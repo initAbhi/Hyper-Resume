@@ -25,7 +25,9 @@
     "migration:show": "bun ./node_modules/typeorm/cli.js migration:show -d src/database/data-source.ts",
     "migration:run": "bun ./node_modules/typeorm/cli.js migration:run -d src/database/data-source.ts",
     "migration:revert": "bun ./node_modules/typeorm/cli.js migration:revert -d src/database/data-source.ts",
-    "migration:generate": "bun ./node_modules/typeorm/cli.js migration:generate -d src/database/data-source.ts"
+    "migration:generate": "bun ./node_modules/typeorm/cli.js migration:generate -d src/database/data-source.ts",
+    "db:seed": "bun src/database/seeds/seed.ts",
+    "db:setup": "npm run migration:run && npm run db:seed"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
