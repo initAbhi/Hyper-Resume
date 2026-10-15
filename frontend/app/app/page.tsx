@@ -38,9 +38,16 @@ export default function AppDashboardPage() {
           apiClient.listApplications(),
         ]);
         if (isMounted) {
-          setResumes(resumesData);
-          setApplications(appsData);
+          const safeResumes = Array.isArray(resumesData)
+            ? resumesData
+            : ((resumesData as unknown) as { items: Resume[] })?.items || [];
+          const safeApps = Array.isArray(appsData)
+            ? appsData
+            : ((appsData as unknown) as { items: JobApplication[] })?.items || [];
+          setResumes(safeResumes);
+          setApplications(safeApps);
         }
+
       } catch (err: unknown) {
         if (isMounted) {
           setError(
@@ -187,7 +194,7 @@ export default function AppDashboardPage() {
           <div className="p-8 text-center text-sm text-zinc-500 animate-pulse border rounded-xl bg-white dark:bg-zinc-900">
             Loading resumes...
           </div>
-        ) : resumes.length === 0 ? (
+        ) : (Array.isArray(resumes) ? resumes : []).length === 0 ? (
           <div className="p-8 sm:p-10 rounded-2xl border-2 border-dashed border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-center flex flex-col items-center justify-center">
             <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 flex items-center justify-center mb-3">
               <Upload className="w-6 h-6" />
@@ -215,11 +222,12 @@ export default function AppDashboardPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {resumes.slice(0, 4).map((resume) => (
+            {(Array.isArray(resumes) ? resumes : []).slice(0, 4).map((resume) => (
               <div
                 key={resume.id}
                 className="p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all flex flex-col justify-between"
               >
+
                 <div>
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div>

@@ -507,8 +507,11 @@ export class ApiClient {
     if (pagination?.page) query.set('page', String(pagination.page));
     if (pagination?.limit) query.set('limit', String(pagination.limit));
     const endpoint = `/resumes${query.toString() ? `?${query.toString()}` : ''}`;
-    const res = await this.request<Resume[]>(endpoint);
-    return res.data;
+    const res = await this.request<{ items: Resume[]; total: number } | Resume[]>(endpoint);
+    if (res.data && typeof res.data === 'object' && 'items' in (res.data as Record<string, unknown>)) {
+      return ((res.data as unknown) as { items: Resume[] }).items || [];
+    }
+    return (Array.isArray(res.data) ? res.data : []) as Resume[];
   }
 
   async getResume(resumeId: string) {
@@ -617,8 +620,11 @@ export class ApiClient {
     if (pagination?.page) query.set('page', String(pagination.page));
     if (pagination?.limit) query.set('limit', String(pagination.limit));
     const endpoint = `/job-descriptions${query.toString() ? `?${query.toString()}` : ''}`;
-    const res = await this.request<JobDescription[]>(endpoint);
-    return res.data;
+    const res = await this.request<{ items: JobDescription[]; total: number } | JobDescription[]>(endpoint);
+    if (res.data && typeof res.data === 'object' && 'items' in (res.data as Record<string, unknown>)) {
+      return ((res.data as unknown) as { items: JobDescription[] }).items || [];
+    }
+    return (Array.isArray(res.data) ? res.data : []) as JobDescription[];
   }
 
   async getJobDescription(id: string) {
@@ -646,9 +652,13 @@ export class ApiClient {
     if (pagination?.page) query.set('page', String(pagination.page));
     if (pagination?.limit) query.set('limit', String(pagination.limit));
     const endpoint = `/applications${query.toString() ? `?${query.toString()}` : ''}`;
-    const res = await this.request<JobApplication[]>(endpoint);
-    return res.data;
+    const res = await this.request<{ items: JobApplication[]; total: number } | JobApplication[]>(endpoint);
+    if (res.data && typeof res.data === 'object' && 'items' in (res.data as Record<string, unknown>)) {
+      return ((res.data as unknown) as { items: JobApplication[] }).items || [];
+    }
+    return (Array.isArray(res.data) ? res.data : []) as JobApplication[];
   }
+
 
   async createApplication(dto: {
     companyName: string;
