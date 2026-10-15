@@ -58,7 +58,7 @@ Hyper-Resume/
 | **Applications Tracker** | ✅ **100% Working** | Kanban/table view of job applications (`saved`, `applied`, `interviewing`, `offer`, `rejected`). Links directly to the tailored resume version used. | Fully complete. |
 | **Credit Ledger & Entitlements** | ✅ **100% Working** | Double-entry transaction ledger with idempotency keys to prevent duplicate deductions. Free tier grants 35 credits on signup; AI operations deduct credits (e.g., 5 credits per JD match). | Fully complete. |
 | **Payments & Monetization** | 🟡 **Half-Done** (Sandbox ready) | Order creation, credit package pricing (Job Hunt Pack ₹399, Pro ₹799), order verification, and sandbox simulation are fully working in code. | Live payments require real production credentials (`CASHFREE_APP_ID` & `CASHFREE_SECRET_KEY`) in `backend/.env`. |
-| **AI Integration** | 🟡 **Half-Done** (Dual Provider) | Architecture has both `GeminiProvider` and `MockDeterministicProvider`. In local mode without an API key, it generates realistic, repeatable completions. | For real Gemini LLM requests, set `GEMINI_API_KEY` in `backend/.env`. |
+| **AI Integration** | ✅ **100% Working** | Live Google Gemini 1.5 Flash provider configured and authenticated. Factual, grounded bullet enhancements and JD extraction active with offline fallback safety. | Fully complete. |
 | **Free Public SEO Tools** | ✅ **100% Working** | `/tools/resume-checker` allows anonymous users to test resume text against ATS rules, checking action verbs, contact details, and readability. | Fully complete. |
 | **Tests & Quality Assurance** | ✅ **100% Working** | **72 tests passing** (42 backend unit/service tests in Vitest, 30 frontend logic & document rendering tests in Bun). | Fully passing. |
 

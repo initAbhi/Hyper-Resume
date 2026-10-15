@@ -17,7 +17,7 @@ export class GeminiAiProvider implements AiProvider {
   private readonly model: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.apiKey = this.configService.get<string>('AI_API_KEY');
+    this.apiKey = this.configService.get<string>('AI_API_KEY') || this.configService.get<string>('GEMINI_API_KEY');
     this.model = this.configService.get<string>('AI_MODEL', 'gemini-1.5-flash');
   }
 

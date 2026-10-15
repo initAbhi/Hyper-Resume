@@ -21,12 +21,14 @@ export class AiService implements AiProvider {
     private readonly mockProvider: MockAiProvider,
     private readonly geminiProvider: GeminiAiProvider,
   ) {
-    const configuredProvider = this.configService.get<string>('AI_PROVIDER', 'mock').toLowerCase();
-    const hasGeminiKey = Boolean(this.configService.get<string>('AI_API_KEY'));
+    const configuredProvider = this.configService.get<string>('AI_PROVIDER', 'gemini').toLowerCase();
+    const hasGeminiKey = Boolean(
+      this.configService.get<string>('AI_API_KEY') || this.configService.get<string>('GEMINI_API_KEY'),
+    );
 
-    if (configuredProvider === 'gemini' && hasGeminiKey) {
+    if (configuredProvider !== 'mock' && hasGeminiKey) {
       this.activeProvider = this.geminiProvider;
-      this.logger.log('Active AI provider configured: Gemini');
+      this.logger.log('Active AI provider configured: Gemini (Live Inference)');
     } else {
       this.activeProvider = this.mockProvider;
       this.logger.log('Active AI provider configured: Mock (Deterministic & Offline)');

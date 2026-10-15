@@ -79,6 +79,10 @@ export class EnvironmentVariables {
 
   @IsString()
   @IsOptional()
+  GEMINI_API_KEY?: string;
+
+  @IsString()
+  @IsOptional()
   EMAIL_PROVIDER?: string = 'mock';
 }
 
