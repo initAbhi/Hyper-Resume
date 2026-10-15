@@ -1,0 +1,225 @@
+@import "tailwindcss";
+
+:root {
+  /* Surfaces & Backgrounds */
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --surface-subtle: #f1f5f9;
+  --surface-muted: #e2e8f0;
+  --surface-card: #ffffff;
+  --surface-elevated: #ffffff;
+
+  /* Typography & Foreground */
+  --foreground: #0f172a;
+  --foreground-muted: #475569;
+  --foreground-subtle: #64748b;
+  --foreground-disabled: #94a3b8;
+
+  /* Primary Brand Accent (Restrained Deep Indigo/Blue) */
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-active: #1e40af;
+  --primary-subtle: #eff6ff;
+  --primary-border: #bfdbfe;
+  --primary-foreground: #ffffff;
+
+  /* Semantic State Colors */
+  --success: #059669;
+  --success-subtle: #ecfdf5;
+  --success-border: #a7f3d0;
+  --success-foreground: #065f46;
+
+  --warning: #d97706;
+  --warning-subtle: #fffbeb;
+  --warning-border: #fde68a;
+  --warning-foreground: #92400e;
+
+  --error: #dc2626;
+  --error-subtle: #fef2f2;
+  --error-border: #fecaca;
+  --error-foreground: #991b1b;
+
+  --info: #0284c7;
+  --info-subtle: #f0f9ff;
+  --info-border: #bae6fd;
+  --info-foreground: #075985;
+
+  /* Borders & Dividers */
+  --border: #e2e8f0;
+  --border-subtle: #f1f5f9;
+  --border-strong: #cbd5e1;
+
+  /* Focus & Rings */
+  --ring: #2563eb;
+  --ring-offset: #ffffff;
+
+  /* Radii */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(15 23 42 / 0.08), 0 2px 4px -2px rgb(15 23 42 / 0.05);
+  --shadow-lg: 0 10px 15px -3px rgb(15 23 42 / 0.08), 0 4px 6px -4px rgb(15 23 42 / 0.04);
+  --shadow-xl: 0 20px 25px -5px rgb(15 23 42 / 0.1), 0 8px 10px -6px rgb(15 23 42 / 0.04);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #090d16;
+    --surface: #0f172a;
+    --surface-subtle: #1e293b;
+    --surface-muted: #334155;
+    --surface-card: #0f172a;
+    --surface-elevated: #1e293b;
+
+    --foreground: #f8fafc;
+    --foreground-muted: #cbd5e1;
+    --foreground-subtle: #94a3b8;
+    --foreground-disabled: #64748b;
+
+    --primary: #3b82f6;
+    --primary-hover: #60a5fa;
+    --primary-active: #2563eb;
+    --primary-subtle: #1e293b;
+    --primary-border: #1d4ed8;
+    --primary-foreground: #ffffff;
+
+    --success: #10b981;
+    --success-subtle: #064e3b;
+    --success-border: #047857;
+    --success-foreground: #a7f3d0;
+
+    --warning: #f59e0b;
+    --warning-subtle: #78350f;
+    --warning-border: #b45309;
+    --warning-foreground: #fde68a;
+
+    --error: #ef4444;
+    --error-subtle: #7f1d1d;
+    --error-border: #b91c1c;
+    --error-foreground: #fecaca;
+
+    --info: #38bdf8;
+    --info-subtle: #0c4a6e;
+    --info-border: #0369a1;
+    --info-foreground: #bae6fd;
+
+    --border: #1e293b;
+    --border-subtle: #0f172a;
+    --border-strong: #334155;
+
+    --ring: #3b82f6;
+    --ring-offset: #0f172a;
+
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.7), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+  }
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-feature-settings: "rlig" 1, "calt" 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbar for professional SaaS feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--foreground-subtle);
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ATS Print & PDF Export Rules */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  header,
+  footer,
+  aside,
+  nav,
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  #resume-document-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0.5in !important;
+    margin: 0 !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-size: 10pt !important;
+    line-height: 1.4 !important;
+  }
+
+  #resume-document-print * {
+    color: #000000 !important;
+    background: transparent !important;
+  }
+
+  #resume-document-print h1,
+  #resume-document-print h2 {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  #resume-document-print div {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}
+
