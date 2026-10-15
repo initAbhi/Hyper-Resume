@@ -14,6 +14,9 @@ import {
   XCircle,
   ShieldCheck,
   ChevronRight,
+  Copy,
+  Check,
+  FileCheck,
 } from 'lucide-react';
 import {
   apiClient,
@@ -39,6 +42,8 @@ function JobMatchInner() {
   const [analysisStep, setAnalysisStep] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [completedMatch, setCompletedMatch] = useState<JobMatch | null>(null);
+  const [requirementFilter, setRequirementFilter] = useState<'all' | 'supported' | 'needs_confirmation' | 'not_evidenced'>('all');
+  const [copiedKeywords, setCopiedKeywords] = useState(false);
 
   // Load existing resumes on mount
   useEffect(() => {
@@ -270,151 +275,271 @@ function JobMatchInner() {
       </form>
 
       {/* Completed Match Report */}
-      {completedMatch && completedMatch.analysis && (
-        <div className="p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-6 shadow-sm">
-          {/* Header Score Overview */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-200 dark:border-zinc-800">
-            <div>
-              <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                Match Report: {jobTitle || 'Target Role'} {companyName ? `at ${companyName}` : ''}
-              </h3>
-              <p className="text-xs text-zinc-500 mt-0.5">
-                Evaluated against: {selectedResume?.name}
-              </p>
-            </div>
+      {completedMatch && completedMatch.analysis && (() => {
+        const reqs = completedMatch.analysis.matchedRequirements || [];
+        const supportedCount = reqs.filter((r) => r.status === 'supported').length;
+        const needsCount = reqs.filter((r) => r.status === 'needs_confirmation').length;
+        const gapsCount = reqs.filter((r) => r.status === 'not_evidenced').length;
 
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <div className="text-3xl font-black text-blue-600 dark:text-blue-400">
-                  {completedMatch.score}%
+        const filteredReqs = reqs.filter((r) => {
+          if (requirementFilter === 'supported') return r.status === 'supported';
+          if (requirementFilter === 'needs_confirmation') return r.status === 'needs_confirmation';
+          if (requirementFilter === 'not_evidenced') return r.status === 'not_evidenced';
+          return true;
+        });
+
+        const scoreColor =
+          completedMatch.score >= 80
+            ? 'text-emerald-600 dark:text-emerald-400'
+            : completedMatch.score >= 60
+            ? 'text-amber-600 dark:text-amber-400'
+            : 'text-rose-600 dark:text-rose-400';
+
+        const handleCopyKeywords = () => {
+          const kws = completedMatch.analysis.missingKeywords || [];
+          if (kws.length === 0) return;
+          navigator.clipboard.writeText(kws.join(', '));
+          setCopiedKeywords(true);
+          setTimeout(() => setCopiedKeywords(false), 2000);
+        };
+
+        return (
+          <div className="p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-6 shadow-sm">
+            {/* Header Score Overview */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-200 dark:border-zinc-800">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                    Match Report: {jobTitle || 'Target Role'} {companyName ? `at ${companyName}` : ''}
+                  </h3>
+                  <Badge
+                    variant={
+                      completedMatch.score >= 80
+                        ? 'success'
+                        : completedMatch.score >= 60
+                        ? 'neutral'
+                        : 'destructive'
+                    }
+                  >
+                    {completedMatch.score >= 80
+                      ? 'Strong Alignment'
+                      : completedMatch.score >= 60
+                      ? 'Tailoring Advised'
+                      : 'Significant Gaps'}
+                  </Badge>
                 </div>
-                <div className="text-[10px] text-zinc-400 uppercase font-semibold">
-                  Compatibility Score
+                <p className="text-xs text-zinc-500 mt-1">
+                  Evaluated against: <span className="font-semibold text-zinc-700 dark:text-zinc-300">{selectedResume?.name}</span>
+                </p>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <div className={`text-3xl font-black ${scoreColor}`}>
+                    {completedMatch.score}%
+                  </div>
+                  <div className="text-[10px] text-zinc-400 uppercase font-semibold">
+                    Overall Compatibility
+                  </div>
                 </div>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleCreateTailoredDraft}
+                  className="gap-1.5 shadow-sm"
+                >
+                  <span>Create Tailored Draft</span>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
               </div>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handleCreateTailoredDraft}
-                className="gap-1.5"
-              >
-                <span>Create Tailored Draft</span>
-                <ChevronRight className="w-4 h-4" />
-              </Button>
             </div>
-          </div>
 
-          {/* Subscores Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-center">
-              <div className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                {completedMatch.analysis.subScores?.requiredSkills ?? 85}%
-              </div>
-              <div className="text-[10px] text-zinc-500 uppercase font-semibold">Required Skills</div>
-            </div>
-            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-center">
-              <div className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                {completedMatch.analysis.subScores?.experienceAlignment ?? 90}%
-              </div>
-              <div className="text-[10px] text-zinc-500 uppercase font-semibold">Experience Align</div>
-            </div>
-            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-center">
-              <div className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                {completedMatch.analysis.subScores?.educationAlignment ?? 100}%
-              </div>
-              <div className="text-[10px] text-zinc-500 uppercase font-semibold">Education Align</div>
-            </div>
-            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-center">
-              <div className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                {completedMatch.analysis.subScores?.actionMetricsDensity ?? 80}%
-              </div>
-              <div className="text-[10px] text-zinc-500 uppercase font-semibold">Metrics Density</div>
-            </div>
-          </div>
-
-          {/* Detailed Matched Requirements Breakdown */}
-          <div className="space-y-4">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
-              Requirements vs Grounded Evidence
-            </h4>
-
-            <div className="space-y-3">
-              {(completedMatch.analysis.matchedRequirements || []).map((req, rIdx) => (
+            {/* Subscores Grid with Mini Progress Bars */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                {
+                  label: 'Required Skills',
+                  val: completedMatch.analysis.subScores?.requiredSkills ?? 85,
+                  color: 'bg-blue-600',
+                },
+                {
+                  label: 'Experience Align',
+                  val: completedMatch.analysis.subScores?.experienceAlignment ?? 90,
+                  color: 'bg-emerald-600',
+                },
+                {
+                  label: 'Education Align',
+                  val: completedMatch.analysis.subScores?.educationAlignment ?? 100,
+                  color: 'bg-indigo-600',
+                },
+                {
+                  label: 'Metrics Density',
+                  val: completedMatch.analysis.subScores?.actionMetricsDensity ?? 80,
+                  color: 'bg-amber-600',
+                },
+              ].map((sub, sIdx) => (
                 <div
-                  key={rIdx}
-                  className={`p-4 rounded-xl border text-xs space-y-2 ${
-                    req.status === 'supported'
-                      ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60 text-emerald-950 dark:text-emerald-200'
-                      : req.status === 'needs_confirmation'
-                      ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/60 text-amber-950 dark:text-amber-200'
-                      : 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800/60 text-rose-950 dark:text-rose-200'
-                  }`}
+                  key={sIdx}
+                  className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/80 flex flex-col justify-between"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 font-bold">
-                      {req.status === 'supported' && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
-                      {req.status === 'needs_confirmation' && <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />}
-                      {req.status === 'not_evidenced' && <XCircle className="w-4 h-4 text-rose-600 shrink-0" />}
-                      <span>{req.explanation || req.requirementId}</span>
-                    </div>
-                    <Badge
-                      variant={
-                        req.status === 'supported'
-                          ? 'success'
-                          : req.status === 'needs_confirmation'
-                          ? 'neutral'
-                          : 'destructive'
-                      }
-                    >
-                      {req.status.replace('_', ' ').toUpperCase()}
-                    </Badge>
+                    <span className="text-[11px] text-zinc-500 font-medium">{sub.label}</span>
+                    <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{sub.val}%</span>
                   </div>
-
-                  {req.evidenceQuotes && req.evidenceQuotes.length > 0 && (
-                    <div className="p-2 rounded bg-white/70 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono">
-                      <span className="font-bold text-zinc-700 dark:text-zinc-300">Evidenced in resume: </span>
-                      {req.evidenceQuotes.join(' · ')}
-                    </div>
-                  )}
-
-                  {req.suggestedAction && (
-                    <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
-                      <strong>Suggested action: </strong> {req.suggestedAction}
-                    </p>
-                  )}
+                  <div className="w-full h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden mt-2">
+                    <div
+                      className={`h-full ${sub.color} rounded-full transition-all duration-500`}
+                      style={{ width: `${Math.min(100, Math.max(0, sub.val))}%` }}
+                    />
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
 
-          {/* Missing Keywords Notice */}
-          {(completedMatch.analysis.missingKeywords || []).length > 0 && (
-            <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40 text-xs space-y-2">
-              <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                Missing Keywords Detected in Target Job Description
-              </span>
-              <p className="text-zinc-500 text-[11px]">
-                These terms appear in the job specification but were not found in your resume. Only add them if you have genuine experience.
-              </p>
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {completedMatch.analysis.missingKeywords.map((kw, idx) => (
-                  <span
-                    key={idx}
-                    className="px-2 py-0.5 rounded text-[11px] font-mono bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300"
+            {/* Detailed Requirements with Filter Tabs */}
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+                  Requirements vs Grounded Evidence ({reqs.length})
+                </h4>
+
+                {/* Filter Pills */}
+                <div className="flex items-center gap-1.5 flex-wrap text-xs">
+                  <button
+                    onClick={() => setRequirementFilter('all')}
+                    className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+                      requirementFilter === 'all'
+                        ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200'
+                    }`}
                   >
-                    {kw}
-                  </span>
+                    All ({reqs.length})
+                  </button>
+                  <button
+                    onClick={() => setRequirementFilter('supported')}
+                    className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+                      requirementFilter === 'supported'
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100'
+                    }`}
+                  >
+                    Supported ({supportedCount})
+                  </button>
+                  <button
+                    onClick={() => setRequirementFilter('needs_confirmation')}
+                    className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+                      requirementFilter === 'needs_confirmation'
+                        ? 'bg-amber-600 text-white'
+                        : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 hover:bg-amber-100'
+                    }`}
+                  >
+                    Needs Review ({needsCount})
+                  </button>
+                  <button
+                    onClick={() => setRequirementFilter('not_evidenced')}
+                    className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+                      requirementFilter === 'not_evidenced'
+                        ? 'bg-rose-600 text-white'
+                        : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 hover:bg-rose-100'
+                    }`}
+                  >
+                    Missing Gaps ({gapsCount})
+                  </button>
+                </div>
+              </div>
+
+              {/* Requirement Items */}
+              <div className="space-y-3">
+                {filteredReqs.map((req, rIdx) => (
+                  <div
+                    key={rIdx}
+                    className={`p-4 rounded-xl border text-xs space-y-2 transition-all ${
+                      req.status === 'supported'
+                        ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60 text-emerald-950 dark:text-emerald-200'
+                        : req.status === 'needs_confirmation'
+                        ? 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/60 text-amber-950 dark:text-amber-200'
+                        : 'bg-rose-50/40 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800/60 text-rose-950 dark:text-rose-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 font-bold text-sm">
+                        {req.status === 'supported' && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
+                        {req.status === 'needs_confirmation' && <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />}
+                        {req.status === 'not_evidenced' && <XCircle className="w-4 h-4 text-rose-600 shrink-0" />}
+                        <span>{req.explanation || req.requirementId}</span>
+                      </div>
+                      <Badge
+                        variant={
+                          req.status === 'supported'
+                            ? 'success'
+                            : req.status === 'needs_confirmation'
+                            ? 'neutral'
+                            : 'destructive'
+                        }
+                      >
+                        {req.status.replace('_', ' ').toUpperCase()}
+                      </Badge>
+                    </div>
+
+                    {req.evidenceQuotes && req.evidenceQuotes.length > 0 && (
+                      <div className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono leading-relaxed">
+                        <span className="font-bold text-zinc-700 dark:text-zinc-300">Evidenced in resume: </span>
+                        {req.evidenceQuotes.join(' · ')}
+                      </div>
+                    )}
+
+                    {req.suggestedAction && (
+                      <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                        <strong>Suggested action: </strong> {req.suggestedAction}
+                      </p>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
-          )}
 
-          {/* Disclaimer */}
-          <p className="text-[11px] text-zinc-400 text-center pt-2">
-            Disclaimer: The compatibility score is an internal heuristic indicator comparing documented evidence against role requirements. It is not an algorithmic guarantee of interview invitation or automated ATS filter passage.
-          </p>
-        </div>
-      )}
+            {/* Missing Keywords Notice */}
+            {(completedMatch.analysis.missingKeywords || []).length > 0 && (
+              <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40 text-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                      Missing Keywords Detected in Target Job Description
+                    </span>
+                    <p className="text-zinc-500 text-[11px] mt-0.5">
+                      These terms appear in the job specification but were not found in your resume. Only add them if you have genuine experience.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyKeywords}
+                    className="gap-1.5 text-xs shrink-0"
+                  >
+                    {copiedKeywords ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedKeywords ? 'Copied!' : 'Copy Keywords'}</span>
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {completedMatch.analysis.missingKeywords.map((kw, idx) => (
+                    <span
+                      key={idx}
+                      className="px-2.5 py-1 rounded-md text-[11px] font-mono bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 shadow-2xs"
+                    >
+                      {kw}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Disclaimer */}
+            <p className="text-[11px] text-zinc-400 text-center pt-2">
+              Disclaimer: The compatibility score is an internal heuristic indicator comparing documented evidence against role requirements. It is not an algorithmic guarantee of interview invitation or automated ATS filter passage.
+            </p>
+          </div>
+        );
+      })()}
     </div>
   );
 }

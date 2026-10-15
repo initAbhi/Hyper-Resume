@@ -118,7 +118,7 @@ describe('Resume Editor Logic & Invariants', () => {
   });
 
   it('should support switching between ATS templates', () => {
-    const validTemplates = ['clean-modern', 'technical-ats', 'executive'];
+    const validTemplates = ['clean-modern', 'classic-ats', 'technical-ats', 'executive'];
     let selectedTemplate = 'clean-modern';
 
     expect(validTemplates.includes(selectedTemplate)).toBe(true);

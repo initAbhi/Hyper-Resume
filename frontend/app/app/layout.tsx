@@ -197,43 +197,80 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        {/* Mobile Navigation Drawer */}
+        {/* Mobile Navigation Drawer with Backdrop */}
         {isMobileNavOpen && (
-          <div className="md:hidden border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 space-y-2">
-            {navItems.map((item) => {
-              const IconComp = item.icon;
-              const isActive =
-                item.href === '/app'
-                  ? pathname === '/app'
-                  : pathname.startsWith(item.href);
+          <div className="md:hidden fixed inset-0 z-50 flex">
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-zinc-950/50 backdrop-blur-xs transition-opacity"
+              onClick={() => setIsMobileNavOpen(false)}
+            />
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setIsMobileNavOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-semibold'
-                      : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                  }`}
+            {/* Slide-over Drawer Panel */}
+            <div className="relative w-4/5 max-w-xs bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 p-5 flex flex-col justify-between shadow-2xl z-10 animate-in slide-in-from-left duration-200">
+              <div>
+                <div className="flex items-center justify-between pb-4 border-b border-zinc-100 dark:border-zinc-800 mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
+                      H
+                    </div>
+                    <span className="font-extrabold text-base">
+                      Hyper<span className="text-blue-600">Resume</span>
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setIsMobileNavOpen(false)}
+                    className="p-1 rounded-md text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Mobile Navigation Links */}
+                <nav className="space-y-1">
+                  {navItems.map((item) => {
+                    const IconComp = item.icon;
+                    const isActive =
+                      item.href === '/app'
+                        ? pathname === '/app'
+                        : pathname.startsWith(item.href);
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setIsMobileNavOpen(false)}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                          isActive
+                            ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-semibold'
+                            : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                        }`}
+                      >
+                        <IconComp className="w-4 h-4 shrink-0" />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </nav>
+              </div>
+
+              {/* User Credits & Logout */}
+              <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
+                <div className="flex items-center justify-between text-xs px-1">
+                  <span className="text-zinc-500 font-medium">Credits Available</span>
+                  <span className="font-bold text-blue-600 dark:text-blue-400">{creditBalance}</span>
+                </div>
+                <button
+                  onClick={() => {
+                    setIsMobileNavOpen(false);
+                    logout();
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors border border-rose-200 dark:border-rose-900/50"
                 >
-                  <IconComp className="w-4 h-4 shrink-0" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-            <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800">
-              <button
-                onClick={() => {
-                  setIsMobileNavOpen(false);
-                  logout();
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Sign Out</span>
-              </button>
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
             </div>
           </div>
         )}

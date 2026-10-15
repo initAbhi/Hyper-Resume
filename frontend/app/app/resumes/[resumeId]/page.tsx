@@ -16,6 +16,8 @@ import {
   History,
   X,
   RefreshCw,
+  Eye,
+  FileText,
 } from 'lucide-react';
 import {
   apiClient,
@@ -337,54 +339,24 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
 
         {/* Top Control Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Mobile Tab Switcher */}
-          <div className="flex lg:hidden border border-zinc-200 dark:border-zinc-800 rounded-lg p-0.5 bg-zinc-100 dark:bg-zinc-800 text-xs">
-            <button
-              onClick={() => setMobileTab('editor')}
-              className={`px-3 py-1.5 rounded font-medium ${
-                mobileTab === 'editor'
-                  ? 'bg-white dark:bg-zinc-900 shadow-sm text-blue-600'
-                  : 'text-zinc-600 dark:text-zinc-400'
-              }`}
-            >
-              Fields
-            </button>
-            <button
-              onClick={() => setMobileTab('preview')}
-              className={`px-3 py-1.5 rounded font-medium ${
-                mobileTab === 'preview'
-                  ? 'bg-white dark:bg-zinc-900 shadow-sm text-blue-600'
-                  : 'text-zinc-600 dark:text-zinc-400'
-              }`}
-            >
-              Live ATS
-            </button>
-            <button
-              onClick={() => setMobileTab('ai')}
-              className={`px-3 py-1.5 rounded font-medium ${
-                mobileTab === 'ai'
-                  ? 'bg-white dark:bg-zinc-900 shadow-sm text-blue-600'
-                  : 'text-zinc-600 dark:text-zinc-400'
-              }`}
-            >
-              Audit
-            </button>
-          </div>
-
           {/* Template Switcher */}
-          <select
-            value={templateKey}
-            onChange={(e) => {
-              const newTpl = e.target.value;
-              setTemplateKey(newTpl);
-              scheduleAutosave(content, resumeName, newTpl);
-            }}
-            className="text-xs p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200"
-          >
-            <option value="clean-modern">Clean Modern ATS</option>
-            <option value="technical-ats">Technical ATS</option>
-            <option value="executive">Executive & Staff</option>
-          </select>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-zinc-500 hidden sm:inline">Template:</span>
+            <select
+              value={templateKey}
+              onChange={(e) => {
+                const newTpl = e.target.value;
+                setTemplateKey(newTpl);
+                scheduleAutosave(content, resumeName, newTpl);
+              }}
+              className="text-xs py-1.5 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 font-medium focus:ring-2 focus:ring-blue-600"
+            >
+              <option value="classic-ats">Classic Single-Column (Rezi ATS)</option>
+              <option value="clean-modern">Clean Modern (Teal Minimal)</option>
+              <option value="executive">Executive Serif (Leadership)</option>
+              <option value="technical-ats">Technical Monospace (Engineering)</option>
+            </select>
+          </div>
 
           {/* Version History Button */}
           <Button
@@ -402,7 +374,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
             variant="outline"
             size="sm"
             onClick={() => window.print()}
-            className="gap-1.5 text-xs"
+            className="gap-1.5 text-xs font-semibold"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>Export ATS PDF</span>
@@ -413,11 +385,50 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
             variant="primary"
             size="sm"
             onClick={() => setIsAiPanelOpen(!isAiPanelOpen)}
-            className="hidden lg:flex gap-1.5 text-xs"
+            className="hidden lg:flex gap-1.5 text-xs font-semibold"
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span>{isAiPanelOpen ? 'Hide Audit' : 'Show Audit'}</span>
           </Button>
+        </div>
+      </div>
+
+      {/* Mobile Sticky Segmented Navigation (< lg) */}
+      <div className="lg:hidden sticky top-0 z-20 pb-3 pt-1 bg-zinc-50/95 dark:bg-zinc-950/95 backdrop-blur-xs">
+        <div className="grid grid-cols-3 p-1 rounded-xl bg-zinc-200/80 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 text-xs shadow-inner">
+          <button
+            onClick={() => setMobileTab('editor')}
+            className={`flex items-center justify-center gap-1.5 py-2 rounded-lg font-semibold transition-all ${
+              mobileTab === 'editor'
+                ? 'bg-white dark:bg-zinc-900 shadow-sm text-blue-600 dark:text-blue-400'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>Form</span>
+          </button>
+          <button
+            onClick={() => setMobileTab('preview')}
+            className={`flex items-center justify-center gap-1.5 py-2 rounded-lg font-semibold transition-all ${
+              mobileTab === 'preview'
+                ? 'bg-white dark:bg-zinc-900 shadow-sm text-blue-600 dark:text-blue-400'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'
+            }`}
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span>Live Canvas</span>
+          </button>
+          <button
+            onClick={() => setMobileTab('ai')}
+            className={`flex items-center justify-center gap-1.5 py-2 rounded-lg font-semibold transition-all ${
+              mobileTab === 'ai'
+                ? 'bg-white dark:bg-zinc-900 shadow-sm text-blue-600 dark:text-blue-400'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>AI Audit</span>
+          </button>
         </div>
       </div>
 
@@ -1035,122 +1046,220 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
           } space-y-4 ${mobileTab !== 'preview' ? 'hidden lg:block' : ''}`}
         >
           {/* Document Canvas Preview Card */}
-          <div className="p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-md">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800 text-xs text-zinc-500 mb-4">
-              <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-                Single-Column ATS Preview
-              </span>
-              <span className="font-mono text-[11px] bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded">
-                Template: {templateKey}
+          <div className="p-4 sm:p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100/60 dark:bg-zinc-900/60 shadow-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800 text-xs text-zinc-500 mb-4">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-zinc-800 dark:text-zinc-200">
+                  ATS Document Canvas
+                </span>
+                <span className="text-[10px] text-zinc-400 font-mono hidden sm:inline">
+                  (8.5" &times; 11" Letter / A4)
+                </span>
+              </div>
+              <span className="font-mono text-[11px] bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2 py-0.5 rounded text-zinc-700 dark:text-zinc-300 font-medium">
+                {templateKey === 'classic-ats'
+                  ? 'Classic ATS'
+                  : templateKey === 'executive'
+                  ? 'Executive Serif'
+                  : templateKey === 'technical-ats'
+                  ? 'Tech Monospace'
+                  : 'Clean Modern'}
               </span>
             </div>
 
-            {/* The Actual Rendered ATS Document */}
-            <div
-              id="resume-document-print"
-              className={`p-6 bg-white text-zinc-950 border border-zinc-200 rounded-lg shadow-xs leading-relaxed ${
-                templateKey === 'technical-ats'
-                  ? 'font-mono text-[11px]'
-                  : templateKey === 'executive'
-                  ? 'font-serif text-[11px]'
-                  : 'font-sans text-[11px]'
-              }`}
-            >
-              {/* Header */}
-              <div className="text-center border-b border-zinc-300 pb-2 mb-3">
-                <h1 className="text-base font-extrabold tracking-wide uppercase text-zinc-900">
-                  {content.contact.fullName || 'Candidate Name'}
-                </h1>
-                <div className="text-[10px] text-zinc-600 mt-1 flex flex-wrap items-center justify-center gap-x-2">
-                  {content.contact.email && <span>{content.contact.email}</span>}
-                  {content.contact.phone && <span>· {content.contact.phone}</span>}
-                  {content.contact.location && <span>· {content.contact.location}</span>}
-                  {content.contact.linkedinUrl && <span>· {content.contact.linkedinUrl}</span>}
-                  {content.contact.githubUrl && <span>· {content.contact.githubUrl}</span>}
-                </div>
-              </div>
+            {/* Scrollable Container on Mobile */}
+            <div className="overflow-x-auto pb-2">
+              {/* The Actual Rendered ATS Document */}
+              <div
+                id="resume-document-print"
+                className={`resume-paper-canvas p-6 sm:p-8 bg-white text-zinc-950 rounded-lg min-w-[340px] max-w-[760px] mx-auto leading-relaxed ${
+                  templateKey === 'technical-ats'
+                    ? 'font-mono text-[10.5px]'
+                    : templateKey === 'executive'
+                    ? 'font-serif text-[11px]'
+                    : 'font-sans text-[11px]'
+                }`}
+              >
+                {/* Header Section */}
+                <div
+                  className={`resume-section-header pb-2 mb-3 ${
+                    templateKey === 'clean-modern'
+                      ? 'text-left border-b border-zinc-200'
+                      : 'text-center border-b-2 border-zinc-900'
+                  }`}
+                >
+                  <h1
+                    className={`font-black text-zinc-950 uppercase ${
+                      templateKey === 'executive'
+                        ? 'text-lg tracking-wider'
+                        : templateKey === 'classic-ats'
+                        ? 'text-base tracking-widest'
+                        : 'text-base tracking-tight font-extrabold'
+                    }`}
+                  >
+                    {content.contact.fullName || 'Candidate Name'}
+                  </h1>
 
-              {/* Headline & Summary */}
-              {content.headline && (
-                <div className="mb-3">
-                  <h2 className="text-[11px] font-bold uppercase tracking-wider text-zinc-800 border-b border-zinc-200 pb-0.5 mb-1">
-                    Professional Summary
-                  </h2>
-                  <p className="text-[10.5px] text-zinc-700 leading-normal">
-                    {content.summary}
-                  </p>
-                </div>
-              )}
+                  {content.headline && templateKey === 'clean-modern' && (
+                    <p className="text-[11px] font-semibold text-blue-700 dark:text-blue-600 mt-0.5">
+                      {content.headline}
+                    </p>
+                  )}
 
-              {/* Experience */}
-              {(content.experience || []).length > 0 && (
-                <div className="mb-3">
-                  <h2 className="text-[11px] font-bold uppercase tracking-wider text-zinc-800 border-b border-zinc-200 pb-0.5 mb-1.5">
-                    Experience
-                  </h2>
-                  <div className="space-y-2.5">
-                    {content.experience.map((exp, idx) => (
-                      <div key={idx}>
-                        <div className="flex justify-between items-baseline font-semibold text-zinc-900">
-                          <span>{exp.title} — {exp.company}</span>
-                          <span className="text-[9.5px] text-zinc-500 font-normal">
-                            {exp.startDate} – {exp.current ? 'Present' : exp.endDate || ''}
-                          </span>
-                        </div>
-                        <ul className="mt-1 list-disc pl-4 space-y-0.5 text-[10px] text-zinc-700">
-                          {exp.bullets.map((b, bIdx) => (
-                            <li key={bIdx} className="leading-snug">
-                              {b}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
+                  <div
+                    className={`text-[9.5px] text-zinc-700 mt-1 flex flex-wrap items-center gap-x-2 ${
+                      templateKey === 'clean-modern' ? 'justify-start' : 'justify-center'
+                    }`}
+                  >
+                    {content.contact.email && <span>{content.contact.email}</span>}
+                    {content.contact.phone && <span>&bull; {content.contact.phone}</span>}
+                    {content.contact.location && <span>&bull; {content.contact.location}</span>}
+                    {content.contact.linkedinUrl && (
+                      <span>&bull; {content.contact.linkedinUrl.replace(/^https?:\/\//, '')}</span>
+                    )}
+                    {content.contact.githubUrl && (
+                      <span>&bull; {content.contact.githubUrl.replace(/^https?:\/\//, '')}</span>
+                    )}
                   </div>
                 </div>
-              )}
 
-              {/* Skills */}
-              {(content.skills || []).length > 0 && (
-                <div className="mb-3">
-                  <h2 className="text-[11px] font-bold uppercase tracking-wider text-zinc-800 border-b border-zinc-200 pb-0.5 mb-1">
-                    Technical Skills
-                  </h2>
-                  <p className="text-[10.5px] text-zinc-700 leading-relaxed">
-                    {content.skills.map((s) => s.name).join(' · ')}
-                  </p>
-                </div>
-              )}
+                {/* Summary Section */}
+                {content.summary && (
+                  <div className="mb-3">
+                    <h2
+                      className={`resume-section-header font-bold uppercase tracking-wider text-zinc-900 ${
+                        templateKey === 'classic-ats'
+                          ? 'text-[11px] border-b-2 border-zinc-900 pb-0.5 mb-1.5'
+                          : 'text-[10.5px] border-b border-zinc-300 pb-0.5 mb-1 text-zinc-800'
+                      }`}
+                    >
+                      Professional Summary
+                    </h2>
+                    <p className="text-[10px] text-zinc-700 leading-normal">
+                      {content.summary}
+                    </p>
+                  </div>
+                )}
 
-              {/* Education */}
-              {(content.education || []).length > 0 && (
-                <div className="mb-2">
-                  <h2 className="text-[11px] font-bold uppercase tracking-wider text-zinc-800 border-b border-zinc-200 pb-0.5 mb-1">
-                    Education
-                  </h2>
-                  {content.education.map((edu, idx) => (
-                    <div key={idx} className="flex justify-between text-[10px] text-zinc-700">
-                      <span>{edu.degree} in {edu.field} — {edu.school}</span>
-                      <span className="text-zinc-500">{edu.graduationDate}</span>
+                {/* Experience Section */}
+                {(content.experience || []).length > 0 && (
+                  <div className="mb-3">
+                    <h2
+                      className={`resume-section-header font-bold uppercase tracking-wider text-zinc-900 ${
+                        templateKey === 'classic-ats'
+                          ? 'text-[11px] border-b-2 border-zinc-900 pb-0.5 mb-2'
+                          : 'text-[10.5px] border-b border-zinc-300 pb-0.5 mb-1.5 text-zinc-800'
+                      }`}
+                    >
+                      Work Experience
+                    </h2>
+                    <div className="space-y-3">
+                      {content.experience.map((exp, idx) => (
+                        <div key={idx} className="resume-entry">
+                          <div className="flex justify-between items-baseline font-bold text-zinc-950 text-[10.5px]">
+                            <span>
+                              {exp.title}
+                              <span className="font-medium text-zinc-700"> &mdash; {exp.company}</span>
+                            </span>
+                            <span className="text-[9.5px] text-zinc-600 font-normal shrink-0">
+                              {exp.startDate} &ndash; {exp.current ? 'Present' : exp.endDate || ''}
+                            </span>
+                          </div>
+                          {exp.bullets && exp.bullets.length > 0 && (
+                            <ul className="mt-1 list-disc pl-4 space-y-0.5 text-[10px] text-zinc-800">
+                              {exp.bullets.map((b, bIdx) => (
+                                <li key={bIdx} className="leading-snug">
+                                  {b}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                )}
 
-              {/* Projects */}
-              {(content.projects || []).length > 0 && (
-                <div>
-                  <h2 className="text-[11px] font-bold uppercase tracking-wider text-zinc-800 border-b border-zinc-200 pb-0.5 mb-1">
-                    Selected Projects
-                  </h2>
-                  {(content.projects || []).map((proj, idx) => (
-                    <div key={idx} className="text-[10px] text-zinc-700 mb-1">
-                      <span className="font-semibold">{proj.name}: </span>
-                      <span>{proj.description}</span>
+                {/* Skills Section */}
+                {(content.skills || []).length > 0 && (
+                  <div className="mb-3">
+                    <h2
+                      className={`resume-section-header font-bold uppercase tracking-wider text-zinc-900 ${
+                        templateKey === 'classic-ats'
+                          ? 'text-[11px] border-b-2 border-zinc-900 pb-0.5 mb-1.5'
+                          : 'text-[10.5px] border-b border-zinc-300 pb-0.5 mb-1 text-zinc-800'
+                      }`}
+                    >
+                      Technical & Core Competencies
+                    </h2>
+                    {templateKey === 'technical-ats' ? (
+                      <div className="flex flex-wrap gap-1.5 pt-0.5">
+                        {content.skills.map((s, sIdx) => (
+                          <span
+                            key={sIdx}
+                            className="px-2 py-0.5 text-[9px] font-mono bg-zinc-100 border border-zinc-300 rounded text-zinc-800 font-medium"
+                          >
+                            {s.name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-zinc-800 leading-relaxed">
+                        {content.skills.map((s) => s.name).join(' &bull; ')}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Education Section */}
+                {(content.education || []).length > 0 && (
+                  <div className="mb-3">
+                    <h2
+                      className={`resume-section-header font-bold uppercase tracking-wider text-zinc-900 ${
+                        templateKey === 'classic-ats'
+                          ? 'text-[11px] border-b-2 border-zinc-900 pb-0.5 mb-1.5'
+                          : 'text-[10.5px] border-b border-zinc-300 pb-0.5 mb-1 text-zinc-800'
+                      }`}
+                    >
+                      Education
+                    </h2>
+                    <div className="space-y-1.5">
+                      {content.education.map((edu, idx) => (
+                        <div key={idx} className="resume-entry flex justify-between text-[10px] text-zinc-800">
+                          <div>
+                            <span className="font-semibold text-zinc-950">{edu.degree} in {edu.field}</span>
+                            <span className="text-zinc-600"> &mdash; {edu.school}</span>
+                          </div>
+                          <span className="text-zinc-600 shrink-0">{edu.graduationDate}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                )}
+
+                {/* Projects Section */}
+                {(content.projects || []).length > 0 && (
+                  <div className="mb-2">
+                    <h2
+                      className={`resume-section-header font-bold uppercase tracking-wider text-zinc-900 ${
+                        templateKey === 'classic-ats'
+                          ? 'text-[11px] border-b-2 border-zinc-900 pb-0.5 mb-1.5'
+                          : 'text-[10.5px] border-b border-zinc-300 pb-0.5 mb-1 text-zinc-800'
+                      }`}
+                    >
+                      Selected Projects
+                    </h2>
+                    <div className="space-y-1.5">
+                      {(content.projects || []).map((proj, idx) => (
+                        <div key={idx} className="resume-entry text-[10px] text-zinc-800">
+                          <span className="font-bold text-zinc-950">{proj.name}: </span>
+                          <span>{proj.description}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

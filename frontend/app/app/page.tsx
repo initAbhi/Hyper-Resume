@@ -21,7 +21,7 @@ import { apiClient, Resume, JobApplication } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 
 export default function AppDashboardPage() {
-  const { user } = useAuth();
+  const { user, creditBalance } = useAuth();
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -94,6 +94,61 @@ export default function AppDashboardPage() {
               <span>Match a Job</span>
             </Button>
           </Link>
+        </div>
+      </div>
+
+      {/* Quick Status Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs">
+          <div className="flex items-center justify-between text-zinc-500 mb-1">
+            <span className="text-xs font-medium">My Resumes</span>
+            <FileText className="w-4 h-4 text-blue-600" />
+          </div>
+          <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+            {resumes.length}
+          </div>
+          <span className="text-[11px] text-zinc-400">
+            {resumes.some((r) => r.isMaster) ? 'Master Profile active' : 'Draft created'}
+          </span>
+        </div>
+
+        <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs">
+          <div className="flex items-center justify-between text-zinc-500 mb-1">
+            <span className="text-xs font-medium">Applications</span>
+            <Briefcase className="w-4 h-4 text-emerald-600" />
+          </div>
+          <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+            {applications.length}
+          </div>
+          <span className="text-[11px] text-zinc-400">
+            {applications.filter((a) => a.status === 'interviewing').length} interviewing
+          </span>
+        </div>
+
+        <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs">
+          <div className="flex items-center justify-between text-zinc-500 mb-1">
+            <span className="text-xs font-medium">AI Credits</span>
+            <Sparkles className="w-4 h-4 text-amber-500" />
+          </div>
+          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            {creditBalance}
+          </div>
+          <Link href="/pricing" className="text-[11px] text-blue-600 hover:underline font-medium">
+            Get more credits &rarr;
+          </Link>
+        </div>
+
+        <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs">
+          <div className="flex items-center justify-between text-zinc-500 mb-1">
+            <span className="text-xs font-medium">ATS Grounding</span>
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+          </div>
+          <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+            Active Guard
+          </div>
+          <span className="text-[11px] text-zinc-400">
+            Zero hallucinations
+          </span>
         </div>
       </div>
 

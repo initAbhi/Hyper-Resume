@@ -172,9 +172,17 @@ body {
 
 /* ATS Print & PDF Export Rules */
 @media print {
+  @page {
+    size: letter portrait;
+    margin: 0.5in 0.5in 0.5in 0.5in;
+  }
+
   body {
     background-color: #ffffff !important;
     color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 10pt !important;
   }
 
   header,
@@ -192,13 +200,12 @@ body {
   }
 
   #resume-document-print {
-    position: absolute;
-    left: 0;
-    top: 0;
+    position: static !important;
     width: 100% !important;
+    max-width: 100% !important;
     border: none !important;
     box-shadow: none !important;
-    padding: 0.5in !important;
+    padding: 0 !important;
     margin: 0 !important;
     background-color: #ffffff !important;
     color: #000000 !important;
@@ -212,14 +219,39 @@ body {
   }
 
   #resume-document-print h1,
-  #resume-document-print h2 {
-    page-break-after: avoid;
-    break-after: avoid;
+  #resume-document-print h2,
+  #resume-document-print .resume-section-header {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
 
-  #resume-document-print div {
-    page-break-inside: avoid;
-    break-inside: avoid;
+  #resume-document-print .resume-entry {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  #resume-document-print ul {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  #resume-document-print li {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 }
+
+/* Paper Sheet Preview Simulator (Teal & Rezi visual quality) */
+.resume-paper-canvas {
+  background: #ffffff;
+  color: #09090b;
+  min-height: 11in;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1), 0 0 0 1px rgb(0 0 0 / 0.05);
+  transition: box-shadow 0.2s ease;
+}
+
+.resume-paper-canvas:hover {
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1), 0 0 0 1px rgb(0 0 0 / 0.08);
+}
+
 
