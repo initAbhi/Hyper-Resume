@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>HyperResume — Project Status & System Audit Report</title>
+  <title>HyperResume — Project Status Report</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
     @page {
       size: A4 portrait;
-      margin: 11mm 13mm 11mm 13mm;
+      margin: 12mm 14mm 12mm 14mm;
     }
 
     * {
@@ -21,13 +21,13 @@
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       color: #18181b;
       background-color: #ffffff;
-      line-height: 1.36;
-      font-size: 8.5pt;
+      line-height: 1.42;
+      font-size: 8.8pt;
       -webkit-font-smoothing: antialiased;
     }
 
     .header-banner {
-      border-bottom: 2px solid #2563eb;
+      border-bottom: 2.5px solid #2563eb;
       padding-bottom: 8px;
       margin-bottom: 12px;
       display: flex;
@@ -54,15 +54,14 @@
       margin-top: 2px;
     }
 
-    .meta-box {
-      text-align: right;
+    .meta-badge {
       font-size: 7.5pt;
-      color: #71717a;
-      line-height: 1.35;
-    }
-
-    .meta-box strong {
-      color: #18181b;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1d4ed8;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      font-weight: 600;
     }
 
     h2 {
@@ -70,36 +69,27 @@
       font-weight: 700;
       color: #09090b;
       border-bottom: 1px solid #e4e4e7;
-      padding-bottom: 3px;
-      margin-top: 12px;
-      margin-bottom: 6px;
+      padding-bottom: 4px;
+      margin-top: 13px;
+      margin-bottom: 7px;
       letter-spacing: -0.01em;
-      break-after: avoid;
-    }
-
-    h3 {
-      font-size: 9pt;
-      font-weight: 700;
-      color: #18181b;
-      margin-top: 8px;
-      margin-bottom: 4px;
       break-after: avoid;
     }
 
     p {
       margin-bottom: 6px;
-      color: #3f3f46;
+      color: #27272a;
     }
 
-    ul, ol {
-      margin-left: 16px;
+    ul {
+      margin-left: 18px;
       margin-bottom: 8px;
-      color: #3f3f46;
+      color: #27272a;
     }
 
     li {
       margin-bottom: 3px;
-      line-height: 1.32;
+      line-height: 1.35;
     }
 
     strong {
@@ -108,60 +98,58 @@
 
     code {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 7.5pt;
+      font-size: 7.8pt;
       background-color: #f4f4f5;
-      padding: 1px 3px;
+      padding: 1px 4px;
       border-radius: 3px;
       color: #09090b;
     }
 
-    .badge {
-      display: inline-block;
-      padding: 1px 6px;
-      border-radius: 9999px;
-      font-size: 7pt;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      vertical-align: middle;
+    pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.4pt;
+      background-color: #09090b;
+      color: #f4f4f5;
+      padding: 7px 11px;
+      border-radius: 5px;
+      margin: 6px 0 8px 0;
+      overflow-x: hidden;
+      line-height: 1.35;
+      break-inside: avoid;
     }
 
-    .badge-success {
-      background-color: #ecfdf5;
-      color: #047857;
-      border: 1px solid #a7f3d0;
+    .error-card {
+      border: 1px solid #fecaca;
+      background-color: #fef2f2;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      font-size: 8.2pt;
+      break-inside: avoid;
     }
 
-    .badge-warning {
-      background-color: #fffbeb;
-      color: #b45309;
-      border: 1px solid #fde68a;
-    }
-
-    .badge-info {
-      background-color: #eff6ff;
-      color: #1d4ed8;
-      border: 1px solid #bfdbfe;
+    .error-card strong {
+      color: #991b1b;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
       margin: 8px 0 10px 0;
-      font-size: 7.5pt;
+      font-size: 7.6pt;
       break-inside: avoid;
     }
 
     th, td {
       border: 1px solid #e4e4e7;
-      padding: 4px 7px;
+      padding: 5px 8px;
       text-align: left;
-      vertical-align: middle;
+      vertical-align: top;
     }
 
     th {
       background-color: #f8fafc;
-      font-weight: 600;
+      font-weight: 700;
       color: #0f172a;
     }
 
@@ -169,59 +157,40 @@
       background-color: #fafafa;
     }
 
-    .callout {
-      border-left: 3px solid #2563eb;
-      background-color: #f8fafc;
-      padding: 6px 10px;
-      border-radius: 0 4px 4px 0;
-      margin: 8px 0;
-      font-size: 8pt;
-      break-inside: avoid;
+    .status-working {
+      color: #15803d;
+      font-weight: 600;
+      white-space: nowrap;
     }
 
-    .callout-title {
-      font-weight: 700;
-      color: #1e3a8a;
-      margin-bottom: 2px;
+    .status-halfdone {
+      color: #b45309;
+      font-weight: 600;
+      white-space: nowrap;
     }
 
-    .credentials-card {
+    .login-box {
       border: 1px solid #cbd5e1;
       background-color: #f8fafc;
       border-radius: 6px;
-      padding: 8px 12px;
-      margin: 8px 0;
+      padding: 9px 13px;
+      margin-top: 6px;
       break-inside: avoid;
     }
 
-    .credentials-grid {
+    .login-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8px;
+      gap: 10px;
       margin-top: 6px;
     }
 
-    .credential-box {
-      background: white;
-      border: 1px solid #e2e8f0;
-      padding: 6px 8px;
-      border-radius: 4px;
-      font-size: 7.5pt;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin: 8px 0;
-      break-inside: avoid;
-    }
-
-    .stat-card {
+    .login-card {
+      background: #ffffff;
       border: 1px solid #e2e8f0;
       border-radius: 5px;
-      padding: 8px 10px;
-      background: #fafafa;
+      padding: 7px 10px;
+      font-size: 7.8pt;
     }
 
     .page-break {
@@ -235,190 +204,158 @@
   <div class="header-banner">
     <div>
       <div class="brand-title">HYPER<span>RESUME</span></div>
-      <div class="brand-subtitle">Project Status &amp; System Audit Report</div>
+      <div class="brand-subtitle">Status &amp; Architecture Report</div>
     </div>
-    <div class="meta-box">
-      <strong>Generated:</strong> October 15, 2026<br>
-      <strong>Version:</strong> v1.0.0 (Unified Monorepo)<br>
-      <strong>Health:</strong> <span class="badge badge-success">Healthy (72/72 Tests)</span>
+    <div>
+      <span class="meta-badge">October 15, 2026 &bull; Monorepo Active</span>
     </div>
   </div>
 
-  <!-- EXECUTIVE SUMMARY -->
-  <h2>1. Executive Summary</h2>
-  <p>
-    <strong>HyperResume</strong> is an enterprise-ready, privacy-first AI resume optimization platform and job application tracker. The application enforces a strict <em>evidence grounding invariant</em> that eliminates AI hallucinations while guaranteeing ATS compliance across candidate applications.
-  </p>
-  <p>
-    The codebase has been consolidated into a unified monorepo at <code>https://github.com/initAbhi/Hyper-Resume.git</code> featuring a <strong>Next.js 15 App Router</strong> frontend and a <strong>NestJS 10 / PostgreSQL (TypeORM)</strong> backend.
-  </p>
-
-  <div class="callout">
-    <div class="callout-title">Core Milestone Status</div>
-    <div>All foundational milestones (Data Models, Backend Core API, Connected Next.js UI, Double-Entry Monetization, and Test Automation) are complete with <strong>72 passing tests</strong> across Bun and Vitest.</div>
+  <!-- SECTION 1 -->
+  <h2>1. Why You Were Seeing That Error</h2>
+  <div class="error-card">
+    The red screen you encountered (<code>resumes.slice is not a function</code> and <code>Failed to load resource: net::ERR_CONNECTION_REFUSED :3001/api/v1/auth/me</code>) occurred due to two related events:
   </div>
 
-  <!-- ERROR RESOLUTION -->
-  <h2>2. Recent Error Resolution &amp; Stability</h2>
-  <div class="callout" style="border-left-color: #10b981; background-color: #f0fdf4;">
-    <div class="callout-title" style="color: #065f46;">Resolved: <code>TypeError: resumes.slice is not a function</code></div>
-    <p style="margin: 0; color: #166534; font-size: 7.8pt;">
-      <strong>Root Cause:</strong> The backend <code>GET /api/v1/resumes</code> endpoint delivers paginated results in a <code>{ items: [], total: n }</code> envelope. The frontend dashboard previously assumed a raw array. During backend reconnection, an unhandled structure triggered React's ErrorBoundary.
-    </p>
-    <p style="margin-top: 4px; margin-bottom: 0; color: #166534; font-size: 7.8pt;">
-      <strong>Fix Implemented:</strong> <code>frontend/lib/api-client.ts</code> safely unwraps <code>.items</code>, and <code>frontend/app/app/page.tsx</code> now defends with <code>(Array.isArray(resumes) ? resumes : []).slice(0, 4)</code>. Verified live on port 3000.
-    </p>
-  </div>
-
-  <!-- FEATURE BREAKDOWN -->
-  <h2>3. Detailed Feature Audit</h2>
-
-  <h3>3.1 Fully Implemented &amp; Working Features <span class="badge badge-success">100% Complete</span></h3>
   <ul>
-    <li><strong>Authentication &amp; User Security:</strong> JWT stateless session management (Access + Refresh tokens), salted bcrypt password hashing, NestJS <code>JwtAuthGuard</code>, user profile management.</li>
-    <li><strong>Master Resume Architecture:</strong> Dedicated single source of truth ("Master Profile") with version branching for specific job targets. Optimistic concurrency locking (integer version tracking) prevents multi-tab edit overwrites (HTTP 409).</li>
-    <li><strong>Live Split-Pane Editor:</strong> Real-time form controls synchronized with live document preview. 4 standard ATS templates: <em>Classic ATS</em>, <em>Modern Minimal</em>, <em>Executive Serif</em>, and <em>Tech Monospace</em>.</li>
-    <li><strong>Single-Column Print Engine:</strong> Pure <code>@media print</code> stylesheet with strict 8.5" &times; 11" A4 page break handling, ensuring zero clipped lines or orphaned bullet points.</li>
-    <li><strong>Evidence-Grounded JD Matching:</strong> Categorizes requirements into <code>supported</code>, <code>needs_confirmation</code>, and <code>not_evidenced</code>. Calculates sub-scores for Hard Skills %, Experience %, and Education %.</li>
-    <li><strong>Applications Tracker:</strong> Full pipeline tracking across 5 statuses (<code>saved</code>, <code>applied</code>, <code>interviewing</code>, <code>offer</code>, <code>rejected</code>) linked directly to the tailored resume version.</li>
-    <li><strong>Double-Entry Credit Ledger:</strong> Immutable ledger tracking welcome grants (+35 credits) and action-based deductions (-5 for JD analysis, -3 for bullet enhancement) with idempotency keys.</li>
-    <li><strong>Free Public Tools &amp; SEO:</strong> Live ATS resume checker at <code>/tools/resume-checker</code>, landing page, pricing page, DPDP/GDPR privacy policy, dynamic sitemap, and robots.txt.</li>
+    <li><strong>Temporary Backend Disconnect:</strong> When the terminal was interrupted to consolidate git branches, the backend server on port 3001 momentarily stopped, triggering the <code>ERR_CONNECTION_REFUSED</code> in your browser.</li>
+    <li>
+      <strong>Data Structure Mismatch Caught by React:</strong> The backend endpoint <code>GET /api/v1/resumes</code> returns a paginated object envelope:
+<pre>{
+  "items": [ /* resumes */ ],
+  "total": 1,
+  "page": 1,
+  "limit": 20
+}</pre>
+      The dashboard component initially expected a raw array and called <code>resumes.slice(0, 4)</code>. Because it was an object (or undefined while disconnected), calling <code>.slice()</code> threw a <code>TypeError</code>, which Next.js caught in its <code>&lt;ErrorBoundaryHandler&gt;</code>.
+    </li>
   </ul>
 
-  <!-- PAGE BREAK HERE TO SPLIT CLEANLY INTO 2 BALANCED PAGES -->
+  <p style="margin-top: 4px;"><strong>Current Status:</strong></p>
+  <ul>
+    <li>Both files have been patched: <code>api-client.ts</code> safely unwraps <code>.items</code>, and <code>page.tsx</code> uses defensive <code>Array.isArray(resumes) ? resumes : []</code> checks.</li>
+    <li>The backend is live and healthy on port 3001 (<code>/api/v1/health/live</code> returns HTTP 200).</li>
+    <li><strong>To clear it:</strong> Simply click <strong>"Reload Page"</strong> (or refresh <code>http://localhost:3000/app</code> in your browser).</li>
+  </ul>
+
+  <!-- SECTION 2 -->
+  <h2>2. Full Project Overview &amp; Architecture</h2>
+  <p>
+    HyperResume is a privacy-first, ATS-focused AI resume builder and job application tracker. The repository is a consolidated monorepo tracked at <strong><a href="https://github.com/initAbhi/Hyper-Resume" style="color: #2563eb; text-decoration: none;">github.com/initAbhi/Hyper-Resume</a></strong>:
+  </p>
+
+<pre>Hyper-Resume/
+├── frontend/               # Next.js 15 (App Router), Tailwind CSS, Bun runtime
+│   ├── app/                # Public landing, /pricing, /tools/resume-checker, /app/*
+│   ├── components/         # Reusable design system (Buttons, Dialogs, Cards, Badges)
+│   └── lib/                # API client, Auth Context, Analytics, ATS Document generator
+├── backend/                # NestJS 10, TypeORM, PostgreSQL, Vitest
+│   ├── src/auth/           # JWT authentication & session management
+│   ├── src/resumes/        # Resume CRUD & version trees
+│   ├── src/job-matching/   # Grounded ATS matching engine
+│   ├── src/credits/        # Double-entry credit ledger & entitlements
+│   ├── src/payments/       # Cashfree & Sandbox payment provider
+│   └── src/ai/             # Gemini AI provider + deterministic fallback engine
+└── docs/                   # Product strategy, architecture plans, and benchmarks</pre>
+
+  <!-- PAGE BREAK -->
   <div class="page-break"></div>
 
-  <h3>3.2 Environment-Dependent &amp; Sandbox Features <span class="badge badge-warning">Sandbox Active</span></h3>
-  <ul>
-    <li><strong>AI Generation Engine:</strong> Architected with dual-provider capability. Operates seamlessly offline with the deterministic <code>MockDeterministicProvider</code>. To activate live Gemini LLM completions, simply add <code>GEMINI_API_KEY</code> in <code>backend/.env</code>.</li>
-    <li><strong>Payment Gateway:</strong> Fully functional sandbox checkout, order creation, and credit top-up simulation via <code>SandboxPaymentProvider</code>. Production Cashfree / Stripe activation requires adding merchant API keys.</li>
-    <li><strong>Headless PDF Export:</strong> High-quality PDF export currently runs client-side via native browser print. A server-side Puppeteer microservice can optionally be attached if headless PDF generation is needed.</li>
-  </ul>
-
-  <h3>3.3 Roadmap Capabilities <span class="badge badge-info">Future Iterations</span></h3>
-  <ul>
-    <li>Social Single-Sign-On (Google One-Tap and LinkedIn OAuth).</li>
-    <li>Browser Extension for 1-click job scraping directly from LinkedIn, Indeed, and Naukri.</li>
-    <li>Recruiter &amp; Career Coach multi-seat collaborative workspaces.</li>
-  </ul>
-
-  <!-- FEATURE MATRIX TABLE -->
-  <h2>4. Core Feature &amp; Route Matrix</h2>
+  <!-- SECTION 3 -->
+  <h2>3. Detailed Feature Status: What is Built, Half-Done, and Pending</h2>
   <table>
     <thead>
       <tr>
-        <th>Domain</th>
-        <th>Backend Endpoint</th>
-        <th>Frontend Route</th>
-        <th>Status</th>
-        <th>Test Suite</th>
+        <th style="width: 22%;">Feature Area</th>
+        <th style="width: 18%;">Status</th>
+        <th style="width: 36%;">Working Details</th>
+        <th style="width: 24%;">Caveats / What is Needed</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td><strong>Authentication</strong></td>
-        <td><code>POST /api/v1/auth/login</code></td>
-        <td><code>/login</code>, <code>/signup</code></td>
-        <td><span class="badge badge-success">Production Ready</span></td>
-        <td>Vitest (7 tests)</td>
+        <td><strong>Authentication &amp; Users</strong></td>
+        <td><span class="status-working">&#x2705; 100% Working</span></td>
+        <td>Email/Password signup &amp; login, bcrypt hashing, JWT access + refresh tokens, protected routes via JwtAuthGuard, user profile editing, demo seed accounts.</td>
+        <td>Google One-Tap / LinkedIn OAuth are planned for later iterations.</td>
       </tr>
       <tr>
-        <td><strong>User Profiles</strong></td>
-        <td><code>GET/PUT /api/v1/profiles/me</code></td>
-        <td><code>/app/settings</code></td>
-        <td><span class="badge badge-success">Production Ready</span></td>
-        <td>Vitest + Bun</td>
+        <td><strong>Master Resume &amp; Versions</strong></td>
+        <td><span class="status-working">&#x2705; 100% Working</span></td>
+        <td>Multi-resume support with a designated "Master" profile. Optimistic concurrency locking (prevents race-condition overwrites). CRUD for Work Experience, Education, Skills, Projects, and Certifications.</td>
+        <td>Fully complete.</td>
       </tr>
       <tr>
-        <td><strong>Resume Management</strong></td>
-        <td><code>GET/POST /api/v1/resumes</code></td>
-        <td><code>/app/resumes</code></td>
-        <td><span class="badge badge-success">Production Ready</span></td>
-        <td>Vitest (4 tests) + Bun</td>
+        <td><strong>Resume Editor &amp; Canvas</strong></td>
+        <td><span class="status-working">&#x2705; 100% Working</span></td>
+        <td>Split-pane editor (form on the left, live ATS document preview on the right). 4 ATS-compliant templates (Classic ATS, Modern Minimal, Executive Serif, Tech Monospace). Action verb &amp; STAR/XYZ bullet optimizer. Print styles (@media print) formatted to 8.5&times;11 A4.</td>
+        <td>Currently exports via browser print-to-PDF (window.print()).</td>
       </tr>
       <tr>
-        <td><strong>Interactive Editor</strong></td>
-        <td><code>GET/PUT /api/v1/resumes/:id</code></td>
-        <td><code>/app/resumes/[id]</code></td>
-        <td><span class="badge badge-success">Production Ready</span></td>
-        <td>Bun (6 tests)</td>
+        <td><strong>Job Description Matcher</strong></td>
+        <td><span class="status-working">&#x2705; 100% Working</span></td>
+        <td>Paste any JD to parse company, title, and requirements. Generates hard skill match %, experience match %, education match %, and missing keyword audits. Strict evidence invariant: never hallucinates fake skills.</td>
+        <td>Uses offline deterministic engine by default unless a Gemini key is set.</td>
       </tr>
       <tr>
-        <td><strong>JD Match &amp; Grounding</strong></td>
-        <td><code>POST /api/v1/job-matching/analyze</code></td>
-        <td><code>/app/match</code></td>
-        <td><span class="badge badge-success">Production Ready</span></td>
-        <td>Vitest (3 tests) + Bun</td>
+        <td><strong>Applications Tracker</strong></td>
+        <td><span class="status-working">&#x2705; 100% Working</span></td>
+        <td>Kanban/table view of job applications (saved, applied, interviewing, offer, rejected). Links directly to the tailored resume version used.</td>
+        <td>Fully complete.</td>
       </tr>
       <tr>
-        <td><strong>Application Pipeline</strong></td>
-        <td><code>GET/POST /api/v1/applications</code></td>
-        <td><code>/app/applications</code></td>
-        <td><span class="badge badge-success">Production Ready</span></td>
-        <td>Vitest</td>
+        <td><strong>Credit Ledger &amp; Entitlements</strong></td>
+        <td><span class="status-working">&#x2705; 100% Working</span></td>
+        <td>Double-entry transaction ledger with idempotency keys to prevent duplicate deductions. Free tier grants 35 credits on signup; AI operations deduct credits (e.g., 5 credits per JD match).</td>
+        <td>Fully complete.</td>
       </tr>
       <tr>
-        <td><strong>Credit Ledger</strong></td>
-        <td><code>GET /api/v1/credits/balance</code></td>
-        <td><code>/app/settings</code></td>
-        <td><span class="badge badge-success">Production Ready</span></td>
-        <td>Vitest (6 tests)</td>
+        <td><strong>Payments &amp; Monetization</strong></td>
+        <td><span class="status-halfdone">&#x1F7E1; Half-Done (Sandbox ready)</span></td>
+        <td>Order creation, credit package pricing (Job Hunt Pack &#x20B9;399, Pro &#x20B9;799), order verification, and sandbox simulation are fully working in code.</td>
+        <td>Live payments require real production credentials (CASHFREE_APP_ID &amp; CASHFREE_SECRET_KEY) in backend/.env.</td>
       </tr>
       <tr>
-        <td><strong>Payments (Sandbox)</strong></td>
-        <td><code>POST /api/v1/payments/orders</code></td>
-        <td><code>/pricing</code></td>
-        <td><span class="badge badge-warning">Sandbox Active</span></td>
-        <td>Vitest (8 tests)</td>
+        <td><strong>AI Integration</strong></td>
+        <td><span class="status-halfdone">&#x1F7E1; Half-Done (Dual Provider)</span></td>
+        <td>Architecture has both GeminiProvider and MockDeterministicProvider. In local mode without an API key, it generates realistic, repeatable completions.</td>
+        <td>For real Gemini LLM requests, set GEMINI_API_KEY in backend/.env.</td>
       </tr>
       <tr>
-        <td><strong>Free ATS Checker</strong></td>
-        <td>N/A (Client Engine)</td>
-        <td><code>/tools/resume-checker</code></td>
-        <td><span class="badge badge-success">Production Ready</span></td>
-        <td>Bun (5 tests)</td>
+        <td><strong>Free Public SEO Tools</strong></td>
+        <td><span class="status-working">&#x2705; 100% Working</span></td>
+        <td>/tools/resume-checker allows anonymous users to test resume text against ATS rules, checking action verbs, contact details, and readability.</td>
+        <td>Fully complete.</td>
       </tr>
       <tr>
-        <td><strong>System Liveness</strong></td>
-        <td><code>GET /api/v1/health/live</code></td>
-        <td>N/A</td>
-        <td><span class="badge badge-success">Production Ready</span></td>
-        <td>Vitest (3 tests)</td>
+        <td><strong>Tests &amp; Quality Assurance</strong></td>
+        <td><span class="status-working">&#x2705; 100% Working</span></td>
+        <td>72 tests passing (42 backend unit/service tests in Vitest, 30 frontend logic &amp; document rendering tests in Bun).</td>
+        <td>Fully passing.</td>
       </tr>
     </tbody>
   </table>
 
-  <!-- TEST SUITE SUMMARY -->
-  <h2>5. Test Suite &amp; Quality Metrics</h2>
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div style="font-weight: 700; color: #0f172a; margin-bottom: 2px;">Backend (Vitest 4.1.11)</div>
-      <div style="font-size: 13pt; font-weight: 800; color: #16a34a;">42 Passed <span style="font-size: 8pt; color: #64748b; font-weight: 500;">(0 failed)</span></div>
-      <div style="font-size: 7.2pt; color: #64748b; margin-top: 2px;">Auth, Resumes, Credits, Payments, Health, AiService, JobMatching, ResumeParser, EnvValidation</div>
-    </div>
-    <div class="stat-card">
-      <div style="font-weight: 700; color: #0f172a; margin-bottom: 2px;">Frontend (Bun 1.3.2)</div>
-      <div style="font-size: 13pt; font-weight: 800; color: #16a34a;">30 Passed <span style="font-size: 8pt; color: #64748b; font-weight: 500;">(0 failed)</span></div>
-      <div style="font-size: 7.2pt; color: #64748b; margin-top: 2px;">ApiClient, JobMatching, ResumeEditor, Analytics, DocumentQuality, SEO</div>
-    </div>
-  </div>
-
-  <!-- CREDENTIALS CARD -->
-  <h2>6. Demo &amp; Inspection Credentials</h2>
-  <div class="credentials-card">
-    <div style="font-weight: 700; color: #0f172a; font-size: 8pt;">Pre-Configured Development Accounts</div>
-    <div class="credentials-grid">
-      <div class="credential-box">
-        <div style="font-weight: 600; color: #2563eb;">Standard Demo Account</div>
+  <!-- SECTION 4 -->
+  <h2>4. How to Log In &amp; Try It Right Now</h2>
+  <div class="login-box">
+    <p><strong>Open the App in your browser:</strong> URL: <a href="http://localhost:3000" style="color: #2563eb;">http://localhost:3000</a></p>
+    <div class="login-grid">
+      <div class="login-card">
+        <div style="font-weight: 700; color: #2563eb; margin-bottom: 2px;">Log In with Seeded Demo Account:</div>
         <div><strong>Email:</strong> <code>demo@hyperresume.ai</code></div>
         <div><strong>Password:</strong> <code>Password123!</code></div>
-        <div style="font-size: 7pt; color: #64748b; margin-top: 2px;">Includes: 35 credits + Full Stack Engineer Resume</div>
+        <div style="font-size: 7.2pt; color: #64748b; margin-top: 3px;">
+          <em>(Or create a brand-new account on <a href="http://localhost:3000/signup" style="color: #2563eb;">http://localhost:3000/signup</a> to receive 35 free credits immediately).</em>
+        </div>
       </div>
-      <div class="credential-box">
-        <div style="font-weight: 600; color: #059669;">Administrator Account</div>
+      <div class="login-card">
+        <div style="font-weight: 700; color: #059669; margin-bottom: 2px;">Admin Account (Health &amp; Metrics):</div>
         <div><strong>Email:</strong> <code>admin@hyperresume.ai</code></div>
         <div><strong>Password:</strong> <code>Password123!</code></div>
-        <div style="font-size: 7pt; color: #64748b; margin-top: 2px;">Includes: Admin role for platform observability</div>
+        <div style="font-size: 7.2pt; color: #64748b; margin-top: 3px;">
+          <em>Access elevated permissions and inspect system health.</em>
+        </div>
       </div>
     </div>
   </div>
