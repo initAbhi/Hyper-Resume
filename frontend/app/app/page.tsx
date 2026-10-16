@@ -147,7 +147,7 @@ export default function AppDashboardPage() {
             Active Guard
           </div>
           <span className="text-[11px] text-zinc-400">
-            Zero hallucinations
+            Verified experience
           </span>
         </div>
       </div>
@@ -382,7 +382,7 @@ export default function AppDashboardPage() {
       <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center justify-between text-xs text-zinc-500">
         <span className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-emerald-600" />
-          Zero AI hallucination invariant: Unverified skills or exaggerated metrics are never introduced.
+          Evidence-backed integrity: Only your verified career history and authentic metrics are highlighted.
         </span>
         <Badge variant="neutral">Verified Workspace</Badge>
       </div>

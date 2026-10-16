@@ -97,7 +97,7 @@ const FAQS = [
   },
   {
     q: 'Can I export my resume without paying?',
-    a: 'Yes! Unlike dishonest resume builders that let you type for an hour before asking for ₹1,999 to download your PDF, HyperResume allows unlimited, clean, watermark-free PDF exports on every tier, including Free Starter.',
+    a: 'Yes! Unlike platforms that hide PDF downloads behind paywalls after you spend time typing, HyperResume allows unlimited, clean, watermark-free PDF exports on every tier, including Free Starter.',
   },
   {
     q: 'Do purchased credits expire if I get hired quickly?',
@@ -226,7 +226,7 @@ export function PricingClient() {
       {/* Header */}
       <div className="text-center max-w-3xl mx-auto mb-16">
         <Badge variant="info" className="mb-3 px-3 py-1 font-semibold text-xs">
-          Honest Indian Career Tech
+          Transparent SaaS Pricing
         </Badge>
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
           Pay Only For Real Results. <br className="hidden sm:inline" />

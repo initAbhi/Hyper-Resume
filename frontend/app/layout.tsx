@@ -1,25 +1,29 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import './globals.css';
 import { Suspense } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { AuthProvider } from '@/lib/auth-context';
+import { ThemeProvider } from '@/lib/theme-context';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const inter = Inter({
+  variable: '--font-inter',
   subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: 'HyperResume — AI Job-Application Optimization Platform',
+  title: 'HyperResume — AI Resume Builder & ATS Optimizer',
   description:
-    'Turn your real experience into a stronger, truthful, job-specific application. Evidence-backed resume builder and ATS compatibility platform.',
+    'Build ATS-optimized resumes that land interviews. Match your experience to any job description, improve your bullets, and export clean PDFs. Trusted by thousands of job seekers.',
+  keywords: ['resume builder', 'ATS resume', 'AI resume', 'job application', 'resume optimizer', 'resume checker'],
+  openGraph: {
+    title: 'HyperResume — AI Resume Builder & ATS Optimizer',
+    description: 'Build ATS-optimized resumes that land interviews. Free resume checker & job matcher.',
+    type: 'website',
+    siteName: 'HyperResume',
+  },
 };
 
 export default function RootLayout({
@@ -30,16 +34,37 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${inter.variable} h-full`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans">
-        <AuthProvider>
-          <Suspense fallback={<header className="sticky top-0 z-50 w-full h-16 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80" />}>
-            <Navbar />
-          </Suspense>
-          <main className="flex-1 flex flex-col">{children}</main>
-          <Footer />
-        </AuthProvider>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){
+              try {
+                var t = localStorage.getItem('hyperresume-theme');
+                if (t === 'dark') {
+                  document.documentElement.classList.add('dark');
+                } else {
+                  document.documentElement.classList.remove('dark');
+                }
+              } catch(e) {}
+            })();`,
+          }}
+        />
+      </head>
+      <body className="min-h-full flex flex-col bg-white dark:bg-[#0a0a0a] text-zinc-900 dark:text-zinc-100 antialiased" style={{ fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif" }}>
+        <ThemeProvider>
+          <AuthProvider>
+            <Suspense fallback={<header className="sticky top-0 z-50 w-full h-16 border-b border-zinc-100 dark:border-zinc-900 bg-white/80 dark:bg-zinc-950/80" />}>
+              <Navbar />
+            </Suspense>
+            <main className="flex-1 flex flex-col">{children}</main>
+            <Suspense fallback={null}>
+              <Footer />
+            </Suspense>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

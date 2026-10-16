@@ -112,7 +112,7 @@ export default function ApplicationsPage() {
             Job Application Pipeline
           </h1>
           <p className="text-sm text-zinc-500 mt-1">
-            Track which tailored resume variant was submitted to each role to keep your job search organized and honest.
+            Track which tailored resume variant was submitted to each role to keep your job search organized and interview-ready.
           </p>
         </div>
         <div>

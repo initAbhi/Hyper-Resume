@@ -45,7 +45,7 @@ export class ResumeAnalysis {
   resume!: Resume;
 
   @Column({ type: 'varchar', length: 50, name: 'analysis_type' })
-  analysisType!: 'ats_check' | 'comprehensive_audit';
+  analysisType!: 'ats_check' | 'comprehensive_audit' | 'ats_audit';
 
   @Column({ type: 'int' })
   score!: number;

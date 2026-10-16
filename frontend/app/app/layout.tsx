@@ -16,6 +16,7 @@ import {
   User as UserIcon,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useAuth } from '@/lib/auth-context';
 
 function AppLayoutInner({ children }: { children: React.ReactNode }) {
@@ -187,6 +188,8 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
               </Badge>
             </Link>
 
+            <ThemeToggle id="workspace-theme-toggle" />
+
             <Link
               href="/app/settings"
               className="p-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
@@ -259,6 +262,10 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                 <div className="flex items-center justify-between text-xs px-1">
                   <span className="text-zinc-500 font-medium">Credits Available</span>
                   <span className="font-bold text-blue-600 dark:text-blue-400">{creditBalance}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs px-1">
+                  <span className="text-zinc-500 font-medium">Appearance</span>
+                  <ThemeToggle id="workspace-drawer-theme-toggle" showLabel />
                 </div>
                 <button
                   onClick={() => {

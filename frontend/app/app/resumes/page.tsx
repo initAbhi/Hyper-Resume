@@ -48,7 +48,12 @@ export default function ResumesListPage() {
     apiClient
       .listResumes()
       .then((data) => {
-        if (isMounted) setResumes(data);
+        if (isMounted) {
+          const safeResumes = Array.isArray(data)
+            ? data
+            : ((data as unknown) as { items: Resume[] })?.items || [];
+          setResumes(safeResumes);
+        }
       })
       .catch((err: unknown) => {
         if (isMounted) {

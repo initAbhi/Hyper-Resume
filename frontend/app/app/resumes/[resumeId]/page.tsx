@@ -182,7 +182,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
     setIsAnalyzing(true);
     try {
       const result = await apiClient.runAnalysis(resumeId, {
-        analysisType: 'ats_audit',
+        analysisType: 'ats_check',
       });
       setAnalysis(result);
     } catch (err: unknown) {
@@ -1112,13 +1112,13 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                     }`}
                   >
                     {content.contact.email && <span>{content.contact.email}</span>}
-                    {content.contact.phone && <span>&bull; {content.contact.phone}</span>}
-                    {content.contact.location && <span>&bull; {content.contact.location}</span>}
+                    {content.contact.phone && <span>• {content.contact.phone}</span>}
+                    {content.contact.location && <span>• {content.contact.location}</span>}
                     {content.contact.linkedinUrl && (
-                      <span>&bull; {content.contact.linkedinUrl.replace(/^https?:\/\//, '')}</span>
+                      <span>• {content.contact.linkedinUrl.replace(/^https?:\/\//, '')}</span>
                     )}
                     {content.contact.githubUrl && (
-                      <span>&bull; {content.contact.githubUrl.replace(/^https?:\/\//, '')}</span>
+                      <span>• {content.contact.githubUrl.replace(/^https?:\/\//, '')}</span>
                     )}
                   </div>
                 </div>
@@ -1205,7 +1205,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                       </div>
                     ) : (
                       <p className="text-[10px] text-zinc-800 leading-relaxed">
-                        {content.skills.map((s) => s.name).join(' &bull; ')}
+                        {content.skills.map((s) => s.name).join(' • ')}
                       </p>
                     )}
                   </div>

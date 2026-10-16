@@ -98,7 +98,7 @@ export async function runSeeds() {
         {
           name: 'HyperResume Platform',
           description: 'Privacy-centric ATS resume optimization engine with grounded evidence validation.',
-          highlights: ['Built with Next.js 15, NestJS, and PostgreSQL', 'Zero hallucination parsing'],
+          highlights: ['Built with Next.js 15, NestJS, and PostgreSQL', 'Evidence-based parsing'],
           url: 'https://github.com/initAbhi/Hyper-Resume',
           skillsUsed: ['TypeScript', 'Next.js', 'NestJS', 'TypeORM', 'PostgreSQL'],
         },

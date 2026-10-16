@@ -313,7 +313,7 @@ export default async function RoleExamplePage({
           Tailor Your {data.title} Resume Now
         </h3>
         <p className="text-sm text-zinc-300 max-w-md mx-auto">
-          Audit your existing resume against target job descriptions. Zero hallucinated skills.
+          Audit your existing resume against target job descriptions with 100% verified evidence.
         </p>
         <Link href="/tools/resume-checker">
           <Button variant="primary" size="md" className="shadow-lg">

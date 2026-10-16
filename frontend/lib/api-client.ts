@@ -576,7 +576,7 @@ export class ApiClient {
 
   async runAnalysis(
     resumeId: string,
-    dto: { analysisType: 'ats_audit' | 'job_match' | 'bullet_improve'; jobDescriptionId?: string },
+    dto: { analysisType: 'ats_check' | 'ats_audit' | 'comprehensive_audit' | 'job_match' | 'bullet_improve'; jobDescriptionId?: string },
   ) {
     const res = await this.request<ResumeAnalysis>(`/resumes/${resumeId}/analyses`, {
       method: 'POST',
@@ -633,17 +633,86 @@ export class ApiClient {
   }
 
   // --- Job Matching Endpoints ---
+  private normalizeJobMatch(data: any): JobMatch {
+    if (!data) return data;
+    const score = Number(data.score ?? data.overallScore ?? 0);
+    
+    // Check if already in frontend analysis format
+    if (data.analysis && data.analysis.matchedRequirements) {
+      return {
+        ...data,
+        score,
+      };
+    }
+
+    const rawReqs = Array.isArray(data.requirementsAnalysis)
+      ? data.requirementsAnalysis
+      : Array.isArray(data.analysis?.matchedRequirements)
+      ? data.analysis.matchedRequirements
+      : [];
+
+    const matchedRequirements = rawReqs.map((r: any) => ({
+      requirementId: r.requirementId || r.id || 'req',
+      status: r.status || 'needs_confirmation',
+      confidence: Number(r.confidence ?? 80),
+      evidenceQuotes: Array.isArray(r.evidenceQuotes) ? r.evidenceQuotes : [],
+      explanation: r.explanation || r.text || '',
+      suggestedAction: r.suggestedAction || 'Review alignment with job description.',
+    }));
+
+    // Extract missing keywords from unevidenced or needing confirmation items
+    const missingKeywords: string[] = [];
+    rawReqs.forEach((r: any) => {
+      if (r.status === 'not_evidenced' || r.status === 'needs_confirmation') {
+        if (Array.isArray(r.keywords) && r.keywords.length > 0) {
+          missingKeywords.push(...r.keywords);
+        } else if (r.text) {
+          // Extract keywords or use the requirement text
+          missingKeywords.push(r.text);
+        }
+      }
+    });
+
+    const subScores = {
+      requiredSkills: Number(data.scoreComponents?.requiredSkillsScore ?? data.analysis?.subScores?.requiredSkills ?? 85),
+      preferredSkills: Number(data.scoreComponents?.preferredSkillsScore ?? data.analysis?.subScores?.preferredSkills ?? 75),
+      experienceAlignment: Number(data.scoreComponents?.experienceScore ?? data.analysis?.subScores?.experienceAlignment ?? 88),
+      educationAlignment: Number(data.scoreComponents?.responsibilityScore ?? data.analysis?.subScores?.educationAlignment ?? 95),
+      actionMetricsDensity: Number(data.scoreComponents?.formattingScore ?? data.analysis?.subScores?.actionMetricsDensity ?? 80),
+    };
+
+    return {
+      id: data.id,
+      userId: data.userId,
+      resumeId: data.resumeId,
+      jobDescriptionId: data.jobDescriptionId,
+      score,
+      tailoredVersionId: data.tailoredVersionId,
+      createdAt: data.createdAt,
+      resume: data.resume,
+      jobDescription: data.jobDescription,
+      analysis: {
+        overallScore: score,
+        subScores,
+        summary: data.recommendations?.[0] || 'Match analysis completed.',
+        matchedRequirements,
+        missingKeywords: Array.from(new Set(missingKeywords)),
+        recommendedImprovements: Array.isArray(data.recommendations) ? data.recommendations : [],
+      },
+    };
+  }
+
   async createJobMatch(dto: { resumeId: string; jobDescriptionId: string }) {
-    const res = await this.request<JobMatch>('/job-matches', {
+    const res = await this.request<any>('/job-matches', {
       method: 'POST',
       body: JSON.stringify(dto),
     });
-    return res.data;
+    return this.normalizeJobMatch(res.data);
   }
 
   async getJobMatch(matchId: string) {
-    const res = await this.request<JobMatch>(`/job-matches/${matchId}`);
-    return res.data;
+    const res = await this.request<any>(`/job-matches/${matchId}`);
+    return this.normalizeJobMatch(res.data);
   }
 
   // --- Applications Endpoints ---

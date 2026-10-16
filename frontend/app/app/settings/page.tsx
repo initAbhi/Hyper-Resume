@@ -34,9 +34,11 @@ export default function SettingsPage() {
           apiClient.getMyProfile().catch(() => null),
           apiClient.getCreditHistory().catch(() => []),
         ]);
-        if (!isMounted) return;
         if (profData) setProfile(profData);
-        setCreditsHistory(historyData);
+        const safeHistory = Array.isArray(historyData)
+          ? historyData
+          : ((historyData as unknown) as { items?: CreditLedgerItem[] })?.items || [];
+        setCreditsHistory(safeHistory);
       } catch (err: unknown) {
         if (!isMounted) return;
         setErrorMessage(
@@ -251,11 +253,11 @@ export default function SettingsPage() {
             <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
               Transaction History
             </span>
-            {creditsHistory.length === 0 ? (
+            {(Array.isArray(creditsHistory) ? creditsHistory : []).length === 0 ? (
               <p className="text-xs text-zinc-400">No credit ledger events recorded yet.</p>
             ) : (
               <div className="divide-y divide-zinc-100 dark:divide-zinc-800 text-xs">
-                {creditsHistory.slice(0, 5).map((item) => (
+                {(Array.isArray(creditsHistory) ? creditsHistory : []).slice(0, 5).map((item) => (
                   <div key={item.id} className="py-2.5 flex items-center justify-between">
                     <div>
                       <div className="font-semibold text-zinc-800 dark:text-zinc-200">

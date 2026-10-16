@@ -70,8 +70,8 @@ function JobMatchInner() {
     };
   }, [preselectedResumeId, selectedResumeId]);
 
-  const handleStartAnalysis = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleStartAnalysis = async (e?: React.FormEvent | React.MouseEvent) => {
+    e?.preventDefault();
     if (!selectedResumeId) {
       setErrorMessage('Please select a resume profile from your workspace.');
       return;
@@ -150,10 +150,10 @@ function JobMatchInner() {
         <ShieldCheck className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
         <div className="text-xs sm:text-sm">
           <span className="font-semibold text-blue-950 dark:text-blue-200">
-            Zero Hallucination Compatibility Engine:{' '}
+            Evidence-Based Compatibility Engine:{' '}
           </span>
           <span className="text-blue-900/90 dark:text-blue-300">
-            HyperResume strictly validates your experience against target requirements. Unverified skills or exaggerated metrics are flagged as missing rather than falsified.
+            HyperResume accurately validates your experience against target role requirements. Unverified skills or missing qualifications are flagged transparently for your review.
           </span>
         </div>
       </div>
@@ -260,7 +260,9 @@ function JobMatchInner() {
 
           <div className="flex justify-end pt-1">
             <Button
+              id="run-match-button"
               type="submit"
+              onClick={handleStartAnalysis}
               variant="primary"
               size="sm"
               isLoading={isAnalyzing}
@@ -275,13 +277,15 @@ function JobMatchInner() {
       </form>
 
       {/* Completed Match Report */}
-      {completedMatch && completedMatch.analysis && (() => {
-        const reqs = completedMatch.analysis.matchedRequirements || [];
-        const supportedCount = reqs.filter((r) => r.status === 'supported').length;
-        const needsCount = reqs.filter((r) => r.status === 'needs_confirmation').length;
-        const gapsCount = reqs.filter((r) => r.status === 'not_evidenced').length;
+      {completedMatch && (() => {
+        const analysis = completedMatch.analysis || (completedMatch as any);
+        const reqs = analysis.matchedRequirements || (completedMatch as any).requirementsAnalysis || [];
+        const score = typeof completedMatch.score === 'number' ? completedMatch.score : Number((completedMatch as any).overallScore || 0);
+        const supportedCount = reqs.filter((r: any) => r.status === 'supported').length;
+        const needsCount = reqs.filter((r: any) => r.status === 'needs_confirmation').length;
+        const gapsCount = reqs.filter((r: any) => r.status === 'not_evidenced').length;
 
-        const filteredReqs = reqs.filter((r) => {
+        const filteredReqs = reqs.filter((r: any) => {
           if (requirementFilter === 'supported') return r.status === 'supported';
           if (requirementFilter === 'needs_confirmation') return r.status === 'needs_confirmation';
           if (requirementFilter === 'not_evidenced') return r.status === 'not_evidenced';
@@ -289,22 +293,35 @@ function JobMatchInner() {
         });
 
         const scoreColor =
-          completedMatch.score >= 80
+          score >= 80
             ? 'text-emerald-600 dark:text-emerald-400'
-            : completedMatch.score >= 60
+            : score >= 60
             ? 'text-amber-600 dark:text-amber-400'
             : 'text-rose-600 dark:text-rose-400';
 
+        const missingKws =
+          analysis.missingKeywords ||
+          (reqs as any[])
+            .filter((r: any) => r.status === 'not_evidenced' || r.status === 'needs_confirmation')
+            .flatMap((r: any) => r.keywords || (r.text ? [r.text] : []))
+            .filter(Boolean);
+
         const handleCopyKeywords = () => {
-          const kws = completedMatch.analysis.missingKeywords || [];
-          if (kws.length === 0) return;
-          navigator.clipboard.writeText(kws.join(', '));
+          if (missingKws.length === 0) return;
+          navigator.clipboard.writeText(missingKws.join(', '));
           setCopiedKeywords(true);
           setTimeout(() => setCopiedKeywords(false), 2000);
         };
 
+        const subScores = analysis.subScores || {
+          requiredSkills: (completedMatch as any).scoreComponents?.requiredSkillsScore ?? 85,
+          experienceAlignment: (completedMatch as any).scoreComponents?.experienceScore ?? 88,
+          educationAlignment: (completedMatch as any).scoreComponents?.responsibilityScore ?? 90,
+          actionMetricsDensity: (completedMatch as any).scoreComponents?.formattingScore ?? 80,
+        };
+
         return (
-          <div className="p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-6 shadow-sm">
+          <div id="match-report-container" className="p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-6 shadow-sm">
             {/* Header Score Overview */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-200 dark:border-zinc-800">
               <div>
@@ -314,16 +331,16 @@ function JobMatchInner() {
                   </h3>
                   <Badge
                     variant={
-                      completedMatch.score >= 80
+                      score >= 80
                         ? 'success'
-                        : completedMatch.score >= 60
+                        : score >= 60
                         ? 'neutral'
                         : 'destructive'
                     }
                   >
-                    {completedMatch.score >= 80
+                    {score >= 80
                       ? 'Strong Alignment'
-                      : completedMatch.score >= 60
+                      : score >= 60
                       ? 'Tailoring Advised'
                       : 'Significant Gaps'}
                   </Badge>
@@ -336,7 +353,7 @@ function JobMatchInner() {
               <div className="flex items-center gap-4">
                 <div className="text-right">
                   <div className={`text-3xl font-black ${scoreColor}`}>
-                    {completedMatch.score}%
+                    {score}%
                   </div>
                   <div className="text-[10px] text-zinc-400 uppercase font-semibold">
                     Overall Compatibility
@@ -359,22 +376,22 @@ function JobMatchInner() {
               {[
                 {
                   label: 'Required Skills',
-                  val: completedMatch.analysis.subScores?.requiredSkills ?? 85,
+                  val: subScores.requiredSkills ?? 85,
                   color: 'bg-blue-600',
                 },
                 {
                   label: 'Experience Align',
-                  val: completedMatch.analysis.subScores?.experienceAlignment ?? 90,
+                  val: subScores.experienceAlignment ?? 90,
                   color: 'bg-emerald-600',
                 },
                 {
                   label: 'Education Align',
-                  val: completedMatch.analysis.subScores?.educationAlignment ?? 100,
+                  val: subScores.educationAlignment ?? 100,
                   color: 'bg-indigo-600',
                 },
                 {
                   label: 'Metrics Density',
-                  val: completedMatch.analysis.subScores?.actionMetricsDensity ?? 80,
+                  val: subScores.actionMetricsDensity ?? 80,
                   color: 'bg-amber-600',
                 },
               ].map((sub, sIdx) => (
@@ -499,7 +516,7 @@ function JobMatchInner() {
             </div>
 
             {/* Missing Keywords Notice */}
-            {(completedMatch.analysis.missingKeywords || []).length > 0 && (
+            {missingKws.length > 0 && (
               <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40 text-xs space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -521,7 +538,7 @@ function JobMatchInner() {
                   </Button>
                 </div>
                 <div className="flex flex-wrap gap-1.5 pt-1">
-                  {completedMatch.analysis.missingKeywords.map((kw, idx) => (
+                  {missingKws.map((kw: string, idx: number) => (
                     <span
                       key={idx}
                       className="px-2.5 py-1 rounded-md text-[11px] font-mono bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 shadow-2xs"
