@@ -24,13 +24,25 @@ import type { User } from '../users/entities/user.entity.js';
 export class ApplicationsController {
   constructor(private readonly applicationsService: ApplicationsService) {}
 
+  private mapApplication(app: any) {
+    if (!app) return app;
+    return {
+      ...app,
+      companyName: app.company,
+      jobTitle: app.role,
+      resumeId: app.resumeVersionId,
+      applicationUrl: app.jobUrl,
+    };
+  }
+
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async create(
     @CurrentUser() user: User,
     @Body() dto: CreateApplicationDto,
   ) {
-    return this.applicationsService.createApplication(user.id, dto);
+    const created = await this.applicationsService.createApplication(user.id, dto);
+    return this.mapApplication(created);
   }
 
   @Get()
@@ -38,7 +50,11 @@ export class ApplicationsController {
     @CurrentUser() user: User,
     @Query() pagination: PaginationQueryDto,
   ) {
-    return this.applicationsService.listApplications(user.id, pagination);
+    const result = await this.applicationsService.listApplications(user.id, pagination);
+    return {
+      ...result,
+      items: (result.items || []).map((app) => this.mapApplication(app)),
+    };
   }
 
   @Get(':id')
@@ -46,7 +62,8 @@ export class ApplicationsController {
     @CurrentUser() user: User,
     @Param('id') id: string,
   ) {
-    return this.applicationsService.getApplication(user.id, id);
+    const app = await this.applicationsService.getApplication(user.id, id);
+    return this.mapApplication(app);
   }
 
   @Patch(':id')
@@ -55,7 +72,8 @@ export class ApplicationsController {
     @Param('id') id: string,
     @Body() dto: UpdateApplicationDto,
   ) {
-    return this.applicationsService.updateApplication(user.id, id, dto);
+    const updated = await this.applicationsService.updateApplication(user.id, id, dto);
+    return this.mapApplication(updated);
   }
 
   @Delete(':id')

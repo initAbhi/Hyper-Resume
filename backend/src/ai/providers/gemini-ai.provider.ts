@@ -22,11 +22,23 @@ export class GeminiAiProvider implements AiProvider {
   }
 
   async parseResumeText(text: string): Promise<ParsedProfileDraft> {
-    const prompt = `You are a resume parsing engine. Extract the candidate's profile into JSON.
-CRITICAL INVARIANT: DO NOT invent or fabricate any details, employers, dates, metrics, or credentials. Only extract what is explicitly written in the resume text.
+    const prompt = `You are an expert ATS resume parsing engine. Extract the candidate's complete profile into JSON.
+CRITICAL INVARIANTS:
+1. DO NOT invent or fabricate any details, employers, dates, metrics, or credentials. Only extract what is explicitly written in the resume text.
+2. Extract the candidate's full name, email, phone number, location, and social profile links (LinkedIn, GitHub, portfolio) into the "contact" object.
+3. Extract all work experience positions, bullet points, skills, education, and projects thoroughly without truncation.
 
 Return JSON in this shape:
 {
+  "contact": {
+    "fullName": string,
+    "email": string,
+    "phone": string,
+    "location": string,
+    "linkedinUrl": string,
+    "githubUrl": string,
+    "websiteUrl": string
+  },
   "headline": string,
   "summary": string,
   "location": string,

@@ -27,6 +27,7 @@ import {
   ResumeVersion,
   ApiError,
 } from '@/lib/api-client';
+import { ScoreMeter } from '@/components/resumes/ScoreMeter';
 
 interface ResumeEditorPageProps {
   params: Promise<{ resumeId: string }>;
@@ -77,6 +78,54 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
   const [isVersionDrawerOpen, setIsVersionDrawerOpen] = useState(false);
   const [versionNote, setVersionNote] = useState('');
   const [isSavingVersion, setIsSavingVersion] = useState(false);
+
+  // Live ATS Score Calculator (mirrors backend scoring engine)
+  const liveScore = React.useMemo(() => {
+    if (!content) return 0;
+    let score = 100;
+    
+    // Check essential sections
+    if (!content.experience || content.experience.length === 0) score -= 20;
+    if (!content.education || content.education.length === 0) score -= 20;
+    if (!content.skills || content.skills.length === 0) score -= 20;
+
+    // Contact completeness
+    if (!content.contact?.email) score -= 10;
+    if (!content.headline) score -= 10;
+
+    // Bullets metrics and action verbs density
+    const allBullets: string[] = [];
+    (content.experience || []).forEach((exp) => {
+      (exp.bullets || []).forEach((b) => allBullets.push(b));
+    });
+
+    const actionVerbsList = [
+      'architected', 'built', 'spearheaded', 'led', 'designed', 'developed',
+      'engineered', 'optimized', 'reduced', 'increased', 'scaled', 'implemented',
+      'refactored', 'migrated', 'automated', 'streamlined', 'cut', 'delivered',
+    ];
+
+    if (allBullets.length > 0) {
+      let metricsCount = 0;
+      let actionVerbsCount = 0;
+      allBullets.forEach((bullet) => {
+        const lower = bullet.toLowerCase();
+        if (actionVerbsList.some((v) => lower.startsWith(v) || lower.includes(` ${v} `))) actionVerbsCount++;
+        if (/\b\d+(%|\+)?\b|\b\$\d+|\b[0-9]+x\b/i.test(bullet)) metricsCount++;
+      });
+
+      const metricRatio = metricsCount / allBullets.length;
+      if (metricRatio < 0.4) score -= 15;
+      else if (metricRatio < 0.6) score -= 5;
+
+      const verbRatio = actionVerbsCount / allBullets.length;
+      if (verbRatio < 0.5) score -= 10;
+    } else {
+      score -= 30;
+    }
+
+    return Math.max(10, Math.min(100, score));
+  }, [content]);
 
   // 1. Initial Data Fetch
   useEffect(() => {
@@ -279,14 +328,14 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
   }
 
   return (
-    <div className="space-y-4 max-w-[1600px] mx-auto">
+    <div className="space-y-4 max-w-[1600px] mx-auto print:space-y-0 print:p-0 print:m-0 print:max-w-none">
       {errorMessage && (
         <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs">
           {errorMessage}
         </div>
       )}
       {/* Top Action Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-zinc-200 dark:border-zinc-800">
+      <div className="print:hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-zinc-200 dark:border-zinc-800">
         <div className="flex items-center gap-3">
           <Link
             href="/app/resumes"
@@ -352,8 +401,9 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
               className="text-xs py-1.5 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 font-medium focus:ring-2 focus:ring-blue-600"
             >
               <option value="classic-ats">Classic Single-Column (Rezi ATS)</option>
-              <option value="clean-modern">Clean Modern (Teal Minimal)</option>
-              <option value="executive">Executive Serif (Leadership)</option>
+              <option value="compact-ats">Compact High-Density (1-Page ATS)</option>
+              <option value="clean-modern">Clean Modern Tech</option>
+              <option value="executive">Executive Serif (Ivy League)</option>
               <option value="technical-ats">Technical Monospace (Engineering)</option>
             </select>
           </div>
@@ -394,7 +444,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
       </div>
 
       {/* Mobile Sticky Segmented Navigation (< lg) */}
-      <div className="lg:hidden sticky top-0 z-20 pb-3 pt-1 bg-zinc-50/95 dark:bg-zinc-950/95 backdrop-blur-xs">
+      <div className="print:hidden lg:hidden sticky top-0 z-20 pb-3 pt-1 bg-zinc-50/95 dark:bg-zinc-950/95 backdrop-blur-xs">
         <div className="grid grid-cols-3 p-1 rounded-xl bg-zinc-200/80 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 text-xs shadow-inner">
           <button
             onClick={() => setMobileTab('editor')}
@@ -434,7 +484,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
 
       {/* Conflict Resolution Banner */}
       {hasConflict && (
-        <div className="p-4 rounded-xl border border-rose-300 bg-rose-50 dark:bg-rose-950/40 text-rose-900 dark:text-rose-200 flex items-center justify-between text-xs">
+        <div className="print:hidden p-4 rounded-xl border border-rose-300 bg-rose-50 dark:bg-rose-950/40 text-rose-900 dark:text-rose-200 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
             <span>
@@ -463,9 +513,9 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
       )}
 
       {/* Main 3-Panel Desktop Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* PANEL 1: Left Section Editor (5 cols) */}
-        <div className={`lg:col-span-5 space-y-4 ${mobileTab !== 'editor' ? 'hidden lg:block' : ''}`}>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start print:block print:w-full print:m-0 print:p-0">
+        {/* PANEL 1: Left Section Editor (4 or 5 cols depending on AI panel) - hidden on print */}
+        <div className={`print:hidden ${isAiPanelOpen ? 'lg:col-span-4 xl:col-span-4' : 'lg:col-span-5'} space-y-4 ${mobileTab !== 'editor' ? 'hidden lg:block' : ''}`}>
           {/* Section Navigation Tabs */}
           <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 overflow-x-auto text-xs font-medium">
             {(
@@ -1039,15 +1089,15 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
           </div>
         </div>
 
-        {/* PANEL 2: Centre Live ATS Preview (4 or 7 cols depending on AI panel) */}
+        {/* PANEL 2: Centre Live ATS Preview (expanded when AI panel is closed) */}
         <div
           className={`${
-            isAiPanelOpen ? 'lg:col-span-4' : 'lg:col-span-7'
-          } space-y-4 ${mobileTab !== 'preview' ? 'hidden lg:block' : ''}`}
+            isAiPanelOpen ? 'lg:col-span-8 xl:col-span-5' : 'lg:col-span-7'
+          } space-y-4 print:space-y-0 print:p-0 print:m-0 print:w-full print:block ${mobileTab !== 'preview' ? 'hidden lg:block' : ''}`}
         >
           {/* Document Canvas Preview Card */}
-          <div className="p-4 sm:p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100/60 dark:bg-zinc-900/60 shadow-xs">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800 text-xs text-zinc-500 mb-4">
+          <div className="p-4 sm:p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100/60 dark:bg-zinc-900/60 shadow-xs print:p-0 print:border-none print:shadow-none print:bg-transparent">
+            <div className="print:hidden flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800 text-xs text-zinc-500 mb-4">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-zinc-800 dark:text-zinc-200">
                   ATS Document Canvas
@@ -1068,23 +1118,27 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
             </div>
 
             {/* Scrollable Container on Mobile */}
-            <div className="overflow-x-auto pb-2">
+            <div className="overflow-x-auto pb-2 print:overflow-visible print:pb-0">
               {/* The Actual Rendered ATS Document */}
               <div
                 id="resume-document-print"
-                className={`resume-paper-canvas p-6 sm:p-8 bg-white text-zinc-950 rounded-lg min-w-[340px] max-w-[760px] mx-auto leading-relaxed ${
-                  templateKey === 'technical-ats'
-                    ? 'font-mono text-[10.5px]'
+                className={`resume-paper-canvas bg-white text-zinc-950 rounded-lg min-w-[340px] max-w-[760px] mx-auto leading-relaxed ${
+                  templateKey === 'compact-ats'
+                    ? 'p-4 sm:p-6 text-[10px] font-sans'
+                    : templateKey === 'technical-ats'
+                    ? 'p-6 sm:p-8 font-mono text-[10.5px]'
                     : templateKey === 'executive'
-                    ? 'font-serif text-[11px]'
-                    : 'font-sans text-[11px]'
+                    ? 'p-6 sm:p-8 font-serif text-[11px]'
+                    : 'p-6 sm:p-8 font-sans text-[11px]'
                 }`}
               >
                 {/* Header Section */}
                 <div
                   className={`resume-section-header pb-2 mb-3 ${
                     templateKey === 'clean-modern'
-                      ? 'text-left border-b border-zinc-200'
+                      ? 'text-left border-b-2 border-blue-600'
+                      : templateKey === 'compact-ats'
+                      ? 'text-center border-b border-zinc-900 pb-1.5 mb-2'
                       : 'text-center border-b-2 border-zinc-900'
                   }`}
                 >
@@ -1092,6 +1146,8 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                     className={`font-black text-zinc-950 uppercase ${
                       templateKey === 'executive'
                         ? 'text-lg tracking-wider'
+                        : templateKey === 'compact-ats'
+                        ? 'text-sm tracking-wider font-extrabold'
                         : templateKey === 'classic-ats'
                         ? 'text-base tracking-widest'
                         : 'text-base tracking-tight font-extrabold'
@@ -1264,19 +1320,50 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
           </div>
         </div>
 
-        {/* PANEL 3: Right AI Recommendations & Findings (3 cols) */}
+        {/* PANEL 3: Right AI Recommendations, Live Meter & Findings - hidden on print */}
         {isAiPanelOpen && (
           <div
-            className={`lg:col-span-3 space-y-4 ${
+            className={`print:hidden lg:col-span-4 xl:col-span-3 space-y-4 ${
               mobileTab !== 'ai' ? 'hidden lg:block' : ''
             }`}
           >
-            <div className="p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-4 shadow-sm">
+            {/* Live ATS Score Meter Card (Rezi-Style) */}
+            <div className="p-4 sm:p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm relative overflow-hidden">
+              <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
+                    Live Resume Score
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAiPanelOpen(false)}
+                  className="p-1 rounded-md text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                  title="Close AI Panel"
+                  aria-label="Close AI Panel"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Live Semi-Circle Meter */}
+              <div className="pt-3 pb-1">
+                <ScoreMeter score={analysis?.score ?? liveScore} />
+              </div>
+
+              <p className="text-[11px] text-zinc-500 text-center mt-1">
+                Real-time ATS parsing audit based on metric density, active verbs, and section completeness.
+              </p>
+            </div>
+
+            {/* Deep AI Audit & Radar Card */}
+            <div className="p-4 sm:p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-4 shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-blue-600" />
                   <h3 className="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
-                    AI Audit & Radar
+                    Detailed AI Audit
                   </h3>
                 </div>
                 <Button
@@ -1284,51 +1371,39 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                   size="sm"
                   onClick={handleRunAudit}
                   isLoading={isAnalyzing}
-                  className="text-xs py-1 px-2"
+                  className="text-xs py-1 px-2.5 font-semibold"
                 >
-                  Run Audit
+                  Run Deep Audit
                 </Button>
               </div>
 
               {analysis ? (
                 <div className="space-y-4">
-                  <div className="p-3 rounded-xl bg-blue-50/50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 flex items-center justify-between">
-                    <div>
-                      <div className="text-[11px] font-medium text-zinc-500">ATS Structural Score</div>
-                      <div className="text-2xl font-black text-blue-600 dark:text-blue-400">
-                        {analysis.score}/100
-                      </div>
-                    </div>
-                    <Badge variant={analysis.score >= 80 ? 'success' : 'neutral'}>
-                      {analysis.score >= 80 ? 'ATS Ready' : 'Optimization Advised'}
-                    </Badge>
-                  </div>
-
                   <div className="grid grid-cols-2 gap-2 text-center text-xs">
-                    <div className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-                      <div className="font-bold text-zinc-900 dark:text-zinc-100">
+                    <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60">
+                      <div className="text-lg font-black text-zinc-900 dark:text-zinc-100">
                         {analysis.findings.metricsCount}
                       </div>
-                      <div className="text-[10px] text-zinc-500">Quantified Outcomes</div>
+                      <div className="text-[10px] text-zinc-500 font-medium">Quantified Outcomes</div>
                     </div>
-                    <div className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-                      <div className="font-bold text-zinc-900 dark:text-zinc-100">
+                    <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60">
+                      <div className="text-lg font-black text-zinc-900 dark:text-zinc-100">
                         {analysis.findings.actionVerbsCount}
                       </div>
-                      <div className="text-[10px] text-zinc-500">Action Verbs</div>
+                      <div className="text-[10px] text-zinc-500 font-medium">Action Verbs</div>
                     </div>
                   </div>
 
                   {/* Recommendations */}
                   <div className="space-y-2">
                     <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
-                      Recommendations
+                      Targeted Improvements
                     </span>
                     <ul className="space-y-1.5 text-xs">
                       {analysis.recommendations.map((rec, rIdx) => (
                         <li
                           key={rIdx}
-                          className="p-2 rounded-lg bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 text-amber-900 dark:text-amber-200 text-[11px] leading-snug"
+                          className="p-2.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 text-amber-900 dark:text-amber-200 text-[11px] leading-relaxed"
                         >
                           {rec}
                         </li>
@@ -1337,24 +1412,24 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-6 text-xs text-zinc-500">
-                  <Sparkles className="w-6 h-6 mx-auto mb-2 text-blue-500" />
-                  <p>Click <strong>Run Audit</strong> to evaluate metric density, action verbs, and ATS compliance.</p>
+                <div className="text-center py-5 text-xs text-zinc-500">
+                  <Sparkles className="w-5 h-5 mx-auto mb-2 text-blue-500" />
+                  <p>Run a deep audit to inspect individual bullet points for STAR/XYZ formula compliance.</p>
                 </div>
               )}
             </div>
 
             {/* Quick Match JD Link */}
-            <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs space-y-2">
+            <div className="p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs space-y-2 shadow-sm">
               <span className="font-bold text-zinc-800 dark:text-zinc-200">
                 Targeting a Specific Role?
               </span>
-              <p className="text-zinc-500 text-[11px]">
+              <p className="text-zinc-500 text-[11px] leading-relaxed">
                 Run our 5-dimension Job Match to extract required skills and calculate evidence alignment.
               </p>
               <Link
                 href={`/app/match?resumeId=${resumeId}`}
-                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"
+                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors shadow-xs"
               >
                 Match with Job Description
               </Link>

@@ -20,9 +20,11 @@ import {
   FileCheck,
 } from 'lucide-react';
 import { apiClient, Resume, ParsedProfileDraft, ResumeContent } from '@/lib/api-client';
+import { useAuth } from '@/lib/auth-context';
 
 export default function ResumesListPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -155,9 +157,13 @@ export default function ResumesListPage() {
     try {
       const convertedContent: ResumeContent = {
         contact: {
-          fullName: parsedDraft.headline ? 'Candidate' : 'Applicant',
-          email: '',
-          location: parsedDraft.location || undefined,
+          fullName: parsedDraft.contact?.fullName || user?.fullName || 'Candidate',
+          email: parsedDraft.contact?.email || user?.email || '',
+          phone: parsedDraft.contact?.phone || '',
+          location: parsedDraft.contact?.location || parsedDraft.location || undefined,
+          linkedinUrl: parsedDraft.contact?.linkedinUrl || undefined,
+          githubUrl: parsedDraft.contact?.githubUrl || undefined,
+          websiteUrl: parsedDraft.contact?.websiteUrl || undefined,
         },
         headline: parsedDraft.headline || 'Professional Profile',
         summary: parsedDraft.summary || '',

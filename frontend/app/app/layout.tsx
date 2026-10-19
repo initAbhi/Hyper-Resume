@@ -14,6 +14,10 @@ import {
   Menu,
   X,
   User as UserIcon,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Mic,
+  Search,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
@@ -24,6 +28,25 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, creditBalance, isAuthenticated, isLoading, logout } = useAuth();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // Load saved collapse preference
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('hyperresume-sidebar-collapsed');
+      if (saved === 'true') setIsCollapsed(true);
+    } catch {}
+  }, []);
+
+  const toggleSidebar = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('hyperresume-sidebar-collapsed', String(next));
+      } catch {}
+      return next;
+    });
+  };
 
   // Authentication protection
   useEffect(() => {
@@ -54,28 +77,61 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
     { label: 'My Resumes', href: '/app/resumes', icon: FileText },
     { label: 'Match a Job', href: '/app/match', icon: Sparkles },
     { label: 'Applications', href: '/app/applications', icon: Briefcase },
-    { label: 'Settings', href: '/app/settings', icon: Settings },
+    { label: 'AI Interview', href: '/app/interview', icon: Mic, badge: 'Soon' },
+    { label: 'AI Job Search', href: '/app/job-search', icon: Search, badge: 'Soon' },
   ];
 
   return (
-    <div className="flex min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
-      {/* Sidebar Navigation for Desktop */}
-      <aside className="w-64 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col justify-between shrink-0 hidden md:flex">
-        <div>
+    <div className="flex h-screen overflow-hidden bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 print:h-auto print:overflow-visible print:bg-white print:block">
+      {/* Sidebar Navigation for Desktop (Fixed height, independent scroll, collapsible) */}
+      <aside
+        className={`print:hidden ${
+          isCollapsed ? 'w-18' : 'w-64'
+        } h-screen border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col justify-between shrink-0 hidden md:flex transition-all duration-300 ease-in-out z-30 select-none`}
+      >
+        <div className="flex flex-col flex-1 min-h-0">
           {/* Workspace Brand Header */}
-          <div className="p-5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-            <Link href="/app" className="flex items-center gap-2.5">
-              <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-base shadow-sm">
+          <div className={`p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} h-16 shrink-0`}>
+            <Link href="/app" className="flex items-center gap-2.5 min-w-0" title="HyperResume Workspace">
+              <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-base shadow-sm shrink-0">
                 H
               </div>
-              <span className="font-extrabold text-lg tracking-tight">
-                Hyper<span className="text-blue-600">Resume</span>
-              </span>
+              {!isCollapsed && (
+                <span className="font-extrabold text-lg tracking-tight truncate">
+                  Hyper<span className="text-blue-600">Resume</span>
+                </span>
+              )}
             </Link>
+
+            {!isCollapsed && (
+              <button
+                type="button"
+                onClick={toggleSidebar}
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                title="Minimize sidebar"
+                aria-label="Minimize sidebar"
+              >
+                <PanelLeftClose className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
+          {isCollapsed && (
+            <div className="p-2 flex justify-center border-b border-zinc-100 dark:border-zinc-800/60 shrink-0">
+              <button
+                type="button"
+                onClick={toggleSidebar}
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                title="Expand sidebar"
+                aria-label="Expand sidebar"
+              >
+                <PanelLeftOpen className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
           {/* Navigation Links */}
-          <nav className="p-3 space-y-1" aria-label="Workspace Sidebar">
+          <nav className="p-2 space-y-1 overflow-y-auto flex-1" aria-label="Workspace Sidebar">
             {navItems.map((item) => {
               const IconComp = item.icon;
               const isActive =
@@ -84,73 +140,132 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                   : pathname.startsWith(item.href);
 
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-semibold'
-                      : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100'
-                  }`}
-                >
-                  <IconComp className="w-4 h-4 shrink-0" />
-                  <span>{item.label}</span>
-                </Link>
+                <div key={item.href} className="relative group">
+                  <Link
+                    href={item.href}
+                    className={`flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-3'} py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-semibold shadow-xs'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/70 hover:text-zinc-900 dark:hover:text-zinc-100'
+                    }`}
+                  >
+                    <IconComp className="w-4 h-4 shrink-0" />
+                    {!isCollapsed && <span className="truncate">{item.label}</span>}
+                    {!isCollapsed && item.badge && (
+                      <span className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-900/50">
+                        {item.badge}
+                      </span>
+                    )}
+                  </Link>
+
+                  {/* Tooltip for collapsed state */}
+                  {isCollapsed && (
+                    <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1 rounded-md bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-semibold whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity shadow-lg z-50">
+                      {item.label} {item.badge && `(${item.badge})`}
+                    </div>
+                  )}
+                </div>
               );
             })}
           </nav>
         </div>
 
-        {/* User Workspace Info & Logout */}
-        <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 space-y-3">
-          {/* Candidate Profile Snippet */}
-          <div className="px-2 py-1">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 flex items-center justify-center text-xs font-bold">
+        {/* User Workspace Info, Settings & Logout */}
+        <div className={`p-3 border-t border-zinc-200 dark:border-zinc-800 shrink-0 ${isCollapsed ? 'space-y-2' : 'space-y-2.5'}`}>
+          {!isCollapsed ? (
+            <>
+              {/* Candidate Profile Snippet */}
+              <div className="px-2 py-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 flex items-center justify-center text-xs font-bold shrink-0">
+                    {user?.fullName?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold truncate text-zinc-900 dark:text-zinc-100">
+                      {user?.fullName || 'User'}
+                    </p>
+                    <p className="text-[11px] truncate text-zinc-500">
+                      {user?.email}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-2 flex items-center justify-between text-xs">
+                  <span className="text-[11px] text-zinc-500 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-blue-500" />
+                    Credits
+                  </span>
+                  <span className="font-semibold text-blue-600 dark:text-blue-400 text-xs">
+                    {creditBalance}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-zinc-500 px-2 pt-1 border-t border-zinc-100 dark:border-zinc-800">
+                <span className="flex items-center gap-1.5 font-medium text-[11px]">
+                  <Shield className="w-3.5 h-3.5 text-emerald-600" />
+                  Zero-Training AI
+                </span>
+                <Badge variant="neutral" className="text-[10px]">Active</Badge>
+              </div>
+
+              {/* Settings Link placed right above Sign Out */}
+              <Link
+                href="/app/settings"
+                className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                  pathname === '/app/settings'
+                    ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-semibold shadow-xs'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                }`}
+                title="Workspace Settings"
+              >
+                <Settings className="w-4 h-4 shrink-0" />
+                <span>Settings</span>
+              </Link>
+
+              {/* Sign Out Button */}
+              <button
+                onClick={() => logout()}
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              >
+                <LogOut className="w-4 h-4 shrink-0" />
+                <span>Sign Out</span>
+              </button>
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              <div
+                className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 flex items-center justify-center text-xs font-bold cursor-pointer"
+                title={`${user?.fullName} (${creditBalance} credits)`}
+              >
                 {user?.fullName?.charAt(0).toUpperCase() || 'U'}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold truncate text-zinc-900 dark:text-zinc-100">
-                  {user?.fullName || 'User'}
-                </p>
-                <p className="text-[11px] truncate text-zinc-500">
-                  {user?.email}
-                </p>
-              </div>
+              <Link
+                href="/app/settings"
+                className={`p-2 rounded-lg transition-colors ${
+                  pathname === '/app/settings'
+                    ? 'text-blue-600 bg-blue-50 dark:bg-blue-950/40'
+                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                }`}
+                title="Settings"
+              >
+                <Settings className="w-4 h-4" />
+              </Link>
+              <button
+                onClick={() => logout()}
+                className="p-2 rounded-lg text-zinc-500 hover:text-rose-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                title="Sign Out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
-            <div className="mt-2 flex items-center justify-between text-xs">
-              <span className="text-[11px] text-zinc-500 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-blue-500" />
-                Credits
-              </span>
-              <span className="font-semibold text-blue-600 dark:text-blue-400 text-xs">
-                {creditBalance}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between text-xs text-zinc-500 px-2 pt-1 border-t border-zinc-100 dark:border-zinc-800">
-            <span className="flex items-center gap-1.5 font-medium text-[11px]">
-              <Shield className="w-3.5 h-3.5 text-emerald-600" />
-              Zero-Training AI
-            </span>
-            <Badge variant="neutral" className="text-[10px]">Active</Badge>
-          </div>
-
-          <button
-            onClick={() => logout()}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Sign Out</span>
-          </button>
+          )}
         </div>
       </aside>
 
-      {/* Main Workspace Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* Main Workspace Area (Fixed header, scrollable page viewport) */}
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden print:h-auto print:overflow-visible print:block">
         {/* Workspace Top Header */}
-        <header className="h-16 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between shrink-0">
+        <header className="print:hidden h-16 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             {/* Mobile Nav Toggle */}
             <button
@@ -267,6 +382,18 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                   <span className="text-zinc-500 font-medium">Appearance</span>
                   <ThemeToggle id="workspace-drawer-theme-toggle" showLabel />
                 </div>
+                <Link
+                  href="/app/settings"
+                  onClick={() => setIsMobileNavOpen(false)}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors ${
+                    pathname === '/app/settings'
+                      ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
+                      : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                  }`}
+                >
+                  <Settings className="w-4 h-4" />
+                  <span>Settings</span>
+                </Link>
                 <button
                   onClick={() => {
                     setIsMobileNavOpen(false);
@@ -283,7 +410,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
         )}
 
         {/* Child Pages */}
-        <div className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto">
+        <div className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto print:p-0 print:m-0 print:overflow-visible print:block">
           {children}
         </div>
       </div>

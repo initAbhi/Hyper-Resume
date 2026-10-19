@@ -210,6 +210,79 @@ export interface JobMatch {
   jobDescription?: JobDescription;
 }
 
+export type JobApplicationStatus =
+  | 'bookmarked'
+  | 'applying'
+  | 'applied'
+  | 'interviewing'
+  | 'negotiating'
+  | 'offer'
+  | 'accepted'
+  | 'withdrawn'
+  | 'rejected'
+  | 'ghosted'
+  | 'archived'
+  | 'draft';
+
+export interface ApplicationInterviewRound {
+  id: string;
+  roundName: string;
+  date?: string;
+  type?: string;
+  format?: string;
+  interviewers?: { name: string; title?: string; linkedin?: string }[];
+  notes?: string;
+}
+
+export interface ApplicationContact {
+  id: string;
+  name: string;
+  role?: string;
+  email?: string;
+  linkedin?: string;
+  notes?: string;
+}
+
+export interface ApplicationChecklistItem {
+  id: string;
+  text: string;
+  completed: boolean;
+  category?: 'applying' | 'interviewing' | 'offer';
+}
+
+export interface ApplicationRichMetadata {
+  salary?: string;
+  location?: string;
+  excitement?: number; // 1 to 5 stars
+  deadline?: string;
+  followUpDate?: string;
+  postedDate?: string;
+  savedDate?: string;
+  jobDescription?: string;
+  notesText?: string;
+  interviews?: ApplicationInterviewRound[];
+  contacts?: ApplicationContact[];
+  checklist?: ApplicationChecklistItem[];
+  closeReason?: string;
+}
+
+export function parseApplicationMetadata(rawNotes?: string): ApplicationRichMetadata {
+  if (!rawNotes) return {};
+  try {
+    const parsed = JSON.parse(rawNotes);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as ApplicationRichMetadata;
+    }
+  } catch {
+    // legacy or simple string
+  }
+  return { notesText: rawNotes };
+}
+
+export function serializeApplicationMetadata(meta: ApplicationRichMetadata): string {
+  return JSON.stringify(meta);
+}
+
 export interface JobApplication {
   id: string;
   userId: string;
@@ -217,10 +290,11 @@ export interface JobApplication {
   jobDescriptionId?: string;
   companyName: string;
   jobTitle: string;
-  status: 'draft' | 'applied' | 'interviewing' | 'offer' | 'rejected' | 'archived';
+  status: JobApplicationStatus;
   applicationUrl?: string;
   appliedDate?: string;
   notes?: string;
+  metadata?: ApplicationRichMetadata;
   createdAt: string;
   updatedAt: string;
 }
@@ -291,6 +365,15 @@ export interface CandidateProfile {
 }
 
 export interface ParsedProfileDraft {
+  contact?: {
+    fullName?: string;
+    email?: string;
+    phone?: string;
+    location?: string;
+    linkedinUrl?: string;
+    githubUrl?: string;
+    websiteUrl?: string;
+  };
   headline: string;
   summary: string;
   location: string;
@@ -734,14 +817,26 @@ export class ApiClient {
     jobTitle: string;
     resumeId?: string;
     jobDescriptionId?: string;
-    status?: 'draft' | 'applied' | 'interviewing' | 'offer' | 'rejected' | 'archived';
+    status?: JobApplicationStatus;
     applicationUrl?: string;
     appliedDate?: string;
     notes?: string;
   }) {
+    const payload = {
+      company: dto.companyName,
+      companyName: dto.companyName,
+      role: dto.jobTitle,
+      resumeId: dto.resumeId || undefined,
+      resumeVersionId: undefined,
+      jobUrl: dto.applicationUrl || undefined,
+      applicationUrl: dto.applicationUrl || undefined,
+      status: dto.status || 'applied',
+      appliedDate: dto.appliedDate || undefined,
+      notes: dto.notes || undefined,
+    };
     const res = await this.request<JobApplication>('/applications', {
       method: 'POST',
-      body: JSON.stringify(dto),
+      body: JSON.stringify(payload),
     });
     return res.data;
   }
@@ -757,15 +852,24 @@ export class ApiClient {
       companyName?: string;
       jobTitle?: string;
       resumeId?: string;
-      status?: 'draft' | 'applied' | 'interviewing' | 'offer' | 'rejected' | 'archived';
+      status?: JobApplicationStatus;
       applicationUrl?: string;
       appliedDate?: string;
       notes?: string;
     },
   ) {
+    const payload = {
+      ...(dto.companyName ? { company: dto.companyName, companyName: dto.companyName } : {}),
+      ...(dto.jobTitle ? { role: dto.jobTitle, jobTitle: dto.jobTitle } : {}),
+      ...(dto.resumeId !== undefined ? { resumeVersionId: dto.resumeId, resumeId: dto.resumeId } : {}),
+      ...(dto.applicationUrl !== undefined ? { jobUrl: dto.applicationUrl, applicationUrl: dto.applicationUrl } : {}),
+      ...(dto.status !== undefined ? { status: dto.status } : {}),
+      ...(dto.appliedDate !== undefined ? { appliedDate: dto.appliedDate } : {}),
+      ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
+    };
     const res = await this.request<JobApplication>(`/applications/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify(dto),
+      body: JSON.stringify(payload),
     });
     return res.data;
   }

@@ -9,6 +9,15 @@ import type {
 } from '../../profiles/entities/candidate-profile.entity.js';
 
 export interface ParsedProfileDraft {
+  contact?: {
+    fullName?: string;
+    email?: string;
+    phone?: string;
+    location?: string;
+    linkedinUrl?: string;
+    githubUrl?: string;
+    websiteUrl?: string;
+  };
   headline: string;
   summary: string;
   location: string;

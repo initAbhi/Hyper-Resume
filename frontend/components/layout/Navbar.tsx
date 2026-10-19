@@ -17,10 +17,6 @@ function NavbarInner() {
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  if (pathname?.startsWith('/app')) {
-    return null;
-  }
-
   const [prevPathname, setPrevPathname] = useState(pathname);
   if (prevPathname !== pathname) {
     setPrevPathname(pathname);
@@ -60,6 +56,10 @@ function NavbarInner() {
     }
     return () => { document.body.style.overflow = ''; };
   }, [isMobileMenuOpen]);
+
+  if (pathname?.startsWith('/app')) {
+    return null;
+  }
 
   const productLinks = [
     { label: 'AI Resume Builder', desc: 'Create ATS-optimized resumes', href: '/login' },
@@ -171,12 +171,17 @@ function NavbarInner() {
 
         {/* Mobile Header Right */}
         <div className="flex items-center gap-2 lg:hidden">
+          <Link href="/login">
+            <Button size="sm" className="rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-3.5 py-1.5 h-8 shadow-xs">
+              Try for free
+            </Button>
+          </Link>
           <ThemeToggle id="mobile-theme-toggle" />
           {/* Mobile Menu Button */}
           <button
             ref={menuButtonRef}
             type="button"
-            className="p-2 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-lg transition-colors"
+            className="p-1.5 text-zinc-700 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white rounded-lg transition-colors"
             aria-controls="mobile-menu"
             aria-expanded={isMobileMenuOpen}
             aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}

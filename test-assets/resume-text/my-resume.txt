@@ -1,0 +1,67 @@
++91-6268644194 
+ABHI SINGH
+github.com/initAbhi
+FULL STACK DEVELOPER
+developerabhi17@gmail.com 
+SUMMARY
+linkedin.com/in/developer-abhi-j1714 
+Full Stack Developer with 2+ years of experience building and scaling production-grade web applications and backend
+systems. Experienced in Next.js, React, NestJS, Node.js, PostgreSQL, MongoDB, Redis, and AWS, with hands-on
+expertise in system architecture, API development, distributed job processing, cloud infrastructure, and DevOps. Currently
+working on a global platform serving 500,000+ users, with a strong focus on performance optimization, high availability,
+scalability, and reliable production deployments. Experienced in independently taking products from development through
+deployment, monitoring, and scaling.
+WORK EXPERIENCE
+Full Stack Developer
+Algo Ocean
+June 2024– Present
+Next.js, NestJS, AWS, Redis– Oodle– Global Dating Platform (Play Store & App Store): Architected and scaled backend infrastructure using
+NestJS and AWS, successfully supporting a growing user base of over 500,000 (5 Lakh) total users globally.– High-Availability & Optimization: Optimized database queries and streamlined server code to maximize throughput on
+limited resources; maintained near-zero downtime by dynamically scaling multiple instances to manage massive traffic
+spikes during high-scale ad campaigns.– Automated Identity & Verification: Integrated AWS Rekognition to automate user identity verification and instantly
+detect artificial imagery/fake profiles, drastically improving platform integrity.– Marketing Integrations: Configured and managed Apple Search Ads (ASA) APIs to track attribution and optimize the
+platform’s global marketing reach.– Asynchronous Architecture: Implemented highly resilient task processing using Redis and Bull queues to handle
+complex user matching algorithms, distributed background jobs, and real-time notifications.
+SKILLS
+Frontend
+Backend
+Databases
+ORMs
+DevOps & Cloud
+Google Cloud
+Infrastructure
+Languages
+AI & Dev Tools
+Other
+PROJECTS
+Next.js, React, Tailwind CSS, ShadCN, Redux, TypeScript, JavaScript
+Node.js, NestJS, Express, REST APIs, Microservices, Redis, Bull Queues, WebSockets, WebRTC,
+Auth.js, JWT
+MongoDB, PostgreSQL
+Prisma, Mongoose, Convex
+AWS(EC2, S3, Lambda), Docker, Kubernetes, Cloudflare, Nginx, PM2
+Google Cloud Console, Firebase, Google Cloud Pub/Sub, Google Play Console
+Server Monitoring, Scaling, Backup Automation, CI/CD (GitHub Actions, Jenkins)
+JavaScript, TypeScript, Python, Java
+Claude Code, CodeRabbit, Lovable, Bolt, Antigravity, Cursor, AI/LLM Integration
+AI/LLM Integration, Selenium Automation, GIS Systems, Chrome Extensions, Git, GitHub
+Infodatabox– Cloud Storage Platform (Google Drive Clone) | Next.js, NestJS, AWS S3, EC2
+2025– Architected and developed a scalable cloud file storage platform similar to Google Drive for Ensowebworks, supporting
+secure file storage, sharing, and file management workflows.– Handled the entire system development independently including frontend, backend architecture, deployment, and
+DevOps infrastructure.– Built scalable backend services using NestJS and integrated AWS S3 for distributed object storage with efficient upload,
+download, and access control mechanisms.– Deployed and managed production infrastructure on AWS EC2, implementing monitoring, server optimization, and
+scalable architecture capable of supporting millions of users.
+Oodle– Global Dating Platform | NestJS, Redis, AWS, Cloudflare
+2025
+– Backend engineer for a large-scale dating platform available on Google Play Store and Apple App Store supporting
+global users and high traffic workloads.– Designed scalable backend APIs using NestJS with modular architecture focused on performance and reliability.– Implemented distributed job processing using Redis and Bull queues for notifications, matching logic, and asynchronous
+workflows.– Managed infrastructure including AWS EC2, S3, and Cloudflare with server monitoring, automated backups, and
+deployment pipelines.– Configured PM2 clustering and scaling strategies to maintain reliability and performance under high concurrency.
+Trading Bot– Automated Crypto Trading Platform | React, TypeScript, Python FastAPI
+2025– Designed React + TypeScript dashboard for strategy setup and performance tracking, integrated with Delta Exchange
+APIs for order execution.– Automated trading strategies based on technical indicators, enabling real-time rule-based decision making with secure
+API key management.
+EDUCATION
+Bachelor in Computer Application– Computer Science
+Tilak Maharashtra Vidyapeeth
+2023– 2026

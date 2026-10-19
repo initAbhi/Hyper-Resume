@@ -18,7 +18,8 @@ export async function runSeeds() {
   const resumeRepo = AppDataSource.getRepository(Resume);
   const creditRepo = AppDataSource.getRepository(CreditLedger);
 
-  const defaultPasswordHash = await bcrypt.hash('Password123!', 10);
+  const demoPasswordHash = await bcrypt.hash('demo123', 10);
+  const adminPasswordHash = await bcrypt.hash('admin123', 10);
 
   // 1. Seed Demo Candidate User
   let demoUser = await userRepo.findOne({ where: { email: 'demo@hyperresume.ai' } });
@@ -26,15 +27,17 @@ export async function runSeeds() {
     demoUser = userRepo.create({
       email: 'demo@hyperresume.ai',
       fullName: 'Demo Candidate',
-      passwordHash: defaultPasswordHash,
+      passwordHash: demoPasswordHash,
       role: UserRole.USER,
       isActive: true,
       isEmailVerified: true,
     });
     await userRepo.save(demoUser);
-    console.log('✅ Created Demo User: demo@hyperresume.ai');
+    console.log('✅ Created Demo User: demo@hyperresume.ai (password: demo123)');
   } else {
-    console.log('ℹ️ Demo User demo@hyperresume.ai already exists.');
+    demoUser.passwordHash = demoPasswordHash;
+    await userRepo.save(demoUser);
+    console.log('ℹ️ Updated Demo User demo@hyperresume.ai password to: demo123');
   }
 
   // 2. Seed Demo Candidate Profile
@@ -212,15 +215,17 @@ export async function runSeeds() {
     adminUser = userRepo.create({
       email: 'admin@hyperresume.ai',
       fullName: 'System Administrator',
-      passwordHash: defaultPasswordHash,
+      passwordHash: adminPasswordHash,
       role: UserRole.ADMIN,
       isActive: true,
       isEmailVerified: true,
     });
     await userRepo.save(adminUser);
-    console.log('✅ Created Admin User: admin@hyperresume.ai');
+    console.log('✅ Created Admin User: admin@hyperresume.ai (password: admin123)');
   } else {
-    console.log('ℹ️ Admin User admin@hyperresume.ai already exists.');
+    adminUser.passwordHash = adminPasswordHash;
+    await userRepo.save(adminUser);
+    console.log('ℹ️ Updated Admin User admin@hyperresume.ai password to: admin123');
   }
 
   // 6. Seed Admin Credits

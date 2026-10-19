@@ -338,21 +338,38 @@ body {
     margin: 0.5in 0.5in 0.5in 0.5in;
   }
 
-  body {
+  html, body {
     background-color: #ffffff !important;
     color: #000000 !important;
     margin: 0 !important;
     padding: 0 !important;
     font-size: 10pt !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
-  header, footer, aside, nav, button, .no-print {
+  /* Completely suppress all web application chrome, navbars, sidebars, buttons */
+  header, footer, aside, nav, button, select, input, textarea, .no-print, [role="navigation"], [role="banner"] {
     display: none !important;
   }
 
   main {
     padding: 0 !important;
     margin: 0 !important;
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Reset all canvas simulation wrappers */
+  .resume-paper-canvas {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
   }
 
   #resume-document-print {

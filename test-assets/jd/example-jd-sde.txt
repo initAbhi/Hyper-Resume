@@ -1,0 +1,56 @@
+    Software Engineer (SE-I)
+    Example Company · Full-time · Engineering
+    2–3 years experience
+    Full Stack
+    Remote / Hybrid
+
+
+
+
+    About the role
+    We are looking for a Software Engineer to design, develop, and maintain scalable web applications. You will work with product managers, designers, and other engineers to build reliable software, improve application performance, and deliver high-quality features.
+    Responsibilities
+    - Design, develop, and maintain backend APIs using Node.js and NestJS.
+    - Build responsive frontend applications using React.js and Next.js.
+    - Design database schemas and optimize SQL queries using PostgreSQL.
+    - Write clean, reusable, maintainable, and well-tested code.
+    - Debug production issues and improve application performance.
+    - Participate in code reviews and technical design discussions.
+    - Collaborate with cross-functional teams to deliver features.
+    - Contribute to CI/CD pipelines, monitoring, and deployment processes.
+    Required qualifications
+    - 2+ years of professional software development experience.
+    - Strong knowledge of JavaScript and TypeScript.
+    - Hands-on experience with React.js and Node.js.
+    - Experience building REST APIs and working with authentication systems such as JWT.
+    - Good understanding of PostgreSQL, SQL queries, joins, indexes, and transactions.
+    - Familiarity with Git, Linux, and basic networking concepts.
+    - Understanding of data structures, algorithms, OOP, and common design patterns.
+    - Experience debugging complex technical issues.
+    Preferred qualifications
+    - Experience with AWS services such as EC2, RDS, and S3.
+    - Familiarity with Docker and CI/CD pipelines.
+    - Knowledge of caching, queues, and distributed systems fundamentals.
+    - Experience monitoring and troubleshooting production applications.
+    Compensation
+    - Experience: 2–3 years
+    - Location: India
+    - Illustrative salary range: ₹8–15 LPA, depending on company and candidate experience.
+    Interview process
+    1. Online coding assessment — DSA and problem-solving.
+    2. Technical Round 1 — JavaScript/TypeScript, coding, and SQL.
+    3. Technical Round 2 — Backend architecture, APIs, databases, and debugging.
+    4. Hiring Manager Round — Project ownership, collaboration, and behavioral questions.
+
+    What you should prepare for this JD
+    Given your full-stack background, these are the areas I would prioritize:
+    Priority	Topics
+    1	JavaScript, TypeScript, promises, event loop, closures
+    2	Node.js, NestJS, dependency injection, middleware, guards
+    3	PostgreSQL, joins, indexes, query optimization, transactions
+    4	DSA — arrays, strings, hash maps, trees, binary search
+    5	System design — caching, queues, scaling, database bottlenecks
+    6	Project deep dives — architecture, production incidents, trade-offs
+    Important: This is a sample JD, not a live job listing. Actual requirements and salaries vary by company.
+
+    A Software Engineer role can mean different things depending on the company. For your preparation, the most useful distinction is between a Full Stack Software Engineer, a Backend Software Engineer, and a general Software Engineer at a product-based company.

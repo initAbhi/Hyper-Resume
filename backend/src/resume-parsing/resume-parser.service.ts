@@ -3,6 +3,8 @@ import {
   Injectable,
   PayloadTooLargeException,
 } from '@nestjs/common';
+import pdf from 'pdf-parse-fork';
+import zlib from 'node:zlib';
 import { AiService } from '../ai/ai.service.js';
 import type { ParsedProfileDraft } from '../ai/interfaces/ai-provider.interface.js';
 
@@ -29,7 +31,7 @@ export class ResumeParserService {
       throw new PayloadTooLargeException('File exceeds the 10MB upload limit');
     }
 
-    const text = this.extractTextFromBuffer(fileBuffer, mimeType, originalName);
+    const text = await this.extractTextFromBuffer(fileBuffer, mimeType, originalName);
 
     if (!text || text.trim().length < 50) {
       throw new BadRequestException(
@@ -47,11 +49,11 @@ export class ResumeParserService {
     };
   }
 
-  private extractTextFromBuffer(
+  private async extractTextFromBuffer(
     buffer: Buffer,
     mimeType: string,
     fileName: string,
-  ): string {
+  ): Promise<string> {
     const isPdf =
       mimeType === 'application/pdf' ||
       fileName.toLowerCase().endsWith('.pdf') ||
@@ -74,50 +76,63 @@ export class ResumeParserService {
     return buffer.toString('utf-8');
   }
 
-  private extractFromPdf(buffer: Buffer): string {
+  private async extractFromPdf(buffer: Buffer): Promise<string> {
     // Check PDF magic bytes
     if (!buffer.subarray(0, 5).toString('ascii').startsWith('%PDF-')) {
       throw new BadRequestException('Invalid PDF structure or header missing');
     }
 
+    // 1. Primary extractor: pdf-parse-fork
+    try {
+      const parsed = await pdf(buffer);
+      if (parsed.text && parsed.text.trim().length >= 50) {
+        return parsed.text;
+      }
+    } catch {
+      // Fallback to internal decompressor & stream extraction
+    }
+
+    // 2. Secondary fallback: decompress flate streams and extract tokens
     const raw = buffer.toString('binary');
-
-    // Extract text between BT (Begin Text) and ET (End Text) or Tj/TJ tokens safely
+    const streamRegex = /stream[\r\n]+([\s\S]*?)[\r\n]+endstream/g;
+    let streamMatch: RegExpExecArray | null;
     const textChunks: string[] = [];
-    const textRegex = /\(([^)]+)\)\s*Tj|\[([^\]]+)\]\s*TJ/g;
-    let match: RegExpExecArray | null;
 
-    while ((match = textRegex.exec(raw)) !== null) {
-      if (match[1]) {
-        textChunks.push(match[1]);
-      } else if (match[2]) {
-        // TJ array matches (e.g. [(Hel) -10 (lo)])
-        const innerMatches = match[2].match(/\(([^)]+)\)/g);
-        if (innerMatches) {
-          innerMatches.forEach((m) => textChunks.push(m.slice(1, -1)));
+    while ((streamMatch = streamRegex.exec(raw)) !== null) {
+      let content = streamMatch[1];
+      try {
+        const decompressed = zlib.inflateSync(Buffer.from(content, 'binary'));
+        content = decompressed.toString('binary');
+      } catch {
+        // Continue with raw stream if not flate compressed
+      }
+
+      const textRegex = /\(([^)]+)\)\s*Tj|\[([^\]]+)\]\s*TJ/g;
+      let textMatch: RegExpExecArray | null;
+      while ((textMatch = textRegex.exec(content)) !== null) {
+        if (textMatch[1]) {
+          textChunks.push(textMatch[1]);
+        } else if (textMatch[2]) {
+          const innerMatches = textMatch[2].match(/\(([^)]+)\)/g);
+          if (innerMatches) {
+            innerMatches.forEach((m) => textChunks.push(m.slice(1, -1)));
+          }
         }
       }
     }
 
-    if (textChunks.length === 0) {
-      // Stream extraction fallback
-      const streamRegex = /stream[\r\n]+([\s\S]*?)[\r\n]+endstream/g;
-      let streamMatch: RegExpExecArray | null;
-      while ((streamMatch = streamRegex.exec(raw)) !== null) {
-        const streamData = streamMatch[1];
-        const readable = streamData.replace(/[^a-zA-Z0-9\s.,@:;()-]/g, ' ');
-        if (readable.trim().length > 30) {
-          textChunks.push(readable.trim());
-        }
-      }
+    const reconstructed = textChunks.join(' ').replace(/\s+/g, ' ');
+    if (reconstructed.trim().length >= 50) {
+      return reconstructed;
     }
 
-    return textChunks.join(' ').replace(/\s+/g, ' ');
+    // 3. Fallback: plain ASCII stream strings
+    const readable = raw.replace(/[^a-zA-Z0-9\s.,@:;()-]/g, ' ').replace(/\s+/g, ' ');
+    return readable;
   }
 
   private extractFromDocx(buffer: Buffer): string {
     const raw = buffer.toString('binary');
-    // Extract XML contents from word/document.xml without external xml entities
     const xmlMatch = /<w:t[^>]*>(.*?)<\/w:t>/g;
     const textPieces: string[] = [];
     let match: RegExpExecArray | null;
@@ -127,7 +142,6 @@ export class ResumeParserService {
     }
 
     if (textPieces.length === 0) {
-      // Fallback clean ASCII text extraction from binary stream
       const cleaned = raw.replace(/<[^>]+>/g, ' ').replace(/[^a-zA-Z0-9\s.,@:;()-]/g, ' ');
       return cleaned.replace(/\s+/g, ' ');
     }

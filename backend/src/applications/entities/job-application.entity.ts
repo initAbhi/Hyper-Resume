@@ -10,12 +10,18 @@ import { User } from '../../users/entities/user.entity.js';
 import { ResumeVersion } from '../../resumes/entities/resume-version.entity.js';
 
 export type ApplicationStatus =
-  | 'draft'
+  | 'bookmarked'
+  | 'applying'
   | 'applied'
   | 'interviewing'
+  | 'negotiating'
   | 'offer'
+  | 'accepted'
+  | 'withdrawn'
   | 'rejected'
-  | 'archived';
+  | 'ghosted'
+  | 'archived'
+  | 'draft';
 
 @Entity('job_applications')
 export class JobApplication extends BaseEntity {

@@ -2,6 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JobApplication } from './entities/job-application.entity.js';
+import { Resume } from '../resumes/entities/resume.entity.js';
+import { ResumeVersion } from '../resumes/entities/resume-version.entity.js';
 import { CreateApplicationDto } from './dto/create-application.dto.js';
 import { UpdateApplicationDto } from './dto/update-application.dto.js';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
@@ -11,24 +13,83 @@ export class ApplicationsService {
   constructor(
     @InjectRepository(JobApplication)
     private readonly applicationRepository: Repository<JobApplication>,
+    @InjectRepository(Resume)
+    private readonly resumeRepository: Repository<Resume>,
+    @InjectRepository(ResumeVersion)
+    private readonly versionRepository: Repository<ResumeVersion>,
   ) {}
+
+  private async resolveResumeVersionId(
+    userId: string,
+    candidateId?: string,
+  ): Promise<string | undefined> {
+    if (!candidateId) return undefined;
+
+    try {
+      // 1. Direct match with ResumeVersion
+      const directVersion = await this.versionRepository.findOne({
+        where: { id: candidateId },
+      });
+      if (directVersion) {
+        return directVersion.id;
+      }
+
+      // 2. Candidate ID is a Resume owned by user
+      const resume = await this.resumeRepository.findOne({
+        where: { id: candidateId, userId },
+      });
+      if (resume) {
+        const latestVersion = await this.versionRepository.findOne({
+          where: { resumeId: resume.id },
+          order: { versionNumber: 'DESC' },
+        });
+        if (latestVersion) {
+          return latestVersion.id;
+        }
+
+        // Create snapshot version on the fly so foreign key constraint holds
+        const snapshotVersion = this.versionRepository.create({
+          resumeId: resume.id,
+          versionNumber: resume.version || 1,
+          changeSummary: 'Snapshot for job application',
+          contentSnapshot: resume.content,
+        });
+        const savedVersion = await this.versionRepository.save(snapshotVersion);
+        return savedVersion.id;
+      }
+    } catch {
+      // Gracefully fall through
+    }
+
+    // 3. Fallback: return undefined so foreign key constraint is not violated
+    return undefined;
+  }
 
   async createApplication(
     userId: string,
     dto: CreateApplicationDto,
   ): Promise<JobApplication> {
+    const resumeVersionId = await this.resolveResumeVersionId(
+      userId,
+      dto.resumeVersionId || dto.resumeId,
+    );
+
+    const company = (dto.company || dto.companyName || '').trim();
+    const role = (dto.role || dto.jobTitle || '').trim();
+
     const app = this.applicationRepository.create({
       userId,
-      company: dto.company.trim(),
-      role: dto.role.trim(),
-      resumeVersionId: dto.resumeVersionId,
-      jobUrl: dto.jobUrl?.trim(),
+      company,
+      role,
+      resumeVersionId,
+      jobUrl: (dto.jobUrl || dto.applicationUrl)?.trim(),
       status: dto.status || 'draft',
       appliedDate: dto.appliedDate ? new Date(dto.appliedDate) : undefined,
       notes: dto.notes?.trim(),
     });
 
-    return this.applicationRepository.save(app);
+    const saved = await this.applicationRepository.save(app);
+    return this.getApplication(userId, saved.id);
   }
 
   async listApplications(
@@ -71,17 +132,29 @@ export class ApplicationsService {
   ): Promise<JobApplication> {
     const app = await this.getApplication(userId, id);
 
-    if (dto.company !== undefined) app.company = dto.company.trim();
-    if (dto.role !== undefined) app.role = dto.role.trim();
-    if (dto.resumeVersionId !== undefined) app.resumeVersionId = dto.resumeVersionId;
-    if (dto.jobUrl !== undefined) app.jobUrl = dto.jobUrl?.trim();
+    if (dto.company !== undefined || dto.companyName !== undefined) {
+      app.company = (dto.company || dto.companyName || '').trim();
+    }
+    if (dto.role !== undefined || dto.jobTitle !== undefined) {
+      app.role = (dto.role || dto.jobTitle || '').trim();
+    }
+    if (dto.resumeVersionId !== undefined || dto.resumeId !== undefined) {
+      app.resumeVersionId = await this.resolveResumeVersionId(
+        userId,
+        dto.resumeVersionId || dto.resumeId,
+      );
+    }
+    if (dto.jobUrl !== undefined || dto.applicationUrl !== undefined) {
+      app.jobUrl = (dto.jobUrl || dto.applicationUrl)?.trim();
+    }
     if (dto.status !== undefined) app.status = dto.status;
     if (dto.appliedDate !== undefined) {
       app.appliedDate = dto.appliedDate ? new Date(dto.appliedDate) : undefined;
     }
     if (dto.notes !== undefined) app.notes = dto.notes?.trim();
 
-    return this.applicationRepository.save(app);
+    await this.applicationRepository.save(app);
+    return this.getApplication(userId, id);
   }
 
   async deleteApplication(userId: string, id: string): Promise<{ success: boolean }> {
