@@ -20,25 +20,25 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref,
   ) => {
     const baseStyles =
-      'inline-flex items-center justify-center font-medium rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none select-none cursor-pointer';
+      'inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none select-none cursor-pointer';
 
     const variants = {
       primary:
-        'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 focus-visible:ring-blue-500 shadow-sm hover:shadow',
+        'bg-[#285FEA] hover:bg-[#1E4BC8] active:bg-[#173DA3] text-white shadow-xs focus-visible:ring-[#285FEA]',
       secondary:
-        'bg-zinc-100 text-zinc-900 hover:bg-zinc-200 active:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700 focus-visible:ring-zinc-400',
+        'bg-[#F1F3F5] hover:bg-[#EAECEF] active:bg-[#E2E5E9] dark:bg-[#1D2128] dark:hover:bg-[#252A33] text-[#1A1D23] dark:text-[#F0F2F5] focus-visible:ring-zinc-400',
       outline:
-        'border border-zinc-300 dark:border-zinc-700 bg-transparent text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900 focus-visible:ring-zinc-400',
+        'border border-[#E2E5E9] dark:border-[#252A33] bg-white dark:bg-[#14171C] text-[#1A1D23] dark:text-[#F0F2F5] hover:bg-[#F7F8FA] dark:hover:bg-[#1D2128] focus-visible:ring-zinc-400',
       ghost:
-        'bg-transparent text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 focus-visible:ring-zinc-400',
+        'bg-transparent text-[#5A6270] dark:text-[#9EA7B4] hover:bg-[#F1F3F5] dark:hover:bg-[#1D2128] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5] focus-visible:ring-zinc-400',
       destructive:
-        'bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800 focus-visible:ring-rose-500 shadow-sm',
+        'bg-[#DC2626] hover:bg-[#B91C1C] text-white shadow-xs focus-visible:ring-[#DC2626]',
     };
 
     const sizes = {
-      sm: 'text-xs px-3 py-1.5 gap-1.5 h-8',
-      md: 'text-sm px-4 py-2 gap-2 h-10',
-      lg: 'text-base px-6 py-2.5 gap-2.5 h-12',
+      sm: 'h-8 px-2.5 text-xs gap-1.5 rounded-md',
+      md: 'h-9 px-3.5 text-sm gap-2 rounded-lg',
+      lg: 'h-11 px-5 text-sm font-semibold gap-2.5 rounded-lg',
     };
 
     return (
@@ -50,7 +50,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {isLoading && (
           <svg
-            className="animate-spin -ml-1 mr-2 h-4 w-4 text-current"
+            className="animate-spin -ml-0.5 mr-2 h-3.5 w-3.5 text-current"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"

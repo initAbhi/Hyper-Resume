@@ -7,7 +7,7 @@ export function Card({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={`rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-950 dark:text-zinc-50 shadow-sm ${className}`}
+      className={`rounded-xl border border-[#E2E5E9] dark:border-[#252A33] bg-white dark:bg-[#14171C] text-[#1A1D23] dark:text-[#F0F2F5] shadow-xs ${className}`}
       {...props}
     >
       {children}
@@ -22,7 +22,7 @@ export function CardHeader({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={`flex flex-col space-y-1.5 p-6 border-b border-zinc-100 dark:border-zinc-800/60 ${className}`}
+      className={`flex flex-col space-y-1 p-5 border-b border-[#F1F3F5] dark:border-[#1D2128] ${className}`}
       {...props}
     >
       {children}
@@ -37,7 +37,7 @@ export function CardTitle({
 }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h3
-      className={`font-semibold tracking-tight text-lg text-zinc-900 dark:text-zinc-50 ${className}`}
+      className={`font-semibold tracking-tight text-base text-[#1A1D23] dark:text-[#F0F2F5] ${className}`}
       {...props}
     >
       {children}
@@ -52,7 +52,7 @@ export function CardDescription({
 }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (
     <p
-      className={`text-sm text-zinc-500 dark:text-zinc-400 ${className}`}
+      className={`text-xs text-[#5A6270] dark:text-[#9EA7B4] leading-relaxed ${className}`}
       {...props}
     >
       {children}
@@ -66,7 +66,7 @@ export function CardContent({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={`p-6 ${className}`} {...props}>
+    <div className={`p-5 ${className}`} {...props}>
       {children}
     </div>
   );
@@ -79,7 +79,7 @@ export function CardFooter({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={`flex items-center p-6 pt-0 border-t border-zinc-100 dark:border-zinc-800/60 ${className}`}
+      className={`flex items-center p-5 pt-0 border-t border-[#F1F3F5] dark:border-[#1D2128] ${className}`}
       {...props}
     >
       {children}

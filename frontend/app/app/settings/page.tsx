@@ -279,15 +279,15 @@ export default function SettingsPage() {
       </Card>
 
       {/* AI Privacy & Model Boundaries */}
-      <div className="p-6 rounded-2xl border border-blue-200 bg-blue-50/40 dark:bg-blue-950/20 dark:border-blue-900 space-y-4">
+      <div className="p-5 rounded-xl border border-border bg-card shadow-xs space-y-3">
         <div className="flex items-start gap-3">
-          <Shield className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+          <Shield className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
           <div>
-            <h2 className="text-sm font-bold text-blue-950 dark:text-blue-100">
-              Zero-Training Privacy Guarantee
+            <h2 className="text-sm font-semibold text-foreground">
+              Candidate Privacy & LLM Data Governance
             </h2>
-            <p className="text-xs text-blue-900/90 dark:text-blue-300 mt-1 leading-relaxed">
-              HyperResume enforces zero data retention with AI LLM providers. Your resume history, employment credentials, and job descriptions are <strong>never</strong> used to train or refine public or proprietary foundation models.
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              HyperResume enforces strict confidentiality. Your career documents, contact information, and target job descriptions are processed with stateless API calls and are never used to train public foundation models.
             </p>
           </div>
         </div>

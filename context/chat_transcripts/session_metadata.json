@@ -1,0 +1,20 @@
+{
+  "conversation_id": "e85fd2e4-9269-4827-a4da-34af8f2c92c4",
+  "app_data_directory": "C:\\Users\\AbhiSingh\\.gemini\\antigravity-ide",
+  "project_name": "HyperResume (AI Resume Builder & ATS Career Platform)",
+  "repository_root": "c:\\Users\\AbhiSingh\\Pictures\\builder",
+  "production_urls": {
+    "frontend": "https://resume.fourth-coffee.shop",
+    "backend_api": "https://resume-api.fourth-coffee.shop/api/v1",
+    "examples": "https://resume.fourth-coffee.shop/examples",
+    "dashboard": "https://resume.fourth-coffee.shop/app"
+  },
+  "server": {
+    "host": "210.79.128.247",
+    "user": "ubuntu",
+    "os": "Ubuntu 24.04.4 LTS",
+    "pm2_frontend_process": "hyper-resume-frontend (port 3082)",
+    "pm2_backend_process": "hyper-resume-backend (port 3002)"
+  },
+  "date_generated": "2026-10-27T19:25:00+05:30"
+}

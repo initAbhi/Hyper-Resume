@@ -12,11 +12,11 @@ export function ScoreMeter({ score, className = '' }: ScoreMeterProps) {
 
   // Meter arc geometry:
   // Semi-circle arc from 180° to 360° (left to right)
-  // Radius = 68, Center = (90, 80)
-  // Circumference of semi-circle = Math.PI * 68 = 213.628
-  const radius = 68;
-  const strokeWidth = 14;
-  const arcLength = Math.PI * radius; // ~213.63
+  // Radius = 66, Center = (90, 80)
+  const radius = 66;
+  const strokeWidth = 9;
+  const arcLength = Math.PI * radius; // ~207.35
+  const strokeDashoffset = arcLength - (safeScore / 100) * arcLength;
 
   // Angle for indicator dot (180 deg = 0%, 360 deg = 100%)
   const angleDeg = 180 + (safeScore / 100) * 180;
@@ -25,34 +25,21 @@ export function ScoreMeter({ score, className = '' }: ScoreMeterProps) {
   const dotY = 80 + radius * Math.sin(angleRad);
 
   const getStatus = (val: number) => {
-    if (val >= 80) return { label: 'Ready to apply', color: 'text-emerald-500', badgeBg: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' };
-    if (val >= 60) return { label: 'Good foundation', color: 'text-blue-500', badgeBg: 'bg-blue-500/10 border-blue-500/30 text-blue-400' };
-    if (val >= 40) return { label: 'Needs improvement', color: 'text-amber-500', badgeBg: 'bg-amber-500/10 border-amber-500/30 text-amber-400' };
-    return { label: 'Incomplete facts', color: 'text-rose-500', badgeBg: 'bg-rose-500/10 border-rose-500/30 text-rose-400' };
+    if (val >= 85) return { label: 'High Alignment', badgeClass: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' };
+    if (val >= 70) return { label: 'Solid Evidence', badgeClass: 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800' };
+    if (val >= 50) return { label: 'Needs Metrics', badgeClass: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800' };
+    return { label: 'Incomplete Sections', badgeClass: 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700' };
   };
 
   const status = getStatus(safeScore);
 
   return (
     <div className={`flex flex-col items-center select-none ${className}`}>
-      <div className="relative w-[180px] h-[105px]">
-        <svg viewBox="0 0 180 100" className="w-full h-full overflow-visible">
-          <defs>
-            <linearGradient id="scoreGaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#ef4444" />
-              <stop offset="28%" stopColor="#f59e0b" />
-              <stop offset="65%" stopColor="#eab308" />
-              <stop offset="85%" stopColor="#3b82f6" />
-              <stop offset="100%" stopColor="#10b981" />
-            </linearGradient>
-            <filter id="gaugeShadow" x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.25" />
-            </filter>
-          </defs>
-
+      <div className="relative w-[180px] h-[95px]">
+        <svg viewBox="0 0 180 95" className="w-full h-full overflow-visible">
           {/* Background Track Arc */}
           <path
-            d="M 22 80 A 68 68 0 0 1 158 80"
+            d="M 24 80 A 66 66 0 0 1 156 80"
             fill="none"
             stroke="currentColor"
             strokeWidth={strokeWidth}
@@ -60,52 +47,47 @@ export function ScoreMeter({ score, className = '' }: ScoreMeterProps) {
             className="text-zinc-200 dark:text-zinc-800"
           />
 
-          {/* Gradient Colored Arc */}
+          {/* Active Value Arc */}
           <path
-            d="M 22 80 A 68 68 0 0 1 158 80"
+            d="M 24 80 A 66 66 0 0 1 156 80"
             fill="none"
-            stroke="url(#scoreGaugeGrad)"
+            stroke="currentColor"
             strokeWidth={strokeWidth}
+            strokeDasharray={arcLength}
+            strokeDashoffset={strokeDashoffset}
             strokeLinecap="round"
+            className="text-blue-600 dark:text-blue-500 transition-all duration-700 ease-out"
           />
 
           {/* Indicator Dot on the Arc */}
-          <g filter="url(#gaugeShadow)">
-            <circle
-              cx={dotX}
-              cy={dotY}
-              r={9}
-              className="fill-zinc-900 dark:fill-white stroke-2 stroke-white dark:stroke-zinc-950 transition-all duration-500 ease-out"
-            />
-            <circle
-              cx={dotX}
-              cy={dotY}
-              r={4}
-              className="fill-blue-500 transition-all duration-500 ease-out"
-            />
-          </g>
+          <circle
+            cx={dotX}
+            cy={dotY}
+            r={5}
+            className="fill-white dark:fill-zinc-950 stroke-[2.5] stroke-blue-600 dark:stroke-blue-400 transition-all duration-700 ease-out"
+          />
         </svg>
 
         {/* Score Number in Center of Arch */}
-        <div className="absolute inset-x-0 bottom-1 flex flex-col items-center justify-center text-center">
-          <span className="text-3xl font-black tracking-tight text-zinc-900 dark:text-white leading-none">
+        <div className="absolute inset-x-0 bottom-0 flex flex-col items-center justify-center text-center">
+          <span className="text-3xl font-bold font-mono tracking-tight text-zinc-900 dark:text-zinc-100 leading-none">
             {safeScore}
           </span>
-          <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mt-1 uppercase tracking-wider">
-            / 100
+          <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mt-1">
+            out of 100
           </span>
         </div>
       </div>
 
       {/* Status Rating Label */}
-      <div className="mt-2 text-center">
-        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${status.badgeBg}`}>
+      <div className="mt-3 text-center">
+        <span className={`inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium border ${status.badgeClass}`}>
           {status.label}
         </span>
       </div>
 
       {/* Range Limits (0 and 100) */}
-      <div className="w-full flex justify-between px-3 text-[10px] font-mono text-zinc-400 dark:text-zinc-500 mt-1">
+      <div className="w-full flex justify-between px-4 text-[10px] font-mono text-zinc-400 dark:text-zinc-500 mt-1">
         <span>0</span>
         <span>100</span>
       </div>

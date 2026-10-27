@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Logo } from '../ui/Logo';
 
 export function Footer() {
   const pathname = usePathname();
@@ -38,13 +39,8 @@ export function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-12">
           {/* Brand Column */}
           <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="h-7 w-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
-                H
-              </div>
-              <span className="font-bold text-base text-zinc-900 dark:text-white tracking-tight">
-                HyperResume
-              </span>
+            <Link href="/" className="inline-block mb-4" aria-label="HyperResume Home">
+              <Logo variant="full" size="md" />
             </Link>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-xs">
               Build ATS-optimized resumes backed by your real experience. No fabricated skills, no fake metrics.

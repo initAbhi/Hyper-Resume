@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Alert } from '@/components/ui/alert';
+import { Logo } from '@/components/ui/Logo';
 import { useAuth } from '@/lib/auth-context';
 
 export default function RegisterPage() {
@@ -48,7 +49,10 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex flex-1 items-center justify-center py-16 px-4">
+    <div className="flex flex-1 flex-col items-center justify-center py-16 px-4">
+      <Link href="/" className="mb-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-lg" aria-label="HyperResume Home">
+        <Logo variant="full" size="lg" priority />
+      </Link>
       <Card className="w-full max-w-md shadow-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">Create Account</CardTitle>

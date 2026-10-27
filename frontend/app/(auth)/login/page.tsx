@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Alert } from '@/components/ui/alert';
+import { Logo } from '@/components/ui/Logo';
 import { useAuth } from '@/lib/auth-context';
 
 export default function LoginPage() {
@@ -40,7 +41,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex flex-1 items-center justify-center py-16 px-4">
+    <div className="flex flex-1 flex-col items-center justify-center py-16 px-4">
+      <Link href="/" className="mb-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-lg" aria-label="HyperResume Home">
+        <Logo variant="full" size="lg" priority />
+      </Link>
       <Card className="w-full max-w-md shadow-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">Sign In</CardTitle>
@@ -53,6 +57,23 @@ export default function LoginPage() {
             {errorMessage && (
               <Alert variant="destructive">{errorMessage}</Alert>
             )}
+
+            <div className="p-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 flex items-center justify-between text-xs">
+              <div className="flex flex-col">
+                <span className="font-semibold text-blue-950 dark:text-blue-200">Demo Account</span>
+                <span className="text-blue-700 dark:text-blue-300 text-[11px]">demo@hyperresume.ai / demo123</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('demo@hyperresume.ai');
+                  setPassword('demo123');
+                }}
+                className="px-2.5 py-1 rounded bg-[#285FEA] hover:bg-[#1E4BC8] text-white text-[11px] font-medium transition-colors"
+              >
+                Auto-fill
+              </button>
+            </div>
             <Input
               id="login-email"
               label="Email Address"

@@ -34,11 +34,40 @@ async function bootstrap() {
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // CORS configuration
+  const allowedOrigins = [
+    frontendUrl,
+    'https://resume.fourth-coffee.shop',
+    'http://resume.fourth-coffee.shop',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+  ].filter(Boolean);
+
   app.enableCors({
-    origin: [frontendUrl, 'http://localhost:3000'],
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      if (!origin) return callback(null, true);
+      const isAllowed =
+        allowedOrigins.includes(origin) ||
+        /^https?:\/\/([a-z0-9-]+\.)*fourth-coffee\.shop(:\d+)?$/.test(origin) ||
+        /^https?:\/\/localhost(:\d+)?$/.test(origin) ||
+        /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin);
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        logger.warn(`Blocked CORS request from origin: ${origin}`, 'CORS');
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
+      }
+    },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Request-ID',
+      'Accept',
+      'Origin',
+      'X-Requested-With',
+    ],
+    exposedHeaders: ['Content-Disposition'],
   });
 
   // Global API Prefix
@@ -57,7 +86,8 @@ async function bootstrap() {
   );
 
   // OpenAPI / Swagger Documentation
-  if (isDev) {
+  const enableSwagger = isDev || configService.get<string>('ENABLE_SWAGGER') === 'true';
+  if (enableSwagger) {
     const swaggerConfig = new DocumentBuilder()
       .setTitle('HyperResume API')
       .setDescription('Core API documentation for HyperResume backend')
@@ -73,7 +103,7 @@ async function bootstrap() {
 
   await app.listen(port);
   logger.log(`Server started on port ${port} in ${configService.get('NODE_ENV')} mode`, 'Bootstrap');
-  if (isDev) {
+  if (enableSwagger) {
     logger.log(`Swagger documentation available at http://localhost:${port}/api/docs`, 'Bootstrap');
   }
 }

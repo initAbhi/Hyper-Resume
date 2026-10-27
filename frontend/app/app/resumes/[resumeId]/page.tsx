@@ -513,11 +513,11 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
       )}
 
       {/* Main 3-Panel Desktop Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start print:block print:w-full print:m-0 print:p-0">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start print:block print:w-full print:m-0 print:p-0">
         {/* PANEL 1: Left Section Editor (4 or 5 cols depending on AI panel) - hidden on print */}
-        <div className={`print:hidden ${isAiPanelOpen ? 'lg:col-span-4 xl:col-span-4' : 'lg:col-span-5'} space-y-4 ${mobileTab !== 'editor' ? 'hidden lg:block' : ''}`}>
+        <div className={`print:hidden ${isAiPanelOpen ? 'lg:col-span-4 xl:col-span-4' : 'lg:col-span-5'} space-y-3 ${mobileTab !== 'editor' ? 'hidden lg:block' : ''}`}>
           {/* Section Navigation Tabs */}
-          <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 overflow-x-auto text-xs font-medium">
+          <div className="flex items-center gap-1 p-1 rounded-lg bg-zinc-100 dark:bg-zinc-800/80 overflow-x-auto text-xs font-medium">
             {(
               [
                 { id: 'contact', label: 'Contact' },
@@ -531,10 +531,10 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
               <button
                 key={s.id}
                 onClick={() => setActiveSection(s.id)}
-                className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
+                className={`px-3 py-1.5 rounded-md whitespace-nowrap transition-colors ${
                   activeSection === s.id
-                    ? 'bg-white dark:bg-zinc-900 text-blue-600 font-bold shadow-xs'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'
+                    ? 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 font-semibold shadow-xs'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
                 }`}
               >
                 {s.label}
@@ -543,7 +543,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
           </div>
 
           {/* Form Fields for Active Section */}
-          <div className="p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-5">
+          <div className="p-4 sm:p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-4">
             {/* 1. Contact Information */}
             {activeSection === 'contact' && (
               <div className="space-y-4">
@@ -1093,17 +1093,17 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
         <div
           className={`${
             isAiPanelOpen ? 'lg:col-span-8 xl:col-span-5' : 'lg:col-span-7'
-          } space-y-4 print:space-y-0 print:p-0 print:m-0 print:w-full print:block ${mobileTab !== 'preview' ? 'hidden lg:block' : ''}`}
+          } space-y-3 print:space-y-0 print:p-0 print:m-0 print:w-full print:block ${mobileTab !== 'preview' ? 'hidden lg:block' : ''}`}
         >
           {/* Document Canvas Preview Card */}
-          <div className="p-4 sm:p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100/60 dark:bg-zinc-900/60 shadow-xs print:p-0 print:border-none print:shadow-none print:bg-transparent">
+          <div className="p-4 sm:p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-[#F7F8FA] dark:bg-[#111317] print:p-0 print:border-none print:shadow-none print:bg-transparent">
             <div className="print:hidden flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800 text-xs text-zinc-500 mb-4">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-zinc-800 dark:text-zinc-200">
                   ATS Document Canvas
                 </span>
                 <span className="text-[10px] text-zinc-400 font-mono hidden sm:inline">
-                  (8.5" &times; 11" Letter / A4)
+                  (8.5" &times; 11" Standard Page)
                 </span>
               </div>
               <span className="font-mono text-[11px] bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2 py-0.5 rounded text-zinc-700 dark:text-zinc-300 font-medium">
@@ -1122,7 +1122,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
               {/* The Actual Rendered ATS Document */}
               <div
                 id="resume-document-print"
-                className={`resume-paper-canvas bg-white text-zinc-950 rounded-lg min-w-[340px] max-w-[760px] mx-auto leading-relaxed ${
+                className={`resume-paper-canvas bg-white text-zinc-950 rounded-md shadow-xs border border-zinc-200/80 min-w-[340px] max-w-[760px] mx-auto leading-relaxed ${
                   templateKey === 'compact-ats'
                     ? 'p-4 sm:p-6 text-[10px] font-sans'
                     : templateKey === 'technical-ats'
@@ -1323,17 +1323,17 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
         {/* PANEL 3: Right AI Recommendations, Live Meter & Findings - hidden on print */}
         {isAiPanelOpen && (
           <div
-            className={`print:hidden lg:col-span-4 xl:col-span-3 space-y-4 ${
+            className={`print:hidden lg:col-span-4 xl:col-span-3 space-y-3 ${
               mobileTab !== 'ai' ? 'hidden lg:block' : ''
             }`}
           >
-            {/* Live ATS Score Meter Card (Rezi-Style) */}
-            <div className="p-4 sm:p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm relative overflow-hidden">
+            {/* Live ATS Score Meter Card */}
+            <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs relative overflow-hidden">
               <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
-                    Live Resume Score
+                  <div className="w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400" />
+                  <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
+                    Resume Alignment Score
                   </span>
                 </div>
                 <button
@@ -1353,17 +1353,17 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
               </div>
 
               <p className="text-[11px] text-zinc-500 text-center mt-1">
-                Real-time ATS parsing audit based on metric density, active verbs, and section completeness.
+                HyperResume internal comparison metric evaluating quantified outcomes, action verbs, and section completeness.
               </p>
             </div>
 
-            {/* Deep AI Audit & Radar Card */}
-            <div className="p-4 sm:p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-4 shadow-sm">
+            {/* Deep AI Audit Card */}
+            <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-3 shadow-xs">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-blue-600" />
-                  <h3 className="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
-                    Detailed AI Audit
+                  <Sparkles className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />
+                  <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
+                    Evidence Audit
                   </h3>
                 </div>
                 <Button
@@ -1371,23 +1371,23 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                   size="sm"
                   onClick={handleRunAudit}
                   isLoading={isAnalyzing}
-                  className="text-xs py-1 px-2.5 font-semibold"
+                  className="text-xs py-1 px-2.5 font-medium"
                 >
-                  Run Deep Audit
+                  Run Audit
                 </Button>
               </div>
 
               {analysis ? (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-2 text-center text-xs">
-                    <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60">
-                      <div className="text-lg font-black text-zinc-900 dark:text-zinc-100">
+                    <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60">
+                      <div className="text-lg font-bold font-mono text-zinc-900 dark:text-zinc-100">
                         {analysis.findings.metricsCount}
                       </div>
-                      <div className="text-[10px] text-zinc-500 font-medium">Quantified Outcomes</div>
+                      <div className="text-[10px] text-zinc-500 font-medium">Quantified Metrics</div>
                     </div>
-                    <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60">
-                      <div className="text-lg font-black text-zinc-900 dark:text-zinc-100">
+                    <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60">
+                      <div className="text-lg font-bold font-mono text-zinc-900 dark:text-zinc-100">
                         {analysis.findings.actionVerbsCount}
                       </div>
                       <div className="text-[10px] text-zinc-500 font-medium">Action Verbs</div>
@@ -1396,14 +1396,14 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
 
                   {/* Recommendations */}
                   <div className="space-y-2">
-                    <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
+                    <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
                       Targeted Improvements
                     </span>
                     <ul className="space-y-1.5 text-xs">
                       {analysis.recommendations.map((rec, rIdx) => (
                         <li
                           key={rIdx}
-                          className="p-2.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 text-amber-900 dark:text-amber-200 text-[11px] leading-relaxed"
+                          className="p-2.5 rounded-lg bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 text-amber-900 dark:text-amber-200 text-[11px] leading-relaxed"
                         >
                           {rec}
                         </li>
@@ -1412,24 +1412,24 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-5 text-xs text-zinc-500">
-                  <Sparkles className="w-5 h-5 mx-auto mb-2 text-blue-500" />
-                  <p>Run a deep audit to inspect individual bullet points for STAR/XYZ formula compliance.</p>
+                <div className="text-center py-4 text-xs text-zinc-500">
+                  <Sparkles className="w-4 h-4 mx-auto mb-1.5 text-zinc-400" />
+                  <p>Run an audit to check bullet structure and STAR/XYZ outcome density.</p>
                 </div>
               )}
             </div>
 
             {/* Quick Match JD Link */}
-            <div className="p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs space-y-2 shadow-sm">
-              <span className="font-bold text-zinc-800 dark:text-zinc-200">
+            <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs space-y-2 shadow-xs">
+              <span className="font-semibold text-zinc-800 dark:text-zinc-200">
                 Targeting a Specific Role?
               </span>
               <p className="text-zinc-500 text-[11px] leading-relaxed">
-                Run our 5-dimension Job Match to extract required skills and calculate evidence alignment.
+                Compare this resume with a target job description to verify required skills and evidence alignment.
               </p>
               <Link
                 href={`/app/match?resumeId=${resumeId}`}
-                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors shadow-xs"
+                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors shadow-xs text-xs"
               >
                 Match with Job Description
               </Link>
@@ -1440,18 +1440,18 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
 
       {/* AI Suggestion Interactive Modal */}
       {activeSuggestion && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xl p-5 space-y-4 animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xl p-5 space-y-4 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-blue-600" />
-                <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
-                  AI STAR / XYZ Bullet Rewrite
+                <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
+                  Structured Bullet Improvement (STAR / XYZ)
                 </h3>
               </div>
               <button
                 onClick={() => setActiveSuggestion(null)}
-                className="text-zinc-400 hover:text-zinc-600"
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1459,14 +1459,14 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
 
             <div className="space-y-3 text-xs">
               <div>
-                <span className="font-semibold text-zinc-500">Original Bullet:</span>
-                <p className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 mt-1">
+                <span className="font-medium text-zinc-500">Current Bullet Text:</span>
+                <p className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 mt-1 border border-zinc-200 dark:border-zinc-700">
                   {activeSuggestion.original}
                 </p>
               </div>
 
               <div>
-                <span className="font-semibold text-blue-600">Suggested Rewrite:</span>
+                <span className="font-medium text-blue-600 dark:text-blue-400">Proposed Revision:</span>
                 <textarea
                   rows={3}
                   value={activeSuggestion.suggested}
@@ -1476,12 +1476,12 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                       suggested: e.target.value,
                     })
                   }
-                  className="w-full p-2.5 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50/30 dark:bg-blue-950/20 text-zinc-900 dark:text-zinc-100 mt-1 focus:outline-none focus:ring-1 focus:ring-blue-600 leading-relaxed font-sans"
+                  className="w-full p-2.5 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50/20 dark:bg-blue-950/20 text-zinc-900 dark:text-zinc-100 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-600 leading-relaxed font-sans"
                 />
               </div>
 
-              <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 text-[11px] text-emerald-900 dark:text-emerald-200">
-                <span className="font-bold">Why this helps: </span>
+              <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-[11px] text-zinc-700 dark:text-zinc-300">
+                <span className="font-semibold text-zinc-900 dark:text-zinc-100">Rationale: </span>
                 {activeSuggestion.why}
               </div>
             </div>
@@ -1508,35 +1508,35 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
 
       {/* Version Snapshots Drawer */}
       {isVersionDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/50">
-          <div className="w-full max-w-md bg-white dark:bg-zinc-900 h-full p-6 space-y-5 overflow-y-auto shadow-2xl">
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white dark:bg-zinc-900 h-full p-6 space-y-5 overflow-y-auto shadow-2xl border-l border-zinc-200 dark:border-zinc-800">
             <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800">
               <div className="flex items-center gap-2">
-                <History className="w-5 h-5 text-blue-600" />
+                <History className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />
                 <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
                   Version History
                 </h3>
               </div>
               <button
                 onClick={() => setIsVersionDrawerOpen(false)}
-                className="text-zinc-400 hover:text-zinc-600"
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Create Snapshot Note */}
             <div className="space-y-2">
-              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-                Save Current State Snapshot
+              <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                Create State Snapshot
               </label>
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="e.g. Tailored for Staff Role at Stripe"
+                  placeholder="e.g. Tailored for Senior Role at Stripe"
                   value={versionNote}
                   onChange={(e) => setVersionNote(e.target.value)}
-                  className="flex-1 text-xs p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                  className="flex-1 text-xs p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-600"
                 />
                 <Button
                   variant="primary"
@@ -1545,14 +1545,14 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                   isLoading={isSavingVersion}
                   disabled={!versionNote.trim()}
                 >
-                  Snapshot
+                  Save
                 </Button>
               </div>
             </div>
 
             {/* Versions List */}
             <div className="space-y-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
-              <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
                 Saved Snapshots ({versions.length})
               </span>
               {versions.length === 0 ? (
@@ -1562,13 +1562,13 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                   {versions.map((ver) => (
                     <div
                       key={ver.id}
-                      className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40 text-xs space-y-1"
+                      className="p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40 text-xs space-y-1"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                        <span className="font-semibold text-zinc-900 dark:text-zinc-100">
                           Version {ver.versionNumber}
                         </span>
-                        <span className="text-[10px] text-zinc-400">
+                        <span className="text-[10px] text-zinc-400 font-mono">
                           {new Date(ver.createdAt).toLocaleDateString()}
                         </span>
                       </div>

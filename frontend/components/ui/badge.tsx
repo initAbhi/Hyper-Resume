@@ -12,20 +12,20 @@ export function Badge({
 }: BadgeProps) {
   const variants = {
     neutral:
-      'bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700',
+      'bg-[#F1F3F5] text-[#5A6270] dark:bg-[#1D2128] dark:text-[#9EA7B4] border border-[#E2E5E9] dark:border-[#252A33]',
     success:
-      'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+      'bg-[#ECFDF5] text-[#065F46] dark:bg-[#064E3B]/40 dark:text-[#A7F3D0] border border-[#A7F3D0]/60 dark:border-[#047857]/50',
     warning:
-      'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border-amber-200 dark:border-amber-800',
+      'bg-[#FFFBEB] text-[#92400E] dark:bg-[#78350F]/40 dark:text-[#FDE68A] border border-[#FDE68A]/60 dark:border-[#B45309]/50',
     destructive:
-      'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border-rose-200 dark:border-rose-800',
+      'bg-[#FEF2F2] text-[#991B1B] dark:bg-[#7F1D1D]/40 dark:text-[#FECACA] border border-[#FECACA]/60 dark:border-[#B91C1C]/50',
     info:
-      'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 border-blue-200 dark:border-blue-800',
+      'bg-[#EDF3FD] text-[#1E4BC8] dark:bg-[#13203D] dark:text-[#93C5FD] border border-[#C7DBF9]/60 dark:border-[#1E3A78]/50',
   };
 
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${variants[variant]} ${className}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors ${variants[variant]} ${className}`}
       {...props}
     >
       {children}

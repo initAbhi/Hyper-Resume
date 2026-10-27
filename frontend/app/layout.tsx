@@ -23,6 +23,19 @@ export const metadata: Metadata = {
     description: 'Build ATS-optimized resumes that land interviews. Free resume checker & job matcher.',
     type: 'website',
     siteName: 'HyperResume',
+    images: [{ url: '/logos/HyperResume-Full-Logo.png', width: 1200, height: 400, alt: 'HyperResume' }],
+  },
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icon.png', type: 'image/png', sizes: '32x32' },
+      { url: '/icon-192.png', type: 'image/png', sizes: '192x192' },
+      { url: '/icon-512.png', type: 'image/png', sizes: '512x512' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
   },
 };
 

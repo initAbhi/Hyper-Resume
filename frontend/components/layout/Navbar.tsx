@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '../ui/button';
 import { ThemeToggle } from '../ui/ThemeToggle';
+import { Logo } from '../ui/Logo';
 import { Menu, X, ArrowRight, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
@@ -63,6 +64,7 @@ function NavbarInner() {
 
   const productLinks = [
     { label: 'AI Resume Builder', desc: 'Create ATS-optimized resumes', href: '/login' },
+    { label: 'Sample Resume Library', desc: 'Top 20 company ATS resumes', href: '/examples' },
     { label: 'Resume Checker', desc: 'Get instant ATS feedback', href: '/tools/resume-checker' },
     { label: 'Job Matcher', desc: 'Match resume to any job', href: '/tools/job-match' },
     { label: 'Bullet Improver', desc: 'Strengthen weak bullets', href: '/tools/bullet-improver' },
@@ -78,12 +80,7 @@ function NavbarInner() {
             className="flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-lg"
             aria-label="HyperResume Home"
           >
-            <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
-              H
-            </div>
-            <span className="font-bold text-lg tracking-tight text-zinc-900 dark:text-white">
-              HyperResume
-            </span>
+            <Logo variant="full" size="md" priority />
           </Link>
 
           {/* Desktop Navigation */}
@@ -117,7 +114,7 @@ function NavbarInner() {
             </div>
 
             {[
-              { label: 'Templates', href: '/examples' },
+              { label: 'Sample Library', href: '/examples' },
               { label: 'Pricing', href: '/pricing' },
             ].map((link) => {
               const isActive = pathname.startsWith(link.href);
@@ -231,7 +228,7 @@ function NavbarInner() {
                 className="block px-3 py-2.5 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                Templates
+                Sample Library
               </Link>
               <Link
                 href="/pricing"
