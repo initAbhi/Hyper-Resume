@@ -58,7 +58,7 @@ function NavbarInner() {
     return () => { document.body.style.overflow = ''; };
   }, [isMobileMenuOpen]);
 
-  if (pathname?.startsWith('/app')) {
+  if (pathname?.startsWith('/app') || pathname?.startsWith('/admin')) {
     return null;
   }
 
@@ -78,7 +78,7 @@ function NavbarInner() {
           <Link
             href="/"
             className="flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-lg"
-            aria-label="HyperResume Home"
+            aria-label="HypeResume Home"
           >
             <Logo variant="full" size="md" priority />
           </Link>

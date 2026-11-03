@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-export const SITE_NAME = 'HyperResume';
+export const SITE_NAME = 'HypeResume';
 export const SITE_URL =
   process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 export const DEFAULT_DESCRIPTION =
@@ -52,7 +52,7 @@ export function constructMetadata({
       title: fullTitle,
       description,
       images: [`${SITE_URL}${image}`],
-      creator: '@HyperResumeAI',
+      creator: '@HypeResumeAI',
     },
     robots: {
       index: !noIndex,
@@ -69,13 +69,13 @@ export function constructMetadata({
 }
 
 /**
- * Valid JSON-LD Structured Data for HyperResume SoftwareApplication
+ * Valid JSON-LD Structured Data for HypeResume SoftwareApplication
  */
 export function getSoftwareApplicationJsonLd() {
   return {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
-    name: 'HyperResume',
+    name: 'HypeResume',
     operatingSystem: 'All (Web-based)',
     applicationCategory: 'BusinessApplication',
     offers: {

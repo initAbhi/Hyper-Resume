@@ -46,7 +46,7 @@ export default function ResumeScorePage() {
       <div className="text-center max-w-2xl mx-auto mb-10">
         <Badge variant="info" className="mb-3">Scoring Framework</Badge>
         <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
-          How HyperResume Scores Resumes
+          How HypeResume Scores Resumes
         </h1>
         <p className="mt-3 text-base text-zinc-600 dark:text-zinc-400">
           No black boxes. No fake hiring percentages. We evaluate 5 objective dimensions of technical resume quality.

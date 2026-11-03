@@ -3,7 +3,7 @@ import { constructMetadata } from '@/lib/seo';
 
 export const metadata = constructMetadata({
   title: 'Privacy Policy & Data Protection',
-  description: 'How HyperResume protects your personal career data. Zero model training on resumes, strict access controls, and transparent retention rules.',
+  description: 'How HypeResume protects your personal career data. Zero model training on resumes, strict access controls, and transparent retention rules.',
   path: '/privacy',
 });
 
@@ -30,7 +30,7 @@ export default function PrivacyPage() {
             2. Zero AI Training on Candidate Resumes
           </h2>
           <p className="text-zinc-600 dark:text-zinc-400">
-            HyperResume does <strong>not</strong> use your resumes, cover letters, or job descriptions to train underlying foundation models. Any AI-based structuring and bullet suggestions are executed via secure enterprise APIs with strict zero-data-retention agreements.
+            HypeResume does <strong>not</strong> use your resumes, cover letters, or job descriptions to train underlying foundation models. Any AI-based structuring and bullet suggestions are executed via secure enterprise APIs with strict zero-data-retention agreements.
           </p>
         </section>
 

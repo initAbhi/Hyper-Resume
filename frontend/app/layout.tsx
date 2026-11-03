@@ -6,6 +6,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { AuthProvider } from '@/lib/auth-context';
 import { ThemeProvider } from '@/lib/theme-context';
+import { MetaPixel } from '@/components/analytics/MetaPixel';
 
 const inter = Inter({
   variable: '--font-inter',
@@ -14,16 +15,17 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'HyperResume — AI Resume Builder & ATS Optimizer',
+  metadataBase: new URL('https://hype-resume.com'),
+  title: 'HypeResume — AI Resume Builder & ATS Optimizer',
   description:
     'Build ATS-optimized resumes that land interviews. Match your experience to any job description, improve your bullets, and export clean PDFs. Trusted by thousands of job seekers.',
   keywords: ['resume builder', 'ATS resume', 'AI resume', 'job application', 'resume optimizer', 'resume checker'],
   openGraph: {
-    title: 'HyperResume — AI Resume Builder & ATS Optimizer',
+    title: 'HypeResume — AI Resume Builder & ATS Optimizer',
     description: 'Build ATS-optimized resumes that land interviews. Free resume checker & job matcher.',
     type: 'website',
-    siteName: 'HyperResume',
-    images: [{ url: '/logos/HyperResume-Full-Logo.png', width: 1200, height: 400, alt: 'HyperResume' }],
+    siteName: 'HypeResume',
+    images: [{ url: '/logos/HypeResume-Full-Logo.png', width: 1200, height: 400, alt: 'HypeResume' }],
   },
   icons: {
     icon: [
@@ -65,8 +67,35 @@ export default function RootLayout({
             })();`,
           }}
         />
+        {/* Meta Pixel Code */}
+        <script
+          id="fb-pixel"
+          dangerouslySetInnerHTML={{
+            __html: `!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '1117348281146781');
+fbq('track', 'PageView');`,
+          }}
+        />
+        <noscript>
+          <img
+            height="1"
+            width="1"
+            style={{ display: 'none' }}
+            src="https://www.facebook.com/tr?id=1117348281146781&ev=PageView&noscript=1"
+            alt=""
+          />
+        </noscript>
+        {/* End Meta Pixel Code */}
       </head>
       <body className="min-h-full flex flex-col bg-white dark:bg-[#0a0a0a] text-zinc-900 dark:text-zinc-100 antialiased" style={{ fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif" }}>
+        <MetaPixel />
         <ThemeProvider>
           <AuthProvider>
             <Suspense fallback={<header className="sticky top-0 z-50 w-full h-16 border-b border-zinc-100 dark:border-zinc-900 bg-white/80 dark:bg-zinc-950/80" />}>

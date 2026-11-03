@@ -1,8 +1,8 @@
 # Current Production State — HyperResume
 
-**Last Updated**: October 27, 2026, 19:25 IST  
+**Last Updated**: October 29, 2026, 01:30 IST  
 **Environment**: Production Live (Ubuntu 24.04 LTS on Cloud VPS)  
-**System Status**: 🟢 All Systems Fully Operational
+**System Status**: 🟢 All Systems Fully Operational (Migrated to hype-resume.com)
 
 ---
 
@@ -10,10 +10,12 @@
 
 | Endpoint | Target URL | Upstream Port | Protocol | Certificate |
 | :--- | :--- | :--- | :--- | :--- |
-| **Web Frontend** | `https://resume.fourth-coffee.shop` | `127.0.0.1:3082` | HTTP/2 (SSL) | Let's Encrypt (Certbot) |
-| **REST API** | `https://resume-api.fourth-coffee.shop/api/v1` | `127.0.0.1:3002` | HTTP/2 (SSL) | Let's Encrypt (Certbot) |
-| **Sample Library** | `https://resume.fourth-coffee.shop/examples` | `127.0.0.1:3082` | HTTP/2 (SSL) | Let's Encrypt (Certbot) |
-| **Workspace App** | `https://resume.fourth-coffee.shop/app` | `127.0.0.1:3082` | HTTP/2 (SSL) | Let's Encrypt (Certbot) |
+| **Web Frontend** | `https://hype-resume.com` | `127.0.0.1:3082` | HTTP/2 (SSL) | Let's Encrypt (Certbot - `hype-resume.com`) |
+| **REST API** | `https://api.hype-resume.com/api/v1` | `127.0.0.1:3002` | HTTP/2 (SSL) | Let's Encrypt (Certbot - `hype-resume.com`) |
+| **Sample Library** | `https://hype-resume.com/examples` | `127.0.0.1:3082` | HTTP/2 (SSL) | Let's Encrypt (Certbot - `hype-resume.com`) |
+| **Workspace App** | `https://hype-resume.com/app` | `127.0.0.1:3082` | HTTP/2 (SSL) | Let's Encrypt (Certbot - `hype-resume.com`) |
+| **Legacy Frontend**| `https://resume.fourth-coffee.shop` | N/A (301 Redirect) | HTTP/2 (SSL) | 301 Permanent Redirect to `https://hype-resume.com` |
+| **Legacy API** | `https://resume-api.fourth-coffee.shop` | N/A (301 Redirect) | HTTP/2 (SSL) | 301 Permanent Redirect to `https://api.hype-resume.com` |
 
 ---
 

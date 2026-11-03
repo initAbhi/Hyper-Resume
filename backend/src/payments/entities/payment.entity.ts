@@ -8,6 +8,8 @@ import {
 import { BaseEntity } from '../../common/entities/base.entity.js';
 import { User } from '../../users/entities/user.entity.js';
 
+import type { PaymentProviderType } from '../providers/payment-provider.interface.js';
+
 export type PaymentStatus = 'pending' | 'succeeded' | 'failed' | 'refunded';
 
 @Entity('payments')
@@ -21,7 +23,7 @@ export class Payment extends BaseEntity {
   user!: User;
 
   @Column({ type: 'varchar', length: 50 })
-  provider!: 'razorpay' | 'stripe' | 'mock' | 'sandbox';
+  provider!: PaymentProviderType;
 
   @Index('idx_payments_provider_tx_id', { unique: true })
   @Column({ type: 'varchar', length: 255, unique: true, name: 'provider_transaction_id' })

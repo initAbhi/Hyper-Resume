@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -97,7 +97,7 @@ const FAQS = [
   },
   {
     q: 'Can I export my resume without paying?',
-    a: 'Yes! Unlike platforms that hide PDF downloads behind paywalls after you spend time typing, HyperResume allows unlimited, clean, watermark-free PDF exports on every tier, including Free Starter.',
+    a: 'Yes! Unlike platforms that hide PDF downloads behind paywalls after you spend time typing, HypeResume allows unlimited, clean, watermark-free PDF exports on every tier, including Free Starter.',
   },
   {
     q: 'Do purchased credits expire if I get hired quickly?',
@@ -111,6 +111,7 @@ const FAQS = [
 
 export function PricingClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, creditBalance, isAuthenticated, refreshUser } = useAuth();
   const [plans, setPlans] = useState<PricingPlan[]>(FALLBACK_PLANS);
   const [activePlan, setActivePlan] = useState<PricingPlan | null>(null);
@@ -138,7 +139,42 @@ export function PricingClient() {
       .catch(() => {
         // Fall back to predefined catalog
       });
-  }, []);
+
+    // Handle return from Dodo Payments checkout
+    const statusParam = searchParams?.get('status');
+    const orderIdParam = searchParams?.get('orderId');
+
+    if (statusParam === 'success' && orderIdParam) {
+      setIsCheckoutOpen(true);
+      setCheckoutStep('processing');
+      apiClient
+        .verifyPayment({ orderId: orderIdParam })
+        .then(async (result) => {
+          if (result.verified) {
+            await refreshUser();
+            analytics.track('purchase_completed', {
+              orderId: orderIdParam,
+              paymentId: result.paymentId,
+              amount: 39900,
+            });
+            setSuccessReceipt({
+              orderId: orderIdParam,
+              paymentId: result.paymentId,
+              creditsAwarded: 30,
+              newBalance: result.balance,
+            });
+            setCheckoutStep('success');
+            if (typeof window !== 'undefined') {
+              window.history.replaceState({}, '', '/pricing');
+            }
+          }
+        })
+        .catch((err) => {
+          setCheckoutStep('error');
+          setErrorMessage(err instanceof Error ? err.message : 'Payment verification pending.');
+        });
+    }
+  }, [searchParams, refreshUser]);
 
   const handleSelectPlan = (plan: PricingPlan) => {
     if (plan.amountMinor === 0) {
@@ -177,6 +213,18 @@ export function PricingClient() {
         planId: activePlan.id,
       });
       setOrderData(order);
+
+      // If provider returned a hosted checkout link (e.g. Dodo Payments), redirect immediately!
+      if (order.checkoutUrl) {
+        analytics.track('checkout_started', {
+          planId: activePlan.id,
+          amountMinor: activePlan.amountMinor,
+          orderId: order.orderId,
+          provider: order.provider,
+        });
+        window.location.href = order.checkoutUrl;
+        return;
+      }
     } catch (err: unknown) {
       setCheckoutStep('error');
       setErrorMessage(err instanceof Error ? err.message : 'Unable to create checkout order. Please try again.');

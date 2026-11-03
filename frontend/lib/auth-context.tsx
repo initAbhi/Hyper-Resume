@@ -11,6 +11,12 @@ interface AuthContextType {
   isLoading: boolean;
   login: (credentials: { email: string; password: string }) => Promise<void>;
   signup: (credentials: { email: string; password: string; fullName: string }) => Promise<void>;
+  googleLogin: (payload: {
+    credential: string;
+    targetRole?: string;
+    targetGoal?: string;
+    experienceLevel?: string;
+  }) => Promise<{ isNewUser?: boolean }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -87,6 +93,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const googleLogin = async (payload: {
+    credential: string;
+    targetRole?: string;
+    targetGoal?: string;
+    experienceLevel?: string;
+  }) => {
+    setIsLoading(true);
+    try {
+      const data = await apiClient.googleAuth(payload);
+      setUser(data.user);
+      await refreshUser();
+      return { isNewUser: data.isNewUser };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async () => {
     setIsLoading(true);
     try {
@@ -110,6 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         login,
         signup,
+        googleLogin,
         logout,
         refreshUser,
       }}

@@ -3,7 +3,7 @@ import { constructMetadata } from '@/lib/seo';
 
 export const metadata = constructMetadata({
   title: 'Terms of Service',
-  description: 'Terms of service for HyperResume. Clear rules on usage, fair subscriptions, and truthful resume creation.',
+  description: 'Terms of service for HypeResume. Clear rules on usage, fair subscriptions, and truthful resume creation.',
   path: '/terms',
 });
 
@@ -21,7 +21,7 @@ export default function TermsPage() {
             1. Truthful Application Invariant
           </h2>
           <p className="text-zinc-600 dark:text-zinc-400">
-            HyperResume is designed to highlight and structure your genuine professional experience. You agree that all credentials, employment histories, degrees, and project claims entered into the platform are accurate to the best of your knowledge.
+            HypeResume is designed to highlight and structure your genuine professional experience. You agree that all credentials, employment histories, degrees, and project claims entered into the platform are accurate to the best of your knowledge.
           </p>
         </section>
 
@@ -30,7 +30,7 @@ export default function TermsPage() {
             2. No Guarantees of Employment or ATS Passage
           </h2>
           <p className="text-zinc-600 dark:text-zinc-400">
-            HyperResume provides optimization tools, formatting checks, and compatibility indicators based on common recruitment standards. We make no guarantee that using the platform will result in job offers, interview invitations, or passage through third-party ATS algorithms.
+            HypeResume provides optimization tools, formatting checks, and compatibility indicators based on common recruitment standards. We make no guarantee that using the platform will result in job offers, interview invitations, or passage through third-party ATS algorithms.
           </p>
         </section>
 

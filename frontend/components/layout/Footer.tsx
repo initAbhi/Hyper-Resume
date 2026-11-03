@@ -7,7 +7,7 @@ import { Logo } from '../ui/Logo';
 
 export function Footer() {
   const pathname = usePathname();
-  if (pathname?.startsWith('/app')) return null;
+  if (pathname?.startsWith('/app') || pathname?.startsWith('/admin')) return null;
   const productLinks = [
     { label: 'AI Resume Builder', href: '/login' },
     { label: 'Resume Checker', href: '/tools/resume-checker' },
@@ -39,7 +39,7 @@ export function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-12">
           {/* Brand Column */}
           <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="inline-block mb-4" aria-label="HyperResume Home">
+            <Link href="/" className="inline-block mb-4" aria-label="HypeResume Home">
               <Logo variant="full" size="md" />
             </Link>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-xs">
@@ -108,7 +108,7 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-zinc-400 dark:text-zinc-500">
-            © 2026 HyperResume. All rights reserved.
+            © 2026 HypeResume. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
             <Link href="/privacy" className="text-xs text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">

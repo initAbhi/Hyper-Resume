@@ -125,7 +125,7 @@ export default function BulletImproverPage() {
                 Want to optimize your full resume against a specific job?
               </p>
               <p className="text-xs text-blue-700 dark:text-blue-400">
-                HyperResume tailors your entire application with evidence-based feedback.
+                HypeResume tailors your entire application with evidence-based feedback.
               </p>
             </div>
             <Link href="/register">

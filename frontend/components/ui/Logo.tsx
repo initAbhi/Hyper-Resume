@@ -41,13 +41,29 @@ export function Logo({
 }: LogoProps) {
   const cfg = sizeConfig[size] || sizeConfig.md;
 
+  // Banner / Full Image Logo
+  if (variant === 'banner') {
+    return (
+      <div className={`relative inline-flex items-center shrink-0 ${className}`}>
+        <Image
+          src="/logos/logo-full.png"
+          alt="HypeResume Logo"
+          width={cfg.iconSize * 3.5}
+          height={cfg.iconSize}
+          priority={priority}
+          className="object-contain h-auto max-w-full"
+        />
+      </div>
+    );
+  }
+
   // Icon only
   if (variant === 'icon') {
     return (
       <div className={`relative inline-flex items-center justify-center shrink-0 ${className}`}>
         <Image
           src="/logos/logo-icon.png"
-          alt="HyperResume Logo"
+          alt="HypeResume Logo"
           width={cfg.iconSize}
           height={cfg.iconSize}
           priority={priority}
@@ -61,7 +77,7 @@ export function Logo({
   // Pure HTML Typography Wordmark (sharp, crisp, accessible)
   const Wordmark = () => (
     <span className={`tracking-tight select-none font-sans leading-none flex items-center ${cfg.textSize}`}>
-      <span className="text-[#1A1D23] dark:text-[#F0F2F5]">Hyper</span>
+      <span className="text-[#1A1D23] dark:text-[#F0F2F5]">Hype</span>
       <span className="text-[#285FEA]">Resume</span>
     </span>
   );
@@ -81,7 +97,7 @@ export function Logo({
       <div className="relative shrink-0 flex items-center justify-center">
         <Image
           src="/logos/logo-icon.png"
-          alt="HyperResume Icon"
+          alt="HypeResume Icon"
           width={cfg.iconSize}
           height={cfg.iconSize}
           priority={priority}

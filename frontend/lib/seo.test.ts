@@ -36,15 +36,15 @@ describe('SEO Utilities', () => {
 
     expect(jsonLd['@context']).toBe('https://schema.org');
     expect(jsonLd['@type']).toBe('SoftwareApplication');
-    expect(jsonLd.name).toBe('HyperResume');
+    expect(jsonLd.name).toBe('HypeResume');
     expect(jsonLd.offers.priceCurrency).toBe('INR');
   });
 
   it('should generate valid FAQPage JSON-LD schema', () => {
     const faqs = [
       {
-        question: 'Does HyperResume fabricate work history?',
-        answer: 'No. HyperResume never invents metrics, skills, or job experience.',
+        question: 'Does HypeResume fabricate work history?',
+        answer: 'No. HypeResume never invents metrics, skills, or job experience.',
       },
       {
         question: 'Is my data used for model training?',
@@ -57,9 +57,9 @@ describe('SEO Utilities', () => {
     expect(jsonLd['@context']).toBe('https://schema.org');
     expect(jsonLd['@type']).toBe('FAQPage');
     expect(jsonLd.mainEntity).toHaveLength(2);
-    expect(jsonLd.mainEntity[0].name).toBe('Does HyperResume fabricate work history?');
+    expect(jsonLd.mainEntity[0].name).toBe('Does HypeResume fabricate work history?');
     expect(jsonLd.mainEntity[0].acceptedAnswer.text).toBe(
-      'No. HyperResume never invents metrics, skills, or job experience.'
+      'No. HypeResume never invents metrics, skills, or job experience.'
     );
   });
 });

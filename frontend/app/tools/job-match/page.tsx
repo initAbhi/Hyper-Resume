@@ -180,7 +180,7 @@ export default function JobMatchToolPage() {
                   </h4>
                 </div>
                 <p className="text-xs text-zinc-500 mb-2">
-                  Requested in job description, but not explicitly verified in your resume. HyperResume will never invent these for you.
+                  Requested in job description, but not explicitly verified in your resume. HypeResume will never invent these for you.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {matchResult.needsConfirmation.map((skill) => (

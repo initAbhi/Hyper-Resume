@@ -345,7 +345,7 @@ export function InteractiveTemplateShowcase() {
             </div>
             <div className="max-w-md">
               <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                Use a template that guides you. Our ATS-compliant designs are trusted by over 4.5 million job seekers.
+                Use a template that guides you. Our ATS-compliant designs are trusted by over 10,000+ ambitious job seekers.
               </p>
             </div>
           </div>

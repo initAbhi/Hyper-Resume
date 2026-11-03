@@ -453,7 +453,7 @@ export function SampleResumeModal({ resume, isOpen, onClose }: SampleResumeModal
 
             {/* Document Bottom Stamp */}
             <div className="mt-8 pt-3 border-t border-zinc-200 flex items-center justify-between text-[10px] text-zinc-400 print:hidden select-none">
-              <span className="font-medium">HyperResume 100% ATS Verified Single-Column Architecture</span>
+              <span className="font-medium">HypeResume 100% ATS Verified Single-Column Architecture</span>
               <span>Standard Unicode UTF-8 &bull; Tableless Flow</span>
             </div>
           </div>

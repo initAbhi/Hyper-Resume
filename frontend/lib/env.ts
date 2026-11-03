@@ -11,7 +11,7 @@ export interface FrontendEnv {
 
 export function getFrontendEnv(): FrontendEnv {
   const apiUrl =
-    process.env.NEXT_PUBLIC_API_URL || 'https://resume-api.fourth-coffee.shop/api/v1';
+    process.env.NEXT_PUBLIC_API_URL || 'https://api.hype-resume.com/api/v1';
 
   // Security guard: verify no secrets leaked into NEXT_PUBLIC
   if (process.env.NEXT_PUBLIC_DATABASE_PASSWORD || process.env.NEXT_PUBLIC_JWT_SECRET) {

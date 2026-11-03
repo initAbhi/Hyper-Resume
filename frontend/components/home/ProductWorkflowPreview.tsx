@@ -21,7 +21,7 @@ export function ProductWorkflowPreview() {
               <div className="h-3 w-3 rounded-full bg-[#28c840]" />
             </div>
             <div className="hidden sm:flex items-center gap-1 bg-white dark:bg-zinc-800 rounded-md border border-zinc-200 dark:border-zinc-700 px-3 py-1">
-              <span className="text-[11px] text-zinc-400 font-mono">hyperresume.ai/app/resumes/optimize</span>
+              <span className="text-[11px] text-zinc-400 font-mono">hype-resume.com/app/resumes/optimize</span>
             </div>
           </div>
           <div className="flex items-center gap-2">

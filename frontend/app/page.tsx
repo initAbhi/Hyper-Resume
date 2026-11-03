@@ -23,14 +23,14 @@ import { ReziStyleScoreFeatureSection } from '@/components/home/ReziStyleScoreFe
 export default function HomePage() {
   const faqs = [
     {
-      question: 'How does HyperResume ensure parser compatibility?',
+      question: 'How does HypeResume ensure parser compatibility?',
       answer:
         'We design templates around standard Applicant Tracking System (ATS) parsing conventions: strict single-column document flow, clean UTF-8 character encoding, and recognized section headers (Experience, Education, Skills, Projects). We avoid multi-column floating boxes, graphics, and tables that frequently cause parsing errors in systems like Workday, Greenhouse, and Lever.',
     },
     {
       question: 'Does the AI invent or exaggerate achievements?',
       answer:
-        'Never. HyperResume operates on a strict evidence-grounding principle. The engine assists you in structuring and clarifying the real facts, metrics, and responsibilities you provide (using STAR/XYZ formulas). It never fabricates employers, degrees, unearned skills, or false metrics.',
+        'Never. HypeResume operates on a strict evidence-grounding principle. The engine assists you in structuring and clarifying the real facts, metrics, and responsibilities you provide (using STAR/XYZ formulas). It never fabricates employers, degrees, unearned skills, or false metrics.',
     },
     {
       question: 'Can I manage multiple resumes for different target roles?',
@@ -40,7 +40,7 @@ export default function HomePage() {
     {
       question: 'How does job matching differ from a simple keyword counter?',
       answer:
-        'Traditional keyword counters merely count exact word occurrences, which encourages unhelpful keyword stuffing. HyperResume analyzes requirement competencies—mapping what the job description requires to the actual evidence demonstrated in your work experience.',
+        'Traditional keyword counters merely count exact word occurrences, which encourages unhelpful keyword stuffing. HypeResume analyzes requirement competencies—mapping what the job description requires to the actual evidence demonstrated in your work experience.',
     },
     {
       question: 'Can I export my resume as a PDF for free?',
@@ -137,7 +137,7 @@ export default function HomePage() {
               Tailored resumes yield clearer, more relevant applications.
             </h2>
             <p className="text-xs sm:text-sm text-[#5A6270] dark:text-[#9EA7B4] leading-relaxed max-w-2xl mx-auto">
-              Generic resumes sent to dozens of jobs get overlooked. HyperResume helps you align your accomplishments directly to what hiring teams are looking for.
+              Generic resumes sent to dozens of jobs get overlooked. HypeResume helps you align your accomplishments directly to what hiring teams are looking for.
             </p>
           </div>
 

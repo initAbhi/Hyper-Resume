@@ -3,10 +3,11 @@ export interface PaymentOrderOutput {
   amountMinor: number;
   currency: string;
   provider: string;
+  checkoutUrl?: string;
   metadata?: Record<string, unknown>;
 }
 
-export type PaymentProviderType = 'razorpay' | 'stripe' | 'mock' | 'sandbox';
+export type PaymentProviderType = 'dodo' | 'razorpay' | 'stripe' | 'mock' | 'sandbox';
 
 export interface PaymentProvider {
   readonly name: PaymentProviderType;
@@ -22,5 +23,6 @@ export interface PaymentProvider {
     rawPayload: string | Buffer,
     signature: string,
     secret: string,
+    headers?: Record<string, string | string[] | undefined>,
   ): boolean;
 }

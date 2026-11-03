@@ -79,10 +79,70 @@ class AnalyticsService {
       console.log(`[Analytics] Tracked event: ${event}`, sanitizedProps);
     }
 
+    // Dispatch to Meta Pixel automatically
+    if (typeof window !== 'undefined' && typeof (window as any).fbq === 'function') {
+      try {
+        const fbq = (window as any).fbq;
+        switch (event) {
+          case 'landing_view':
+            fbq('track', 'PageView');
+            break;
+          case 'pricing_viewed':
+            fbq('track', 'ViewContent', {
+              content_name: 'Pricing Plans',
+              content_category: 'Pricing',
+              ...sanitizedProps,
+            });
+            break;
+          case 'signup_completed':
+            fbq('track', 'CompleteRegistration', {
+              content_name: 'User Registration',
+              status: true,
+              ...sanitizedProps,
+            });
+            break;
+          case 'checkout_started': {
+            const eventOptions = sanitizedProps.orderId ? { eventID: String(sanitizedProps.orderId) } : undefined;
+            fbq('track', 'InitiateCheckout', {
+              content_name: sanitizedProps.planId || 'Credit Pack',
+              value: typeof sanitizedProps.amountMinor === 'number' ? sanitizedProps.amountMinor / 100 : 399,
+              currency: 'INR',
+              num_items: 1,
+            }, eventOptions);
+            break;
+          }
+          case 'purchase_completed': {
+            const eventOptions = sanitizedProps.orderId ? { eventID: String(sanitizedProps.orderId) } : undefined;
+            fbq('track', 'Purchase', {
+              content_name: sanitizedProps.planId || 'Credit Pack',
+              value: typeof sanitizedProps.amount === 'number' ? sanitizedProps.amount / 100 : 399,
+              currency: 'INR',
+              content_type: 'product',
+            }, eventOptions);
+            break;
+          }
+          case 'resume_upload_completed':
+          case 'analysis_completed':
+          case 'job_match_completed':
+          case 'suggestion_accepted':
+          case 'export_completed':
+            fbq('trackCustom', event, sanitizedProps);
+            break;
+          default:
+            fbq('trackCustom', event, sanitizedProps);
+        }
+      } catch (err) {
+        console.warn('[Analytics] Meta Pixel dispatch error:', err);
+      }
+    }
+
     // Custom event dispatch for optional client listeners
     if (typeof window !== 'undefined') {
       window.dispatchEvent(
         new CustomEvent('hyperresume:analytics', { detail: record }),
+      );
+      window.dispatchEvent(
+        new CustomEvent('hバイpe:analytics', { detail: record }),
       );
     }
   }

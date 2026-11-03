@@ -1353,7 +1353,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
               </div>
 
               <p className="text-[11px] text-zinc-500 text-center mt-1">
-                HyperResume internal comparison metric evaluating quantified outcomes, action verbs, and section completeness.
+                HypeResume internal comparison metric evaluating quantified outcomes, action verbs, and section completeness.
               </p>
             </div>
 

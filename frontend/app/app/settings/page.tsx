@@ -104,7 +104,7 @@ export default function SettingsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `hyperresume-data-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `hype-resume-data-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -287,7 +287,7 @@ export default function SettingsPage() {
               Candidate Privacy & LLM Data Governance
             </h2>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              HyperResume enforces strict confidentiality. Your career documents, contact information, and target job descriptions are processed with stateless API calls and are never used to train public foundation models.
+              HypeResume enforces strict confidentiality. Your career documents, contact information, and target job descriptions are processed with stateless API calls and are never used to train public foundation models.
             </p>
           </div>
         </div>

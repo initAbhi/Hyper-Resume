@@ -487,7 +487,7 @@ export class ApiClient {
         message:
           networkError instanceof Error
             ? networkError.message
-            : 'Unable to connect to the HyperResume server.',
+            : 'Unable to connect to the HypeResume server.',
         details: [],
         requestId,
       });
@@ -563,6 +563,38 @@ export class ApiClient {
     if (res.data.tokens?.accessToken) {
       this.setToken(res.data.tokens.accessToken);
     }
+    return res.data;
+  }
+
+  async googleAuth(dto: {
+    credential: string;
+    targetRole?: string;
+    targetGoal?: string;
+    experienceLevel?: string;
+  }) {
+    const res = await this.request<LoginResponse & { isNewUser?: boolean }>('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+    if (res.data.tokens?.accessToken) {
+      this.setToken(res.data.tokens.accessToken);
+    }
+    return res.data;
+  }
+
+  async requestPasswordReset(email: string) {
+    const res = await this.request<{ message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+    return res.data;
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    const res = await this.request<{ message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword }),
+    });
     return res.data;
   }
 
@@ -955,6 +987,198 @@ export class ApiClient {
   async getHello() {
     return this.request<string>('/');
   }
+
+  // --- Admin Endpoints ---
+  async getAdminPaymentSettings() {
+    const res = await this.request<AdminPaymentSettings>('/admin/settings/payment');
+    return res.data;
+  }
+
+  async updateAdminPaymentMode(mode: 'test_mode' | 'live_mode') {
+    const res = await this.request<AdminPaymentSettings>('/admin/settings/payment', {
+      method: 'PATCH',
+      body: JSON.stringify({ mode }),
+    });
+    return res.data;
+  }
+
+  async getAdminStats() {
+    const res = await this.request<AdminStats>('/admin/stats');
+    return res.data;
+  }
+
+  async getAdminRecentPayments(limit = 25) {
+    const res = await this.request<AdminPaymentOrder[]>(`/admin/payments/recent?limit=${limit}`);
+    return res.data;
+  }
+
+  async testAdminCheckout(planId = 'job_hunt_pack') {
+    const res = await this.request<{
+      orderId: string;
+      mode: 'test_mode' | 'live_mode';
+      checkoutUrl: string;
+      providerOrderId: string;
+    }>('/admin/test-checkout', {
+      method: 'POST',
+      body: JSON.stringify({ planId }),
+    });
+    return res.data;
+  }
+
+  async getAdminAnalytics() {
+    const res = await this.request<AdminAnalyticsOverview>('/admin/analytics/overview');
+    return res.data;
+  }
+
+  async getAdminUsers(search?: string, role?: string, limit = 50) {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (role && role !== 'all') params.append('role', role);
+    params.append('limit', String(limit));
+    const res = await this.request<AdminUserItem[]>(`/admin/users?${params.toString()}`);
+    return res.data;
+  }
+
+  async grantAdminUserCredits(userId: string, amount: number, reason?: string) {
+    const res = await this.request<{ userId: string; email: string; grantedAmount: number; newBalance: number }>(
+      `/admin/users/${userId}/grant-credits`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ amount, reason }),
+      },
+    );
+    return res.data;
+  }
+
+  async grantUserCredits(userId: string, amount: number, reason?: string) {
+    return this.grantAdminUserCredits(userId, amount, reason);
+  }
+
+  async getAdminPayments(search?: string, status?: string, mode?: string, limit = 50) {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (status && status !== 'all') params.append('status', status);
+    if (mode && mode !== 'all') params.append('mode', mode);
+    params.append('limit', String(limit));
+    const res = await this.request<AdminPaymentOrder[]>(`/admin/payments?${params.toString()}`);
+    return res.data;
+  }
+
+  async getAdminResumes(search?: string, limit = 50) {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    params.append('limit', String(limit));
+    const res = await this.request<AdminResumeItem[]>(`/admin/resumes?${params.toString()}`);
+    return res.data;
+  }
+
+  async getAdminCreditsAudit(limit = 50) {
+    const res = await this.request<AdminCreditAuditItem[]>(`/admin/credits/ledger?limit=${limit}`);
+    return res.data;
+  }
+}
+
+export interface AdminAnalyticsOverview {
+  overview: {
+    uniqueVisitors: number;
+    pageViews: number;
+    totalOrders: number;
+    totalRevenue: string;
+    conversionRate: string;
+  };
+  chartData: Array<{
+    month: string;
+    visitors: number;
+    pageViews: number;
+    orders: number;
+    revenue: number;
+  }>;
+  topReferrers: Array<{
+    source: string;
+    share: string;
+    visits: number;
+  }>;
+}
+
+export interface AdminUserItem {
+  id: string;
+  email: string;
+  fullName: string;
+  role: 'user' | 'admin';
+  isActive: boolean;
+  isEmailVerified: boolean;
+  creditBalance: number;
+  resumesCount: number;
+  createdAt: string;
+}
+
+export interface AdminResumeItem {
+  id: string;
+  name: string;
+  userId: string;
+  userEmail: string;
+  templateKey: string;
+  isMaster: boolean;
+  version: number;
+  updatedAt: string;
+  createdAt: string;
+}
+
+export interface AdminCreditAuditItem {
+  id: string;
+  userId: string;
+  userEmail: string;
+  amount: number;
+  transactionType: string;
+  description: string;
+  idempotencyKey: string;
+  createdAt: string;
+}
+
+export interface AdminPaymentSettings {
+  mode: 'test_mode' | 'live_mode';
+  databaseMode: 'test_mode' | 'live_mode';
+  provider: string;
+  testConfigured: boolean;
+  liveConfigured: boolean;
+  testApiKeyMasked: string;
+  liveApiKeyMasked: string;
+  testWebhookKeyMasked: string;
+  liveWebhookKeyMasked: string;
+  testProducts: Record<string, string>;
+  liveProducts: Record<string, string>;
+  frontendUrl: string;
+  updatedAt: string;
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  totalPayments: number;
+  successfulPayments: number;
+  conversionRate?: string;
+  totalRevenueMinor: number;
+  totalRevenueFormatted: string;
+  totalResumes: number;
+  activePaymentMode: 'test_mode' | 'live_mode';
+}
+
+export interface AdminPaymentOrder {
+  id: string;
+  userId: string;
+  userEmail: string;
+  userName?: string;
+  provider: string;
+  orderId: string;
+  providerTransactionId?: string;
+  amountMinor: number;
+  amountFormatted?: string;
+  currency: string;
+  status: 'pending' | 'succeeded' | 'failed' | 'refunded';
+  planName: string;
+  planId?: string;
+  checkoutUrl?: string;
+  environmentMode?: 'test_mode' | 'live_mode';
+  createdAt: string;
 }
 
 export interface PricingPlan {
@@ -976,6 +1200,7 @@ export interface PaymentOrderResponse {
   amountMinor: number;
   currency: string;
   provider: string;
+  checkoutUrl?: string;
   plan: PricingPlan;
 }
 

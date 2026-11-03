@@ -58,18 +58,27 @@ export class PaymentsController {
   @Post('webhook')
   @HttpCode(HttpStatus.OK)
   async webhook(
-    @Req() req: Request,
-    @Headers('x-razorpay-signature') razorpaySig: string,
-    @Headers('x-webhook-signature') genericSig: string,
-    @Body() body: { event: string; providerTransactionId?: string; orderId?: string },
+    @Req() req: Request & { rawBody?: Buffer },
+    @Headers('webhook-signature') dodoSig?: string,
+    @Headers('webhook-id') webhookId?: string,
+    @Headers('webhook-timestamp') webhookTimestamp?: string,
+    @Headers('x-razorpay-signature') razorpaySig?: string,
+    @Headers('x-webhook-signature') genericSig?: string,
+    @Body() body?: any,
   ) {
-    const signature = razorpaySig || genericSig || '';
-    const rawPayload = JSON.stringify(body);
+    const signature = dodoSig || razorpaySig || genericSig || '';
+    const rawPayload = req.rawBody || JSON.stringify(body || {});
+    const headers = {
+      'webhook-id': webhookId,
+      'webhook-timestamp': webhookTimestamp,
+      'webhook-signature': dodoSig,
+    };
 
     return this.paymentsService.processWebhook(
       rawPayload,
       signature,
-      body,
+      body || {},
+      headers,
     );
   }
 }

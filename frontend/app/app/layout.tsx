@@ -19,6 +19,7 @@ import {
   Search,
   ExternalLink,
   BookOpen,
+  ShieldCheck,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { Logo } from '@/components/ui/Logo';
@@ -81,6 +82,9 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
     { label: 'Applications', href: '/app/applications', icon: Briefcase },
     { label: 'AI Interview', href: '/app/interview', icon: Mic, badge: 'Soon' },
     { label: 'AI Job Search', href: '/app/job-search', icon: Search, badge: 'Soon' },
+    ...(user?.role === 'admin'
+      ? [{ label: 'Admin Center', href: '/admin', icon: ShieldCheck, badge: 'Admin' }]
+      : []),
   ];
 
   const currentNav = navItems.find((item) =>
@@ -98,7 +102,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col flex-1 min-h-0">
           {/* Workspace Brand Header */}
           <div className={`px-4 border-b border-[#E2E5E9] dark:border-[#252A33] flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} h-14 shrink-0`}>
-            <Link href="/app" className="flex items-center gap-2 min-w-0" title="HyperResume Workspace">
+            <Link href="/app" className="flex items-center gap-2 min-w-0" title="HypeResume Workspace">
               {isCollapsed ? (
                 <Logo variant="icon" size="md" priority />
               ) : (

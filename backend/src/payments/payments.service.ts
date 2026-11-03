@@ -18,7 +18,9 @@ import type { PaymentProvider, PaymentProviderType } from './providers/payment-p
 
 import { SandboxPaymentProvider } from './providers/sandbox-payment.provider.js';
 import { RazorpayPaymentProvider } from './providers/razorpay-payment.provider.js';
+import { DodoPaymentProvider } from './providers/dodo-payment.provider.js';
 import { User } from '../users/entities/user.entity.js';
+import { MetaConversionsService } from './meta-conversions.service.js';
 
 @Injectable()
 export class PaymentsService {
@@ -36,16 +38,28 @@ export class PaymentsService {
     private readonly configService: ConfigService,
     private readonly sandboxProvider: SandboxPaymentProvider,
     private readonly razorpayProvider: RazorpayPaymentProvider,
+    private readonly dodoProvider: DodoPaymentProvider,
+    private readonly metaConversionsService: MetaConversionsService,
   ) {
+    const configuredProvider = this.configService.get<string>('PAYMENT_PROVIDER');
+    const hasDodoKey = Boolean(this.configService.get<string>('DODO_PAYMENTS_API_KEY'));
     const isLiveRazorpay =
       Boolean(this.configService.get<string>('RAZORPAY_KEY_SECRET')) &&
       this.configService.get<string>('NODE_ENV') === 'production';
 
-    this.activeProvider = isLiveRazorpay ? this.razorpayProvider : this.sandboxProvider;
-    this.webhookSecret = this.configService.get<string>(
-      'PAYMENT_WEBHOOK_SECRET',
-      'dev_payment_webhook_secret_key_123',
-    );
+    if (configuredProvider === 'dodo' || hasDodoKey) {
+      this.activeProvider = this.dodoProvider;
+    } else if (isLiveRazorpay) {
+      this.activeProvider = this.razorpayProvider;
+    } else {
+      this.activeProvider = this.sandboxProvider;
+    }
+
+    const dodoWebhookKey = this.configService.get<string>('DODO_PAYMENTS_WEBHOOK_KEY')?.trim();
+    this.webhookSecret =
+      dodoWebhookKey ||
+      this.configService.get<string>('PAYMENT_WEBHOOK_SECRET') ||
+      'dev_payment_webhook_secret_key_123';
 
     this.logger.log(`Payments initialized with provider: ${this.activeProvider.name}`);
   }
@@ -63,6 +77,7 @@ export class PaymentsService {
     amountMinor: number;
     currency: string;
     provider: string;
+    checkoutUrl?: string;
     plan: PlanConfig;
   }> {
     const plan = PRICING_PLANS[dto.planId];
@@ -70,6 +85,7 @@ export class PaymentsService {
       throw new BadRequestException('Invalid or non-payable plan selected');
     }
 
+    const user = await this.userRepository.findOne({ where: { id: userId } });
     const orderId = `ord_${crypto.randomBytes(12).toString('hex')}`;
     const idempotencyKey = `idemp_${orderId}`;
 
@@ -77,7 +93,12 @@ export class PaymentsService {
       orderId,
       plan.amountMinor,
       plan.currency,
-      { userId, planId: plan.id },
+      {
+        userId,
+        planId: plan.id,
+        email: user?.email,
+        fullName: user?.fullName,
+      },
     );
 
     const payment = this.paymentRepository.create({
@@ -94,10 +115,23 @@ export class PaymentsService {
         planId: plan.id,
         planName: plan.name,
         creditsAwarded: plan.credits,
+        checkoutUrl: providerOrder.checkoutUrl,
       },
     });
 
     await this.paymentRepository.save(payment);
+
+    // Dispatch Meta Conversions API InitiateCheckout event
+    this.metaConversionsService
+      .sendInitiateCheckout({
+        orderId,
+        planId: plan.id,
+        planName: plan.name,
+        amountMinor: plan.amountMinor,
+        currency: plan.currency,
+        userData: { email: user?.email },
+      })
+      .catch((err) => this.logger.warn(`Meta CAPI initiate checkout failed: ${err.message}`));
 
     return {
       orderId,
@@ -105,6 +139,7 @@ export class PaymentsService {
       amountMinor: plan.amountMinor,
       currency: plan.currency,
       provider: this.activeProvider.name,
+      checkoutUrl: providerOrder.checkoutUrl,
       plan,
     };
   }
@@ -163,6 +198,17 @@ export class PaymentsService {
         .catch((err) => this.logger.error(`Failed to send receipt email: ${err.message}`));
     }
 
+    // Dispatch Meta Conversions API Purchase event
+    this.metaConversionsService
+      .sendPurchase({
+        orderId: payment.orderId,
+        amountMinor: payment.amountMinor,
+        currency: payment.currency,
+        planName,
+        userData: { email: user?.email },
+      })
+      .catch((err) => this.logger.warn(`Meta CAPI purchase verify failed: ${err.message}`));
+
     const newBalance = await this.creditsService.getBalance(userId);
     return { verified: true, paymentId: payment.id, balance: newBalance };
   }
@@ -170,35 +216,38 @@ export class PaymentsService {
   async processWebhook(
     rawPayload: string | Buffer,
     signature: string,
-    body: {
-      event: string;
-      providerTransactionId?: string;
-      orderId?: string;
-    },
+    body: any,
+    headers?: Record<string, string | string[] | undefined>,
   ): Promise<{ processed: boolean; paymentId?: string; message: string }> {
     // 1. Webhook Signature Verification
     const isSignatureValid = this.activeProvider.verifyWebhookSignature(
       rawPayload,
       signature,
       this.webhookSecret,
+      headers,
     );
 
     if (!isSignatureValid) {
       throw new UnauthorizedException('Invalid or unverified webhook signature');
     }
 
-    // 2. Identify Target Payment Entity
-    const providerTxId = body.providerTransactionId;
-    const orderId = body.orderId;
+    // 2. Identify Target Payment Entity & Event normalization
+    const eventType = body?.type || body?.event || '';
+    const data = body?.data || {};
+
+    const providerTxId = body?.providerTransactionId || data?.payment_id || data?.session_id;
+    const orderId = body?.orderId || data?.metadata?.orderId;
 
     let payment: Payment | null = null;
-    if (providerTxId) {
-      payment = await this.paymentRepository.findOne({
-        where: { providerTransactionId: providerTxId },
-      });
-    } else if (orderId) {
+    if (orderId) {
       payment = await this.paymentRepository.findOne({
         where: { orderId },
+      });
+    }
+
+    if (!payment && providerTxId) {
+      payment = await this.paymentRepository.findOne({
+        where: { providerTransactionId: providerTxId },
       });
     }
 
@@ -207,13 +256,21 @@ export class PaymentsService {
     }
 
     // 3. Idempotent Succeeded Handler
-    if (payment.status === 'succeeded' && body.event === 'payment.captured') {
+    const isSuccessEvent =
+      eventType === 'payment.succeeded' ||
+      eventType === 'payment.captured' ||
+      eventType === 'order.paid';
+
+    if (payment.status === 'succeeded' && isSuccessEvent) {
       return { processed: true, paymentId: payment.id, message: 'Already processed' };
     }
 
     // 4. Handle Lifecycle Events
-    if (body.event === 'payment.captured' || body.event === 'order.paid') {
+    if (isSuccessEvent) {
       payment.status = 'succeeded';
+      if (providerTxId && !payment.providerTransactionId) {
+        payment.providerTransactionId = providerTxId;
+      }
       await this.paymentRepository.save(payment);
 
       const creditsAwarded = (payment.metadata as any)?.creditsAwarded || 30;
@@ -228,16 +285,41 @@ export class PaymentsService {
         { orderId: payment.orderId, providerTransactionId: payment.providerTransactionId },
       );
 
+      const user = await this.userRepository.findOne({ where: { id: payment.userId } });
+      if (user?.email) {
+        const formattedAmount = `₹${(payment.amountMinor / 100).toFixed(0)}`;
+        this.emailService
+          .sendPurchaseConfirmation(
+            user.email,
+            payment.orderId,
+            planName,
+            formattedAmount,
+            creditsAwarded,
+          )
+          .catch((err) => this.logger.error(`Failed to send receipt email: ${err.message}`));
+      }
+
+      // Dispatch Meta Conversions API Purchase event upon webhook confirmation
+      this.metaConversionsService
+        .sendPurchase({
+          orderId: payment.orderId,
+          amountMinor: payment.amountMinor,
+          currency: payment.currency,
+          planName,
+          userData: { email: user?.email },
+        })
+        .catch((err) => this.logger.warn(`Meta CAPI webhook purchase failed: ${err.message}`));
+
       return { processed: true, paymentId: payment.id, message: 'Payment captured and credits awarded' };
     }
 
-    if (body.event === 'payment.failed') {
+    if (eventType === 'payment.failed') {
       payment.status = 'failed';
       await this.paymentRepository.save(payment);
       return { processed: true, paymentId: payment.id, message: 'Payment marked failed' };
     }
 
-    if (body.event === 'refund.processed') {
+    if (eventType === 'refund.processed' || eventType === 'refund.succeeded') {
       payment.status = 'refunded';
       await this.paymentRepository.save(payment);
 
@@ -254,7 +336,7 @@ export class PaymentsService {
       return { processed: true, paymentId: payment.id, message: 'Refund processed and credits reverted' };
     }
 
-    return { processed: true, paymentId: payment.id, message: `Event ${body.event} acknowledged` };
+    return { processed: true, paymentId: payment.id, message: `Event ${eventType} acknowledged` };
   }
 
   async getPaymentHistory(userId: string): Promise<Payment[]> {

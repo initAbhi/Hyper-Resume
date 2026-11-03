@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { User } from '../users/entities/user.entity.js';
 import { UserSession } from './entities/user-session.entity.js';
+import { PasswordResetToken } from './entities/password-reset-token.entity.js';
 import { CandidateProfile } from '../profiles/entities/candidate-profile.entity.js';
 import { CreditLedger } from '../credits/entities/credit-ledger.entity.js';
 import { AuthService } from './auth.service.js';
@@ -12,7 +13,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, UserSession, CandidateProfile, CreditLedger]),
+    TypeOrmModule.forFeature([User, UserSession, PasswordResetToken, CandidateProfile, CreditLedger]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

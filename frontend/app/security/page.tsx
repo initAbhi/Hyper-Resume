@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export const metadata = constructMetadata({
   title: 'Platform Security & Trust Architecture',
-  description: 'Security architecture at HyperResume: Multi-tenant data isolation, encryption in transit and rest, and strict prompt sanitization.',
+  description: 'Security architecture at HypeResume: Multi-tenant data isolation, encryption in transit and rest, and strict prompt sanitization.',
   path: '/security',
 });
 
@@ -40,7 +40,7 @@ export default function SecurityPage() {
           Security & Trust Principles
         </h1>
         <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-400">
-          How HyperResume safeguards candidate career records, privacy, and system integrity.
+          How HypeResume safeguards candidate career records, privacy, and system integrity.
         </p>
       </div>
 

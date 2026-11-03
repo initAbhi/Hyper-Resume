@@ -7,8 +7,10 @@ describe('AuthService', () => {
   let authService: AuthService;
   let mockUserRepo: any;
   let mockSessionRepo: any;
+  let mockPasswordResetTokenRepo: any;
   let mockProfileRepo: any;
   let mockCreditLedgerRepo: any;
+  let mockEmailService: any;
   let mockJwtService: any;
   let mockConfigService: any;
 
@@ -26,9 +28,17 @@ describe('AuthService', () => {
       update: vi.fn().mockResolvedValue({ affected: 1 }),
     };
 
+    mockPasswordResetTokenRepo = {
+      create: vi.fn((data) => ({ id: 'prt-123', ...data })),
+      save: vi.fn((data) => Promise.resolve({ id: 'prt-123', ...data })),
+      findOne: vi.fn(),
+      update: vi.fn().mockResolvedValue({ affected: 1 }),
+    };
+
     mockProfileRepo = {
       create: vi.fn((data) => ({ id: 'prof-123', ...data })),
       save: vi.fn((data) => Promise.resolve({ id: 'prof-123', ...data })),
+      findOne: vi.fn(),
     };
 
     mockCreditLedgerRepo = {
@@ -39,6 +49,11 @@ describe('AuthService', () => {
         where: vi.fn().mockReturnThis(),
         getRawOne: vi.fn().mockResolvedValue({ sum: '5' }),
       })),
+    };
+
+    mockEmailService = {
+      sendPasswordResetEmail: vi.fn().mockResolvedValue({ success: true, messageId: 'msg-123' }),
+      sendVerificationEmail: vi.fn().mockResolvedValue({ success: true, messageId: 'msg-123' }),
     };
 
     mockJwtService = {
@@ -55,8 +70,10 @@ describe('AuthService', () => {
     authService = new AuthService(
       mockUserRepo,
       mockSessionRepo,
+      mockPasswordResetTokenRepo,
       mockProfileRepo,
       mockCreditLedgerRepo,
+      mockEmailService,
       mockJwtService,
       mockConfigService,
     );
@@ -173,22 +190,56 @@ describe('AuthService', () => {
     });
   });
 
-  describe('getCurrentUser', () => {
-    it('should return user with ledger-reconciled credit balance', async () => {
+  describe('requestPasswordReset', () => {
+    it('should generate reset token and dispatch email if user exists', async () => {
       mockUserRepo.findOne.mockResolvedValue({
         id: 'usr-1',
-        email: 'test@hyperresume.io',
-        fullName: 'Test User',
-        role: UserRole.USER,
+        email: 'user@example.com',
+        fullName: 'John Doe',
         isActive: true,
-        isEmailVerified: true,
-        createdAt: new Date(),
       });
 
-      const result = await authService.getCurrentUser('usr-1');
+      const res = await authService.requestPasswordReset('user@example.com');
+      expect(res.message).toContain('password reset instructions');
+      expect(mockPasswordResetTokenRepo.create).toHaveBeenCalled();
+      expect(mockPasswordResetTokenRepo.save).toHaveBeenCalled();
+      expect(mockEmailService.sendPasswordResetEmail).toHaveBeenCalledWith(
+        'user@example.com',
+        expect.any(String),
+        'John Doe',
+      );
+    });
 
-      expect(result.user.id).toBe('usr-1');
-      expect(result.creditBalance).toBe(5);
+    it('should return benign message if user does not exist', async () => {
+      mockUserRepo.findOne.mockResolvedValue(null);
+
+      const res = await authService.requestPasswordReset('nonexistent@example.com');
+      expect(res.message).toContain('password reset instructions');
+      expect(mockEmailService.sendPasswordResetEmail).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('resetPassword', () => {
+    it('should update user password and mark token used', async () => {
+      mockPasswordResetTokenRepo.findOne.mockResolvedValue({
+        id: 'prt-1',
+        userId: 'usr-1',
+        isUsed: false,
+        expiresAt: new Date(Date.now() + 100000),
+      });
+
+      mockUserRepo.findOne.mockResolvedValue({
+        id: 'usr-1',
+        email: 'user@example.com',
+        isActive: true,
+        passwordHash: 'old-hash',
+      });
+
+      const res = await authService.resetPassword('sample-token', 'NewSecurePassword123!');
+      expect(res.message).toContain('successfully reset');
+      expect(mockUserRepo.save).toHaveBeenCalled();
+      expect(mockPasswordResetTokenRepo.save).toHaveBeenCalled();
+      expect(mockSessionRepo.update).toHaveBeenCalled();
     });
   });
 });

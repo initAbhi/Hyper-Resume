@@ -51,17 +51,17 @@ context/
 
 | Component | Production URL / Host | Local Port / Path | Status |
 | :--- | :--- | :--- | :--- |
-| **Frontend Application** | [resume.fourth-coffee.shop](https://resume.fourth-coffee.shop) | `localhost:3001` (dev), `localhost:3082` (prod) | 🟢 Live & Operational |
-| **Backend REST API** | [resume-api.fourth-coffee.shop](https://resume-api.fourth-coffee.shop/api/v1) | `localhost:3002` (prod) | 🟢 Live & Operational |
-| **Sample Resume Library**| [resume.fourth-coffee.shop/examples](https://resume.fourth-coffee.shop/examples) | `/examples` & `/app/samples` | 🟢 21 Company Resumes |
-| **Workspace Dashboard** | [resume.fourth-coffee.shop/app](https://resume.fourth-coffee.shop/app) | `/app` | 🟢 Protected Route |
+| **Frontend Application** | [hype-resume.com](https://hype-resume.com) | `localhost:3000` (dev), `localhost:3082` (prod) | 🟢 Live & Operational |
+| **Backend REST API** | [api.hype-resume.com](https://api.hype-resume.com/api/v1) | `localhost:3001` (dev), `localhost:3002` (prod) | 🟢 Live & Operational |
+| **Sample Resume Library**| [hype-resume.com/examples](https://hype-resume.com/examples) | `/examples` & `/app/samples` | 🟢 21 Company Resumes |
+| **Workspace Dashboard** | [hype-resume.com/app](https://hype-resume.com/app) | `/app` | 🟢 Protected Route |
 | **Database Server** | PostgreSQL 16 on `210.79.128.247:5432` | Local PostgreSQL | 🟢 Synchronized |
 
 ### Demo Credentials
 * **Email**: `demo@hyperresume.ai`
 * **Password**: `demo123`
 * **Starting Credits**: `33 Credits`
-* **1-Click Auto-Fill**: Available on [resume.fourth-coffee.shop/login](https://resume.fourth-coffee.shop/login)
+* **1-Click Auto-Fill**: Available on [hype-resume.com/login](https://hype-resume.com/login)
 
 ---
 

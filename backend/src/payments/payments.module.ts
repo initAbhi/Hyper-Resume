@@ -8,11 +8,19 @@ import { CreditsModule } from '../credits/credits.module.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { SandboxPaymentProvider } from './providers/sandbox-payment.provider.js';
 import { RazorpayPaymentProvider } from './providers/razorpay-payment.provider.js';
+import { DodoPaymentProvider } from './providers/dodo-payment.provider.js';
+import { MetaConversionsService } from './meta-conversions.service.js';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Payment, User]), CreditsModule, AuthModule],
   controllers: [PaymentsController],
-  providers: [PaymentsService, SandboxPaymentProvider, RazorpayPaymentProvider],
-  exports: [PaymentsService],
+  providers: [
+    PaymentsService,
+    SandboxPaymentProvider,
+    RazorpayPaymentProvider,
+    DodoPaymentProvider,
+    MetaConversionsService,
+  ],
+  exports: [PaymentsService, DodoPaymentProvider, MetaConversionsService],
 })
 export class PaymentsModule {}

@@ -15,6 +15,9 @@ import { AuthService } from './auth.service.js';
 import { SignupDto } from './dto/signup.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 import { RefreshTokenDto } from './dto/refresh-token.dto.js';
+import { ForgotPasswordDto } from './dto/forgot-password.dto.js';
+import { ResetPasswordDto } from './dto/reset-password.dto.js';
+import { GoogleAuthDto } from './dto/google-auth.dto.js';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import type { User } from '../users/entities/user.entity.js';
@@ -90,6 +93,34 @@ export class AuthController {
     const ip = req.ip;
 
     const result = await this.authService.refresh(refreshToken, userAgent, ip);
+    this.setAuthCookies(res, result.tokens.accessToken, result.tokens.refreshToken);
+
+    return result;
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.requestPasswordReset(dto.email);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto.token, dto.newPassword);
+  }
+
+  @Post('google')
+  @HttpCode(HttpStatus.OK)
+  async googleAuth(
+    @Body() dto: GoogleAuthDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const userAgent = req.headers['user-agent'];
+    const ip = req.ip;
+
+    const result = await this.authService.googleAuth(dto, userAgent, ip);
     this.setAuthCookies(res, result.tokens.accessToken, result.tokens.refreshToken);
 
     return result;

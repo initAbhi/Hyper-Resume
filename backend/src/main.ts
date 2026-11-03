@@ -29,13 +29,24 @@ async function bootstrap() {
   // Cookie parsing
   app.use(cookieParser());
 
-  // Request size limits
-  app.use(express.json({ limit: '10mb' }));
+  // Request size limits & raw body capture for cryptographic webhook signatures
+  app.use(
+    express.json({
+      limit: '10mb',
+      verify: (req: any, _res, buf) => {
+        req.rawBody = buf;
+      },
+    }),
+  );
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // CORS configuration
   const allowedOrigins = [
     frontendUrl,
+    'https://hype-resume.com',
+    'http://hype-resume.com',
+    'https://api.hype-resume.com',
+    'http://api.hype-resume.com',
     'https://resume.fourth-coffee.shop',
     'http://resume.fourth-coffee.shop',
     'http://localhost:3000',
@@ -47,6 +58,7 @@ async function bootstrap() {
       if (!origin) return callback(null, true);
       const isAllowed =
         allowedOrigins.includes(origin) ||
+        /^https?:\/\/([a-z0-9-]+\.)*hype-resume\.com(:\d+)?$/.test(origin) ||
         /^https?:\/\/([a-z0-9-]+\.)*fourth-coffee\.shop(:\d+)?$/.test(origin) ||
         /^https?:\/\/localhost(:\d+)?$/.test(origin) ||
         /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin);
@@ -89,15 +101,15 @@ async function bootstrap() {
   const enableSwagger = isDev || configService.get<string>('ENABLE_SWAGGER') === 'true';
   if (enableSwagger) {
     const swaggerConfig = new DocumentBuilder()
-      .setTitle('HyperResume API')
-      .setDescription('Core API documentation for HyperResume backend')
+      .setTitle('HypeResume API')
+      .setDescription('Core API documentation for HypeResume backend')
       .setVersion('1.0.0')
       .addBearerAuth()
       .build();
 
     const document = SwaggerModule.createDocument(app, swaggerConfig);
     SwaggerModule.setup('api/docs', app, document, {
-      customSiteTitle: 'HyperResume API Documentation',
+      customSiteTitle: 'HypeResume API Documentation',
     });
   }
 
