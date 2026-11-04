@@ -1,6 +1,6 @@
-import { logger } from '@/lib/logger';
 'use client';
 
+import { logger } from '@/lib/logger';
 import React, { useEffect, useState } from 'react';
 import {
   CreditCard,
