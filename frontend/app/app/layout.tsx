@@ -80,7 +80,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
     { label: 'Sample Library', href: '/app/samples', icon: BookOpen },
     { label: 'Match a Job', href: '/app/match', icon: Sparkles },
     { label: 'Applications', href: '/app/applications', icon: Briefcase },
-    { label: 'AI Interview', href: '/app/interview', icon: Mic, badge: 'Soon' },
+    { label: 'AI Interview', href: '/app/interview', icon: Mic, badge: 'New' },
     { label: 'AI Job Search', href: '/app/job-search', icon: Search, badge: 'Soon' },
     ...(user?.role === 'admin'
       ? [{ label: 'Admin Center', href: '/admin', icon: ShieldCheck, badge: 'Admin' }]

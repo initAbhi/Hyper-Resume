@@ -12,6 +12,9 @@ import { JobApplication } from '../applications/entities/job-application.entity.
 import { CreditLedger } from '../credits/entities/credit-ledger.entity.js';
 import { Payment } from '../payments/entities/payment.entity.js';
 import { SystemSetting } from '../admin/entities/system-setting.entity.js';
+import { InterviewSession } from '../interviews/entities/interview-session.entity.js';
+import { InterviewQuestion } from '../interviews/entities/interview-question.entity.js';
+import { InterviewTurn } from '../interviews/entities/interview-turn.entity.js';
 
 export const ALL_ENTITIES = [
   User,
@@ -28,4 +31,7 @@ export const ALL_ENTITIES = [
   CreditLedger,
   Payment,
   SystemSetting,
+  InterviewSession,
+  InterviewQuestion,
+  InterviewTurn,
 ];

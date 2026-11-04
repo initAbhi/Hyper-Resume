@@ -18,7 +18,10 @@ export class GeminiAiProvider implements AiProvider {
 
   constructor(private readonly configService: ConfigService) {
     this.apiKey = this.configService.get<string>('AI_API_KEY') || this.configService.get<string>('GEMINI_API_KEY');
-    this.model = this.configService.get<string>('AI_MODEL', 'gemini-1.5-flash');
+    const rawModel = this.configService.get<string>('AI_MODEL', 'gemini-3.5-flash-lite');
+    this.model = (!rawModel || rawModel.includes('1.5') || rawModel.includes('2.0') || rawModel.includes('2.5'))
+      ? 'gemini-3.5-flash-lite'
+      : rawModel;
   }
 
   async parseResumeText(text: string): Promise<ParsedProfileDraft> {

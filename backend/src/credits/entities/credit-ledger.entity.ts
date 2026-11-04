@@ -15,6 +15,7 @@ export type CreditTransactionType =
   | 'resume_analysis'
   | 'ai_tailor'
   | 'export_pdf'
+  | 'mock_interview'
   | 'refund';
 
 @Entity('credit_ledger')

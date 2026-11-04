@@ -226,6 +226,27 @@ export class AuthService {
     };
   }
 
+  public parseDurationToSeconds(duration: string | number): number {
+    if (typeof duration === 'number') return duration;
+    const match = String(duration).trim().match(/^(\d+)([smhdwy]?)$/i);
+    if (!match) return 7 * 24 * 3600;
+    const val = parseInt(match[1], 10);
+    const unit = (match[2] || 's').toLowerCase();
+    switch (unit) {
+      case 's': return val;
+      case 'm': return val * 60;
+      case 'h': return val * 3600;
+      case 'd': return val * 24 * 3600;
+      case 'w': return val * 7 * 24 * 3600;
+      case 'y': return val * 365 * 24 * 3600;
+      default: return val;
+    }
+  }
+
+  public parseDurationToMs(duration: string | number): number {
+    return this.parseDurationToSeconds(duration) * 1000;
+  }
+
   private async generateTokensAndSession(
     user: User,
     userAgent?: string,
@@ -242,19 +263,25 @@ export class AuthService {
       role: user.role,
     };
 
-    // Access token valid for 1 hour (3600 seconds)
+    const expiresInStr =
+      this.configService.get<string>('JWT_ACCESS_EXPIRES_IN') ||
+      this.configService.get<string>('JWT_EXPIRATION') ||
+      '7d';
+    const expiresInSeconds = this.parseDurationToSeconds(expiresInStr);
+
+    // Access token valid for configurable duration (default 7 days, at least 1 day)
     const accessToken = await this.jwtService.signAsync(payload, {
       secret,
-      expiresIn: '1h',
+      expiresIn: expiresInStr as any,
     });
 
     // Refresh token is a cryptographically secure 256-bit random hex string
     const refreshToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = this.hashToken(refreshToken);
 
-    // Refresh token valid for 7 days
+    // Refresh token valid for 30 days
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
+    expiresAt.setDate(expiresAt.getDate() + 30);
 
     const session = this.sessionRepository.create({
       userId: user.id,
@@ -269,7 +296,7 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
-      expiresIn: 3600,
+      expiresIn: expiresInSeconds,
     };
   }
 

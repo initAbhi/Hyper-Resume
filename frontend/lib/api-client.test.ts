@@ -179,4 +179,52 @@ describe('ApiClient', () => {
       }),
     );
   });
+
+  it('should silently refresh access token on 401 and retry the original request', async () => {
+    const client = new ApiClient('http://localhost:3001/api/v1');
+    client.setTokens('expired-access-token', 'valid-refresh-token');
+
+    let callCount = 0;
+    global.fetch = vi.fn().mockImplementation(async (url: string) => {
+      callCount++;
+      if (url.includes('/resumes') && callCount === 1) {
+        return {
+          ok: false,
+          status: 401,
+          headers: new Headers(),
+          json: async () => ({ statusCode: 401, message: 'Invalid or expired authentication token' }),
+        };
+      }
+      if (url.includes('/auth/refresh')) {
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({
+            data: {
+              tokens: {
+                accessToken: 'refreshed-access-token-999',
+                refreshToken: 'new-refresh-token-888',
+                expiresIn: 604800,
+              },
+            },
+          }),
+        };
+      }
+      if (url.includes('/resumes') && callCount === 3) {
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({ data: [{ id: 'res-1', name: 'Refreshed Profile' }] }),
+        };
+      }
+      return { ok: true, json: async () => ({}) };
+    }) as unknown as typeof fetch;
+
+    const result = await client.listResumes();
+    expect(client.getToken()).toBe('refreshed-access-token-999');
+    expect(client.getRefreshToken()).toBe('new-refresh-token-888');
+    expect(result).toBeDefined();
+  });
 });

@@ -25,6 +25,7 @@ import { PaymentsModule } from './payments/payments.module.js';
 import { TemplatesModule } from './templates/templates.module.js';
 import { EmailModule } from './email/email.module.js';
 import { AdminModule } from './admin/admin.module.js';
+import { InterviewsModule } from './interviews/interviews.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 
@@ -55,6 +56,7 @@ import { AppService } from './app.service.js';
     TemplatesModule,
     EmailModule,
     AdminModule,
+    InterviewsModule,
   ],
   controllers: [AppController],
   providers: [

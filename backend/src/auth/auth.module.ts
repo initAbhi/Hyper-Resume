@@ -17,13 +17,19 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        secret: config.get<string>(
-          'JWT_SECRET',
-          'dev-hyper-resume-secret-key-min-32-chars-long',
-        ),
-        signOptions: { expiresIn: '1h' },
-      }),
+      useFactory: (config: ConfigService) => {
+        const expiresIn =
+          config.get<string>('JWT_ACCESS_EXPIRES_IN') ||
+          config.get<string>('JWT_EXPIRATION') ||
+          '7d';
+        return {
+          secret: config.get<string>(
+            'JWT_SECRET',
+            'dev-hyper-resume-secret-key-min-32-chars-long',
+          ),
+          signOptions: { expiresIn: expiresIn as any },
+        };
+      },
     }),
   ],
   controllers: [AuthController],

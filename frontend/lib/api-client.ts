@@ -269,6 +269,113 @@ export interface ApplicationRichMetadata {
   closeReason?: string;
 }
 
+// --- AI Interview Studio Types ---
+export type InterviewSessionMode = 'quick_practice' | 'full_mock' | 'weak_area';
+export type InterviewSessionStatus =
+  | 'initializing'
+  | 'in_progress'
+  | 'completed'
+  | 'abandoned'
+  | 'failed'
+  | 'expired';
+export type InterviewDifficulty = 'junior' | 'mid' | 'senior';
+export type QuestionCategory =
+  | 'role_alignment'
+  | 'resume_claim'
+  | 'technical_depth'
+  | 'job_match_gap'
+  | 'behavioral';
+
+export interface TurnEvaluation {
+  starPresent?: {
+    situation: boolean;
+    task: boolean;
+    action: boolean;
+    result: boolean;
+  };
+  metricsDetected: boolean;
+  technicalAccuracyNotes: string;
+  strengths: string[];
+  improvementTip: string;
+  idealAnswerDraft?: string;
+  isLockedForPro?: boolean;
+}
+
+export interface InterviewQuestion {
+  id: string;
+  sessionId: string;
+  orderIndex: number;
+  category: QuestionCategory;
+  questionText: string;
+  contextHint?: string;
+  idealAnswerOutline?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InterviewTurn {
+  id: string;
+  sessionId: string;
+  questionId: string;
+  status: 'evaluating' | 'evaluated' | 'failed';
+  candidateAnswer: string;
+  timeTakenSeconds: number;
+  turnScore?: number;
+  evaluation?: TurnEvaluation;
+  followUpQuestion?: string;
+  followUpAnswer?: string;
+  followUpScore?: number;
+  followUpStatus?: string;
+  evaluatedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InterviewSession {
+  id: string;
+  userId: string;
+  resumeId: string;
+  jobDescriptionId?: string;
+  sessionMode: InterviewSessionMode;
+  targetRole: string;
+  difficulty: InterviewDifficulty;
+  status: InterviewSessionStatus;
+  isFreeTrial: boolean;
+  totalQuestions: number;
+  currentQuestionIndex: number;
+  overallScore?: number;
+  scoreBreakdown?: {
+    starScore: number;
+    technicalScore: number;
+    relevanceScore: number;
+    clarityScore: number;
+  };
+  summaryFeedback?: {
+    strengths: string[];
+    improvements: string[];
+    actionItems: string[];
+  };
+  creditsCharged: number;
+  idempotencyKey?: string;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  thinkingTokens: number;
+  estimatedCostUsd: number;
+  expiresAt: string;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  resume?: Resume;
+  jobDescription?: JobDescription;
+}
+
+export interface InterviewReportData {
+  session: InterviewSession;
+  questions: InterviewQuestion[];
+  turns: InterviewTurn[];
+  isPaidUser: boolean;
+}
+
 export function parseApplicationMetadata(rawNotes?: string): ApplicationRichMetadata {
   if (!rawNotes) return {};
   try {
@@ -413,12 +520,15 @@ export interface ParsedProfileDraft {
 export class ApiClient {
   private readonly baseUrl: string;
   private token: string | null = null;
+  private refreshToken: string | null = null;
+  private refreshPromise: Promise<string | null> | null = null;
 
   constructor(baseUrl: string = env.apiUrl) {
     this.baseUrl = baseUrl;
     if (typeof window !== 'undefined') {
       try {
         this.token = localStorage.getItem('hr_access_token');
+        this.refreshToken = localStorage.getItem('hr_refresh_token');
       } catch {
         // Local storage unavailable (private browsing)
       }
@@ -426,13 +536,25 @@ export class ApiClient {
   }
 
   setToken(token: string | null) {
-    this.token = token;
+    this.setTokens(token, this.refreshToken);
+  }
+
+  setTokens(accessToken: string | null, refreshToken?: string | null) {
+    this.token = accessToken;
+    if (refreshToken !== undefined) {
+      this.refreshToken = refreshToken;
+    }
     if (typeof window !== 'undefined') {
       try {
-        if (token) {
-          localStorage.setItem('hr_access_token', token);
+        if (accessToken) {
+          localStorage.setItem('hr_access_token', accessToken);
         } else {
           localStorage.removeItem('hr_access_token');
+        }
+        if (refreshToken) {
+          localStorage.setItem('hr_refresh_token', refreshToken);
+        } else if (refreshToken === null) {
+          localStorage.removeItem('hr_refresh_token');
         }
       } catch {
         // Ignore storage write issues
@@ -442,6 +564,53 @@ export class ApiClient {
 
   getToken(): string | null {
     return this.token;
+  }
+
+  getRefreshToken(): string | null {
+    return this.refreshToken;
+  }
+
+  async tryRefreshToken(): Promise<string | null> {
+    if (this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
+    this.refreshPromise = (async () => {
+      try {
+        const refreshUrl = `${this.baseUrl}/auth/refresh`;
+        const res = await fetch(refreshUrl, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            refreshToken: this.refreshToken || undefined,
+          }),
+        });
+
+        if (!res.ok) {
+          this.setTokens(null, null);
+          return null;
+        }
+
+        const body = await res.json();
+        const tokens = body?.data?.tokens || body?.tokens;
+        if (tokens?.accessToken) {
+          this.setTokens(tokens.accessToken, tokens.refreshToken || this.refreshToken);
+          return tokens.accessToken;
+        }
+
+        this.setTokens(null, null);
+        return null;
+      } catch {
+        return null;
+      } finally {
+        this.refreshPromise = null;
+      }
+    })();
+
+    return this.refreshPromise;
   }
 
   private generateRequestId(): string {
@@ -454,6 +623,7 @@ export class ApiClient {
   async request<T>(
     endpoint: string,
     options: RequestInit = {},
+    isRetry: boolean = false,
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
     const requestId =
@@ -531,6 +701,28 @@ export class ApiClient {
     }
 
     if (!response.ok) {
+      // Auto-refresh token on 401 Unauthorized for non-auth requests
+      if (
+        response.status === 401 &&
+        !isRetry &&
+        !endpoint.includes('/auth/login') &&
+        !endpoint.includes('/auth/signup') &&
+        !endpoint.includes('/auth/refresh') &&
+        !endpoint.includes('/auth/google') &&
+        !endpoint.includes('/auth/reset-password') &&
+        !endpoint.includes('/auth/forgot-password')
+      ) {
+        apiLogger.debug('Access token expired on 401, attempting silent token refresh', { endpoint });
+        const newToken = await this.tryRefreshToken();
+        if (newToken) {
+          const retryHeaders = {
+            ...headers,
+            Authorization: `Bearer ${newToken}`,
+          };
+          return this.request<T>(endpoint, { ...options, headers: retryHeaders }, true);
+        }
+      }
+
       let errorPayload: ApiErrorPayload;
       try {
         const body = await response.json();
@@ -571,7 +763,7 @@ export class ApiClient {
       body: JSON.stringify(dto),
     });
     if (res.data.tokens?.accessToken) {
-      this.setToken(res.data.tokens.accessToken);
+      this.setTokens(res.data.tokens.accessToken, res.data.tokens.refreshToken);
     }
     return res.data;
   }
@@ -582,7 +774,7 @@ export class ApiClient {
       body: JSON.stringify(dto),
     });
     if (res.data.tokens?.accessToken) {
-      this.setToken(res.data.tokens.accessToken);
+      this.setTokens(res.data.tokens.accessToken, res.data.tokens.refreshToken);
     }
     return res.data;
   }
@@ -598,7 +790,18 @@ export class ApiClient {
       body: JSON.stringify(dto),
     });
     if (res.data.tokens?.accessToken) {
-      this.setToken(res.data.tokens.accessToken);
+      this.setTokens(res.data.tokens.accessToken, res.data.tokens.refreshToken);
+    }
+    return res.data;
+  }
+
+  async refreshTokens(refreshToken?: string) {
+    const res = await this.request<LoginResponse>('/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken: refreshToken || this.refreshToken || undefined }),
+    });
+    if (res.data.tokens?.accessToken) {
+      this.setTokens(res.data.tokens.accessToken, res.data.tokens.refreshToken);
     }
     return res.data;
   }
@@ -623,10 +826,12 @@ export class ApiClient {
     try {
       await this.request<{ message: string }>('/auth/logout', {
         method: 'POST',
-        body: JSON.stringify({}),
+        body: JSON.stringify({ refreshToken: this.refreshToken || undefined }),
       });
+    } catch {
+      // Ignore network failures on logout
     } finally {
-      this.setToken(null);
+      this.setTokens(null, null);
     }
   }
 
@@ -936,6 +1141,87 @@ export class ApiClient {
       method: 'DELETE',
     });
     return res.data;
+  }
+
+  // --- AI Interview Studio Endpoints ---
+  async startInterview(dto: {
+    resumeId: string;
+    jobDescriptionId?: string;
+    sessionMode: InterviewSessionMode;
+    targetRole: string;
+    difficulty?: InterviewDifficulty;
+    idempotencyKey?: string;
+  }) {
+    const headers: Record<string, string> = {};
+    if (dto.idempotencyKey) {
+      headers['idempotency-key'] = dto.idempotencyKey;
+    }
+    const res = await this.request<InterviewSession & { activeQuestion?: InterviewQuestion }>('/interviews/start', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(dto),
+    });
+    return res.data;
+  }
+
+  async getInterviewSession(id: string) {
+    const res = await this.request<{
+      session: InterviewSession;
+      questions: InterviewQuestion[];
+      turns: InterviewTurn[];
+      activeQuestion: InterviewQuestion | null;
+    }>(`/interviews/${id}`);
+    return res.data;
+  }
+
+  async submitInterviewAnswer(
+    id: string,
+    dto: { questionId: string; candidateAnswer: string; timeTakenSeconds: number },
+  ) {
+    const res = await this.request<InterviewTurn>(`/interviews/${id}/answer`, {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+    return res.data;
+  }
+
+  async submitInterviewFollowUp(
+    id: string,
+    dto: { questionId: string; followUpAnswer: string },
+  ) {
+    const res = await this.request<InterviewTurn>(`/interviews/${id}/follow-up`, {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+    return res.data;
+  }
+
+  async finishInterviewSession(id: string) {
+    const res = await this.request<InterviewSession>(`/interviews/${id}/finish`, {
+      method: 'POST',
+    });
+    return res.data;
+  }
+
+  async getInterviewReport(id: string) {
+    const res = await this.request<InterviewReportData>(`/interviews/${id}/report`);
+    return res.data;
+  }
+
+  async listInterviewSessions(pagination?: { page?: number; limit?: number }) {
+    const query = new URLSearchParams();
+    if (pagination?.page) query.set('page', String(pagination.page));
+    if (pagination?.limit) query.set('limit', String(pagination.limit));
+    const endpoint = `/interviews${query.toString() ? `?${query.toString()}` : ''}`;
+    const res = await this.request<{ items: InterviewSession[]; total: number; page: number; limit: number } | InterviewSession[]>(endpoint);
+    const data = res.data;
+    if (data && typeof data === 'object' && 'items' in data && Array.isArray(data.items)) {
+      return data;
+    }
+    if (Array.isArray(data)) {
+      return { items: data, total: data.length, page: 1, limit: data.length };
+    }
+    return { items: [], total: 0, page: 1, limit: 20 };
   }
 
   // --- Templates Endpoints ---

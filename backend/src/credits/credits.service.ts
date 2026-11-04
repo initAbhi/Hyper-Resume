@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { CreditLedger, type CreditTransactionType } from './entities/credit-ledger.entity.js';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 
@@ -20,8 +20,13 @@ export class CreditsService {
     private readonly ledgerRepository: Repository<CreditLedger>,
   ) {}
 
-  async getBalance(userId: string): Promise<number> {
-    const { sum } = await this.ledgerRepository
+  private getRepo(manager?: EntityManager): Repository<CreditLedger> {
+    return manager ? manager.getRepository(CreditLedger) : this.ledgerRepository;
+  }
+
+  async getBalance(userId: string, manager?: EntityManager): Promise<number> {
+    const repo = this.getRepo(manager);
+    const { sum } = await repo
       .createQueryBuilder('ledger')
       .select('COALESCE(SUM(ledger.amount), 0)', 'sum')
       .where('ledger.user_id = :userId', { userId })
@@ -57,8 +62,10 @@ export class CreditsService {
     idempotencyKey: string,
     description: string,
     metadata?: Record<string, unknown>,
+    manager?: EntityManager,
   ): Promise<CreditLedger> {
-    const existing = await this.ledgerRepository.findOne({
+    const repo = this.getRepo(manager);
+    const existing = await repo.findOne({
       where: { idempotencyKey },
     });
 
@@ -67,7 +74,7 @@ export class CreditsService {
       return existing;
     }
 
-    const entry = this.ledgerRepository.create({
+    const entry = repo.create({
       userId,
       amount,
       transactionType,
@@ -76,7 +83,7 @@ export class CreditsService {
       metadata,
     });
 
-    const saved = await this.ledgerRepository.save(entry);
+    const saved = await repo.save(entry);
     this.logger.log(`Awarded ${amount} credits to user ${userId} (${transactionType}: ${description})`);
     return saved;
   }
@@ -88,9 +95,12 @@ export class CreditsService {
     idempotencyKey: string,
     description: string,
     metadata?: Record<string, unknown>,
+    manager?: EntityManager,
   ): Promise<CreditLedger> {
+    const repo = this.getRepo(manager);
+
     // 1. Idempotency Check: if this exact operation was already executed, return it
-    const existing = await this.ledgerRepository.findOne({
+    const existing = await repo.findOne({
       where: { idempotencyKey },
     });
     if (existing) {
@@ -99,7 +109,7 @@ export class CreditsService {
     }
 
     // 2. Strict Balance Check
-    const currentBalance = await this.getBalance(userId);
+    const currentBalance = await this.getBalance(userId, manager);
     const requiredAmount = Math.abs(amount);
 
     if (currentBalance < requiredAmount) {
@@ -112,7 +122,7 @@ export class CreditsService {
     }
 
     // 3. Negative Ledger Deduction Entry
-    const deduction = this.ledgerRepository.create({
+    const deduction = repo.create({
       userId,
       amount: -requiredAmount,
       transactionType,
@@ -125,7 +135,7 @@ export class CreditsService {
       },
     });
 
-    const saved = await this.ledgerRepository.save(deduction);
+    const saved = await repo.save(deduction);
     this.logger.log(
       `Deducted ${requiredAmount} credits from user ${userId} (${description}). New balance: ${currentBalance - requiredAmount}`,
     );
@@ -137,9 +147,14 @@ export class CreditsService {
     amount: number,
     originalIdempotencyKey: string,
     reason: string,
+    manager?: EntityManager,
   ): Promise<CreditLedger> {
-    const refundKey = `refund-${originalIdempotencyKey}`;
-    const existingRefund = await this.ledgerRepository.findOne({
+    const repo = this.getRepo(manager);
+    const refundKey = originalIdempotencyKey.startsWith('refund-')
+      ? originalIdempotencyKey
+      : `refund-${originalIdempotencyKey}`;
+
+    const existingRefund = await repo.findOne({
       where: { idempotencyKey: refundKey },
     });
     if (existingRefund) {
@@ -148,7 +163,7 @@ export class CreditsService {
     }
 
     const refundAmount = Math.abs(amount);
-    const entry = this.ledgerRepository.create({
+    const entry = repo.create({
       userId,
       amount: refundAmount,
       transactionType: 'refund',
@@ -157,7 +172,7 @@ export class CreditsService {
       metadata: { originalIdempotencyKey, reason },
     });
 
-    const saved = await this.ledgerRepository.save(entry);
+    const saved = await repo.save(entry);
     this.logger.log(`Refunded ${refundAmount} credits to user ${userId} (${reason})`);
     return saved;
   }

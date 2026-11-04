@@ -134,13 +134,18 @@ export class AuthController {
 
   private setAuthCookies(res: Response, accessToken: string, refreshToken: string): void {
     const isProd = this.configService.get<string>('NODE_ENV') === 'production';
+    const expiresInStr =
+      this.configService.get<string>('JWT_ACCESS_EXPIRES_IN') ||
+      this.configService.get<string>('JWT_EXPIRATION') ||
+      '7d';
+    const accessMaxAgeMs = this.authService.parseDurationToMs(expiresInStr);
 
     res.cookie('hr_access_token', accessToken, {
       httpOnly: true,
       secure: isProd,
       sameSite: 'lax',
       path: '/',
-      maxAge: 3600 * 1000, // 1 hour
+      maxAge: accessMaxAgeMs,
     });
 
     res.cookie('hr_refresh_token', refreshToken, {
@@ -148,7 +153,7 @@ export class AuthController {
       secure: isProd,
       sameSite: 'lax',
       path: '/',
-      maxAge: 7 * 24 * 3600 * 1000, // 7 days
+      maxAge: 30 * 24 * 3600 * 1000, // 30 days
     });
   }
 

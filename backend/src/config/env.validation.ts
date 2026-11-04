@@ -55,6 +55,10 @@ export class EnvironmentVariables {
 
   @IsString()
   @IsOptional()
+  JWT_ACCESS_EXPIRES_IN: string = '7d';
+
+  @IsString()
+  @IsOptional()
   PAYMENT_PROVIDER?: string = 'sandbox';
 
   @IsString()
