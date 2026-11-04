@@ -79,38 +79,50 @@ export function TemplatePicker({
                     }`}
                   >
                     {/* Realistic CSS Mock Preview based on template type */}
-                    <div className="w-full h-full pointer-events-none select-none text-[5px] flex flex-col">
+                    <div className="w-full h-full pointer-events-none select-none text-[5px] flex flex-col justify-between">
                       {/* Double Column Preview */}
                       {tpl.key === 'double-column' && (
                         <div className="h-full flex flex-col justify-between">
                           <div className="flex items-start justify-between border-b border-zinc-200 pb-1">
                             <div className="space-y-0.5">
-                              <div className="w-12 h-1.5 bg-zinc-900 rounded-xs" />
-                              <div className="w-16 h-1 bg-blue-600 rounded-xs" />
-                              <div className="w-20 h-0.5 bg-zinc-300 rounded-xs" />
+                              <div className="w-14 h-1.5 bg-zinc-900 rounded-xs" />
+                              <div className="w-18 h-1 bg-blue-600 rounded-xs" />
+                              <div className="w-24 h-0.5 bg-zinc-300 rounded-xs" />
                             </div>
                             <div className="w-4 h-4 rounded-full bg-zinc-200 shrink-0" />
                           </div>
-                          <div className="grid grid-cols-12 gap-1 flex-1 pt-1">
+                          <div className="grid grid-cols-12 gap-1.5 flex-1 pt-1">
                             <div className="col-span-7 space-y-1">
-                              <div className="w-8 h-1 bg-zinc-800 rounded-xs" />
+                              <div className="w-10 h-1 bg-zinc-800 rounded-xs" />
                               <div className="space-y-0.5">
-                                <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
+                                <div className="w-full h-0.5 bg-zinc-300 rounded-xs" />
                                 <div className="w-4/5 h-0.5 bg-zinc-200 rounded-xs" />
                                 <div className="w-5/6 h-0.5 bg-zinc-200 rounded-xs" />
                               </div>
                               <div className="space-y-0.5 pt-0.5">
-                                <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
+                                <div className="w-full h-0.5 bg-zinc-300 rounded-xs" />
                                 <div className="w-3/4 h-0.5 bg-zinc-200 rounded-xs" />
+                                <div className="w-4/5 h-0.5 bg-zinc-200 rounded-xs" />
+                              </div>
+                              <div className="space-y-0.5 pt-0.5">
+                                <div className="w-10 h-0.5 bg-zinc-700 rounded-xs" />
+                                <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
+                                <div className="w-3/5 h-0.5 bg-zinc-200 rounded-xs" />
                               </div>
                             </div>
                             <div className="col-span-5 space-y-1 border-l border-zinc-100 pl-1">
-                              <div className="w-6 h-1 bg-zinc-800 rounded-xs" />
+                              <div className="w-8 h-1 bg-zinc-800 rounded-xs" />
                               <div className="space-y-0.5">
                                 <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
                                 <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
+                                <div className="w-3/4 h-0.5 bg-zinc-200 rounded-xs" />
                               </div>
-                              <div className="w-6 h-1 bg-zinc-800 rounded-xs pt-1" />
+                              <div className="w-8 h-1 bg-zinc-800 rounded-xs pt-0.5" />
+                              <div className="space-y-0.5">
+                                <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
+                                <div className="w-4/5 h-0.5 bg-zinc-200 rounded-xs" />
+                              </div>
+                              <div className="w-7 h-1 bg-zinc-800 rounded-xs pt-0.5" />
                               <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
                             </div>
                           </div>
@@ -121,21 +133,28 @@ export function TemplatePicker({
                       {tpl.key === 'ivy-league' && (
                         <div className="h-full flex flex-col justify-between items-center text-center">
                           <div className="w-full pb-1 border-b border-zinc-300 space-y-0.5">
-                            <div className="w-14 h-1.5 bg-zinc-900 mx-auto rounded-xs" />
-                            <div className="w-20 h-0.5 bg-zinc-400 mx-auto rounded-xs" />
+                            <div className="w-16 h-1.5 bg-zinc-900 mx-auto rounded-xs" />
+                            <div className="w-24 h-0.5 bg-zinc-400 mx-auto rounded-xs" />
                           </div>
-                          <div className="w-full flex-1 pt-1.5 space-y-1.5">
-                            <div className="w-10 h-0.5 bg-zinc-800 mx-auto border-b border-zinc-800" />
+                          <div className="w-full flex-1 pt-1 space-y-1">
+                            <div className="w-12 h-0.5 bg-zinc-800 mx-auto border-b border-zinc-800" />
                             <div className="space-y-0.5">
                               <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
                               <div className="w-5/6 h-0.5 bg-zinc-200 mx-auto rounded-xs" />
                             </div>
-                            <div className="w-12 h-0.5 bg-zinc-800 mx-auto border-b border-zinc-800 pt-1" />
+                            <div className="w-14 h-0.5 bg-zinc-800 mx-auto border-b border-zinc-800 pt-0.5" />
                             <div className="space-y-0.5">
-                              <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
+                              <div className="w-full h-0.5 bg-zinc-300 rounded-xs" />
                               <div className="w-4/5 h-0.5 bg-zinc-200 mx-auto rounded-xs" />
                               <div className="w-3/4 h-0.5 bg-zinc-200 mx-auto rounded-xs" />
                             </div>
+                            <div className="w-12 h-0.5 bg-zinc-800 mx-auto border-b border-zinc-800 pt-0.5" />
+                            <div className="space-y-0.5">
+                              <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
+                              <div className="w-5/6 h-0.5 bg-zinc-200 mx-auto rounded-xs" />
+                            </div>
+                            <div className="w-10 h-0.5 bg-zinc-800 mx-auto border-b border-zinc-800 pt-0.5" />
+                            <div className="w-3/4 h-0.5 bg-zinc-200 mx-auto rounded-xs" />
                           </div>
                         </div>
                       )}
@@ -143,42 +162,69 @@ export function TemplatePicker({
                       {/* Elegant (Sidebar) Preview */}
                       {tpl.key === 'elegant' && (
                         <div className="h-full flex -m-2">
-                          <div className="w-1/3 bg-slate-800 p-1 flex flex-col items-center space-y-1">
-                            <div className="w-3.5 h-3.5 rounded-full bg-white/20 mt-1" />
-                            <div className="w-full h-0.5 bg-white/30 rounded-xs" />
-                            <div className="w-3/4 h-0.5 bg-white/30 rounded-xs" />
-                            <div className="w-full h-0.5 bg-white/20 rounded-xs mt-1" />
-                            <div className="w-2/3 h-0.5 bg-white/20 rounded-xs" />
+                          <div className="w-1/3 bg-slate-800 p-1 flex flex-col justify-between items-center space-y-1">
+                            <div className="w-full flex flex-col items-center space-y-1">
+                              <div className="w-3.5 h-3.5 rounded-full bg-white/30 mt-0.5" />
+                              <div className="w-full h-0.5 bg-white/40 rounded-xs" />
+                              <div className="w-3/4 h-0.5 bg-white/40 rounded-xs" />
+                              <div className="w-full h-0.5 bg-white/25 rounded-xs mt-0.5" />
+                              <div className="w-2/3 h-0.5 bg-white/25 rounded-xs" />
+                              <div className="w-full h-0.5 bg-white/25 rounded-xs mt-0.5" />
+                              <div className="w-4/5 h-0.5 bg-white/25 rounded-xs" />
+                            </div>
+                            <div className="w-full space-y-0.5 pb-0.5">
+                              <div className="w-full h-0.5 bg-white/20 rounded-xs" />
+                              <div className="w-2/3 h-0.5 bg-white/20 rounded-xs" />
+                            </div>
                           </div>
-                          <div className="w-2/3 p-1.5 space-y-1">
-                            <div className="w-10 h-1.5 bg-zinc-900 rounded-xs" />
-                            <div className="w-14 h-1 bg-slate-600 rounded-xs" />
-                            <div className="w-8 h-1 bg-slate-800 border-b border-slate-300 pt-1" />
-                            <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
-                            <div className="w-4/5 h-0.5 bg-zinc-200 rounded-xs" />
-                            <div className="w-8 h-1 bg-slate-800 border-b border-slate-300 pt-1" />
-                            <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
+                          <div className="w-2/3 p-1.5 space-y-1 flex flex-col justify-between">
+                            <div>
+                              <div className="w-12 h-1.5 bg-zinc-900 rounded-xs" />
+                              <div className="w-16 h-1 bg-slate-600 rounded-xs mt-0.5" />
+                              <div className="w-10 h-1 bg-slate-800 border-b border-slate-300 pt-1" />
+                              <div className="space-y-0.5 mt-0.5">
+                                <div className="w-full h-0.5 bg-zinc-300 rounded-xs" />
+                                <div className="w-4/5 h-0.5 bg-zinc-200 rounded-xs" />
+                                <div className="w-5/6 h-0.5 bg-zinc-200 rounded-xs" />
+                              </div>
+                              <div className="w-10 h-1 bg-slate-800 border-b border-slate-300 pt-1" />
+                              <div className="space-y-0.5 mt-0.5">
+                                <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
+                                <div className="w-3/4 h-0.5 bg-zinc-200 rounded-xs" />
+                              </div>
+                            </div>
+                            <div className="space-y-0.5 pt-0.5">
+                              <div className="w-8 h-0.5 bg-slate-700 rounded-xs" />
+                              <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
+                            </div>
                           </div>
                         </div>
                       )}
 
                       {/* Crest Preview */}
                       {tpl.key === 'crest' && (
-                        <div className="h-full flex flex-col -m-2">
+                        <div className="h-full flex flex-col justify-between -m-2">
                           <div className="bg-teal-700 p-1.5 space-y-0.5">
-                            <div className="w-12 h-1.5 bg-white rounded-xs" />
-                            <div className="w-16 h-0.5 bg-white/70 rounded-xs" />
+                            <div className="w-14 h-1.5 bg-white rounded-xs" />
+                            <div className="w-20 h-0.5 bg-white/70 rounded-xs" />
                           </div>
                           <div className="bg-zinc-100 px-1 py-0.5 flex gap-1 border-b border-zinc-200">
-                            <div className="w-8 h-0.5 bg-zinc-400 rounded-xs" />
-                            <div className="w-8 h-0.5 bg-zinc-400 rounded-xs" />
+                            <div className="w-10 h-0.5 bg-zinc-400 rounded-xs" />
+                            <div className="w-10 h-0.5 bg-zinc-400 rounded-xs" />
                           </div>
-                          <div className="p-1.5 space-y-1 flex-1">
-                            <div className="w-8 h-1 bg-teal-800 rounded-xs" />
-                            <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
-                            <div className="w-4/5 h-0.5 bg-zinc-200 rounded-xs" />
-                            <div className="w-8 h-1 bg-teal-800 rounded-xs pt-1" />
-                            <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
+                          <div className="p-1.5 space-y-1 flex-1 flex flex-col justify-between">
+                            <div className="space-y-1">
+                              <div className="w-10 h-1 bg-teal-800 rounded-xs" />
+                              <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
+                              <div className="w-4/5 h-0.5 bg-zinc-200 rounded-xs" />
+                              <div className="w-10 h-1 bg-teal-800 rounded-xs pt-0.5" />
+                              <div className="w-full h-0.5 bg-zinc-300 rounded-xs" />
+                              <div className="w-5/6 h-0.5 bg-zinc-200 rounded-xs" />
+                            </div>
+                            <div className="space-y-0.5">
+                              <div className="w-8 h-0.5 bg-teal-700 rounded-xs" />
+                              <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
+                            </div>
                           </div>
                         </div>
                       )}
@@ -187,19 +233,26 @@ export function TemplatePicker({
                       {tpl.key === 'clean-modern' && (
                         <div className="h-full flex flex-col justify-between p-0.5">
                           <div className="border-b-2 border-blue-600 pb-1 space-y-0.5">
-                            <div className="w-14 h-1.5 bg-blue-600 rounded-xs" />
-                            <div className="w-10 h-0.5 bg-zinc-600 rounded-xs" />
+                            <div className="w-16 h-1.5 bg-blue-600 rounded-xs" />
+                            <div className="w-12 h-0.5 bg-zinc-600 rounded-xs" />
                           </div>
-                          <div className="space-y-1 pt-1 flex-1">
-                            <div className="border-l-2 border-blue-600 pl-1">
-                              <div className="w-8 h-1 bg-zinc-900 rounded-xs" />
+                          <div className="space-y-1 pt-1 flex-1 flex flex-col justify-between">
+                            <div className="space-y-1">
+                              <div className="border-l-2 border-blue-600 pl-1">
+                                <div className="w-10 h-1 bg-zinc-900 rounded-xs" />
+                              </div>
+                              <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
+                              <div className="w-4/5 h-0.5 bg-zinc-200 rounded-xs" />
+                              <div className="border-l-2 border-blue-600 pl-1 pt-0.5">
+                                <div className="w-10 h-1 bg-zinc-900 rounded-xs" />
+                              </div>
+                              <div className="w-full h-0.5 bg-zinc-300 rounded-xs" />
+                              <div className="w-3/4 h-0.5 bg-zinc-200 rounded-xs" />
                             </div>
-                            <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
-                            <div className="w-4/5 h-0.5 bg-zinc-200 rounded-xs" />
-                            <div className="border-l-2 border-blue-600 pl-1 pt-1">
-                              <div className="w-8 h-1 bg-zinc-900 rounded-xs" />
+                            <div className="space-y-0.5 border-t border-zinc-100 pt-0.5">
+                              <div className="w-8 h-0.5 bg-blue-600 rounded-xs" />
+                              <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
                             </div>
-                            <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
                           </div>
                         </div>
                       )}
@@ -208,19 +261,26 @@ export function TemplatePicker({
                       {tpl.key === 'classic-ats' && (
                         <div className="h-full flex flex-col justify-between p-0.5">
                           <div className="border-b-2 border-zinc-900 pb-1 space-y-0.5 text-center">
-                            <div className="w-14 h-1.5 bg-zinc-900 mx-auto rounded-xs" />
-                            <div className="w-20 h-0.5 bg-zinc-600 mx-auto rounded-xs" />
+                            <div className="w-16 h-1.5 bg-zinc-900 mx-auto rounded-xs" />
+                            <div className="w-24 h-0.5 bg-zinc-600 mx-auto rounded-xs" />
                           </div>
-                          <div className="space-y-1 pt-1 flex-1">
-                            <div className="border-b border-zinc-900 pb-0.5">
-                              <div className="w-10 h-1 bg-zinc-900 rounded-xs" />
+                          <div className="space-y-1 pt-1 flex-1 flex flex-col justify-between">
+                            <div className="space-y-1">
+                              <div className="border-b border-zinc-900 pb-0.5">
+                                <div className="w-12 h-1 bg-zinc-900 rounded-xs" />
+                              </div>
+                              <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
+                              <div className="w-5/6 h-0.5 bg-zinc-200 rounded-xs" />
+                              <div className="border-b border-zinc-900 pb-0.5 pt-0.5">
+                                <div className="w-12 h-1 bg-zinc-900 rounded-xs" />
+                              </div>
+                              <div className="w-full h-0.5 bg-zinc-300 rounded-xs" />
+                              <div className="w-4/5 h-0.5 bg-zinc-200 rounded-xs" />
                             </div>
-                            <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
-                            <div className="w-5/6 h-0.5 bg-zinc-200 rounded-xs" />
-                            <div className="border-b border-zinc-900 pb-0.5 pt-1">
-                              <div className="w-10 h-1 bg-zinc-900 rounded-xs" />
+                            <div className="space-y-0.5 border-t border-zinc-200 pt-0.5">
+                              <div className="w-8 h-0.5 bg-zinc-800 rounded-xs" />
+                              <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
                             </div>
-                            <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
                           </div>
                         </div>
                       )}
