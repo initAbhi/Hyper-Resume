@@ -150,3 +150,4 @@ export function ClassicTemplate({
     </div>
   );
 }
+

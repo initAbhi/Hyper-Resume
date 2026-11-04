@@ -167,10 +167,82 @@ export function CompanyBrandBadge({ companyKey, companyName, className = '' }: C
         </span>
       );
 
+    case 'goldman':
     case 'goldman-sachs':
       return (
         <span className={`inline-flex items-center font-serif font-bold text-[#7399C6] text-sm tracking-wide ${className}`}>
           Goldman Sachs
+        </span>
+      );
+
+    case 'openai':
+      return (
+        <span className={`inline-flex items-center gap-1.5 font-bold tracking-tight text-zinc-900 dark:text-white text-base ${className}`}>
+          <svg className="w-4 h-4 fill-current text-[#10A37F] shrink-0" viewBox="0 0 24 24">
+            <path d="M22.28 9.53a5.98 5.98 0 0 0-.52-4.91 6.05 6.05 0 0 0-6.51-2.9A6.07 6.07 0 0 0 10.7.27a6.03 6.03 0 0 0-5.77 4.2 6.04 6.04 0 0 0-4.35 3.16 6.07 6.07 0 0 0 .74 7.08 5.98 5.98 0 0 0 .52 4.91 6.05 6.05 0 0 0 6.51 2.9A6.06 6.06 0 0 0 13.3 23.73a6.03 6.03 0 0 0 5.77-4.2 6.05 6.05 0 0 0 4.35-3.16 6.07 6.07 0 0 0-.74-7.08zM13.3 22.23c-1.35 0-2.61-.45-3.64-1.21l.18-.1 4.54-2.62a.84.84 0 0 0 .42-.73v-6.41l1.92 1.11a.08.08 0 0 1 .04.06v5.33a4.57 4.57 0 0 1-3.46 4.57zm-8.86-4.14a4.55 4.55 0 0 1-.58-3.67l.18.11 4.54 2.62a.84.84 0 0 0 .84 0l5.55-3.2v2.22a.08.08 0 0 1-.03.07l-4.62 2.67a4.58 4.58 0 0 1-5.88-.81zm-1.84-9.35c.42-1.28 1.3-2.33 2.47-2.95v5.43a.84.84 0 0 0 .42.73l5.55 3.2-1.92 1.11a.08.08 0 0 1-.07 0l-4.62-2.67a4.58 4.58 0 0 1-1.83-4.85zm14.88 2.37-5.55-3.2 1.92-1.11a.08.08 0 0 1 .07 0l4.62 2.67a4.58 4.58 0 0 1 1.83 4.85 4.55 4.55 0 0 1-2.47 2.95v-5.43a.84.84 0 0 0-.42-.73zm2.42-2.92-.18-.11-4.54-2.62a.84.84 0 0 0-.84 0l-5.55 3.2V6.24a.08.08 0 0 1 .03-.07l4.62-2.67a4.58 4.58 0 0 1 5.88.81 4.55 4.55 0 0 1 .58 3.67zm-9.36 4.09-2.55-1.47 2.55-1.47 2.55 1.47-2.55 1.47z"/>
+          </svg>
+          <span className="font-semibold text-sm tracking-tight">OpenAI</span>
+        </span>
+      );
+
+    case 'palantir':
+      return (
+        <span className={`inline-flex items-center gap-1.5 font-mono text-zinc-900 dark:text-white text-sm tracking-widest uppercase font-bold ${className}`}>
+          <svg className="w-3.5 h-3.5 fill-current text-zinc-900 dark:text-zinc-100 shrink-0" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2.5" />
+            <path d="M12 7v10M7 12h10" stroke="currentColor" strokeWidth="2.5" />
+          </svg>
+          <span>PALANTIR</span>
+        </span>
+      );
+
+    case 'databricks':
+      return (
+        <span className={`inline-flex items-center gap-1.5 font-bold text-zinc-900 dark:text-white text-base tracking-tight ${className}`}>
+          <span className="w-3 h-3 bg-[#FF3621] rounded-sm transform rotate-45 shrink-0" />
+          <span className="text-sm font-bold text-zinc-900 dark:text-white">databricks</span>
+        </span>
+      );
+
+    case 'figma':
+      return (
+        <span className={`inline-flex items-center gap-1.5 font-bold text-base tracking-tight ${className}`}>
+          <span className="inline-flex items-center gap-0.5">
+            <span className="w-2 h-2 rounded-l-full bg-[#F24E1E]" />
+            <span className="w-2 h-2 rounded-r-full bg-[#FF7262]" />
+          </span>
+          <span className="text-zinc-900 dark:text-white text-sm font-bold">Figma</span>
+        </span>
+      );
+
+    case 'citadel':
+      return (
+        <span className={`inline-flex items-center gap-1.5 font-serif font-black tracking-wider text-[#002B49] dark:text-[#5B9BD5] text-base ${className}`}>
+          <span className="w-2.5 h-2.5 border-2 border-current rounded-none rotate-45 shrink-0" />
+          <span>CITADEL</span>
+        </span>
+      );
+
+    case 'bytedance':
+    case 'tiktok':
+      return (
+        <span className={`inline-flex items-center gap-1.5 font-sans font-black text-zinc-900 dark:text-white text-base tracking-tight ${className}`}>
+          <span className="w-2.5 h-2.5 rounded-sm bg-[#00F2FE] shadow-[2px_2px_0px_0px_#FE2C55] shrink-0" />
+          <span>TikTok</span>
+          <span className="text-xs text-zinc-400 font-normal">/ ByteDance</span>
+        </span>
+      );
+
+    case 'snowflake':
+      return (
+        <span className={`inline-flex items-center gap-1.5 font-bold text-zinc-900 dark:text-white text-base tracking-tight ${className}`}>
+          <svg className="w-4 h-4 text-[#29B5E8] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="12" y1="2" x2="12" y2="22" />
+            <line x1="2" y1="12" x2="22" y2="12" />
+            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+            <line x1="4.93" y1="19.07" x2="19.07" y2="4.93" />
+          </svg>
+          <span className="text-sm font-bold text-[#29B5E8]">snowflake</span>
         </span>
       );
 

@@ -96,3 +96,4 @@ export function getTemplateComponent(templateKey: string): React.ComponentType<T
       return DoubleColumnTemplate;
   }
 }
+
