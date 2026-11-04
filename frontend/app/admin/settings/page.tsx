@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -32,7 +33,7 @@ export default function AdminSettingsPage() {
       const data = await apiClient.getAdminPaymentSettings();
       setSettings(data);
     } catch (err) {
-      console.error('Failed to load settings:', err);
+      logger.error('Failed to load settings', err);
     } finally {
       setLoading(false);
     }

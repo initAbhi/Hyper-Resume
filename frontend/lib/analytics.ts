@@ -5,6 +5,10 @@
  * candidate names, resume bodies, bullet content, or job description text.
  */
 
+import { logger } from './logger';
+
+const analyticsLogger = logger.child('Analytics');
+
 export type AnalyticsEventType =
   | 'landing_view'
   | 'resume_checker_started'
@@ -75,9 +79,7 @@ class AnalyticsService {
 
     this.eventQueue.push(record);
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[Analytics] Tracked event: ${event}`, sanitizedProps);
-    }
+    analyticsLogger.debug(`Tracked event: ${event}`, sanitizedProps);
 
     // Dispatch to Meta Pixel automatically
     if (typeof window !== 'undefined' && typeof (window as any).fbq === 'function') {
@@ -132,7 +134,7 @@ class AnalyticsService {
             fbq('trackCustom', event, sanitizedProps);
         }
       } catch (err) {
-        console.warn('[Analytics] Meta Pixel dispatch error:', err);
+        analyticsLogger.warn('Meta Pixel dispatch error', err);
       }
     }
 

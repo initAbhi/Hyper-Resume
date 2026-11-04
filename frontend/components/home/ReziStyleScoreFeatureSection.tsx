@@ -21,7 +21,7 @@ export function ReziStyleScoreFeatureSection() {
   const [activeSection, setActiveSection] = useState<'build' | 'score' | 'target'>('score');
 
   return (
-    <div className="w-full rounded-3xl bg-zinc-950 text-white p-6 sm:p-12 lg:p-16 border border-zinc-800 relative overflow-hidden shadow-2xl">
+    <div className="w-full rounded-2xl sm:rounded-3xl bg-zinc-950 text-white p-4 sm:p-8 lg:p-16 border border-zinc-800 relative overflow-hidden shadow-2xl">
       {/* Subtle background glow */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none" />
@@ -102,7 +102,7 @@ export function ReziStyleScoreFeatureSection() {
 
         {/* Right Realistic Dark Floating Card with Live Meter & Document */}
         <div className="lg:col-span-7 relative">
-          <div className="relative rounded-2xl bg-zinc-900/90 border border-zinc-800 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
+          <div className="relative rounded-2xl bg-zinc-900/90 border border-zinc-800 p-4 sm:p-8 shadow-2xl backdrop-blur-xl">
             
             {/* Top Toolbar */}
             <div className="flex items-center justify-between pb-4 border-b border-zinc-800 text-xs text-zinc-400">

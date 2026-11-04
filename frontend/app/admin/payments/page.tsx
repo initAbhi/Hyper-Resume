@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -45,7 +46,7 @@ export default function AdminPaymentsPage() {
       setSettings(settingsData);
       setPayments(paymentsData);
     } catch (err) {
-      console.error('Failed to load payments:', err);
+      logger.error('Failed to load payments', err);
     } finally {
       setLoading(false);
     }

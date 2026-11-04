@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreditLedger, type CreditTransactionType } from './entities/credit-ledger.entity.js';
@@ -13,6 +13,8 @@ export const CREDIT_COSTS = {
 
 @Injectable()
 export class CreditsService {
+  private readonly logger = new Logger(CreditsService.name);
+
   constructor(
     @InjectRepository(CreditLedger)
     private readonly ledgerRepository: Repository<CreditLedger>,
@@ -61,7 +63,8 @@ export class CreditsService {
     });
 
     if (existing) {
-      return existing; // Idempotent response
+      this.logger.debug(`Idempotent transaction ignored for key: ${idempotencyKey}`);
+      return existing;
     }
 
     const entry = this.ledgerRepository.create({
@@ -73,7 +76,9 @@ export class CreditsService {
       metadata,
     });
 
-    return this.ledgerRepository.save(entry);
+    const saved = await this.ledgerRepository.save(entry);
+    this.logger.log(`Awarded ${amount} credits to user ${userId} (${transactionType}: ${description})`);
+    return saved;
   }
 
   async deductCredits(
@@ -89,6 +94,7 @@ export class CreditsService {
       where: { idempotencyKey },
     });
     if (existing) {
+      this.logger.debug(`Idempotent credit deduction hit for key: ${idempotencyKey}`);
       return existing;
     }
 
@@ -97,6 +103,9 @@ export class CreditsService {
     const requiredAmount = Math.abs(amount);
 
     if (currentBalance < requiredAmount) {
+      this.logger.warn(
+        `Insufficient credit balance for user ${userId}. Available: ${currentBalance}, Required: ${requiredAmount}`,
+      );
       throw new ForbiddenException(
         `Insufficient credit balance (${currentBalance} available, ${requiredAmount} required). Please recharge your credits to continue.`,
       );
@@ -116,7 +125,11 @@ export class CreditsService {
       },
     });
 
-    return this.ledgerRepository.save(deduction);
+    const saved = await this.ledgerRepository.save(deduction);
+    this.logger.log(
+      `Deducted ${requiredAmount} credits from user ${userId} (${description}). New balance: ${currentBalance - requiredAmount}`,
+    );
+    return saved;
   }
 
   async refundCredits(
@@ -130,6 +143,7 @@ export class CreditsService {
       where: { idempotencyKey: refundKey },
     });
     if (existingRefund) {
+      this.logger.debug(`Idempotent refund hit for key: ${refundKey}`);
       return existingRefund;
     }
 
@@ -143,6 +157,8 @@ export class CreditsService {
       metadata: { originalIdempotencyKey, reason },
     });
 
-    return this.ledgerRepository.save(entry);
+    const saved = await this.ledgerRepository.save(entry);
+    this.logger.log(`Refunded ${refundAmount} credits to user ${userId} (${reason})`);
+    return saved;
   }
 }

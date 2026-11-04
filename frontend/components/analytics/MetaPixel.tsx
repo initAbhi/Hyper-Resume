@@ -2,6 +2,9 @@
 
 import { useEffect, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { logger } from '@/lib/logger';
+
+const pixelLogger = logger.child('MetaPixel');
 
 export const META_PIXEL_ID = process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID || '1117348281146781';
 
@@ -20,6 +23,7 @@ function PixelRouteTracker() {
     if (typeof window !== 'undefined' && typeof window.fbq === 'function') {
       // Fire PageView on every Next.js client-side route change
       window.fbq('track', 'PageView');
+      pixelLogger.debug('Dispatched PageView on route change', { pathname });
     }
   }, [pathname, searchParams]);
 
@@ -65,8 +69,9 @@ export function trackMetaEvent(
   if (typeof window !== 'undefined' && typeof window.fbq === 'function') {
     try {
       window.fbq('track', eventName, options);
+      pixelLogger.debug(`Tracked event: ${eventName}`, options);
     } catch (e) {
-      console.warn('[Meta Pixel] Failed to track event:', eventName, e);
+      pixelLogger.warn(`Failed to track event: ${eventName}`, e);
     }
   }
 }
@@ -75,8 +80,9 @@ export function trackMetaCustomEvent(eventName: string, options: Record<string, 
   if (typeof window !== 'undefined' && typeof window.fbq === 'function') {
     try {
       window.fbq('trackCustom', eventName, options);
+      pixelLogger.debug(`Tracked custom event: ${eventName}`, options);
     } catch (e) {
-      console.warn('[Meta Pixel] Failed to track custom event:', eventName, e);
+      pixelLogger.warn(`Failed to track custom event: ${eventName}`, e);
     }
   }
 }

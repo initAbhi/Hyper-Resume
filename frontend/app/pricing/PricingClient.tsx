@@ -305,7 +305,7 @@ export function PricingClient() {
               key={plan.id}
               className={`flex flex-col justify-between transition-all duration-200 ${
                 isHighlighted
-                  ? 'border-2 border-blue-600 dark:border-blue-500 shadow-xl relative scale-102 bg-white dark:bg-zinc-900 ring-4 ring-blue-600/10'
+                  ? 'border-2 border-blue-600 dark:border-blue-500 shadow-xl relative md:scale-102 bg-white dark:bg-zinc-900 ring-4 ring-blue-600/10'
                   : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60'
               }`}
             >

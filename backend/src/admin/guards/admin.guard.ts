@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, UserRole } from '../../users/entities/user.entity.js';
+import { RequestContext } from '../../common/logger/request-context.js';
 
 @Injectable()
 export class AdminGuard implements CanActivate {
@@ -48,6 +49,7 @@ export class AdminGuard implements CanActivate {
       }
 
       request.user = user;
+      RequestContext.setUserId(user.id);
       return true;
     } catch (err: unknown) {
       if (err instanceof ForbiddenException) {

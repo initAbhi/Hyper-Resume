@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -13,6 +14,8 @@ import { CreateJobMatchDto } from './dto/create-job-match.dto.js';
 
 @Injectable()
 export class JobMatchingService {
+  private readonly logger = new Logger(JobMatchingService.name);
+
   constructor(
     @InjectRepository(JobMatch)
     private readonly jobMatchRepository: Repository<JobMatch>,
@@ -26,6 +29,8 @@ export class JobMatchingService {
   ) {}
 
   async createJobMatch(userId: string, dto: CreateJobMatchDto): Promise<JobMatch> {
+    this.logger.log(`Initiating job match analysis for user ${userId}, resume ${dto.resumeId}, job ${dto.jobDescriptionId}`);
+
     // 1. Verify Resume ownership
     const resume = await this.resumeRepository.findOne({
       where: { id: dto.resumeId, userId, isArchived: false },
@@ -97,6 +102,7 @@ export class JobMatchingService {
       await this.creditLedgerRepository.save(deduction);
     }
 
+    this.logger.log(`Job match analysis completed: score ${overallScore}% for resume ${resume.id} against job "${job.title}"`);
     return savedMatch;
   }
 

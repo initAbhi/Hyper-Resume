@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CandidateProfile } from './entities/candidate-profile.entity.js';
@@ -6,6 +6,8 @@ import { UpdateProfileDto } from './dto/update-profile.dto.js';
 
 @Injectable()
 export class ProfilesService {
+  private readonly logger = new Logger(ProfilesService.name);
+
   constructor(
     @InjectRepository(CandidateProfile)
     private readonly profileRepository: Repository<CandidateProfile>,
@@ -17,7 +19,7 @@ export class ProfilesService {
     });
 
     if (!profile) {
-      // Auto-initialize if absent
+      this.logger.log(`Auto-initializing candidate profile for user ${userId}`);
       profile = this.profileRepository.create({
         userId,
         headline: '',
@@ -55,6 +57,8 @@ export class ProfilesService {
     if (dto.projects !== undefined) profile.projects = dto.projects;
     if (dto.certifications !== undefined) profile.certifications = dto.certifications;
 
-    return this.profileRepository.save(profile);
+    const saved = await this.profileRepository.save(profile);
+    this.logger.log(`Updated candidate profile for user ${userId}`);
+    return saved;
   }
 }

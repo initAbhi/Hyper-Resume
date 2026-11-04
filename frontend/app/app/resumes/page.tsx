@@ -49,6 +49,27 @@ export default function ResumesListPage() {
   const [importedResumeName, setImportedResumeName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Auto-restore template cloned before sign-in
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const pending = sessionStorage.getItem('pending_cloned_resume');
+    if (!pending) return;
+    sessionStorage.removeItem('pending_cloned_resume');
+    try {
+      const data = JSON.parse(pending);
+      setIsSubmitting(true);
+      apiClient.createResume({
+        name: data.title || 'Cloned Resume',
+        content: data.content,
+      }).then((created) => {
+        router.push('/app/resumes/' + created.id);
+      }).catch((err) => {
+        setErrorMessage(err instanceof Error ? err.message : 'Failed to clone template.');
+        setIsSubmitting(false);
+      });
+    } catch {}
+  }, [router]);
+
   useEffect(() => {
     let isMounted = true;
     apiClient

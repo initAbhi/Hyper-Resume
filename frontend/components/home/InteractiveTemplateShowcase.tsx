@@ -299,21 +299,46 @@ const RESUME_CATEGORY_CARDS = [
 export function InteractiveTemplateShowcase() {
   const [activeCategory, setActiveCategory] = useState<CategoryKey>('Most Popular');
   const [activeIndex, setActiveIndex] = useState(0);
+  const carouselRef = useRef<HTMLDivElement>(null);
 
   const currentTemplates = TEMPLATES_BY_CATEGORY[activeCategory] || TEMPLATES_BY_CATEGORY['Most Popular'];
   const activeTemplate = currentTemplates[activeIndex] || currentTemplates[0];
 
+  const scrollToIndex = (idx: number) => {
+    if (carouselRef.current) {
+      const children = carouselRef.current.children;
+      if (children && children[idx]) {
+        (children[idx] as HTMLElement).scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'start',
+        });
+      }
+    }
+  };
+
   const handleCategoryChange = (cat: CategoryKey) => {
     setActiveCategory(cat);
     setActiveIndex(0);
+    if (carouselRef.current) {
+      carouselRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+    }
   };
 
   const handlePrev = () => {
-    setActiveIndex((prev) => (prev > 0 ? prev - 1 : currentTemplates.length - 1));
+    setActiveIndex((prev) => {
+      const nextIdx = prev > 0 ? prev - 1 : currentTemplates.length - 1;
+      scrollToIndex(nextIdx);
+      return nextIdx;
+    });
   };
 
   const handleNext = () => {
-    setActiveIndex((prev) => (prev < currentTemplates.length - 1 ? prev + 1 : 0));
+    setActiveIndex((prev) => {
+      const nextIdx = prev < currentTemplates.length - 1 ? prev + 1 : 0;
+      scrollToIndex(nextIdx);
+      return nextIdx;
+    });
   };
 
   // Safe check if index is out of bounds when category changes
@@ -373,90 +398,89 @@ export function InteractiveTemplateShowcase() {
           })}
         </div>
 
-        {/* Carousel Viewport */}
-        <div className="relative overflow-hidden w-full pb-2">
-          <div
-            className="flex gap-6 transition-transform duration-500 ease-out"
-            style={{
-              transform: `translateX(-${Math.min(activeIndex, Math.max(0, currentTemplates.length - 3)) * (100 / 3 + 1.2)}%)`,
-            }}
-          >
-            {currentTemplates.map((tpl, idx) => {
-              const isActive = idx === activeIndex;
+        {/* Carousel Viewport (Responsive Touch & Desktop Slider) */}
+        <div
+          ref={carouselRef}
+          className="relative w-full flex gap-4 sm:gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth no-scrollbar"
+        >
+          {currentTemplates.map((tpl, idx) => {
+            const isActive = idx === activeIndex;
 
-              return (
+            return (
+              <div
+                key={`${tpl.name}-${idx}`}
+                onClick={() => {
+                  setActiveIndex(idx);
+                  scrollToIndex(idx);
+                }}
+                className={`snap-start group relative rounded-[20px] sm:rounded-[24px] bg-[#F9FAFB] dark:bg-zinc-900/60 p-4 sm:p-6 lg:p-7 border border-zinc-200/80 dark:border-zinc-800 flex flex-col items-center justify-center transition-all duration-300 cursor-pointer select-none shrink-0 w-[84vw] xs:w-[78vw] sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] ${
+                  isActive ? 'shadow-sm ring-2 ring-blue-500/20' : 'opacity-85 hover:opacity-100'
+                }`}
+              >
+                {/* Paper Frame with Crisp .avif Asset */}
                 <div
-                  key={`${tpl.name}-${idx}`}
-                  onClick={() => setActiveIndex(idx)}
-                  className={`group relative rounded-[24px] bg-[#F9FAFB] dark:bg-zinc-900/60 p-4 sm:p-6 lg:p-7 border border-zinc-200/80 dark:border-zinc-800 flex flex-col items-center justify-center transition-all duration-300 cursor-pointer select-none shrink-0 w-[88vw] sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] ${
-                    isActive ? 'shadow-sm' : 'opacity-85 hover:opacity-100'
+                  className={`relative w-full rounded-[14px] bg-white overflow-hidden transition-all duration-300 ${
+                    isActive
+                      ? 'border-2 border-[#2563EB] ring-4 ring-blue-500/10 shadow-xl'
+                      : 'border border-zinc-200 shadow-xs group-hover:border-zinc-300'
                   }`}
                 >
-                  {/* Paper Frame with Crisp .avif Asset */}
+                  <img
+                    src={tpl.img}
+                    alt={`${tpl.name} resume template preview`}
+                    loading="lazy"
+                    className="w-full h-auto object-cover block select-none pointer-events-none rounded-[12px]"
+                  />
+
+                  {/* Customize & Download Action Buttons on Active / Hover */}
                   <div
-                    className={`relative w-full rounded-[14px] bg-white overflow-hidden transition-all duration-300 ${
+                    className={`absolute inset-x-0 bottom-4 flex items-center justify-center gap-2 z-10 transition-all duration-300 ${
                       isActive
-                        ? 'border-2 border-[#2563EB] ring-4 ring-blue-500/10 shadow-xl'
-                        : 'border border-zinc-200 shadow-xs group-hover:border-zinc-300'
+                        ? 'opacity-100 translate-y-0'
+                        : 'opacity-0 group-hover:opacity-100 translate-y-1'
                     }`}
                   >
-                    <img
-                      src={tpl.img}
-                      alt={`${tpl.name} resume template preview`}
-                      loading="lazy"
-                      className="w-full h-auto object-cover block select-none pointer-events-none rounded-[12px]"
-                    />
-
-                    {/* Customize & Download Action Buttons on Active / Hover */}
-                    <div
-                      className={`absolute inset-x-0 bottom-4 flex items-center justify-center gap-2 z-10 transition-all duration-300 ${
-                        isActive
-                          ? 'opacity-100 translate-y-0'
-                          : 'opacity-0 group-hover:opacity-100 translate-y-1'
-                      }`}
+                    <Link
+                      href={`/login?template=${encodeURIComponent(tpl.name.toLowerCase())}`}
+                      className="px-5 py-2 rounded-full bg-[#2563EB] hover:bg-blue-700 text-white font-medium text-xs sm:text-sm shadow-md hover:shadow-lg transition-all transform hover:scale-105 cursor-pointer"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      <Link
-                        href={`/login?template=${encodeURIComponent(tpl.name.toLowerCase())}`}
-                        className="px-5 py-2 rounded-full bg-[#2563EB] hover:bg-blue-700 text-white font-medium text-xs sm:text-sm shadow-md hover:shadow-lg transition-all transform hover:scale-105 cursor-pointer"
-                        onClick={(e) => e.stopPropagation()}
+                      Customize
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.location.href = `/login?download=${encodeURIComponent(tpl.name.toLowerCase())}`;
+                      }}
+                      className="px-4 py-2 rounded-full bg-[#71717A] hover:bg-zinc-700 text-white font-medium text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 transform hover:scale-105 cursor-pointer backdrop-blur-sm"
+                    >
+                      {/* Download Document SVG matching Rezi */}
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        className="w-4 h-4 text-white"
                       >
-                        Customize
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.location.href = `/login?download=${encodeURIComponent(tpl.name.toLowerCase())}`;
-                        }}
-                        className="px-4 py-2 rounded-full bg-[#71717A] hover:bg-zinc-700 text-white font-medium text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 transform hover:scale-105 cursor-pointer backdrop-blur-sm"
-                      >
-                        {/* Download Document SVG matching Rezi */}
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 20 20"
-                          fill="none"
-                          className="w-4 h-4 text-white"
-                        >
-                          <path
-                            opacity="0.5"
-                            d="M4 4V16C4 17.1031 4.89688 18 6 18H14C15.1031 18 16 17.1031 16 16V7.32812C16 6.79688 15.7906 6.2875 15.4156 5.9125L12.0844 2.58437C11.7094 2.20937 11.2031 2 10.6719 2H6C4.89688 2 4 2.89688 4 4Z"
-                            fill="currentColor"
-                          />
-                          <path
-                            d="M10.5297 15.7812C10.2359 16.075 9.76094 16.075 9.47031 15.7812L7.47031 13.7812C7.17656 13.4875 7.17656 13.0125 7.47031 12.7219C7.76406 12.4313 8.23906 12.4281 8.52969 12.7219L9.24844 13.4406V10.75C9.24844 10.3344 9.58281 10 9.99844 10C10.4141 10 10.7484 10.3344 10.7484 10.75V13.4406L11.4672 12.7219C11.7609 12.4281 12.2359 12.4281 12.5266 12.7219C12.8172 13.0156 12.8203 13.4906 12.5266 13.7812L10.5266 15.7812H10.5297Z"
-                            fill="currentColor"
-                          />
-                        </svg>
-                        <span>Download</span>
-                      </button>
-                    </div>
+                        <path
+                          opacity="0.5"
+                          d="M4 4V16C4 17.1031 4.89688 18 6 18H14C15.1031 18 16 17.1031 16 16V7.32812C16 6.79688 15.7906 6.2875 15.4156 5.9125L12.0844 2.58437C11.7094 2.20937 11.2031 2 10.6719 2H6C4.89688 2 4 2.89688 4 4Z"
+                          fill="currentColor"
+                        />
+                        <path
+                          d="M10.5297 15.7812C10.2359 16.075 9.76094 16.075 9.47031 15.7812L7.47031 13.7812C7.17656 13.4875 7.17656 13.0125 7.47031 12.7219C7.76406 12.4313 8.23906 12.4281 8.52969 12.7219L9.24844 13.4406V10.75C9.24844 10.3344 9.58281 10 9.99844 10C10.4141 10 10.7484 10.3344 10.7484 10.75V13.4406L11.4672 12.7219C11.7609 12.4281 12.2359 12.4281 12.5266 12.7219C12.8172 13.0156 12.8203 13.4906 12.5266 13.7812L10.5266 15.7812H10.5297Z"
+                          fill="currentColor"
+                        />
+                      </svg>
+                      <span>Download</span>
+                    </button>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Carousel Bottom Info & Navigation Controls */}
@@ -523,12 +547,12 @@ export function InteractiveTemplateShowcase() {
         </div>
 
         {/* 10 Category Cards Grid matching Rezi's exact assets */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
           {RESUME_CATEGORY_CARDS.map((item, idx) => (
             <Link
               key={idx}
               href={`/login?category=${encodeURIComponent(item.category.toLowerCase())}`}
-              className="group p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 hover:border-zinc-300 dark:hover:border-zinc-700 hover:shadow-md transition-all flex flex-col justify-between min-h-[115px]"
+              className="group p-3 sm:p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 hover:border-zinc-300 dark:hover:border-zinc-700 hover:shadow-md transition-all flex flex-col justify-between min-h-[105px] sm:min-h-[115px]"
             >
               {/* Overlapping Company Logos from Rezi CDN */}
               <div className="flex items-center -space-x-1.5 mb-3">

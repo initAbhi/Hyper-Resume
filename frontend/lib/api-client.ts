@@ -1,4 +1,7 @@
 import { env } from './env';
+import { logger } from './logger';
+
+const apiLogger = logger.child('ApiClient');
 
 export interface ApiResponse<T> {
   data: T;
@@ -473,6 +476,10 @@ export class ApiClient {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
 
+    const method = (options.method || 'GET').toUpperCase();
+    apiLogger.debug(`--> ${method} ${endpoint}`, { requestId });
+    const startTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
+
     let response: Response;
     try {
       response = await fetch(url, {
@@ -481,6 +488,9 @@ export class ApiClient {
         headers,
       });
     } catch (networkError: unknown) {
+      apiLogger.error(`Network failure on ${method} ${endpoint} [${requestId}]`, {
+        error: networkError instanceof Error ? networkError.message : String(networkError),
+      });
       throw new ApiError({
         statusCode: 0,
         code: 'NETWORK_ERROR',
@@ -493,9 +503,14 @@ export class ApiClient {
       });
     }
 
+    const durationMs = Math.round(
+      (typeof performance !== 'undefined' ? performance.now() : Date.now()) - startTime,
+    );
+
     // Health check endpoints return unintercepted JSON
     if (endpoint.includes('/health')) {
       if (!response.ok) {
+        apiLogger.warn(`<-- ${response.status} ${method} ${endpoint} (${durationMs}ms) [${requestId}]`);
         throw new ApiError({
           statusCode: response.status,
           code: 'SERVICE_UNAVAILABLE',
@@ -505,6 +520,7 @@ export class ApiClient {
         });
       }
       const rawData = await response.json();
+      apiLogger.debug(`<-- ${response.status} ${method} ${endpoint} (${durationMs}ms) [${requestId}]`);
       return {
         data: rawData as T,
         meta: {
@@ -537,9 +553,14 @@ export class ApiClient {
           requestId: response.headers.get('x-request-id') || requestId,
         };
       }
+      apiLogger.error(
+        `<-- ${response.status} ${method} ${endpoint} (${durationMs}ms) [${requestId}]`,
+        errorPayload,
+      );
       throw new ApiError(errorPayload);
     }
 
+    apiLogger.debug(`<-- ${response.status} ${method} ${endpoint} (${durationMs}ms) [${requestId}]`);
     return (await response.json()) as ApiResponse<T>;
   }
 
@@ -642,9 +663,13 @@ export class ApiClient {
     locale?: string;
     content?: ResumeContent;
   }) {
+    const { targetRole, targetCompany, ...payload } = dto;
+    if (targetRole && payload.content && !payload.content.headline) {
+      payload.content.headline = targetRole;
+    }
     const res = await this.request<Resume>('/resumes', {
       method: 'POST',
-      body: JSON.stringify(dto),
+      body: JSON.stringify(payload),
     });
     return res.data;
   }

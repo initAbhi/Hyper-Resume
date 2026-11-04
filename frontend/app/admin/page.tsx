@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -52,7 +53,7 @@ export default function AdminOverviewPage() {
       setRecentPayments(paymentsData);
       setPaymentSettings(settingsData);
     } catch (err: unknown) {
-      console.error('Failed to load dashboard data:', err);
+      logger.error('Failed to load dashboard data', err);
     } finally {
       setLoading(false);
     }

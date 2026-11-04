@@ -167,12 +167,20 @@ function NavbarInner() {
         </div>
 
         {/* Mobile Header Right */}
-        <div className="flex items-center gap-2 lg:hidden">
-          <Link href="/login">
-            <Button size="sm" className="rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-3.5 py-1.5 h-8 shadow-xs">
-              Try for free
-            </Button>
-          </Link>
+        <div className="flex items-center gap-1.5 sm:gap-2 lg:hidden">
+          {isAuthenticated ? (
+            <Link href="/app">
+              <Button size="sm" className="rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] sm:text-xs px-2.5 sm:px-3.5 py-1 sm:py-1.5 h-8 shadow-xs">
+                Dashboard
+              </Button>
+            </Link>
+          ) : (
+            <Link href="/login" className="hidden xs:inline-flex">
+              <Button size="sm" className="rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-3 sm:px-3.5 py-1.5 h-8 shadow-xs">
+                Try for free
+              </Button>
+            </Link>
+          )}
           <ThemeToggle id="mobile-theme-toggle" />
           {/* Mobile Menu Button */}
           <button

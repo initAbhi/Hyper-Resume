@@ -7,6 +7,7 @@ import { Footer } from '@/components/layout/Footer';
 import { AuthProvider } from '@/lib/auth-context';
 import { ThemeProvider } from '@/lib/theme-context';
 import { MetaPixel } from '@/components/analytics/MetaPixel';
+import { ClientLoggerProvider } from '@/components/providers/ClientLoggerProvider';
 
 const inter = Inter({
   variable: '--font-inter',
@@ -95,6 +96,7 @@ fbq('track', 'PageView');`,
         {/* End Meta Pixel Code */}
       </head>
       <body className="min-h-full flex flex-col bg-white dark:bg-[#0a0a0a] text-zinc-900 dark:text-zinc-100 antialiased" style={{ fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif" }}>
+        <ClientLoggerProvider />
         <MetaPixel />
         <ThemeProvider>
           <AuthProvider>

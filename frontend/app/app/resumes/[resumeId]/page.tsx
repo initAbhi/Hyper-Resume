@@ -424,10 +424,11 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
             variant="outline"
             size="sm"
             onClick={() => window.print()}
-            className="gap-1.5 text-xs font-semibold"
+            className="gap-1.5 text-xs font-semibold px-2.5 sm:px-3"
           >
             <Printer className="w-3.5 h-3.5" />
-            <span>Export ATS PDF</span>
+            <span className="hidden sm:inline">Export ATS PDF</span>
+            <span className="sm:hidden">Export</span>
           </Button>
 
           {/* Toggle AI Panel Button (Desktop) */}
@@ -466,7 +467,8 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
             }`}
           >
             <Eye className="w-3.5 h-3.5" />
-            <span>Live Canvas</span>
+            <span className="hidden sm:inline">Live Canvas</span>
+            <span className="sm:hidden">Canvas</span>
           </button>
           <button
             onClick={() => setMobileTab('ai')}
@@ -1122,14 +1124,14 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
               {/* The Actual Rendered ATS Document */}
               <div
                 id="resume-document-print"
-                className={`resume-paper-canvas bg-white text-zinc-950 rounded-md shadow-xs border border-zinc-200/80 min-w-[340px] max-w-[760px] mx-auto leading-relaxed ${
+                className={`resume-paper-canvas bg-white text-zinc-950 rounded-md shadow-xs border border-zinc-200/80 w-full max-w-[760px] mx-auto leading-relaxed ${
                   templateKey === 'compact-ats'
-                    ? 'p-4 sm:p-6 text-[10px] font-sans'
+                    ? 'p-3.5 sm:p-6 text-[10px] font-sans'
                     : templateKey === 'technical-ats'
-                    ? 'p-6 sm:p-8 font-mono text-[10.5px]'
+                    ? 'p-4 sm:p-8 font-mono text-[10.5px]'
                     : templateKey === 'executive'
-                    ? 'p-6 sm:p-8 font-serif text-[11px]'
-                    : 'p-6 sm:p-8 font-sans text-[11px]'
+                    ? 'p-4 sm:p-8 font-serif text-[11px]'
+                    : 'p-4 sm:p-8 font-sans text-[11px]'
                 }`}
               >
                 {/* Header Section */}

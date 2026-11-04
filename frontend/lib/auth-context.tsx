@@ -3,6 +3,9 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient, User, ApiError } from './api-client';
+import { logger } from './logger';
+
+const authLogger = logger.child('Auth');
 
 interface AuthContextType {
   user: User | null;
@@ -34,8 +37,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await apiClient.getMe();
       setUser(data.user);
       setCreditBalance(data.creditBalance || 0);
+      authLogger.debug('User session refreshed', { userId: data.user.id, credits: data.creditBalance });
     } catch (err: unknown) {
       if (err instanceof ApiError && err.statusCode === 401) {
+        authLogger.debug('Session expired, clearing tokens');
         apiClient.setToken(null);
         setUser(null);
         setCreditBalance(0);
@@ -51,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (isMounted) {
           setUser(data.user);
           setCreditBalance(data.creditBalance || 0);
+          authLogger.debug('Initial session authenticated', { userId: data.user.id });
         }
       })
       .catch((err: unknown) => {
@@ -76,7 +82,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await apiClient.login(credentials);
       setUser(data.user);
+      authLogger.info('User login successful', { email: credentials.email, userId: data.user.id });
       await refreshUser();
+    } catch (err) {
+      authLogger.warn('User login failed', { email: credentials.email });
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -87,7 +97,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await apiClient.signup(credentials);
       setUser(data.user);
+      authLogger.info('User signup successful', { email: credentials.email, userId: data.user.id });
       await refreshUser();
+    } catch (err) {
+      authLogger.warn('User signup failed', { email: credentials.email });
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -103,8 +117,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await apiClient.googleAuth(payload);
       setUser(data.user);
+      authLogger.info('Google authentication successful', { userId: data.user.id, isNewUser: data.isNewUser });
       await refreshUser();
       return { isNewUser: data.isNewUser };
+    } catch (err) {
+      authLogger.warn('Google authentication failed');
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -114,6 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     try {
       await apiClient.logout();
+      authLogger.info('User logged out');
     } catch {
       // Ignore API failure on logout
     } finally {

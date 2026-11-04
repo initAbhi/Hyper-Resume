@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JobApplication } from './entities/job-application.entity.js';
@@ -10,6 +10,8 @@ import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 
 @Injectable()
 export class ApplicationsService {
+  private readonly logger = new Logger(ApplicationsService.name);
+
   constructor(
     @InjectRepository(JobApplication)
     private readonly applicationRepository: Repository<JobApplication>,
@@ -89,6 +91,7 @@ export class ApplicationsService {
     });
 
     const saved = await this.applicationRepository.save(app);
+    this.logger.log(`Created job application "${role} at ${company}" (${saved.id}) for user ${userId}`);
     return this.getApplication(userId, saved.id);
   }
 
@@ -154,12 +157,14 @@ export class ApplicationsService {
     if (dto.notes !== undefined) app.notes = dto.notes?.trim();
 
     await this.applicationRepository.save(app);
+    this.logger.log(`Updated job application ${id} for user ${userId} (status: ${app.status})`);
     return this.getApplication(userId, id);
   }
 
   async deleteApplication(userId: string, id: string): Promise<{ success: boolean }> {
     const app = await this.getApplication(userId, id);
     await this.applicationRepository.remove(app);
+    this.logger.log(`Deleted job application ${id} for user ${userId}`);
     return { success: true };
   }
 }

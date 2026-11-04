@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../../users/entities/user.entity.js';
+import { RequestContext } from '../logger/request-context.js';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -43,6 +44,7 @@ export class JwtAuthGuard implements CanActivate {
       }
 
       request.user = user;
+      RequestContext.setUserId(user.id);
       return true;
     } catch {
       throw new UnauthorizedException('Invalid or expired authentication token');

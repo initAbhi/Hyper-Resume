@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   PayloadTooLargeException,
 } from '@nestjs/common';
 import pdf from 'pdf-parse-fork';
@@ -10,6 +11,7 @@ import type { ParsedProfileDraft } from '../ai/interfaces/ai-provider.interface.
 
 @Injectable()
 export class ResumeParserService {
+  private readonly logger = new Logger(ResumeParserService.name);
   private readonly MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
 
   constructor(private readonly aiService: AiService) {}
@@ -31,16 +33,23 @@ export class ResumeParserService {
       throw new PayloadTooLargeException('File exceeds the 10MB upload limit');
     }
 
+    this.logger.log(`Parsing uploaded resume file "${originalName}" (${fileBuffer.length} bytes, mime: ${mimeType})`);
+
     const text = await this.extractTextFromBuffer(fileBuffer, mimeType, originalName);
 
     if (!text || text.trim().length < 50) {
+      this.logger.warn(`Insufficient extractable text from "${originalName}" (${text?.length || 0} chars)`);
       throw new BadRequestException(
         'The uploaded document contains insufficient or unextractable text. Please ensure it is not scanned/rasterized or password-protected.',
       );
     }
 
+    this.logger.log(`Extracted ${text.length} characters from "${originalName}", initiating AI profile draft parsing`);
+
     // Pass extracted text to AI extraction engine
     const draft = await this.aiService.parseResumeText(text);
+
+    this.logger.log(`Successfully generated profile draft from "${originalName}"`);
 
     return {
       fileName: originalName,

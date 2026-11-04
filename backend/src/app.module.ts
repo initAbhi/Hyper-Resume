@@ -5,6 +5,8 @@ import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { validate } from './config/env.validation.js';
 import { getTypeOrmConfig } from './database/typeorm.config.js';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware.js';
+import { HttpLoggerMiddleware } from './common/middleware/http-logger.middleware.js';
+import { LoggerModule } from './common/logger/logger.module.js';
 import { AppLoggerService } from './common/logger/app-logger.service.js';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 import { TransformResponseInterceptor } from './common/interceptors/transform-response.interceptor.js';
@@ -37,6 +39,7 @@ import { AppService } from './app.service.js';
       inject: [ConfigService],
       useFactory: getTypeOrmConfig,
     }),
+    LoggerModule,
     HealthModule,
     UsersModule,
     AuthModule,
@@ -69,6 +72,8 @@ import { AppService } from './app.service.js';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(CorrelationIdMiddleware).forRoutes('*');
+    consumer
+      .apply(CorrelationIdMiddleware, HttpLoggerMiddleware)
+      .forRoutes('*');
   }
 }

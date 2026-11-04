@@ -3,6 +3,9 @@
 import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
+import { logger } from '@/lib/logger';
+
+const errorLogger = logger.child('ErrorBoundary');
 
 export default function ErrorBoundary({
   error,
@@ -12,8 +15,12 @@ export default function ErrorBoundary({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log error to client-side diagnostics if needed
-    console.error('Frontend ErrorBoundary caught error:', error);
+    errorLogger.error('Frontend ErrorBoundary caught error', {
+      name: error.name,
+      message: error.message,
+      digest: error.digest,
+      stack: error.stack,
+    });
   }, [error]);
 
   return (

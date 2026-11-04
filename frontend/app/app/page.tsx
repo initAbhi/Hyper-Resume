@@ -257,48 +257,50 @@ export default function AppDashboardPage() {
           </div>
         ) : (
           <div className="border border-[#E2E5E9] dark:border-[#252A33] rounded-lg overflow-hidden bg-white dark:bg-[#14171C]">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#F7F8FA] dark:bg-[#1D2128] border-b border-[#E2E5E9] dark:border-[#252A33] text-[#5A6270] dark:text-[#9EA7B4]">
-                <tr>
-                  <th className="py-2.5 px-3.5 font-medium">Resume Name</th>
-                  <th className="py-2.5 px-3.5 font-medium hidden sm:table-cell">Target Role</th>
-                  <th className="py-2.5 px-3.5 font-medium hidden md:table-cell">Last Modified</th>
-                  <th className="py-2.5 px-3.5 font-medium text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#F1F3F5] dark:divide-[#1D2128]">
-                {resumes.slice(0, 5).map((r) => (
-                  <tr key={r.id} className="hover:bg-[#F7F8FA] dark:hover:bg-[#1D2128]/50 transition-colors">
-                    <td className="py-2.5 px-3.5">
-                      <div className="flex items-center gap-2">
-                        <FileText className="w-3.5 h-3.5 text-[#285FEA] shrink-0" />
-                        <span className="font-semibold text-[#1A1D23] dark:text-[#F0F2F5]">
-                          {r.name}
-                        </span>
-                        {r.isMaster && (
-                          <Badge variant="neutral" className="text-[10px]">
-                            Master
-                          </Badge>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-2.5 px-3.5 text-[#5A6270] dark:text-[#9EA7B4] hidden sm:table-cell">
-                      {r.targetRole || 'General'}
-                    </td>
-                    <td className="py-2.5 px-3.5 text-[#848D9A] hidden md:table-cell">
-                      {new Date(r.updatedAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </td>
-                    <td className="py-2.5 px-3.5 text-right">
-                      <Link href={`/app/resumes/${r.id}`}>
-                        <Button variant="ghost" size="sm" className="h-7 text-xs text-[#285FEA]">
-                          Open
-                        </Button>
-                      </Link>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs min-w-[500px] sm:min-w-0">
+                <thead className="bg-[#F7F8FA] dark:bg-[#1D2128] border-b border-[#E2E5E9] dark:border-[#252A33] text-[#5A6270] dark:text-[#9EA7B4]">
+                  <tr>
+                    <th className="py-2.5 px-3.5 font-medium">Resume Name</th>
+                    <th className="py-2.5 px-3.5 font-medium hidden sm:table-cell">Target Role</th>
+                    <th className="py-2.5 px-3.5 font-medium hidden md:table-cell">Last Modified</th>
+                    <th className="py-2.5 px-3.5 font-medium text-right">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-[#F1F3F5] dark:divide-[#1D2128]">
+                  {resumes.slice(0, 5).map((r) => (
+                    <tr key={r.id} className="hover:bg-[#F7F8FA] dark:hover:bg-[#1D2128]/50 transition-colors">
+                      <td className="py-2.5 px-3.5">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-3.5 h-3.5 text-[#285FEA] shrink-0" />
+                          <span className="font-semibold text-[#1A1D23] dark:text-[#F0F2F5]">
+                            {r.name}
+                          </span>
+                          {r.isMaster && (
+                            <Badge variant="neutral" className="text-[10px]">
+                              Master
+                            </Badge>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-3.5 text-[#5A6270] dark:text-[#9EA7B4] hidden sm:table-cell">
+                        {r.targetRole || 'General'}
+                      </td>
+                      <td className="py-2.5 px-3.5 text-[#848D9A] hidden md:table-cell">
+                        {new Date(r.updatedAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </td>
+                      <td className="py-2.5 px-3.5 text-right">
+                        <Link href={`/app/resumes/${r.id}`}>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs text-[#285FEA]">
+                            Open
+                          </Button>
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -316,40 +318,42 @@ export default function AppDashboardPage() {
           </div>
 
           <div className="border border-[#E2E5E9] dark:border-[#252A33] rounded-lg overflow-hidden bg-white dark:bg-[#14171C]">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#F7F8FA] dark:bg-[#1D2128] border-b border-[#E2E5E9] dark:border-[#252A33] text-[#5A6270] dark:text-[#9EA7B4]">
-                <tr>
-                  <th className="py-2.5 px-3.5 font-medium">Company</th>
-                  <th className="py-2.5 px-3.5 font-medium">Role</th>
-                  <th className="py-2.5 px-3.5 font-medium">Status</th>
-                  <th className="py-2.5 px-3.5 font-medium text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#F1F3F5] dark:divide-[#1D2128]">
-                {applications.slice(0, 4).map((app) => (
-                  <tr key={app.id} className="hover:bg-[#F7F8FA] dark:hover:bg-[#1D2128]/50 transition-colors">
-                    <td className="py-2.5 px-3.5 font-semibold text-[#1A1D23] dark:text-[#F0F2F5]">
-                      {app.companyName}
-                    </td>
-                    <td className="py-2.5 px-3.5 text-[#5A6270] dark:text-[#9EA7B4]">
-                      {app.jobTitle}
-                    </td>
-                    <td className="py-2.5 px-3.5">
-                      <span className="capitalize px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#F1F3F5] dark:bg-[#1D2128] text-[#5A6270] dark:text-[#9EA7B4] border border-[#E2E5E9] dark:border-[#252A33]">
-                        {app.status}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3.5 text-right">
-                      <Link href={`/app/applications?jobId=${app.id}`}>
-                        <Button variant="ghost" size="sm" className="h-7 text-xs text-[#285FEA]">
-                          View
-                        </Button>
-                      </Link>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs min-w-[460px] sm:min-w-0">
+                <thead className="bg-[#F7F8FA] dark:bg-[#1D2128] border-b border-[#E2E5E9] dark:border-[#252A33] text-[#5A6270] dark:text-[#9EA7B4]">
+                  <tr>
+                    <th className="py-2.5 px-3.5 font-medium">Company</th>
+                    <th className="py-2.5 px-3.5 font-medium">Role</th>
+                    <th className="py-2.5 px-3.5 font-medium">Status</th>
+                    <th className="py-2.5 px-3.5 font-medium text-right">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-[#F1F3F5] dark:divide-[#1D2128]">
+                  {applications.slice(0, 4).map((app) => (
+                    <tr key={app.id} className="hover:bg-[#F7F8FA] dark:hover:bg-[#1D2128]/50 transition-colors">
+                      <td className="py-2.5 px-3.5 font-semibold text-[#1A1D23] dark:text-[#F0F2F5]">
+                        {app.companyName}
+                      </td>
+                      <td className="py-2.5 px-3.5 text-[#5A6270] dark:text-[#9EA7B4]">
+                        {app.jobTitle}
+                      </td>
+                      <td className="py-2.5 px-3.5">
+                        <span className="capitalize px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#F1F3F5] dark:bg-[#1D2128] text-[#5A6270] dark:text-[#9EA7B4] border border-[#E2E5E9] dark:border-[#252A33]">
+                          {app.status}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3.5 text-right">
+                        <Link href={`/app/applications?jobId=${app.id}`}>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs text-[#285FEA]">
+                            View
+                          </Button>
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

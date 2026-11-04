@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -23,7 +24,7 @@ export default function AdminResumesPage() {
       const data = await apiClient.getAdminResumes(search, 100);
       setResumes(data);
     } catch (err) {
-      console.error('Failed to load resumes:', err);
+      logger.error('Failed to load resumes', err);
     } finally {
       setLoading(false);
     }

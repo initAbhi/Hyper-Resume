@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -35,7 +36,7 @@ export default function AdminUsersPage() {
       const data = await apiClient.getAdminUsers(search, roleFilter, 100);
       setUsers(data);
     } catch (err) {
-      console.error('Failed to load users:', err);
+      logger.error('Failed to load users', err);
     } finally {
       setLoading(false);
     }

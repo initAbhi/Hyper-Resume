@@ -268,18 +268,18 @@ TypeScript, Node.js, Next.js, PostgreSQL, Docker, Redis, TailwindCSS, Git`;
                 <CardDescription>Internal structural compatibility indicator.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-                    <div className="text-lg font-bold text-zinc-900 dark:text-zinc-100">{results.metricsCount}</div>
-                    <div className="text-[10px] text-zinc-500 uppercase font-semibold">Metrics</div>
+                <div className="grid grid-cols-3 gap-1.5 sm:gap-2 text-center">
+                  <div className="p-2 sm:p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                    <div className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100">{results.metricsCount}</div>
+                    <div className="text-[9.5px] sm:text-[10px] text-zinc-500 uppercase font-semibold truncate">Metrics</div>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-                    <div className="text-lg font-bold text-zinc-900 dark:text-zinc-100">{results.actionVerbsCount}</div>
-                    <div className="text-[10px] text-zinc-500 uppercase font-semibold">Action Verbs</div>
+                  <div className="p-2 sm:p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                    <div className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100">{results.actionVerbsCount}</div>
+                    <div className="text-[9.5px] sm:text-[10px] text-zinc-500 uppercase font-semibold truncate">Action Verbs</div>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-                    <div className="text-lg font-bold text-zinc-900 dark:text-zinc-100">{results.detectedSections.length}/5</div>
-                    <div className="text-[10px] text-zinc-500 uppercase font-semibold">Sections</div>
+                  <div className="p-2 sm:p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                    <div className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100">{results.detectedSections.length}/5</div>
+                    <div className="text-[9.5px] sm:text-[10px] text-zinc-500 uppercase font-semibold truncate">Sections</div>
                   </div>
                 </div>
 

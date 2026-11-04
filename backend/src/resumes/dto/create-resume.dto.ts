@@ -17,6 +17,16 @@ export class CreateResumeDto {
   @IsOptional()
   @IsString()
   @MaxLength(100)
+  targetRole?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  targetCompany?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
   templateKey?: string;
 
   @IsOptional()

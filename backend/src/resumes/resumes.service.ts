@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -18,6 +19,8 @@ import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 
 @Injectable()
 export class ResumesService {
+  private readonly logger = new Logger(ResumesService.name);
+
   constructor(
     @InjectRepository(Resume)
     private readonly resumeRepository: Repository<Resume>,
@@ -79,6 +82,7 @@ export class ResumesService {
     });
     await this.versionRepository.save(initialVersion);
 
+    this.logger.log(`Created resume "${savedResume.name}" (${savedResume.id}) for user ${userId}`);
     return savedResume;
   }
 
@@ -132,13 +136,16 @@ export class ResumesService {
     if (dto.locale !== undefined) resume.locale = dto.locale;
     if (dto.content !== undefined) resume.content = dto.content;
 
-    return this.resumeRepository.save(resume);
+    const saved = await this.resumeRepository.save(resume);
+    this.logger.log(`Updated resume "${saved.name}" (${saved.id}) for user ${userId} to version ${saved.version}`);
+    return saved;
   }
 
   async archiveResume(userId: string, resumeId: string): Promise<{ success: boolean }> {
     const resume = await this.getResume(userId, resumeId);
     resume.isArchived = true;
     await this.resumeRepository.save(resume);
+    this.logger.log(`Archived resume ${resumeId} for user ${userId}`);
     return { success: true };
   }
 
@@ -191,7 +198,9 @@ export class ResumesService {
       jobMatchId: dto.jobMatchId,
     });
 
-    return this.versionRepository.save(newVersion);
+    const savedVersion = await this.versionRepository.save(newVersion);
+    this.logger.log(`Created version ${nextVersionNumber} for resume ${resumeId}`);
+    return savedVersion;
   }
 
   async runAnalysis(
@@ -214,7 +223,9 @@ export class ResumesService {
       recommendations,
     });
 
-    return this.analysisRepository.save(analysis);
+    const savedAnalysis = await this.analysisRepository.save(analysis);
+    this.logger.log(`Ran analysis for resume ${resumeId} (score: ${score}/100, type: ${dto.analysisType})`);
+    return savedAnalysis;
   }
 
   private evaluateResumeContent(content: ResumeContent): ResumeAuditFindings {

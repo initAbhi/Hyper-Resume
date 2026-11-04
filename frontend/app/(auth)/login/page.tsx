@@ -38,7 +38,8 @@ export default function LoginPage() {
               setIsGoogleLoading(true);
               try {
                 await googleLogin({ credential: response.credential });
-                router.push('/app');
+                const redirectTarget = typeof window !== 'undefined' ? (new URLSearchParams(window.location.search).get('redirect') || '/app') : '/app';
+                router.push(redirectTarget);
               } catch (err: unknown) {
                 setErrorMessage(err instanceof Error ? err.message : 'Google sign in failed');
               } finally {
@@ -85,7 +86,8 @@ export default function LoginPage() {
         throw new Error('Please enter both email and password.');
       }
       await login({ email: email.trim(), password });
-      router.push('/app');
+      const redirectTarget = typeof window !== 'undefined' ? (new URLSearchParams(window.location.search).get('redirect') || '/app') : '/app';
+                router.push(redirectTarget);
     } catch (err: unknown) {
       setErrorMessage(
         err instanceof Error

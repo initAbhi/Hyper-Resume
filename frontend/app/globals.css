@@ -226,6 +226,11 @@ body {
     overflow: visible !important;
   }
 
+  /* When sample resume modal is active, hide everything else inside main during print */
+  body:has(#sample-resume-modal-wrapper) main > *:not(:has(#sample-resume-modal-wrapper)) {
+    display: none !important;
+  }
+
   .resume-paper-canvas {
     box-shadow: none !important;
     border: none !important;

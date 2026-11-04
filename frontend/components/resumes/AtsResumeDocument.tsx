@@ -200,9 +200,9 @@ export function AtsResumeDocument({
     <div className={`relative w-full ${className}`}>
       {/* Floating Style Customizer Pill (Matching Screenshot 1) */}
       {interactiveToolbar && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-zinc-900/90 dark:bg-zinc-800/95 backdrop-blur-md text-white rounded-xl shadow-2xl border border-zinc-700/80 p-2 sm:px-4 sm:py-2.5 flex items-center gap-3 sm:gap-5 text-xs animate-in fade-in select-none">
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 max-w-[95vw] overflow-x-auto bg-zinc-900/90 dark:bg-zinc-800/95 backdrop-blur-md text-white rounded-xl shadow-2xl border border-zinc-700/80 p-2 sm:px-4 sm:py-2.5 flex items-center gap-2.5 sm:gap-5 text-xs animate-in fade-in select-none no-scrollbar">
           {/* Color Swatches */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <span className="font-semibold text-zinc-300 text-[11px] hidden sm:inline">Color</span>
             <div className="flex items-center gap-1.5">
               {COLOR_SWATCHES.map((swatch) => (
@@ -220,10 +220,10 @@ export function AtsResumeDocument({
             </div>
           </div>
 
-          <div className="h-4 w-px bg-zinc-700 hidden sm:block" />
+          <div className="h-4 w-px bg-zinc-700 hidden sm:block shrink-0" />
 
           {/* Profile Pic Toggle */}
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label className="flex items-center gap-2 cursor-pointer shrink-0">
             <span className="text-zinc-300 font-semibold text-[11px] hidden sm:inline">Profile Pic</span>
             <input
               type="checkbox"
@@ -244,10 +244,10 @@ export function AtsResumeDocument({
             </div>
           </label>
 
-          <div className="h-4 w-px bg-zinc-700 hidden sm:block" />
+          <div className="h-4 w-px bg-zinc-700 hidden sm:block shrink-0" />
 
           {/* Dividers Toggle */}
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label className="flex items-center gap-2 cursor-pointer shrink-0">
             <span className="text-zinc-300 font-semibold text-[11px]">Dividers</span>
             <input
               type="checkbox"
@@ -274,7 +274,7 @@ export function AtsResumeDocument({
           THE FULL-PAGE ATS RESUME SHEET (8.5 x 11 Standard Aspect Ratio & Density)
       ========================================================================= */}
       <div
-        className={`resume-paper bg-white text-zinc-950 shadow-xl rounded-lg w-full max-w-[850px] mx-auto p-8 sm:p-12 transition-all ${
+        className={`resume-paper bg-white text-zinc-950 shadow-xl rounded-lg w-full max-w-[850px] mx-auto p-4 sm:p-8 md:p-12 transition-all ${
           isExecutive ? 'font-serif' : 'font-sans'
         }`}
         style={{

@@ -64,11 +64,41 @@ export class AllExceptionsFilter implements ExceptionFilter {
             : [resObj.details];
         }
       }
+
+      const logContext = {
+        statusCode,
+        code,
+        message,
+        details,
+        path: request.originalUrl || request.url,
+        method: request.method,
+        requestId,
+      };
+
+      if (statusCode >= 500) {
+        this.logger.error(
+          `[${statusCode} ${code}] ${request.method} ${request.url} - ${message}`,
+          exception instanceof Error ? exception.stack : undefined,
+          logContext,
+          'AllExceptionsFilter',
+        );
+      } else {
+        this.logger.warn(
+          `[${statusCode} ${code}] ${request.method} ${request.url} - ${message}`,
+          logContext,
+          'AllExceptionsFilter',
+        );
+      }
     } else {
       // Unhandled / server errors
       this.logger.error(
         `Unhandled exception for request [${requestId}] on ${request.method} ${request.url}`,
         exception instanceof Error ? exception.stack : JSON.stringify(exception),
+        {
+          path: request.originalUrl || request.url,
+          method: request.method,
+          requestId,
+        },
         'AllExceptionsFilter',
       );
 
