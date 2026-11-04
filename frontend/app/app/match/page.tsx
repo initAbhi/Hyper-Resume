@@ -18,6 +18,7 @@ import {
   Check,
   ArrowRight,
   ExternalLink,
+  RefreshCw,
 } from 'lucide-react';
 import {
   apiClient,
@@ -40,6 +41,7 @@ function JobMatchInner() {
   // Workflow State
   const [isLoadingResumes, setIsLoadingResumes] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisPhase, setAnalysisPhase] = useState(0);
   const [analysisStep, setAnalysisStep] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [completedMatch, setCompletedMatch] = useState<JobMatch | null>(null);
@@ -84,7 +86,12 @@ function JobMatchInner() {
 
     setErrorMessage(null);
     setIsAnalyzing(true);
+    setAnalysisPhase(0);
     setCompletedMatch(null);
+
+    const t1 = setTimeout(() => setAnalysisPhase(1), 800);
+    const t2 = setTimeout(() => setAnalysisPhase(2), 1800);
+    const t3 = setTimeout(() => setAnalysisPhase(3), 2800);
 
     try {
       setAnalysisStep('Parsing target job requirements...');
@@ -106,6 +113,9 @@ function JobMatchInner() {
         err instanceof Error ? err.message : 'Match analysis failed. Please try again.',
       );
     } finally {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
       setIsAnalyzing(false);
       setAnalysisStep('');
     }
@@ -255,6 +265,114 @@ function JobMatchInner() {
           </Button>
         </div>
       </form>
+
+      {/* Multi-Phase Scanning Animation (Matching Competitor's UX) */}
+      {isAnalyzing && (
+        <div className="p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-md space-y-5 animate-in fade-in duration-300">
+          <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
+                Evaluating Grounded Fit & Keywords
+              </h3>
+            </div>
+            <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 animate-pulse font-medium">
+              Scanning in progress...
+            </span>
+          </div>
+
+          <div className="space-y-3.5 pl-2">
+            {/* Phase 0 */}
+            <div className="flex items-center gap-3 text-xs">
+              {analysisPhase > 0 ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              ) : (
+                <RefreshCw className="w-4 h-4 text-emerald-600 animate-spin shrink-0" />
+              )}
+              <span
+                className={
+                  analysisPhase >= 0
+                    ? 'font-medium text-zinc-900 dark:text-zinc-100'
+                    : 'text-zinc-400'
+                }
+              >
+                Reading target job description...
+              </span>
+            </div>
+
+            {/* Phase 1 */}
+            <div className="flex items-center gap-3 text-xs">
+              {analysisPhase > 1 ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              ) : analysisPhase === 1 ? (
+                <RefreshCw className="w-4 h-4 text-emerald-600 animate-spin shrink-0" />
+              ) : (
+                <div className="w-4 h-4 rounded-full border-2 border-zinc-300 dark:border-zinc-700 shrink-0" />
+              )}
+              <span
+                className={
+                  analysisPhase >= 1
+                    ? 'font-medium text-zinc-900 dark:text-zinc-100'
+                    : 'text-zinc-400'
+                }
+              >
+                Matching your skills & keywords...
+              </span>
+            </div>
+
+            {/* Phase 2 */}
+            <div className="flex items-center gap-3 text-xs">
+              {analysisPhase > 2 ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              ) : analysisPhase === 2 ? (
+                <RefreshCw className="w-4 h-4 text-emerald-600 animate-spin shrink-0" />
+              ) : (
+                <div className="w-4 h-4 rounded-full border-2 border-zinc-300 dark:border-zinc-700 shrink-0" />
+              )}
+              <span
+                className={
+                  analysisPhase >= 2
+                    ? 'font-medium text-zinc-900 dark:text-zinc-100'
+                    : 'text-zinc-400'
+                }
+              >
+                Checking core responsibilities & requirements...
+              </span>
+            </div>
+
+            {/* Phase 3 */}
+            <div className="flex items-center gap-3 text-xs">
+              {analysisPhase >= 3 ? (
+                <RefreshCw className="w-4 h-4 text-emerald-600 animate-spin shrink-0" />
+              ) : (
+                <div className="w-4 h-4 rounded-full border-2 border-zinc-300 dark:border-zinc-700 shrink-0" />
+              )}
+              <span
+                className={
+                  analysisPhase >= 3
+                    ? 'font-medium text-zinc-900 dark:text-zinc-100'
+                    : 'text-zinc-400'
+                }
+              >
+                Scoring evidence alignment & fit...
+              </span>
+            </div>
+          </div>
+
+          {/* Shimmering Skeletons */}
+          <div className="space-y-2.5 pt-2">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-10 rounded-lg bg-zinc-100 dark:bg-zinc-800/60 animate-pulse border border-zinc-200/50 dark:border-zinc-700/40 p-2.5 space-y-1"
+              >
+                <div className="w-1/4 h-2 bg-zinc-200 dark:bg-zinc-700 rounded" />
+                <div className="w-3/5 h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Completed Match Report */}
       {completedMatch && (() => {

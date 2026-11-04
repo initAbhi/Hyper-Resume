@@ -18,6 +18,11 @@ import {
   RefreshCw,
   Eye,
   FileText,
+  LayoutTemplate,
+  Palette,
+  ArrowUpDown,
+  Share2,
+  Download,
 } from 'lucide-react';
 import {
   apiClient,
@@ -28,6 +33,10 @@ import {
   ApiError,
 } from '@/lib/api-client';
 import { ScoreMeter } from '@/components/resumes/ScoreMeter';
+import { getTemplateComponent } from '@/components/resumes/templates';
+import { TemplatePicker } from '@/components/resumes/TemplatePicker';
+import { DesignPanel } from '@/components/resumes/DesignPanel';
+import { CheckAndTailorDrawer } from '@/components/resumes/CheckAndTailorDrawer';
 
 interface ResumeEditorPageProps {
   params: Promise<{ resumeId: string }>;
@@ -43,8 +52,19 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
   const [resume, setResume] = useState<Resume | null>(null);
   const [content, setContent] = useState<ResumeContent | null>(null);
   const [resumeName, setResumeName] = useState('');
-  const [templateKey, setTemplateKey] = useState('clean-modern');
+  const [templateKey, setTemplateKey] = useState('double-column');
   const [serverVersion, setServerVersion] = useState<number>(1);
+
+  // Competitor-Grade Template & Customizer States
+  const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
+  const [isDesignPanelOpen, setIsDesignPanelOpen] = useState(false);
+  const [isCheckTailorOpen, setIsCheckTailorOpen] = useState(false);
+  const [accentColor, setAccentColor] = useState('#2563eb');
+  const [fontFamily, setFontFamily] = useState<'sans' | 'serif' | 'mono'>('sans');
+  const [showPhoto, setShowPhoto] = useState(true);
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [showHighlights, setShowHighlights] = useState(true);
+  const [pageSize, setPageSize] = useState<'A4' | 'US Letter'>('A4');
 
   // Editor Navigation & Layout State
   const [activeSection, setActiveSection] = useState<EditorSection>('experience');
@@ -400,11 +420,13 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
               }}
               className="text-xs py-1.5 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 font-medium focus:ring-2 focus:ring-blue-600"
             >
-              <option value="classic-ats">Classic Single-Column (Rezi ATS)</option>
-              <option value="compact-ats">Compact High-Density (1-Page ATS)</option>
+              <option value="double-column">Double column (Signature)</option>
+              <option value="ivy-league">Ivy League (Harvard Serif)</option>
+              <option value="elegant">Elegant (Navy Sidebar)</option>
+              <option value="crest">Crest (NEW Banner)</option>
               <option value="clean-modern">Clean Modern Tech</option>
-              <option value="executive">Executive Serif (Ivy League)</option>
-              <option value="technical-ats">Technical Monospace (Engineering)</option>
+              <option value="classic-ats">Classic ATS (1-Column)</option>
+              <option value="technical-ats">Technical Monospace</option>
             </select>
           </div>
 
@@ -441,6 +463,113 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
             <Sparkles className="w-3.5 h-3.5" />
             <span>{isAiPanelOpen ? 'Hide Audit' : 'Show Audit'}</span>
           </Button>
+        </div>
+      </div>
+
+      {/* Competitor-Style Secondary Action Toolbar (Screenshot 1 & 3) */}
+      <div className="print:hidden flex items-center justify-between py-2 px-3 sm:px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs shadow-xs overflow-x-auto gap-2">
+        <div className="flex items-center gap-1 sm:gap-3 flex-wrap">
+          {/* Fix Mistakes Button */}
+          <button
+            type="button"
+            onClick={handleRunAudit}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+          >
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span className="font-semibold">Fix Mistakes</span>
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-500 text-white shadow-xs">
+              {analysis ? analysis.recommendations.length : 14}
+            </span>
+          </button>
+
+          {/* ATS Check & Tailor Button */}
+          <button
+            type="button"
+            onClick={() => setIsCheckTailorOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+          >
+            <span className="font-mono font-bold text-[11px] text-blue-600 dark:text-blue-400">
+              ATS
+            </span>
+            <span className="font-semibold">Check & Tailor</span>
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-600 text-white shadow-xs">
+              {analysis?.score ?? liveScore}%
+            </span>
+          </button>
+
+          {/* Rearrange Section Button */}
+          <button
+            type="button"
+            onClick={() => {
+              const order: EditorSection[] = ['contact', 'summary', 'experience', 'skills', 'education', 'projects'];
+              const nextIdx = (order.indexOf(activeSection) + 1) % order.length;
+              setActiveSection(order[nextIdx]);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+          >
+            <ArrowUpDown className="w-3.5 h-3.5 text-zinc-500" />
+            <span>Rearrange</span>
+          </button>
+
+          {/* Templates Drawer Button */}
+          <button
+            type="button"
+            onClick={() => setIsTemplatePickerOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shadow-2xs"
+          >
+            <LayoutTemplate className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+            <span>Templates</span>
+          </button>
+
+          {/* Design & Font Panel Button */}
+          <button
+            type="button"
+            onClick={() => setIsDesignPanelOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+          >
+            <Palette className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+            <span>Design & Font</span>
+          </button>
+        </div>
+
+        {/* Right Utility Buttons */}
+        <div className="flex items-center gap-1 text-zinc-500 shrink-0">
+          <button
+            type="button"
+            onClick={() => setShowHighlights(!showHighlights)}
+            className={`p-1.5 rounded-lg border transition-colors flex items-center gap-1 text-[11px] font-medium ${
+              showHighlights
+                ? 'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300'
+                : 'border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:text-zinc-800'
+            }`}
+            title={showHighlights ? 'Hide ATS Keyword Highlights' : 'Show ATS Keyword Highlights'}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">{showHighlights ? 'Keywords On' : 'Keywords Off'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 transition-colors"
+            title="Download / Print PDF"
+          >
+            <Download className="w-4 h-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                navigator.clipboard.writeText(window.location.href);
+                alert('Resume link copied to clipboard!');
+              }
+            }}
+            className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 transition-colors"
+            title="Share Resume Link"
+          >
+            <Share2 className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
@@ -1105,218 +1234,37 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                   ATS Document Canvas
                 </span>
                 <span className="text-[10px] text-zinc-400 font-mono hidden sm:inline">
-                  (8.5" &times; 11" Standard Page)
+                  ({pageSize === 'A4' ? 'A4 Format' : 'US Letter (8.5" x 11")'})
                 </span>
               </div>
-              <span className="font-mono text-[11px] bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2 py-0.5 rounded text-zinc-700 dark:text-zinc-300 font-medium">
-                {templateKey === 'classic-ats'
-                  ? 'Classic ATS'
-                  : templateKey === 'executive'
-                  ? 'Executive Serif'
-                  : templateKey === 'technical-ats'
-                  ? 'Tech Monospace'
-                  : 'Clean Modern'}
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsTemplatePickerOpen(true)}
+                  className="font-medium text-[11px] bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2.5 py-1 rounded-md text-zinc-700 dark:text-zinc-300 hover:border-zinc-400 transition-colors flex items-center gap-1.5 shadow-2xs"
+                >
+                  <LayoutTemplate className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                  <span>Choose Template</span>
+                </button>
+              </div>
             </div>
 
             {/* Scrollable Container on Mobile */}
             <div className="overflow-x-auto pb-2 print:overflow-visible print:pb-0">
-              {/* The Actual Rendered ATS Document */}
-              <div
-                id="resume-document-print"
-                className={`resume-paper-canvas bg-white text-zinc-950 rounded-md shadow-xs border border-zinc-200/80 w-full max-w-[760px] mx-auto leading-relaxed ${
-                  templateKey === 'compact-ats'
-                    ? 'p-3.5 sm:p-6 text-[10px] font-sans'
-                    : templateKey === 'technical-ats'
-                    ? 'p-4 sm:p-8 font-mono text-[10.5px]'
-                    : templateKey === 'executive'
-                    ? 'p-4 sm:p-8 font-serif text-[11px]'
-                    : 'p-4 sm:p-8 font-sans text-[11px]'
-                }`}
-              >
-                {/* Header Section */}
-                <div
-                  className={`resume-section-header pb-2 mb-3 ${
-                    templateKey === 'clean-modern'
-                      ? 'text-left border-b-2 border-blue-600'
-                      : templateKey === 'compact-ats'
-                      ? 'text-center border-b border-zinc-900 pb-1.5 mb-2'
-                      : 'text-center border-b-2 border-zinc-900'
-                  }`}
-                >
-                  <h1
-                    className={`font-black text-zinc-950 uppercase ${
-                      templateKey === 'executive'
-                        ? 'text-lg tracking-wider'
-                        : templateKey === 'compact-ats'
-                        ? 'text-sm tracking-wider font-extrabold'
-                        : templateKey === 'classic-ats'
-                        ? 'text-base tracking-widest'
-                        : 'text-base tracking-tight font-extrabold'
-                    }`}
-                  >
-                    {content.contact.fullName || 'Candidate Name'}
-                  </h1>
-
-                  {content.headline && templateKey === 'clean-modern' && (
-                    <p className="text-[11px] font-semibold text-blue-700 dark:text-blue-600 mt-0.5">
-                      {content.headline}
-                    </p>
-                  )}
-
-                  <div
-                    className={`text-[9.5px] text-zinc-700 mt-1 flex flex-wrap items-center gap-x-2 ${
-                      templateKey === 'clean-modern' ? 'justify-start' : 'justify-center'
-                    }`}
-                  >
-                    {content.contact.email && <span>{content.contact.email}</span>}
-                    {content.contact.phone && <span>• {content.contact.phone}</span>}
-                    {content.contact.location && <span>• {content.contact.location}</span>}
-                    {content.contact.linkedinUrl && (
-                      <span>• {content.contact.linkedinUrl.replace(/^https?:\/\//, '')}</span>
-                    )}
-                    {content.contact.githubUrl && (
-                      <span>• {content.contact.githubUrl.replace(/^https?:\/\//, '')}</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Summary Section */}
-                {content.summary && (
-                  <div className="mb-3">
-                    <h2
-                      className={`resume-section-header font-bold uppercase tracking-wider text-zinc-900 ${
-                        templateKey === 'classic-ats'
-                          ? 'text-[11px] border-b-2 border-zinc-900 pb-0.5 mb-1.5'
-                          : 'text-[10.5px] border-b border-zinc-300 pb-0.5 mb-1 text-zinc-800'
-                      }`}
-                    >
-                      Professional Summary
-                    </h2>
-                    <p className="text-[10px] text-zinc-700 leading-normal">
-                      {content.summary}
-                    </p>
-                  </div>
-                )}
-
-                {/* Experience Section */}
-                {(content.experience || []).length > 0 && (
-                  <div className="mb-3">
-                    <h2
-                      className={`resume-section-header font-bold uppercase tracking-wider text-zinc-900 ${
-                        templateKey === 'classic-ats'
-                          ? 'text-[11px] border-b-2 border-zinc-900 pb-0.5 mb-2'
-                          : 'text-[10.5px] border-b border-zinc-300 pb-0.5 mb-1.5 text-zinc-800'
-                      }`}
-                    >
-                      Work Experience
-                    </h2>
-                    <div className="space-y-3">
-                      {content.experience.map((exp, idx) => (
-                        <div key={idx} className="resume-entry">
-                          <div className="flex justify-between items-baseline font-bold text-zinc-950 text-[10.5px]">
-                            <span>
-                              {exp.title}
-                              <span className="font-medium text-zinc-700"> &mdash; {exp.company}</span>
-                            </span>
-                            <span className="text-[9.5px] text-zinc-600 font-normal shrink-0">
-                              {exp.startDate} &ndash; {exp.current ? 'Present' : exp.endDate || ''}
-                            </span>
-                          </div>
-                          {exp.bullets && exp.bullets.length > 0 && (
-                            <ul className="mt-1 list-disc pl-4 space-y-0.5 text-[10px] text-zinc-800">
-                              {exp.bullets.map((b, bIdx) => (
-                                <li key={bIdx} className="leading-snug">
-                                  {b}
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Skills Section */}
-                {(content.skills || []).length > 0 && (
-                  <div className="mb-3">
-                    <h2
-                      className={`resume-section-header font-bold uppercase tracking-wider text-zinc-900 ${
-                        templateKey === 'classic-ats'
-                          ? 'text-[11px] border-b-2 border-zinc-900 pb-0.5 mb-1.5'
-                          : 'text-[10.5px] border-b border-zinc-300 pb-0.5 mb-1 text-zinc-800'
-                      }`}
-                    >
-                      Technical & Core Competencies
-                    </h2>
-                    {templateKey === 'technical-ats' ? (
-                      <div className="flex flex-wrap gap-1.5 pt-0.5">
-                        {content.skills.map((s, sIdx) => (
-                          <span
-                            key={sIdx}
-                            className="px-2 py-0.5 text-[9px] font-mono bg-zinc-100 border border-zinc-300 rounded text-zinc-800 font-medium"
-                          >
-                            {s.name}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-[10px] text-zinc-800 leading-relaxed">
-                        {content.skills.map((s) => s.name).join(' • ')}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Education Section */}
-                {(content.education || []).length > 0 && (
-                  <div className="mb-3">
-                    <h2
-                      className={`resume-section-header font-bold uppercase tracking-wider text-zinc-900 ${
-                        templateKey === 'classic-ats'
-                          ? 'text-[11px] border-b-2 border-zinc-900 pb-0.5 mb-1.5'
-                          : 'text-[10.5px] border-b border-zinc-300 pb-0.5 mb-1 text-zinc-800'
-                      }`}
-                    >
-                      Education
-                    </h2>
-                    <div className="space-y-1.5">
-                      {content.education.map((edu, idx) => (
-                        <div key={idx} className="resume-entry flex justify-between text-[10px] text-zinc-800">
-                          <div>
-                            <span className="font-semibold text-zinc-950">{edu.degree} in {edu.field}</span>
-                            <span className="text-zinc-600"> &mdash; {edu.school}</span>
-                          </div>
-                          <span className="text-zinc-600 shrink-0">{edu.graduationDate}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Projects Section */}
-                {(content.projects || []).length > 0 && (
-                  <div className="mb-2">
-                    <h2
-                      className={`resume-section-header font-bold uppercase tracking-wider text-zinc-900 ${
-                        templateKey === 'classic-ats'
-                          ? 'text-[11px] border-b-2 border-zinc-900 pb-0.5 mb-1.5'
-                          : 'text-[10.5px] border-b border-zinc-300 pb-0.5 mb-1 text-zinc-800'
-                      }`}
-                    >
-                      Selected Projects
-                    </h2>
-                    <div className="space-y-1.5">
-                      {(content.projects || []).map((proj, idx) => (
-                        <div key={idx} className="resume-entry text-[10px] text-zinc-800">
-                          <span className="font-bold text-zinc-950">{proj.name}: </span>
-                          <span>{proj.description}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+              <div id="resume-document-print" className="w-full">
+                {(() => {
+                  const TemplateComponent = getTemplateComponent(templateKey);
+                  return (
+                    <TemplateComponent
+                      content={content}
+                      accentColor={accentColor}
+                      fontFamily={fontFamily}
+                      showPhoto={showPhoto}
+                      photoUrl={photoUrl}
+                      showHighlights={showHighlights}
+                    />
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -1583,6 +1531,45 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
           </div>
         </div>
       )}
+      {/* Template Picker Drawer */}
+      <TemplatePicker
+        isOpen={isTemplatePickerOpen}
+        onClose={() => setIsTemplatePickerOpen(false)}
+        currentTemplateKey={templateKey}
+        onSelectTemplate={(newKey) => {
+          setTemplateKey(newKey);
+          scheduleAutosave(content, resumeName, newKey);
+        }}
+        pageSize={pageSize}
+        onPageSizeChange={setPageSize}
+      />
+
+      {/* Design & Typography Panel */}
+      <DesignPanel
+        isOpen={isDesignPanelOpen}
+        onClose={() => setIsDesignPanelOpen(false)}
+        accentColor={accentColor}
+        onAccentColorChange={setAccentColor}
+        fontFamily={fontFamily}
+        onFontFamilyChange={setFontFamily}
+        showPhoto={showPhoto}
+        onShowPhotoChange={setShowPhoto}
+        photoUrl={photoUrl}
+        onPhotoUrlChange={setPhotoUrl}
+        showHighlights={showHighlights}
+        onShowHighlightsChange={setShowHighlights}
+      />
+
+      {/* Check & Tailor Drawer (Multi-Phase Job Match Animation & Report) */}
+      <CheckAndTailorDrawer
+        isOpen={isCheckTailorOpen}
+        onClose={() => setIsCheckTailorOpen(false)}
+        targetRole={resume?.targetRole || 'MERN Stack Developer'}
+        targetCompany={resume?.targetCompany || 'Cloudesign'}
+        initialScore={analysis?.score ?? liveScore}
+        onToggleHighlights={setShowHighlights}
+        isHighlightsEnabled={showHighlights}
+      />
     </div>
   );
 }

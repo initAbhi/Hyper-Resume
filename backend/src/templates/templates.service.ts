@@ -24,6 +24,41 @@ export class TemplatesService implements OnModuleInit {
   private async seedDefaultTemplates(): Promise<void> {
     const defaults = [
       {
+        templateKey: 'double-column',
+        name: 'Double column',
+        description: 'Our #1 most popular layout with signature two-column split, photo avatar, and clear section dividers.',
+        isFree: true,
+        layoutOptions: { font: 'Inter', headerStyle: 'split-photo', columns: 2 },
+      },
+      {
+        templateKey: 'ivy-league',
+        name: 'Ivy League',
+        description: 'Classic serif typography modeled on Harvard and Yale academic standards. Best for executive & leadership roles.',
+        isFree: true,
+        layoutOptions: { font: 'Georgia', headerStyle: 'centered', columns: 1 },
+      },
+      {
+        templateKey: 'elegant',
+        name: 'Elegant',
+        description: 'Dark navy sidebar with circular photo avatar and high-contrast right content area.',
+        isFree: true,
+        layoutOptions: { font: 'Inter', headerStyle: 'dark-sidebar', columns: 2 },
+      },
+      {
+        templateKey: 'crest',
+        name: 'Crest',
+        description: 'Contemporary header banner with colored accent block and clear visual hierarchy.',
+        isFree: true,
+        layoutOptions: { font: 'Inter', headerStyle: 'accent-banner', columns: 2 },
+      },
+      {
+        templateKey: 'classic-ats',
+        name: 'Classic ATS',
+        description: '100% ATS parser compliant single-column format optimized for enterprise scanning systems.',
+        isFree: true,
+        layoutOptions: { font: 'Inter', headerStyle: 'centered', columns: 1 },
+      },
+      {
         templateKey: 'clean-modern',
         name: 'Clean Modern',
         description: 'Standard single-column layout engineered for high ATS parsing accuracy and tech roles.',

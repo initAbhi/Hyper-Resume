@@ -97,6 +97,8 @@ export interface ResumeContent {
     degree: string;
     field: string;
     graduationDate?: string;
+    location?: string;
+    gpa?: string;
   }>;
   projects?: Array<{
     id?: string;
@@ -458,6 +460,8 @@ export interface CandidateProfile {
     degree: string;
     field: string;
     graduationDate?: string;
+    location?: string;
+    gpa?: string;
   }>;
   projects?: Array<{
     id?: string;
@@ -502,6 +506,8 @@ export interface ParsedProfileDraft {
     degree: string;
     field: string;
     graduationDate?: string;
+    location?: string;
+    gpa?: string;
   }>;
   projects: Array<{
     name: string;
