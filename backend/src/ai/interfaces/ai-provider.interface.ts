@@ -7,6 +7,7 @@ import type {
   ProfileProject,
   ProfileSkill,
 } from '../../profiles/entities/candidate-profile.entity.js';
+import type { RawAiAdaptationPayload } from '../utils/factual-integrity-validator.js';
 
 export interface ParsedProfileDraft {
   contact?: {
@@ -47,6 +48,26 @@ export interface RequirementMatchOutput {
   suggestedAction: string;
 }
 
+export interface AdaptationTelemetry {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  costUsd: number;
+  modelId: string;
+  pricingVersion: string;
+}
+
+export interface AdaptationProviderResult {
+  payload: RawAiAdaptationPayload;
+  telemetry: AdaptationTelemetry;
+}
+
+export interface SectionAdaptationProviderResult {
+  sectionKey: string;
+  adaptedContent: any;
+  telemetry: AdaptationTelemetry;
+}
+
 export interface AiProvider {
   name: string;
   parseResumeText(text: string): Promise<ParsedProfileDraft>;
@@ -60,4 +81,15 @@ export interface AiProvider {
     targetRole?: string,
     metricHint?: string,
   ): Promise<BulletRewriteResult>;
+  adaptResume(
+    sourceResume: ResumeContent,
+    benchmarkSample: ResumeContent,
+    targetRole?: string,
+  ): Promise<AdaptationProviderResult>;
+  adaptSection(
+    sectionKey: string,
+    sourceSectionData: any,
+    benchmarkSectionData: any,
+    targetRole?: string,
+  ): Promise<SectionAdaptationProviderResult>;
 }

@@ -5,6 +5,7 @@ import { CandidateProfile } from '../profiles/entities/candidate-profile.entity.
 import { Resume } from '../resumes/entities/resume.entity.js';
 import { ResumeVersion } from '../resumes/entities/resume-version.entity.js';
 import { ResumeAnalysis } from '../resumes/entities/resume-analysis.entity.js';
+import { ResumeAdaptation } from '../resumes/entities/resume-adaptation.entity.js';
 import { JobDescription } from '../jobs/entities/job-description.entity.js';
 import { JobMatch } from '../job-matching/entities/job-match.entity.js';
 import { Template } from '../templates/entities/template.entity.js';
@@ -24,6 +25,7 @@ export const ALL_ENTITIES = [
   Resume,
   ResumeVersion,
   ResumeAnalysis,
+  ResumeAdaptation,
   JobDescription,
   JobMatch,
   Template,

@@ -14,6 +14,7 @@ export type CreditTransactionType =
   | 'purchase'
   | 'resume_analysis'
   | 'ai_tailor'
+  | 'ai_adapt'
   | 'export_pdf'
   | 'mock_interview'
   | 'refund';
