@@ -1,10 +1,29 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { SAMPLE_RESUMES, SAMPLE_CATEGORIES, SampleResume } from '@/data/sample-resumes';
+import {
+  SAMPLE_RESUMES,
+  SAMPLE_CATEGORIES,
+  SAMPLE_EXPERIENCE_LEVELS,
+  SAMPLE_COUNTRIES,
+  SAMPLE_STYLES,
+  SampleResume,
+} from '@/data/sample-resumes';
 import { SampleResumeCard } from './SampleResumeCard';
 import { SampleResumeModal } from './SampleResumeModal';
-import { Search, Sparkles, Filter, CheckCircle2, FileText, ArrowRight, X } from 'lucide-react';
+import { SourceResumeSelectorModal } from './SourceResumeSelectorModal';
+import { AdaptationComparisonModal } from './AdaptationComparisonModal';
+import {
+  Search,
+  Sparkles,
+  Filter,
+  CheckCircle2,
+  FileText,
+  ArrowRight,
+  X,
+  RotateCcw,
+  SlidersHorizontal,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { apiClient, ResumeContent } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
@@ -17,8 +36,28 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [selectedExperience, setSelectedExperience] = useState<string>('ALL');
+  const [selectedCountry, setSelectedCountry] = useState<string>('ALL');
+  const [selectedStyle, setSelectedStyle] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [previewResume, setPreviewResume] = useState<SampleResume | null>(null);
+  const [adaptingSample, setAdaptingSample] = useState<SampleResume | null>(null);
+  const [activeAdaptation, setActiveAdaptation] = useState<any>(null);
+
+  const hasActiveFilters =
+    selectedCategory !== 'ALL' ||
+    selectedExperience !== 'ALL' ||
+    selectedCountry !== 'ALL' ||
+    selectedStyle !== 'ALL' ||
+    searchQuery.trim().length > 0;
+
+  const resetAllFilters = () => {
+    setSelectedCategory('ALL');
+    setSelectedExperience('ALL');
+    setSelectedCountry('ALL');
+    setSelectedStyle('ALL');
+    setSearchQuery('');
+  };
 
   // Filter logic
   const filteredResumes = useMemo(() => {
@@ -28,6 +67,21 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
         if (resume.badge !== 'PRO') return false;
       } else if (selectedCategory !== 'ALL') {
         if (resume.category !== selectedCategory) return false;
+      }
+
+      // Experience Level match
+      if (selectedExperience !== 'ALL') {
+        if (resume.experienceLevel !== selectedExperience) return false;
+      }
+
+      // Country match
+      if (selectedCountry !== 'ALL') {
+        if (resume.country !== selectedCountry) return false;
+      }
+
+      // Style match
+      if (selectedStyle !== 'ALL') {
+        if (resume.resumeStyle !== selectedStyle) return false;
       }
 
       // Search match
@@ -40,13 +94,23 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
         );
         const matchesCandidate = resume.candidate.name.toLowerCase().includes(query);
         const matchesSummary = resume.summary.toLowerCase().includes(query);
+        const matchesCountry = resume.country.toLowerCase().includes(query);
+        const matchesCategory = resume.category.toLowerCase().replace(/_/g, ' ').includes(query);
 
-        return matchesCompany || matchesRole || matchesSkills || matchesCandidate || matchesSummary;
+        return (
+          matchesCompany ||
+          matchesRole ||
+          matchesSkills ||
+          matchesCandidate ||
+          matchesSummary ||
+          matchesCountry ||
+          matchesCategory
+        );
       }
 
       return true;
     });
-  }, [selectedCategory, searchQuery]);
+  }, [selectedCategory, selectedExperience, selectedCountry, selectedStyle, searchQuery]);
 
   const handleUseTemplateDirect = async (resume: SampleResume) => {
     const resumeContent: ResumeContent = {
@@ -78,7 +142,7 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
       education: resume.education.map((edu) => ({
         school: edu.school,
         degree: edu.degree,
-        field: edu.field,
+        field: edu.field || edu.degree,
         graduationDate: edu.graduationDate,
       })),
       projects: resume.projects?.map((proj) => ({
@@ -126,9 +190,9 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
 
   return (
     <div className="w-full space-y-6">
-      {/* Top Controls: Filter Pills & Search Bar */}
+      {/* Top Controls: Filter Pills & Multi-Dimensional Selectors */}
       <div className="flex flex-col gap-4">
-        {/* Category Filter Tabs */}
+        {/* Category / Industry Filter Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none select-none">
           {SAMPLE_CATEGORIES.map((cat) => {
             const isActive = selectedCategory === cat.id;
@@ -139,7 +203,7 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
                 key={cat.id}
                 type="button"
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`px-3.5 py-1.5 rounded-md text-xs font-bold tracking-wider transition-all uppercase whitespace-nowrap shrink-0 ${
+                className={`px-3.5 py-1.5 rounded-md text-xs font-bold tracking-wider transition-all uppercase whitespace-nowrap shrink-0 cursor-pointer ${
                   isActive
                     ? isProPill
                       ? 'bg-[#285FEA] text-white shadow-xs'
@@ -155,41 +219,99 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
           })}
         </div>
 
-        {/* Search & Active Info Bar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <div className="relative flex-1 max-w-md">
+        {/* Secondary Filter Bar: Search + Seniority, Country, Style Dropdowns */}
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+          {/* Search Input */}
+          <div className="relative flex-1 max-w-lg">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#848D9A] pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by company (Google, Meta, Disney...), role, or skill..."
+              placeholder="Search by job title, skills (React, Python, ICU), company, or country..."
               className="w-full pl-9 pr-8 py-2 rounded-lg bg-white dark:bg-[#14171C] border border-[#E2E5E9] dark:border-[#252A33] text-xs text-[#1A1D23] dark:text-[#F0F2F5] placeholder:text-[#848D9A] focus:outline-none focus:border-[#285FEA] focus:ring-1 focus:ring-[#285FEA] transition-all shadow-xs"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#848D9A] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5]"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#848D9A] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5] cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
-          <div className="flex items-center justify-between sm:justify-end gap-3 text-xs text-[#5A6270] dark:text-[#9EA7B4]">
-            <span>
-              Showing <strong className="text-[#1A1D23] dark:text-[#F0F2F5]">{filteredResumes.length}</strong> ATS Resumes
-            </span>
-            <div className="hidden md:flex items-center gap-1.5 text-[11px] text-[#848D9A]">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-              <span>Verified ATS Standard Single-Column</span>
-            </div>
+          {/* Dimension Dropdowns */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Experience Level Selector */}
+            <select
+              value={selectedExperience}
+              onChange={(e) => setSelectedExperience(e.target.value)}
+              className="py-1.5 px-2.5 rounded-lg bg-white dark:bg-[#14171C] border border-[#E2E5E9] dark:border-[#252A33] text-xs font-medium text-[#1A1D23] dark:text-[#F0F2F5] focus:outline-none focus:border-[#285FEA] shadow-xs cursor-pointer"
+            >
+              {SAMPLE_EXPERIENCE_LEVELS.map((lvl) => (
+                <option key={lvl.id} value={lvl.id}>
+                  {lvl.label}
+                </option>
+              ))}
+            </select>
+
+            {/* Country Selector */}
+            <select
+              value={selectedCountry}
+              onChange={(e) => setSelectedCountry(e.target.value)}
+              className="py-1.5 px-2.5 rounded-lg bg-white dark:bg-[#14171C] border border-[#E2E5E9] dark:border-[#252A33] text-xs font-medium text-[#1A1D23] dark:text-[#F0F2F5] focus:outline-none focus:border-[#285FEA] shadow-xs cursor-pointer"
+            >
+              {SAMPLE_COUNTRIES.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+
+            {/* Style Selector */}
+            <select
+              value={selectedStyle}
+              onChange={(e) => setSelectedStyle(e.target.value)}
+              className="py-1.5 px-2.5 rounded-lg bg-white dark:bg-[#14171C] border border-[#E2E5E9] dark:border-[#252A33] text-xs font-medium text-[#1A1D23] dark:text-[#F0F2F5] focus:outline-none focus:border-[#285FEA] shadow-xs cursor-pointer"
+            >
+              {SAMPLE_STYLES.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+
+            {/* Reset Filters Pill */}
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={resetAllFilters}
+                className="py-1.5 px-2.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200/80 dark:border-red-800/60 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-100 flex items-center gap-1 transition-colors cursor-pointer"
+                title="Reset all active filters"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Reset</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Counter & Compliance Bar */}
+        <div className="flex items-center justify-between text-xs text-[#5A6270] dark:text-[#9EA7B4] pt-1">
+          <span>
+            Showing <strong className="text-[#1A1D23] dark:text-[#F0F2F5] font-bold">{filteredResumes.length}</strong> of{' '}
+            <strong className="text-[#1A1D23] dark:text-[#F0F2F5]">{SAMPLE_RESUMES.length}</strong> Verified ATS Resumes
+          </span>
+          <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-[#848D9A]">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+            <span>100% Verified ATS Standard Single-Column Formats</span>
           </div>
         </div>
       </div>
 
-      {/* 4-Column Grid matching Rezi Layout with Unified Light/Dark Tokens */}
+      {/* 4-Column Responsive Grid */}
       {filteredResumes.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {filteredResumes.map((resume) => (
@@ -198,6 +320,7 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
               resume={resume}
               onPreview={(item) => setPreviewResume(item)}
               onUseTemplate={(item) => handleUseTemplateDirect(item)}
+              onAdapt={(item) => setAdaptingSample(item)}
             />
           ))}
         </div>
@@ -207,20 +330,17 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
             <Search className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-[#1A1D23] dark:text-[#F0F2F5]">No sample resumes found</h3>
-            <p className="text-xs text-[#5A6270] dark:text-[#9EA7B4] mt-1 max-w-sm mx-auto">
-              No resumes match &ldquo;{searchQuery}&rdquo; in category {selectedCategory}. Try searching for a different keyword or company name.
+            <h3 className="text-base font-bold text-[#1A1D23] dark:text-[#F0F2F5]">No matching sample resumes</h3>
+            <p className="text-xs text-[#5A6270] dark:text-[#9EA7B4] mt-1 max-w-md mx-auto">
+              We couldn&apos;t find any resume matching your selected filters. Try broadening your criteria or reset the search filters.
             </p>
           </div>
           <button
             type="button"
-            onClick={() => {
-              setSelectedCategory('ALL');
-              setSearchQuery('');
-            }}
-            className="px-4 py-2 rounded-lg bg-[#285FEA] hover:bg-[#1E4BC8] text-white text-xs font-semibold transition-colors shadow-xs"
+            onClick={resetAllFilters}
+            className="px-4 py-2 rounded-lg bg-[#285FEA] hover:bg-[#1E4BC8] text-white text-xs font-semibold transition-colors shadow-xs cursor-pointer"
           >
-            Reset Filters
+            Reset All Filters
           </button>
         </div>
       )}
@@ -230,6 +350,28 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
         resume={previewResume}
         isOpen={!!previewResume}
         onClose={() => setPreviewResume(null)}
+        onAdaptWithProfile={(item) => {
+          setAdaptingSample(item);
+          setPreviewResume(null);
+        }}
+      />
+
+      {/* Source Resume Selection Modal */}
+      <SourceResumeSelectorModal
+        sampleResume={adaptingSample}
+        isOpen={!!adaptingSample}
+        onClose={() => setAdaptingSample(null)}
+        onAdaptationStarted={(adaptationData) => {
+          setAdaptingSample(null);
+          setActiveAdaptation(adaptationData);
+        }}
+      />
+
+      {/* Before / After Selective Adaptation Comparison Modal */}
+      <AdaptationComparisonModal
+        adaptation={activeAdaptation}
+        isOpen={!!activeAdaptation}
+        onClose={() => setActiveAdaptation(null)}
       />
     </div>
   );
