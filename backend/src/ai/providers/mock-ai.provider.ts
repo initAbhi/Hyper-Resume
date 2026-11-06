@@ -1,12 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import type {
   AiProvider,
+  AdaptationProviderResult,
   BulletRewriteResult,
   ParsedProfileDraft,
   RequirementMatchOutput,
+  SectionAdaptationProviderResult,
 } from '../interfaces/ai-provider.interface.js';
 import type { ParsedJobRequirement } from '../../jobs/entities/job-description.entity.js';
 import type { ResumeContent } from '../../resumes/entities/resume.types.js';
+import { calculateUsageCost } from '../config/ai-model-pricing.js';
 
 @Injectable()
 export class MockAiProvider implements AiProvider {
@@ -196,6 +199,93 @@ export class MockAiProvider implements AiProvider {
       framework: 'XYZ',
       explanation: 'Formatted using the Google XYZ formula: Accomplished [X] as measured by [Y] by doing [Z].',
       factualVerificationNotes: 'All claims are anchored strictly to the candidate input; no unverified metrics were fabricated.',
+    };
+  }
+
+  async adaptResume(
+    sourceResume: ResumeContent,
+    benchmarkSample: ResumeContent,
+    targetRole?: string,
+  ): Promise<AdaptationProviderResult> {
+    const role = targetRole || benchmarkSample.headline || sourceResume.headline;
+
+    const adaptedSummary = `${sourceResume.summary} Aligned to ${role} excellence leveraging proven patterns in high-reliability execution.`;
+
+    const experienceBullets = (sourceResume.experience || []).map((exp) => ({
+      company: exp.company,
+      title: exp.title,
+      bullets: exp.bullets.map((b) => {
+        if (/^(spearheaded|architected|orchestrated|engineered|optimized)/i.test(b)) {
+          return b;
+        }
+        return `Architected and delivered ${b.charAt(0).toLowerCase() + b.slice(1)}`;
+      }),
+    }));
+
+    const sourceSkills = new Set((sourceResume.skills || []).map((s) => s.name.toLowerCase()));
+    const recommendedBenchmarkSkills = (benchmarkSample.skills || [])
+      .map((s) => s.name)
+      .filter((name) => !sourceSkills.has(name.toLowerCase()))
+      .slice(0, 10);
+
+    const projects = (sourceResume.projects || []).map((p) => ({
+      name: p.name,
+      description: p.description,
+      highlights: p.highlights.map((h) => `Engineered ${h.charAt(0).toLowerCase() + h.slice(1)}`),
+    }));
+
+    const pricing = calculateUsageCost('mock', 1500, 800);
+
+    return {
+      payload: {
+        headline: role,
+        summary: adaptedSummary,
+        experienceBullets,
+        recommendedBenchmarkSkills,
+        projects,
+      },
+      telemetry: {
+        promptTokens: 1500,
+        completionTokens: 800,
+        totalTokens: 2300,
+        costUsd: pricing.costUsd,
+        modelId: pricing.modelId,
+        pricingVersion: pricing.pricingVersion,
+      },
+    };
+  }
+
+  async adaptSection(
+    sectionKey: string,
+    sourceSectionData: any,
+    benchmarkSectionData: any,
+    targetRole?: string,
+  ): Promise<SectionAdaptationProviderResult> {
+    let adaptedContent: any;
+    if (sectionKey === 'summary') {
+      adaptedContent = `${typeof sourceSectionData === 'string' ? sourceSectionData : ''} Polished for ${targetRole || 'industry leadership'}.`;
+    } else if (sectionKey === 'experience' && Array.isArray(sourceSectionData)) {
+      adaptedContent = sourceSectionData.map((exp: any) => ({
+        ...exp,
+        bullets: (exp.bullets || []).map((b: string) => `Engineered and scaled ${b.charAt(0).toLowerCase() + b.slice(1)}`),
+      }));
+    } else {
+      adaptedContent = sourceSectionData;
+    }
+
+    const pricing = calculateUsageCost('mock', 500, 300);
+
+    return {
+      sectionKey,
+      adaptedContent,
+      telemetry: {
+        promptTokens: 500,
+        completionTokens: 300,
+        totalTokens: 800,
+        costUsd: pricing.costUsd,
+        modelId: pricing.modelId,
+        pricingVersion: pricing.pricingVersion,
+      },
     };
   }
 }

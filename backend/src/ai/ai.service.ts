@@ -2,9 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type {
   AiProvider,
+  AdaptationProviderResult,
   BulletRewriteResult,
   ParsedProfileDraft,
   RequirementMatchOutput,
+  SectionAdaptationProviderResult,
 } from './interfaces/ai-provider.interface.js';
 import { MockAiProvider } from './providers/mock-ai.provider.js';
 import { GeminiAiProvider } from './providers/gemini-ai.provider.js';
@@ -80,5 +82,22 @@ export class AiService implements AiProvider {
       this.logger.warn(`AI Provider error during bullet rewrite, falling back to Mock provider: ${err}`);
       return this.mockProvider.rewriteBullet(bullet, targetRole, metricHint);
     }
+  }
+
+  async adaptResume(
+    sourceResume: ResumeContent,
+    benchmarkSample: ResumeContent,
+    targetRole?: string,
+  ): Promise<AdaptationProviderResult> {
+    return this.activeProvider.adaptResume(sourceResume, benchmarkSample, targetRole);
+  }
+
+  async adaptSection(
+    sectionKey: string,
+    sourceSectionData: any,
+    benchmarkSectionData: any,
+    targetRole?: string,
+  ): Promise<SectionAdaptationProviderResult> {
+    return this.activeProvider.adaptSection(sectionKey, sourceSectionData, benchmarkSectionData, targetRole);
   }
 }

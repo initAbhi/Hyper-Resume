@@ -10,8 +10,18 @@ export interface FrontendEnv {
 }
 
 export function getFrontendEnv(): FrontendEnv {
-  const apiUrl =
-    process.env.NEXT_PUBLIC_API_URL || 'https://api.hype-resume.com/api/v1';
+  // Determine smart local default when running locally
+  let fallbackApiUrl = 'https://api.hype-resume.com/api/v1';
+
+  if (typeof window !== 'undefined') {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      fallbackApiUrl = 'http://localhost:3001/api/v1';
+    }
+  } else if (process.env.NODE_ENV === 'development') {
+    fallbackApiUrl = 'http://localhost:3001/api/v1';
+  }
+
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || fallbackApiUrl;
 
   // Security guard: verify no secrets leaked into NEXT_PUBLIC
   if (process.env.NEXT_PUBLIC_DATABASE_PASSWORD || process.env.NEXT_PUBLIC_JWT_SECRET) {

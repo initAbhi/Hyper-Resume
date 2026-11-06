@@ -16,6 +16,9 @@ import { CreateResumeDto } from './dto/create-resume.dto.js';
 import { UpdateResumeDto } from './dto/update-resume.dto.js';
 import { CreateResumeVersionDto } from './dto/create-resume-version.dto.js';
 import { RunResumeAnalysisDto } from './dto/run-resume-analysis.dto.js';
+import { AdaptResumeDto } from './dto/adapt-resume.dto.js';
+import { AdaptSectionDto } from './dto/adapt-section.dto.js';
+import { ApplyAdaptationDto } from './dto/apply-adaptation.dto.js';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
@@ -41,6 +44,42 @@ export class ResumesController {
     @Query() pagination: PaginationQueryDto,
   ) {
     return this.resumesService.listResumes(user.id, pagination);
+  }
+
+  @Post('adapt')
+  @HttpCode(HttpStatus.OK)
+  async adaptResume(
+    @CurrentUser() user: User,
+    @Body() dto: AdaptResumeDto,
+  ) {
+    return this.resumesService.adaptWithProfile(user.id, dto);
+  }
+
+  @Post('adapt-section')
+  @HttpCode(HttpStatus.OK)
+  async adaptSection(
+    @CurrentUser() user: User,
+    @Body() dto: AdaptSectionDto,
+  ) {
+    return this.resumesService.adaptSection(user.id, dto);
+  }
+
+  @Get('adaptations/:adaptationId')
+  async getAdaptation(
+    @CurrentUser() user: User,
+    @Param('adaptationId') adaptationId: string,
+  ) {
+    return this.resumesService.getAdaptation(user.id, adaptationId);
+  }
+
+  @Post('adaptations/:adaptationId/apply')
+  @HttpCode(HttpStatus.CREATED)
+  async applyAdaptation(
+    @CurrentUser() user: User,
+    @Param('adaptationId') adaptationId: string,
+    @Body() dto: ApplyAdaptationDto,
+  ) {
+    return this.resumesService.applyAdaptation(user.id, adaptationId, dto);
   }
 
   @Get(':resumeId')

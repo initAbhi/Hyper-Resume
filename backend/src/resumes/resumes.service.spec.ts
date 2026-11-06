@@ -46,6 +46,10 @@ describe('ResumesService', () => {
       mockVersionRepo,
       mockAnalysisRepo,
       mockProfileRepo,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
     );
   });
 

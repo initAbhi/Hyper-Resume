@@ -3,12 +3,13 @@
 import React from 'react';
 import { SampleResume } from '@/data/sample-resumes';
 import { CompanyBrandBadge } from './CompanyBrandBadge';
-import { Eye, Sparkles } from 'lucide-react';
+import { Eye, Sparkles, MapPin, Wand2 } from 'lucide-react';
 
 interface SampleResumeCardProps {
   resume: SampleResume;
   onPreview: (resume: SampleResume) => void;
   onUseTemplate: (resume: SampleResume) => void;
+  onAdapt?: (resume: SampleResume) => void;
 }
 
 // Map each company profile to a distinctive, high-end resume template variant
@@ -25,7 +26,7 @@ function getTemplateVariant(companyKey: string): 'double-column' | 'ivy-league' 
   return 'classic';
 }
 
-export function SampleResumeCard({ resume, onPreview, onUseTemplate }: SampleResumeCardProps) {
+export function SampleResumeCard({ resume, onPreview, onUseTemplate, onAdapt }: SampleResumeCardProps) {
   const variant = getTemplateVariant(resume.companyKey);
   const exp1 = resume.experience[0];
   const exp2 = resume.experience[1];
@@ -39,6 +40,13 @@ export function SampleResumeCard({ resume, onPreview, onUseTemplate }: SampleRes
     >
       {/* 1. Miniature ATS Document Preview Sheet (100% full-page canvas with ZERO blank voids) */}
       <div className="relative bg-white text-zinc-900 aspect-[8.5/11] overflow-hidden flex flex-col border-b border-[#E2E5E9] dark:border-[#252A33]">
+        {/* Subtle Illustrative Badge */}
+        <div className="absolute top-1.5 right-1.5 z-10 pointer-events-none">
+          <span className="text-[7px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-zinc-100/90 text-zinc-500 border border-zinc-200">
+            Illustrative
+          </span>
+        </div>
+
         {/* VARIANT A: SIDEBAR (Executive Navy/Slate Left Panel - Replicating Kickresume Elegant) */}
         {variant === 'sidebar' && (
           <div className="w-full h-full flex select-none pointer-events-none">
@@ -584,18 +592,32 @@ export function SampleResumeCard({ resume, onPreview, onUseTemplate }: SampleRes
         )}
 
         {/* Hover Action Overlay */}
-        <div className="absolute inset-0 bg-[#0D0F12]/60 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-2 p-4 z-20">
+        <div className="absolute inset-0 bg-[#0D0F12]/60 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-2 p-3 sm:p-4 z-20">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               onPreview(resume);
             }}
-            className="w-full py-2 px-3 rounded-lg bg-white text-[#1A1D23] text-xs font-semibold shadow-md hover:bg-[#F7F8FA] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            className="w-full py-1.5 px-3 rounded-lg bg-white text-[#1A1D23] text-xs font-semibold shadow-md hover:bg-[#F7F8FA] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
           >
             <Eye className="w-3.5 h-3.5 text-[#5A6270]" />
             <span>Preview Resume</span>
           </button>
+
+          {onAdapt && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAdapt(resume);
+              }}
+              className="w-full py-1.5 px-3 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold shadow-md flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Wand2 className="w-3.5 h-3.5" />
+              <span>Adapt With Profile</span>
+            </button>
+          )}
 
           <button
             type="button"
@@ -603,38 +625,54 @@ export function SampleResumeCard({ resume, onPreview, onUseTemplate }: SampleRes
               e.stopPropagation();
               onUseTemplate(resume);
             }}
-            className="w-full py-2 px-3 rounded-lg bg-[#285FEA] text-white text-xs font-semibold shadow-md hover:bg-[#1E4BC8] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            className="w-full py-1.5 px-3 rounded-lg bg-[#285FEA] text-white text-xs font-semibold shadow-md hover:bg-[#1E4BC8] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Use This Template</span>
+            <span>Use Full Template</span>
           </button>
         </div>
       </div>
 
-      {/* 2. Brand & Role Card Footer (Harmonious Theme-Adaptive Tokens) */}
-      <div className="bg-[#F7F8FA] dark:bg-[#161920] p-3 sm:p-3.5 flex items-center justify-between gap-3 min-h-[66px]">
-        <div className="flex flex-col min-w-0">
-          <div className="flex items-center gap-1.5">
+      {/* 2. Brand & Role Card Footer (with Seniority, Country, Style metadata) */}
+      <div className="bg-[#F7F8FA] dark:bg-[#161920] p-3 sm:p-3.5 flex flex-col justify-between gap-2 min-h-[78px]">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
             <CompanyBrandBadge companyKey={resume.companyKey} companyName={resume.company} />
           </div>
+
+          <div className="flex items-center gap-1 shrink-0">
+            {resume.badge === 'PRO' ? (
+              <span className="text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded border border-[#285FEA]/30 bg-[#285FEA]/10 text-[#285FEA] dark:bg-[#285FEA]/20 dark:text-[#60A5FA] uppercase">
+                {resume.badge}
+              </span>
+            ) : (
+              <span className="text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded border border-[#E2E5E9] dark:border-[#252A33] bg-white dark:bg-[#1D2128] text-[#5A6270] dark:text-[#9EA7B4] uppercase">
+                {resume.badge}
+              </span>
+            )}
+            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/60">
+              {resume.atsScore} ATS
+            </span>
+          </div>
+        </div>
+
+        <div className="min-w-0">
           <span
-            className="text-xs font-semibold text-[#1A1D23] dark:text-[#F0F2F5] truncate mt-1 group-hover:text-[#285FEA] transition-colors"
+            className="text-xs font-semibold text-[#1A1D23] dark:text-[#F0F2F5] truncate block group-hover:text-[#285FEA] transition-colors"
             title={resume.role}
           >
             {resume.role}
           </span>
-        </div>
-
-        <div className="flex items-center gap-1.5 shrink-0">
-          {resume.badge === 'PRO' ? (
-            <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded border border-[#285FEA]/30 bg-[#285FEA]/10 text-[#285FEA] dark:bg-[#285FEA]/20 dark:text-[#60A5FA] uppercase">
-              {resume.badge}
+          <div className="flex items-center gap-1.5 text-[10px] text-[#5A6270] dark:text-[#9EA7B4] mt-0.5 truncate">
+            <span className="font-medium text-zinc-700 dark:text-zinc-300">{resume.experienceLevelLabel}</span>
+            <span>&bull;</span>
+            <span className="inline-flex items-center gap-0.5">
+              <MapPin className="w-2.5 h-2.5 text-zinc-400" />
+              {resume.country}
             </span>
-          ) : (
-            <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded border border-[#E2E5E9] dark:border-[#252A33] bg-white dark:bg-[#1D2128] text-[#5A6270] dark:text-[#9EA7B4] uppercase">
-              {resume.badge}
-            </span>
-          )}
+            <span>&bull;</span>
+            <span className="text-[#285FEA] dark:text-[#60A5FA] font-medium">{resume.resumeStyle}</span>
+          </div>
         </div>
       </div>
     </div>

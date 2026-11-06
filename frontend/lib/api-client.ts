@@ -141,6 +141,70 @@ export interface ResumeVersion {
   createdAt: string;
 }
 
+export interface BulletDiff {
+  original: string;
+  adapted: string;
+  metricFlag?: boolean;
+  warnings?: string[];
+}
+
+export interface ExperienceDiff {
+  company: string;
+  title: string;
+  bullets: BulletDiff[];
+}
+
+export interface SectionChanges {
+  summary?: {
+    original: string;
+    adapted: string;
+    metricFlag?: boolean;
+    warnings?: string[];
+  };
+  headline?: {
+    original: string;
+    adapted: string;
+  };
+  experience?: ExperienceDiff[];
+  skills?: {
+    original: Array<{ name: string; category?: string }>;
+    recommendedBenchmarkSkills: string[];
+  };
+  projects?: Array<{
+    name: string;
+    description: { original: string; adapted: string };
+    highlights: BulletDiff[];
+  }>;
+}
+
+export interface ResumeAdaptation {
+  id: string;
+  userId: string;
+  sourceResumeId: string;
+  sampleId: string;
+  adaptationType: 'full_profile' | 'section';
+  targetRole?: string | null;
+  idempotencyKey: string;
+  status: 'PENDING' | 'SUCCEEDED' | 'FAILED';
+  creditsCharged: number;
+  proposedContent?: ResumeContent | null;
+  sectionChanges?: SectionChanges | null;
+  unsupportedWarnings?: string[] | null;
+  recommendedBenchmarkSkills?: string[] | null;
+  usageMetadata?: {
+    modelId: string;
+    pricingVersion: string;
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    costUsd: number;
+  } | null;
+  errorCode?: string | null;
+  errorMessage?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ResumeAnalysis {
   id: string;
   userId: string;
@@ -541,6 +605,16 @@ export class ApiClient {
     }
   }
 
+  public getBaseUrl(): string {
+    if (typeof window !== 'undefined') {
+      const host = window.location.hostname;
+      if (host === 'localhost' || host === '127.0.0.1') {
+        return 'http://localhost:3001/api/v1';
+      }
+    }
+    return this.baseUrl || env.apiUrl;
+  }
+
   setToken(token: string | null) {
     this.setTokens(token, this.refreshToken);
   }
@@ -583,7 +657,7 @@ export class ApiClient {
 
     this.refreshPromise = (async () => {
       try {
-        const refreshUrl = `${this.baseUrl}/auth/refresh`;
+        const refreshUrl = `${this.getBaseUrl()}/auth/refresh`;
         const res = await fetch(refreshUrl, {
           method: 'POST',
           credentials: 'include',
@@ -631,7 +705,7 @@ export class ApiClient {
     options: RequestInit = {},
     isRetry: boolean = false,
   ): Promise<ApiResponse<T>> {
-    const url = `${this.baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+    const url = `${this.getBaseUrl()}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
     const requestId =
       (options.headers as Record<string, string>)?.[
         'x-request-id'
@@ -930,6 +1004,60 @@ export class ApiClient {
     dto: { analysisType: 'ats_check' | 'ats_audit' | 'comprehensive_audit' | 'job_match' | 'bullet_improve'; jobDescriptionId?: string },
   ) {
     const res = await this.request<ResumeAnalysis>(`/resumes/${resumeId}/analyses`, {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+    return res.data;
+  }
+
+  // --- Resume Adaptation Endpoints ---
+  async adaptResume(dto: {
+    sourceResumeId: string;
+    sampleId: string;
+    idempotencyKey: string;
+    targetRole?: string;
+    sampleBenchmarkData?: ResumeContent;
+  }) {
+    const res = await this.request<ResumeAdaptation>('/resumes/adapt', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+    return res.data;
+  }
+
+  async adaptSection(dto: {
+    sourceResumeId: string;
+    sectionKey: 'summary' | 'experience' | 'skills' | 'projects';
+    sampleId: string;
+    idempotencyKey: string;
+    targetRole?: string;
+    sourceSectionData?: any;
+    benchmarkSectionData?: any;
+  }) {
+    const res = await this.request<ResumeAdaptation>('/resumes/adapt-section', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+    return res.data;
+  }
+
+  async getAdaptation(adaptationId: string) {
+    const res = await this.request<ResumeAdaptation>(`/resumes/adaptations/${adaptationId}`);
+    return res.data;
+  }
+
+  async applyAdaptation(
+    adaptationId: string,
+    dto: {
+      title?: string;
+      summaryDecision?: 'accept' | 'reject';
+      bulletDecisions?: Record<string, Record<string, 'accept' | 'reject'>>;
+      acceptedBenchmarkSkills?: string[];
+      projectDecisions?: Record<string, 'accept' | 'reject'>;
+      customFinalContent?: ResumeContent;
+    },
+  ) {
+    const res = await this.request<Resume>(`/resumes/adaptations/${adaptationId}/apply`, {
       method: 'POST',
       body: JSON.stringify(dto),
     });

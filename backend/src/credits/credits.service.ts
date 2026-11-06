@@ -9,6 +9,8 @@ export const CREDIT_COSTS = {
   JOB_MATCH: 2,
   BULLET_REWRITE: 1,
   EXPORT_PDF: 0,
+  ADAPT_RESUME: 3,
+  ADAPT_SECTION: 1,
 } as const;
 
 @Injectable()
@@ -137,8 +139,9 @@ export class CreditsService {
 
     const saved = await repo.save(deduction);
     this.logger.log(
-      `Deducted ${requiredAmount} credits from user ${userId} (${description}). New balance: ${currentBalance - requiredAmount}`,
+      `Deducted ${requiredAmount} credits from user ${userId} (${transactionType}: ${description}). Remaining: ${currentBalance - requiredAmount}`,
     );
+
     return saved;
   }
 
@@ -149,31 +152,27 @@ export class CreditsService {
     reason: string,
     manager?: EntityManager,
   ): Promise<CreditLedger> {
-    const repo = this.getRepo(manager);
-    const refundKey = originalIdempotencyKey.startsWith('refund-')
-      ? originalIdempotencyKey
-      : `refund-${originalIdempotencyKey}`;
-
-    const existingRefund = await repo.findOne({
-      where: { idempotencyKey: refundKey },
-    });
-    if (existingRefund) {
-      this.logger.debug(`Idempotent refund hit for key: ${refundKey}`);
-      return existingRefund;
-    }
-
-    const refundAmount = Math.abs(amount);
-    const entry = repo.create({
+    const refundKey = `refund:${originalIdempotencyKey}`;
+    return this.addTransaction(
       userId,
-      amount: refundAmount,
-      transactionType: 'refund',
-      idempotencyKey: refundKey,
-      description: `Refund: ${reason}`,
-      metadata: { originalIdempotencyKey, reason },
-    });
+      Math.abs(amount),
+      'refund',
+      refundKey,
+      `Refund: ${reason}`,
+      { originalIdempotencyKey },
+      manager,
+    );
+  }
 
-    const saved = await repo.save(entry);
-    this.logger.log(`Refunded ${refundAmount} credits to user ${userId} (${reason})`);
-    return saved;
+  async initializeUserCredits(userId: string, manager?: EntityManager): Promise<CreditLedger> {
+    return this.addTransaction(
+      userId,
+      10,
+      'signup_bonus',
+      `signup_bonus:${userId}`,
+      'Welcome bonus: 10 free credits',
+      undefined,
+      manager,
+    );
   }
 }
