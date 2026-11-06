@@ -20,6 +20,10 @@ import {
   FileText,
   LayoutTemplate,
   Palette,
+  Type,
+  Camera,
+  Upload,
+  Link2,
   ArrowUpDown,
   Share2,
   Download,
@@ -36,6 +40,7 @@ import { ScoreMeter } from '@/components/resumes/ScoreMeter';
 import { getTemplateComponent } from '@/components/resumes/templates';
 import { TemplatePicker } from '@/components/resumes/TemplatePicker';
 import { DesignPanel } from '@/components/resumes/DesignPanel';
+import { PhotoUploadModal } from '@/components/resumes/PhotoUploadModal';
 import { CheckAndTailorDrawer } from '@/components/resumes/CheckAndTailorDrawer';
 
 interface ResumeEditorPageProps {
@@ -58,6 +63,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
   // Competitor-Grade Template & Customizer States
   const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
   const [isDesignPanelOpen, setIsDesignPanelOpen] = useState(false);
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [isCheckTailorOpen, setIsCheckTailorOpen] = useState(false);
   const [accentColor, setAccentColor] = useState('#2563eb');
   const [fontFamily, setFontFamily] = useState<'sans' | 'serif' | 'mono'>('sans');
@@ -165,6 +171,10 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
         });
         setResumeName(res.name);
         setTemplateKey(res.templateKey || 'clean-modern');
+        if (res.content?.contact?.photoUrl) {
+          setPhotoUrl(res.content.contact.photoUrl);
+          setShowPhoto(true);
+        }
         setServerVersion(res.version || 1);
         setSaveStatus('saved');
         setLastSavedTime(new Date(res.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
@@ -521,14 +531,44 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
             <span>Templates</span>
           </button>
 
-          {/* Design & Font Panel Button */}
+          {/* Color Button (opens Design panel) */}
           <button
             type="button"
             onClick={() => setIsDesignPanelOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            title="Customize accent colors"
           >
             <Palette className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-            <span>Design & Font</span>
+            <span>Color</span>
+            <span
+              className="w-2.5 h-2.5 rounded-full border border-black/10 dark:border-white/20 inline-block shrink-0"
+              style={{ backgroundColor: accentColor }}
+            />
+          </button>
+
+          {/* Font Button (opens Design panel) */}
+          <button
+            type="button"
+            onClick={() => setIsDesignPanelOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            title="Customize typography & font family"
+          >
+            <Type className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            <span>Font</span>
+          </button>
+
+          {/* Photo Button (opens 2-option Upload/Link modal) */}
+          <button
+            type="button"
+            onClick={() => setIsPhotoModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            title="Upload profile picture or paste image link"
+          >
+            <Camera className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>Photo</span>
+            {photoUrl && (
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+            )}
           </button>
         </div>
 
@@ -1555,9 +1595,37 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
         showPhoto={showPhoto}
         onShowPhotoChange={setShowPhoto}
         photoUrl={photoUrl}
-        onPhotoUrlChange={setPhotoUrl}
+        onPhotoUrlChange={(newUrl) => {
+          setPhotoUrl(newUrl);
+          updateContent((prev) => ({
+            ...prev,
+            contact: {
+              ...prev.contact,
+              photoUrl: newUrl,
+            },
+          }));
+        }}
         showHighlights={showHighlights}
         onShowHighlightsChange={setShowHighlights}
+      />
+
+      {/* Profile Photo Modal (Upload & Paste Link) */}
+      <PhotoUploadModal
+        isOpen={isPhotoModalOpen}
+        onClose={() => setIsPhotoModalOpen(false)}
+        photoUrl={photoUrl}
+        showPhoto={showPhoto}
+        onPhotoChange={(newUrl, shouldShow) => {
+          setPhotoUrl(newUrl);
+          setShowPhoto(shouldShow);
+          updateContent((prev) => ({
+            ...prev,
+            contact: {
+              ...prev.contact,
+              photoUrl: newUrl,
+            },
+          }));
+        }}
       />
 
       {/* Check & Tailor Drawer (Multi-Phase Job Match Animation & Report) */}

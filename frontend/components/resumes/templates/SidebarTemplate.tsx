@@ -26,13 +26,17 @@ export function SidebarTemplate({
 
   return (
     <div
-      className={`resume-paper-canvas bg-white text-zinc-950 rounded-sm shadow-md border border-zinc-200/80 w-full max-w-[820px] mx-auto text-left flex flex-col md:flex-row overflow-hidden min-h-[950px] ${className}`}
+      className={`resume-paper-canvas bg-white text-zinc-950 rounded-sm shadow-md border border-zinc-200/80 w-full max-w-[820px] mx-auto text-left flex flex-col md:flex-row print:flex-row overflow-hidden min-h-[950px] ${className}`}
       style={{ boxSizing: 'border-box' }}
     >
-      {/* Dark Navy Left Sidebar (35%) */}
+      {/* Dark Navy Left Sidebar (34%) */}
       <div
-        className="w-full md:w-[34%] p-6 sm:p-7 text-white flex flex-col justify-between shrink-0"
-        style={{ backgroundColor: accentColor }}
+        className="w-full md:w-[34%] print:w-[34%] p-6 sm:p-7 text-white flex flex-col justify-between shrink-0"
+        style={{
+          backgroundColor: accentColor,
+          WebkitPrintColorAdjust: 'exact',
+          printColorAdjust: 'exact',
+        }}
       >
         <div className="space-y-6">
           {/* Circular Photo */}
@@ -152,7 +156,7 @@ export function SidebarTemplate({
       </div>
 
       {/* White Right Content Area (66%) */}
-      <div className="w-full md:w-[66%] p-6 sm:p-9 space-y-5 flex-1">
+      <div className="w-full md:w-[66%] print:w-[66%] p-6 sm:p-9 space-y-5 flex-1">
         {/* Name & Headline Header */}
         <div className="space-y-1 pb-3 border-b-2 border-zinc-100">
           <h1 className="text-2xl sm:text-3xl font-extrabold uppercase tracking-tight text-zinc-950">

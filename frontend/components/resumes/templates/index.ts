@@ -7,6 +7,10 @@ import { SidebarTemplate } from './SidebarTemplate';
 import { CrestTemplate } from './CrestTemplate';
 import { ClassicTemplate } from './ClassicTemplate';
 import { ModernTemplate } from './ModernTemplate';
+import { JakeTemplate } from './JakeTemplate';
+import { AwesomeCVTemplate } from './AwesomeCVTemplate';
+import { DeedyTemplate } from './DeedyTemplate';
+import { ExecutiveTemplate } from './ExecutiveTemplate';
 import { TemplateProps } from './types';
 
 export * from './types';
@@ -16,6 +20,10 @@ export * from './SidebarTemplate';
 export * from './CrestTemplate';
 export * from './ClassicTemplate';
 export * from './ModernTemplate';
+export * from './JakeTemplate';
+export * from './AwesomeCVTemplate';
+export * from './DeedyTemplate';
+export * from './ExecutiveTemplate';
 
 export interface TemplateDefinition {
   key: string;
@@ -27,6 +35,38 @@ export interface TemplateDefinition {
 }
 
 export const AVAILABLE_TEMPLATES: TemplateDefinition[] = [
+  {
+    key: 'jake-ats',
+    name: "Jake's Resume",
+    badge: 'TOP ATS',
+    category: 'Classic',
+    component: JakeTemplate,
+    description: 'Gold-standard LaTeX tech resume template. Single column, compact, 100% ATS parser compliant with right-aligned dates.',
+  },
+  {
+    key: 'awesome-cv',
+    name: 'Awesome CV',
+    badge: 'POPULAR',
+    category: 'Modern',
+    component: AwesomeCVTemplate,
+    description: 'World-famous LaTeX template with two-tone name typography, accent rule dividers, and sleek vector contact icons.',
+  },
+  {
+    key: 'deedy',
+    name: 'Deedy Pro',
+    badge: 'TECH',
+    category: 'Two-Column',
+    component: DeedyTemplate,
+    description: 'Debarghya Das asymmetric 2-column layout (32% left sidebar for skills & education, 68% for deep experience narratives).',
+  },
+  {
+    key: 'executive',
+    name: 'Executive Leader',
+    badge: 'PRO',
+    category: 'Modern',
+    component: ExecutiveTemplate,
+    description: 'High-level C-suite and Director layout with accent indicators, dedicated executive profile, and credential grid.',
+  },
   {
     key: 'double-column',
     name: 'Double column',
@@ -74,10 +114,21 @@ export const AVAILABLE_TEMPLATES: TemplateDefinition[] = [
 
 export function getTemplateComponent(templateKey: string): React.ComponentType<TemplateProps> {
   switch (templateKey) {
+    case 'jake-ats':
+    case 'jake':
+      return JakeTemplate;
+    case 'awesome-cv':
+    case 'awesome':
+      return AwesomeCVTemplate;
+    case 'deedy':
+    case 'deedy-cv':
+      return DeedyTemplate;
+    case 'executive':
+    case 'executive-leader':
+      return ExecutiveTemplate;
     case 'double-column':
       return DoubleColumnTemplate;
     case 'ivy-league':
-    case 'executive':
       return IvyLeagueTemplate;
     case 'elegant':
     case 'sidebar':
@@ -92,8 +143,8 @@ export function getTemplateComponent(templateKey: string): React.ComponentType<T
     case 'clean-modern':
     case 'modern':
     case 'technical-ats':
+      return ModernTemplate;
     default:
       return DoubleColumnTemplate;
   }
 }
-

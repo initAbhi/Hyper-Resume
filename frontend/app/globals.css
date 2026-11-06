@@ -198,6 +198,13 @@ body {
 }
 
 /* ========== ATS PRINT & PDF EXPORT ========== */
+
+/* Force color rendering in print for all resume templates */
+* {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
 @media print {
   @page {
     size: letter portrait;
@@ -206,7 +213,6 @@ body {
 
   html, body {
     background-color: #ffffff !important;
-    color: #000000 !important;
     margin: 0 !important;
     padding: 0 !important;
     font-size: 10pt !important;
@@ -239,6 +245,8 @@ body {
     min-height: 0 !important;
     max-width: 100% !important;
     width: 100% !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   #resume-document-print {
@@ -249,15 +257,19 @@ body {
     box-shadow: none !important;
     padding: 0 !important;
     margin: 0 !important;
-    background-color: #ffffff !important;
-    color: #000000 !important;
     font-size: 10pt !important;
     line-height: 1.4 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
-  #resume-document-print * {
-    color: #000000 !important;
+  /* Preserve colors in resume — only hide keyword highlights in print */
+  #resume-document-print .ats-keyword-highlight {
     background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    color: inherit !important;
+    font-weight: inherit !important;
   }
 
   #resume-document-print h1,

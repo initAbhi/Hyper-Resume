@@ -80,6 +80,140 @@ export function TemplatePicker({
                   >
                     {/* Realistic CSS Mock Preview based on template type */}
                     <div className="w-full h-full pointer-events-none select-none text-[5px] flex flex-col justify-between">
+                      {/* Jake's Resume (LaTeX CS ATS standard) */}
+                      {tpl.key === 'jake-ats' && (
+                        <div className="h-full flex flex-col justify-between p-0.5">
+                          <div className="w-full text-center pb-1 space-y-0.5">
+                            <div className="w-16 h-1.5 bg-zinc-950 mx-auto rounded-xs font-bold" />
+                            <div className="w-24 h-0.5 bg-zinc-400 mx-auto rounded-xs" />
+                          </div>
+                          <div className="space-y-1 flex-1 pt-0.5">
+                            {/* Section 1: Education */}
+                            <div className="border-b border-zinc-900 pb-0.5">
+                              <div className="w-12 h-0.5 bg-zinc-900" />
+                            </div>
+                            <div className="flex justify-between">
+                              <div className="w-14 h-0.5 bg-zinc-800" />
+                              <div className="w-8 h-0.5 bg-zinc-500" />
+                            </div>
+                            {/* Section 2: Experience */}
+                            <div className="border-b border-zinc-900 pb-0.5 pt-0.5">
+                              <div className="w-14 h-0.5 bg-zinc-900" />
+                            </div>
+                            <div className="flex justify-between">
+                              <div className="w-16 h-0.5 bg-zinc-800" />
+                              <div className="w-10 h-0.5 bg-zinc-500" />
+                            </div>
+                            <div className="space-y-0.5 pl-1">
+                              <div className="w-full h-0.5 bg-zinc-300" />
+                              <div className="w-4/5 h-0.5 bg-zinc-300" />
+                            </div>
+                            {/* Section 3: Skills */}
+                            <div className="border-b border-zinc-900 pb-0.5 pt-0.5">
+                              <div className="w-16 h-0.5 bg-zinc-900" />
+                            </div>
+                            <div className="w-full h-0.5 bg-zinc-400" />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Awesome CV Preview (XeLaTeX style) */}
+                      {tpl.key === 'awesome-cv' && (
+                        <div className="h-full flex flex-col justify-between p-0.5">
+                          <div className="w-full text-center pb-1 space-y-0.5">
+                            <div className="flex justify-center items-center gap-0.5">
+                              <span className="w-8 h-1.5 bg-zinc-700 rounded-xs inline-block" />
+                              <span className="w-10 h-1.5 bg-red-600 rounded-xs inline-block" />
+                            </div>
+                            <div className="w-14 h-0.5 bg-red-600 mx-auto rounded-xs" />
+                            <div className="w-22 h-0.5 bg-zinc-300 mx-auto rounded-xs" />
+                          </div>
+                          <div className="space-y-1 flex-1">
+                            <div className="border-b-2 border-red-600 pb-0.5">
+                              <div className="w-16 h-0.5 bg-zinc-900" />
+                            </div>
+                            <div className="flex justify-between items-baseline">
+                              <div className="w-16 h-0.5 bg-zinc-900" />
+                              <div className="w-8 h-0.5 bg-zinc-400" />
+                            </div>
+                            <div className="w-12 h-0.5 bg-red-600" />
+                            <div className="space-y-0.5 pl-1">
+                              <div className="w-full h-0.5 bg-zinc-300" />
+                              <div className="w-5/6 h-0.5 bg-zinc-300" />
+                            </div>
+                            <div className="border-b-2 border-red-600 pb-0.5 pt-0.5">
+                              <div className="w-12 h-0.5 bg-zinc-900" />
+                            </div>
+                            <div className="flex gap-1">
+                              <span className="w-6 h-1 bg-zinc-200 rounded-xs" />
+                              <span className="w-7 h-1 bg-zinc-200 rounded-xs" />
+                              <span className="w-5 h-1 bg-zinc-200 rounded-xs" />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Deedy Pro Preview (Asymmetric 2-column) */}
+                      {tpl.key === 'deedy' && (
+                        <div className="h-full flex flex-col justify-between p-0.5">
+                          <div className="pb-1 border-b border-zinc-200">
+                            <div className="w-20 h-1.5 bg-zinc-900 rounded-xs" />
+                            <div className="w-12 h-0.5 bg-blue-600 rounded-xs mt-0.5" />
+                          </div>
+                          <div className="flex gap-1 flex-1 pt-1">
+                            {/* Left column (32%) */}
+                            <div className="w-[32%] border-r border-zinc-100 pr-0.5 space-y-1">
+                              <div className="w-7 h-0.5 bg-blue-600" />
+                              <div className="w-full h-0.5 bg-zinc-300" />
+                              <div className="w-4/5 h-0.5 bg-zinc-300" />
+                              <div className="w-6 h-0.5 bg-blue-600 pt-0.5" />
+                              <div className="w-full h-0.5 bg-zinc-300" />
+                            </div>
+                            {/* Right column (68%) */}
+                            <div className="w-[68%] space-y-1 pl-0.5">
+                              <div className="w-12 h-0.5 bg-blue-600" />
+                              <div className="w-full h-0.5 bg-zinc-800" />
+                              <div className="w-full h-0.5 bg-zinc-300" />
+                              <div className="w-4/5 h-0.5 bg-zinc-300" />
+                              <div className="w-10 h-0.5 bg-blue-600 pt-0.5" />
+                              <div className="w-full h-0.5 bg-zinc-300" />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Executive Leader Preview */}
+                      {tpl.key === 'executive' && (
+                        <div className="h-full flex flex-col justify-between p-0.5">
+                          <div className="pb-1 border-b border-zinc-200">
+                            <div className="w-20 h-1.5 bg-zinc-950 font-serif" />
+                            <div className="w-16 h-0.5 bg-blue-900 mt-0.5" />
+                            <div className="w-full h-0.5 bg-zinc-300 mt-0.5" />
+                          </div>
+                          <div className="space-y-1 flex-1 pt-1">
+                            <div className="flex items-center gap-0.5">
+                              <div className="w-0.5 h-1.5 bg-blue-900" />
+                              <div className="w-14 h-0.5 bg-zinc-900" />
+                            </div>
+                            <div className="pl-1 space-y-0.5">
+                              <div className="w-full h-0.5 bg-zinc-300" />
+                              <div className="w-5/6 h-0.5 bg-zinc-300" />
+                            </div>
+                            <div className="flex items-center gap-0.5 pt-0.5">
+                              <div className="w-0.5 h-1.5 bg-blue-900" />
+                              <div className="w-16 h-0.5 bg-zinc-900" />
+                            </div>
+                            <div className="pl-1 space-y-0.5">
+                              <div className="flex justify-between">
+                                <div className="w-14 h-0.5 bg-zinc-800" />
+                                <div className="w-6 h-0.5 bg-zinc-400" />
+                              </div>
+                              <div className="w-full h-0.5 bg-zinc-300" />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Double Column Preview */}
                       {tpl.key === 'double-column' && (
                         <div className="h-full flex flex-col justify-between">

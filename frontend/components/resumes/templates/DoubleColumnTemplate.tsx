@@ -121,9 +121,9 @@ export function DoubleColumnTemplate({
       </div>
 
       {/* 2-Column Split: Left (Experience + Projects) | Right (Summary + Education + Skills) */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 pt-5">
+      <div className="grid grid-cols-1 md:grid-cols-12 print:grid-cols-12 gap-6 pt-5">
         {/* Left Column (7 cols): EXPERIENCE */}
-        <div className="md:col-span-7 space-y-5">
+        <div className="md:col-span-7 print:col-span-7 space-y-5">
           {experience.length > 0 && (
             <section className="space-y-3">
               <h2 className="text-xs font-black uppercase tracking-wider text-zinc-950 pb-1 border-b-2 border-zinc-950">
@@ -200,7 +200,7 @@ export function DoubleColumnTemplate({
         </div>
 
         {/* Right Column (5 cols): SUMMARY + EDUCATION + SKILLS */}
-        <div className="md:col-span-5 space-y-5">
+        <div className="md:col-span-5 print:col-span-5 space-y-5">
           {/* Summary */}
           {summary && (
             <section className="space-y-2">

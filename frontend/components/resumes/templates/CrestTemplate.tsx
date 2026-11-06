@@ -33,7 +33,11 @@ export function CrestTemplate({
       {/* Bold Full-Width Top Accent Banner */}
       <div
         className="p-6 sm:p-8 text-white relative"
-        style={{ backgroundColor: accentColor }}
+        style={{
+          backgroundColor: accentColor,
+          WebkitPrintColorAdjust: 'exact',
+          printColorAdjust: 'exact',
+        }}
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
@@ -109,9 +113,9 @@ export function CrestTemplate({
         )}
 
         {/* 2-Column Split: Experience (65%) | Skills & Education (35%) */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 pt-1">
+        <div className="grid grid-cols-1 md:grid-cols-12 print:grid-cols-12 gap-6 pt-1">
           {/* Experience Column */}
-          <div className="md:col-span-8 space-y-4">
+          <div className="md:col-span-8 print:col-span-8 space-y-4">
             {experience.length > 0 && (
               <section className="space-y-3">
                 <div className="flex items-center gap-2 pb-1 border-b-2 border-zinc-100">
@@ -183,7 +187,7 @@ export function CrestTemplate({
           </div>
 
           {/* Right Column: Skills & Education */}
-          <div className="md:col-span-4 space-y-5">
+          <div className="md:col-span-4 print:col-span-4 space-y-5">
             {/* Skills */}
             {skills.length > 0 && (
               <section className="space-y-2">

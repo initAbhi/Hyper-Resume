@@ -77,6 +77,7 @@ export interface ResumeContent {
     linkedinUrl?: string;
     githubUrl?: string;
     websiteUrl?: string;
+    photoUrl?: string;
   };
   headline: string;
   summary: string;
