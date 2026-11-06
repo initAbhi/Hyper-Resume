@@ -115,7 +115,7 @@ describe('CreditsService', () => {
 
     expect(refund.amount).toBe(2);
     expect(refund.transactionType).toBe('refund');
-    expect(refund.idempotencyKey).toBe('refund-op-failed-ai');
+    expect(refund.idempotencyKey).toBe('refund:op-failed-ai');
     expect(mockLedgerRepo.save).toHaveBeenCalled();
   });
 });
