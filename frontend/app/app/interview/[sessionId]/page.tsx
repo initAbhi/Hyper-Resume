@@ -368,7 +368,7 @@ export default function ActiveInterviewStudioPage({ params }: PageProps) {
             onChange={(e) => setCandidateAnswer(e.target.value.slice(0, 1500))}
             placeholder="Type your response here... Structure your answer with clear context, specific actions you took, and measurable results or architectural trade-offs."
             rows={7}
-            className="w-full text-xs sm:text-sm rounded-lg border border-border bg-background p-3.5 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-600 leading-relaxed resize-y"
+            className="w-full text-xs sm:text-sm rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/50 p-4 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:bg-white dark:focus:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 leading-relaxed resize-y transition-all"
           />
 
           <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
