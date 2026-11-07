@@ -293,43 +293,41 @@ export function TemplatePicker({
                         </div>
                       )}
 
-                      {/* Elegant (Sidebar) Preview */}
+                      {/* Elegant (Two-Tone Right Sidebar) Preview */}
                       {tpl.key === 'elegant' && (
                         <div className="h-full flex -m-2">
-                          <div className="w-1/3 bg-slate-800 p-1 flex flex-col justify-between items-center space-y-1">
-                            <div className="w-full flex flex-col items-center space-y-1">
-                              <div className="w-3.5 h-3.5 rounded-full bg-white/30 mt-0.5" />
-                              <div className="w-full h-0.5 bg-white/40 rounded-xs" />
-                              <div className="w-3/4 h-0.5 bg-white/40 rounded-xs" />
-                              <div className="w-full h-0.5 bg-white/25 rounded-xs mt-0.5" />
-                              <div className="w-2/3 h-0.5 bg-white/25 rounded-xs" />
-                              <div className="w-full h-0.5 bg-white/25 rounded-xs mt-0.5" />
-                              <div className="w-4/5 h-0.5 bg-white/25 rounded-xs" />
-                            </div>
-                            <div className="w-full space-y-0.5 pb-0.5">
-                              <div className="w-full h-0.5 bg-white/20 rounded-xs" />
-                              <div className="w-2/3 h-0.5 bg-white/20 rounded-xs" />
-                            </div>
-                          </div>
                           <div className="w-2/3 p-1.5 space-y-1 flex flex-col justify-between">
                             <div>
-                              <div className="w-12 h-1.5 bg-zinc-900 rounded-xs" />
-                              <div className="w-16 h-1 bg-slate-600 rounded-xs mt-0.5" />
-                              <div className="w-10 h-1 bg-slate-800 border-b border-slate-300 pt-1" />
+                              <div className="w-14 h-1.5 bg-zinc-900 rounded-xs" />
+                              <div className="w-16 h-1 bg-blue-600 rounded-xs mt-0.5" />
+                              <div className="w-10 h-0.5 bg-zinc-800 border-b border-zinc-200 pt-1" />
                               <div className="space-y-0.5 mt-0.5">
                                 <div className="w-full h-0.5 bg-zinc-300 rounded-xs" />
                                 <div className="w-4/5 h-0.5 bg-zinc-200 rounded-xs" />
                                 <div className="w-5/6 h-0.5 bg-zinc-200 rounded-xs" />
                               </div>
-                              <div className="w-10 h-1 bg-slate-800 border-b border-slate-300 pt-1" />
+                              <div className="w-10 h-0.5 bg-zinc-800 border-b border-zinc-200 pt-1" />
                               <div className="space-y-0.5 mt-0.5">
                                 <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
                                 <div className="w-3/4 h-0.5 bg-zinc-200 rounded-xs" />
                               </div>
                             </div>
                             <div className="space-y-0.5 pt-0.5">
-                              <div className="w-8 h-0.5 bg-slate-700 rounded-xs" />
+                              <div className="w-8 h-0.5 bg-zinc-700 rounded-xs" />
                               <div className="w-full h-0.5 bg-zinc-200 rounded-xs" />
+                            </div>
+                          </div>
+                          <div className="w-1/3 bg-[#142d4c] p-1 flex flex-col justify-between items-center space-y-1">
+                            <div className="w-full flex flex-col items-center space-y-1">
+                              <div className="w-4 h-4 rounded-full bg-white/30 border border-white/40 mt-0.5" />
+                              <div className="w-full h-0.5 bg-white/40 rounded-xs" />
+                              <div className="w-3/4 h-0.5 bg-white/30 rounded-xs" />
+                              <div className="w-full h-0.5 bg-white/20 rounded-xs mt-0.5" />
+                              <div className="w-2/3 h-0.5 bg-white/20 rounded-xs" />
+                            </div>
+                            <div className="w-full space-y-0.5 pb-0.5">
+                              <div className="w-full h-0.5 bg-white/20 rounded-xs" />
+                              <div className="w-2/3 h-0.5 bg-white/20 rounded-xs" />
                             </div>
                           </div>
                         </div>

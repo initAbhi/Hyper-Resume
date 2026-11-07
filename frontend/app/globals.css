@@ -256,8 +256,8 @@ body {
 
 @media print {
   @page {
-    size: letter portrait;
-    margin: 0.5in;
+    size: auto;
+    margin: 0mm;
   }
 
   html, body {
@@ -267,10 +267,30 @@ body {
     font-size: 10pt !important;
     height: auto !important;
     overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
-  header, footer, aside, nav, button, select, input, textarea, .no-print, [role="navigation"], [role="banner"] {
+  /* Hide app navigation and controls, but PRESERVE resume template headers and sidebars */
+  header:not(#resume-document-print *),
+  footer:not(#resume-document-print *),
+  aside:not(#resume-document-print *),
+  nav:not(#resume-document-print *),
+  button,
+  select,
+  input,
+  textarea,
+  .no-print,
+  [role="navigation"]:not(#resume-document-print *),
+  [role="banner"]:not(#resume-document-print *) {
     display: none !important;
+  }
+
+  #resume-document-print header,
+  #resume-document-print footer,
+  #resume-document-print aside,
+  #resume-document-print [role="banner"] {
+    display: block !important;
   }
 
   main {
@@ -289,8 +309,7 @@ body {
   .resume-paper-canvas {
     box-shadow: none !important;
     border: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
+    margin: 0 auto !important;
     min-height: 0 !important;
     max-width: 100% !important;
     width: 100% !important;
@@ -308,6 +327,12 @@ body {
     margin: 0 !important;
     font-size: 10pt !important;
     line-height: 1.4 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  #resume-document-print,
+  #resume-document-print * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
