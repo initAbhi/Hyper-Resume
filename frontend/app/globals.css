@@ -308,8 +308,14 @@ body {
   textarea,
   .no-print,
   [role="navigation"]:not(#resume-document-print *),
-  [role="banner"]:not(#resume-document-print *) {
+  [role="banner"]:not(#resume-document-print *),
+  [role="dialog"],
+  [aria-modal="true"],
+  .fixed,
+  #export-pdf-modal,
+  [id*="modal"] {
     display: none !important;
+    visibility: hidden !important;
   }
 
   #resume-document-print header,
@@ -341,7 +347,6 @@ body {
     min-height: 297mm !important;
     height: 297mm !important;
     max-height: 297mm !important;
-    padding: 12mm 14mm !important;
     page-break-after: always !important;
     break-after: page !important;
     page-break-inside: avoid !important;
@@ -349,6 +354,14 @@ body {
     overflow: hidden !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  .resume-page-a4:not([class*="p-0"]) {
+    padding: 12mm 14mm !important;
+  }
+
+  .resume-page-a4[class*="p-0"] {
+    padding: 0 !important;
   }
 
   .resume-page-a4:last-child {
