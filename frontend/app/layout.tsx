@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Rubik } from 'next/font/google';
 import './globals.css';
 import { Suspense } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
@@ -13,6 +13,13 @@ const inter = Inter({
   variable: '--font-inter',
   subsets: ['latin'],
   display: 'swap',
+});
+
+const rubik = Rubik({
+  variable: '--font-rubik',
+  subsets: ['latin'],
+  display: 'swap',
+  weight: ['400', '500', '600', '700'],
 });
 
 export const metadata: Metadata = {
@@ -50,7 +57,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} h-full`}
+      className={`${inter.variable} ${rubik.variable} h-full`}
       suppressHydrationWarning
     >
       <head>

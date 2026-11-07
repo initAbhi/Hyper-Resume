@@ -204,8 +204,8 @@ export default function AiInterviewStudioPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 2 Cols: Setup Wizard */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 sm:p-8 space-y-6 shadow-sm">
-            <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2 pb-3 border-b border-zinc-100 dark:border-zinc-800">
+          <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 sm:p-8 space-y-6 shadow-xs">
+            <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-zinc-800">
               <Target className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <span>Configure Your Practice Session</span>
             </h2>
@@ -222,13 +222,13 @@ export default function AiInterviewStudioPage() {
                   onClick={() => setSessionMode('quick_practice')}
                   className={`p-4 rounded-xl border cursor-pointer transition-all ${
                     sessionMode === 'quick_practice'
-                      ? 'border-blue-600 bg-blue-50/40 dark:bg-blue-950/30 ring-2 ring-blue-500/20 shadow-xs'
-                      : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/40 dark:bg-zinc-800/30 hover:border-zinc-300 dark:hover:border-zinc-700'
+                      ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/40 ring-3 ring-blue-500/15 shadow-xs'
+                      : 'border-slate-200 dark:border-zinc-800 bg-slate-50/40 dark:bg-zinc-800/30 hover:border-slate-300 dark:hover:border-zinc-700'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Quick Practice</span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-200/70 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-200/80 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300">
                       2 Credits
                     </span>
                   </div>
@@ -242,13 +242,13 @@ export default function AiInterviewStudioPage() {
                   onClick={() => setSessionMode('full_mock')}
                   className={`p-4 rounded-xl border cursor-pointer transition-all relative ${
                     sessionMode === 'full_mock'
-                      ? 'border-blue-600 bg-blue-50/40 dark:bg-blue-950/30 ring-2 ring-blue-500/20 shadow-xs'
-                      : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/40 dark:bg-zinc-800/30 hover:border-zinc-300 dark:hover:border-zinc-700'
+                      ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/40 ring-3 ring-blue-500/15 shadow-xs'
+                      : 'border-slate-200 dark:border-zinc-800 bg-slate-50/40 dark:bg-zinc-800/30 hover:border-slate-300 dark:hover:border-zinc-700'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Full Mock</span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800">
                       5 Credits
                     </span>
                   </div>
@@ -262,13 +262,13 @@ export default function AiInterviewStudioPage() {
                   onClick={() => setSessionMode('weak_area')}
                   className={`p-4 rounded-xl border cursor-pointer transition-all ${
                     sessionMode === 'weak_area'
-                      ? 'border-blue-600 bg-blue-50/40 dark:bg-blue-950/30 ring-2 ring-blue-500/20 shadow-xs'
-                      : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/40 dark:bg-zinc-800/30 hover:border-zinc-300 dark:hover:border-zinc-700'
+                      ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/40 ring-3 ring-blue-500/15 shadow-xs'
+                      : 'border-slate-200 dark:border-zinc-800 bg-slate-50/40 dark:bg-zinc-800/30 hover:border-slate-300 dark:hover:border-zinc-700'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Weak Area Drill</span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-200/70 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-200/80 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300">
                       3 Credits
                     </span>
                   </div>
@@ -289,7 +289,7 @@ export default function AiInterviewStudioPage() {
                 <select
                   value={selectedResumeId}
                   onChange={(e) => setSelectedResumeId(e.target.value)}
-                  className="w-full text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/50 px-3 py-2.5 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                  className="w-full text-xs rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50/60 dark:bg-zinc-800/50 px-3 py-2.5 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-zinc-900 transition-all font-medium"
                 >
                   {resumes.length === 0 ? (
                     <option value="">No resumes found. Please create one.</option>
@@ -334,7 +334,7 @@ export default function AiInterviewStudioPage() {
                   value={targetRole}
                   onChange={(e) => setTargetRole(e.target.value)}
                   placeholder="e.g. Frontend Developer, Backend Engineer"
-                  className="w-full text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/50 px-3 py-2.5 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                  className="w-full text-xs rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50/60 dark:bg-zinc-800/50 px-3 py-2.5 text-zinc-900 dark:text-zinc-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-zinc-900 transition-all font-medium"
                 />
               </div>
 
@@ -345,7 +345,7 @@ export default function AiInterviewStudioPage() {
                 <select
                   value={difficulty}
                   onChange={(e) => setDifficulty(e.target.value as InterviewDifficulty)}
-                  className="w-full text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/50 px-3 py-2.5 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                  className="w-full text-xs rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50/60 dark:bg-zinc-800/50 px-3 py-2.5 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-zinc-900 transition-all font-medium"
                 >
                   <option value="junior">Junior / Associate (Foundational Concepts)</option>
                   <option value="mid">Mid-Level (Standard Technical & STAR)</option>
@@ -401,7 +401,7 @@ export default function AiInterviewStudioPage() {
 
         {/* Right Col: Feature Highlights & Summary */}
         <div className="space-y-5">
-          <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 space-y-5 shadow-sm">
+          <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 space-y-5 shadow-xs">
             <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
               What the Interviewer Evaluates
             </h3>
@@ -445,7 +445,7 @@ export default function AiInterviewStudioPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-850 p-6 space-y-2.5">
+          <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-850 p-6 space-y-2.5">
             <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-blue-600" />
               <span>Free Starter Entitlement</span>

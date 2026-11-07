@@ -27,7 +27,7 @@ export function CrestTemplate({
 
   return (
     <div
-      className={`resume-paper-canvas bg-white text-zinc-950 rounded-sm shadow-md border border-zinc-200/80 w-full max-w-[820px] mx-auto text-left overflow-hidden ${className}`}
+      className={`resume-page-a4 resume-paper-canvas bg-white text-zinc-950 rounded-sm shadow-md border border-zinc-200/80 w-full max-w-[820px] mx-auto text-left overflow-hidden ${className}`}
       style={{ boxSizing: 'border-box' }}
     >
       {/* Bold Full-Width Top Accent Banner */}

@@ -23,7 +23,7 @@ export function ModernTemplate({
 
   return (
     <div
-      className={`resume-paper-canvas bg-white text-zinc-950 p-6 sm:p-10 rounded-sm shadow-md border border-zinc-200/80 w-full max-w-[820px] mx-auto text-left font-sans leading-relaxed ${className}`}
+      className={`resume-page-a4 resume-paper-canvas bg-white text-zinc-950 p-6 sm:p-10 rounded-sm shadow-md border border-zinc-200/80 w-full max-w-[820px] mx-auto text-left font-sans leading-relaxed ${className}`}
       style={{ boxSizing: 'border-box' }}
     >
       {/* Header */}

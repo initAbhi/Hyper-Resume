@@ -39,7 +39,7 @@ export function AwesomeCVTemplate({
 
   return (
     <div
-      className={`resume-paper-canvas bg-white text-zinc-900 p-8 sm:p-11 rounded-sm shadow-md border border-zinc-200/80 w-full max-w-[820px] mx-auto text-left leading-relaxed ${
+      className={`resume-page-a4 resume-paper-canvas bg-white text-zinc-900 p-8 sm:p-11 rounded-sm shadow-md border border-zinc-200/80 w-full max-w-[820px] mx-auto text-left leading-relaxed ${
         fontFamily === 'serif' ? 'font-serif' : fontFamily === 'mono' ? 'font-mono' : 'font-sans'
       } ${className}`}
       style={{ boxSizing: 'border-box' }}

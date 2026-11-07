@@ -206,7 +206,7 @@ function JobMatchInner() {
       {/* Input Form Card with Premium Framing */}
       <form
         onSubmit={handleStartAnalysis}
-        className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm p-6 sm:p-8 space-y-6"
+        className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs p-6 sm:p-8 space-y-6"
       >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {/* Source Resume Selection */}
@@ -216,9 +216,9 @@ function JobMatchInner() {
               <span>Grounding Resume</span>
             </label>
             {isLoadingResumes ? (
-              <div className="h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 animate-pulse border border-zinc-200 dark:border-zinc-700" />
+              <div className="h-10 rounded-xl bg-slate-100 dark:bg-zinc-800 animate-pulse border border-slate-200 dark:border-zinc-700" />
             ) : resumes.length === 0 ? (
-              <div className="text-xs text-zinc-500 space-y-2 p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-200 dark:border-zinc-700">
+              <div className="text-xs text-zinc-500 space-y-2 p-3 bg-slate-50 dark:bg-zinc-800/50 rounded-xl border border-slate-200 dark:border-zinc-700">
                 <p>No resumes found in workspace.</p>
                 <Link href="/app/resumes">
                   <Button variant="outline" size="sm" className="w-full text-xs">
@@ -230,7 +230,7 @@ function JobMatchInner() {
               <select
                 value={selectedResumeId}
                 onChange={(e) => setSelectedResumeId(e.target.value)}
-                className="w-full text-xs py-2.5 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                className="w-full text-xs py-2.5 px-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50/60 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-zinc-900 transition-all font-medium"
               >
                 {resumes.map((r) => (
                   <option key={r.id} value={r.id}>
@@ -257,7 +257,7 @@ function JobMatchInner() {
               placeholder="e.g. Stripe, Razorpay, Google"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
-              className="w-full text-xs py-2.5 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+              className="w-full text-xs py-2.5 px-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50/60 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-zinc-900 transition-all"
             />
           </div>
 
@@ -272,7 +272,7 @@ function JobMatchInner() {
               placeholder="e.g. Senior Backend Engineer"
               value={jobTitle}
               onChange={(e) => setJobTitle(e.target.value)}
-              className="w-full text-xs py-2.5 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+              className="w-full text-xs py-2.5 px-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50/60 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-zinc-900 transition-all"
             />
           </div>
         </div>
@@ -285,7 +285,7 @@ function JobMatchInner() {
                 Job Description
               </label>
               {jobDescriptionText.length > 0 && (
-                <span className="text-[10.5px] px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-mono">
+                <span className="text-[10.5px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-mono">
                   {jobDescriptionText.length} chars
                 </span>
               )}
@@ -295,7 +295,7 @@ function JobMatchInner() {
               <button
                 type="button"
                 onClick={handlePasteClipboard}
-                className="inline-flex items-center gap-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 px-2 py-1 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 px-2 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
               >
                 <ClipboardPaste className="w-3 h-3" />
                 <span>Paste from Clipboard</span>
@@ -317,12 +317,12 @@ function JobMatchInner() {
             value={jobDescriptionText}
             onChange={(e) => setJobDescriptionText(e.target.value)}
             required
-            className="w-full text-xs sm:text-[13px] p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/30 dark:bg-zinc-800/30 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:bg-white dark:focus:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 leading-relaxed font-sans transition-all"
+            className="w-full text-xs sm:text-[13px] p-4 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50/40 dark:bg-zinc-800/40 text-zinc-900 dark:text-zinc-100 placeholder:text-slate-400 focus:bg-white dark:focus:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 leading-relaxed font-sans transition-all"
           />
         </div>
 
         {/* Action Controls Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-100 dark:border-zinc-800">
           <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
             <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span>Evaluates documented evidence only. Does not fabricate unconfirmed qualifications.</span>
