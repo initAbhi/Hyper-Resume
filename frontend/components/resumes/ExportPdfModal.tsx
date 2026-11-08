@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { X, FileText, Briefcase, Bookmark, Eye } from 'lucide-react';
+import { X, FileText, Briefcase, CheckCircle2 } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 import { jsPDF } from 'jspdf';
 
@@ -63,7 +63,7 @@ export function ExportPdfModal({
         pageElements = directChild ? [directChild] : [container];
       }
 
-      setProgress(40);
+      setProgress(35);
 
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -78,6 +78,9 @@ export function ExportPdfModal({
       for (let i = 0; i < pageElements.length; i++) {
         const pageEl = pageElements[i];
 
+        // Smooth visual pacing for progress
+        await new Promise((r) => setTimeout(r, 120));
+
         // High-fidelity capture via html-to-image (native browser SVG pipeline, supports oklch/lab/custom fonts)
         const dataUrl = await htmlToImage.toPng(pageEl, {
           quality: 0.98,
@@ -86,7 +89,7 @@ export function ExportPdfModal({
           cacheBust: true,
           filter: (node) => {
             // Skip any print:hidden or modal elements that might be inside
-            if (node instanceof HTMLElement && node.classList.contains('print:hidden')) {
+            if (node instanceof HTMLElement && (node.classList.contains('print:hidden') || node.id === 'export-pdf-modal')) {
               return false;
             }
             return true;
@@ -99,10 +102,11 @@ export function ExportPdfModal({
 
         pdf.addImage(dataUrl, 'PNG', 0, 0, pageWidthMm, pageHeightMm, undefined, 'FAST');
 
-        const stepProgress = Math.min(95, Math.round(40 + ((i + 1) / pageElements.length) * 50));
+        const stepProgress = Math.min(95, Math.round(35 + ((i + 1) / pageElements.length) * 55));
         setProgress(stepProgress);
       }
 
+      await new Promise((r) => setTimeout(r, 150));
       setProgress(100);
       setIsDone(true);
 
@@ -111,8 +115,12 @@ export function ExportPdfModal({
       const blobUrl = URL.createObjectURL(blob);
       setPdfBlobUrl(blobUrl);
 
-      // Trigger native file download
-      triggerDownload(blobUrl);
+      // Trigger direct file download
+      try {
+        pdf.save(cleanFileName);
+      } catch {
+        triggerDownload(blobUrl);
+      }
     } catch (err: unknown) {
       console.error('PDF Export Error:', err);
       setErrorMessage(err instanceof Error ? err.message : 'Failed to generate PDF');
@@ -121,7 +129,7 @@ export function ExportPdfModal({
     } finally {
       isGeneratingRef.current = false;
     }
-  }, [targetContainerId, triggerDownload]);
+  }, [cleanFileName, targetContainerId, triggerDownload]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -143,7 +151,7 @@ export function ExportPdfModal({
   return (
     <div
       id="export-pdf-modal"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs print:hidden animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm print:hidden animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
@@ -177,24 +185,21 @@ export function ExportPdfModal({
           />
         </div>
 
-        {/* Context Card: Saved Role & Bookmark */}
-        <div className="p-3.5 rounded-xl border border-zinc-100 bg-zinc-50/70 flex items-center justify-between gap-3">
+        {/* Context Card: Resume Ready & Direct Download */}
+        <div className="p-3.5 rounded-xl border border-zinc-100 bg-zinc-50/80 flex items-center justify-between gap-3">
           <div className="space-y-0.5 min-w-0">
-            <p className="text-[11px] text-zinc-500">
-              We&apos;ve added this role to your <strong className="text-zinc-700 font-semibold">Saved Jobs</strong>.
+            <p className="text-[11px] text-zinc-700">
+              Your resume <strong className="font-semibold text-zinc-900">{resumeName || 'Resume'}</strong> is ready.
             </p>
             <p className="text-[11px] text-zinc-400">
-              Staying organized keeps every opportunity within reach.
+              Formatted as high-resolution vector A4 pages for ATS & recruiter review.
             </p>
           </div>
 
           <div className="shrink-0 text-right space-y-1">
-            <div className="text-[11px] font-semibold text-zinc-800 truncate max-w-[130px]">
-              {resumeName || 'Resume'}
-            </div>
-            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-purple-100 text-purple-700 border border-purple-200">
-              <Bookmark className="w-2.5 h-2.5" />
-              <span>Bookmarked</span>
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200">
+              <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
+              <span>A4 PDF</span>
             </span>
           </div>
         </div>
