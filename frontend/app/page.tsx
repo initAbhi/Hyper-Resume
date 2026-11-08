@@ -60,11 +60,16 @@ export default function HomePage() {
       {/* =====================================================
           1. HERO SECTION (Editorial, Credible, High-Clarity)
       ===================================================== */}
-      <section className="relative w-full pt-12 pb-16 sm:pt-20 sm:pb-24 px-4 sm:px-6 lg:px-8 border-b border-[#E2E5E9] dark:border-[#252A33]">
+      <section className="relative w-full pt-12 pb-16 sm:pt-20 sm:pb-24 px-4 sm:px-6 lg:px-8 border-b border-[#E2E5E9] dark:border-[#252A33] overflow-hidden">
+        {/* Subtle Ambient Glowing Orbs */}
+        <div className="absolute top-1/4 -left-20 w-80 h-80 bg-blue-500/10 dark:bg-blue-600/15 rounded-full blur-3xl pointer-events-none animate-float-slow" />
+        <div className="absolute top-1/3 -right-20 w-96 h-96 bg-emerald-500/10 dark:bg-emerald-600/15 rounded-full blur-3xl pointer-events-none animate-float-slow [animation-delay:2.5s]" />
+
         <div className="relative max-w-5xl mx-auto flex flex-col items-center text-center">
           
           {/* Eyebrow badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F1F3F5] dark:bg-[#1D2128] border border-[#E2E5E9] dark:border-[#252A33] text-[#5A6270] dark:text-[#9EA7B4] text-xs font-semibold mb-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F1F3F5] dark:bg-[#1D2128] border border-[#E2E5E9] dark:border-[#252A33] text-[#5A6270] dark:text-[#9EA7B4] text-xs font-semibold mb-6 shadow-xs hover:border-blue-400/40 transition-colors">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse" />
             <span>Career Productivity Platform</span>
           </div>
 
@@ -81,13 +86,13 @@ export default function HomePage() {
           {/* Action CTAs */}
           <div className="mt-7 flex flex-col sm:flex-row items-center justify-center gap-3 w-full sm:w-auto">
             <Link href="/login" className="w-full sm:w-auto">
-              <Button size="lg" className="w-full sm:w-auto rounded-md bg-[#285FEA] hover:bg-[#1E4BC8] text-white font-medium text-sm h-11 px-7 shadow-xs gap-2">
+              <Button size="lg" className="w-full sm:w-auto rounded-md bg-[#285FEA] hover:bg-[#1E4BC8] text-white font-medium text-sm h-11 px-7 shadow-sm hover:shadow-blue-500/25 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all gap-2 cursor-pointer">
                 <span>Build My Resume — Free</span>
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
             <Link href="/tools/resume-checker" className="w-full sm:w-auto">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-md text-sm font-medium h-11 px-6">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-md text-sm font-medium h-11 px-6 hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer">
                 Try Free ATS Checker
               </Button>
             </Link>
@@ -142,8 +147,8 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 rounded-xl bg-white dark:bg-[#14171C] border border-[#E2E5E9] dark:border-[#252A33] shadow-xs flex flex-col gap-3">
-              <div className="w-9 h-9 rounded-md bg-[#F1F3F5] dark:bg-[#1D2128] text-[#285FEA] flex items-center justify-center font-bold">
+            <div className="p-6 rounded-xl bg-white dark:bg-[#14171C] border border-[#E2E5E9] dark:border-[#252A33] shadow-xs hover:shadow-lg hover:border-blue-400/30 dark:hover:border-blue-500/30 hover:-translate-y-1 transition-all duration-300 flex flex-col gap-3 group">
+              <div className="w-9 h-9 rounded-md bg-[#F1F3F5] dark:bg-[#1D2128] text-[#285FEA] group-hover:bg-blue-50 dark:group-hover:bg-blue-950/40 group-hover:scale-105 transition-all flex items-center justify-center font-bold">
                 <FileText className="w-4 h-4" />
               </div>
               <h3 className="text-base font-semibold text-[#1A1D23] dark:text-[#F0F2F5]">Standard Single-Column ATS</h3>
@@ -152,8 +157,8 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="p-6 rounded-xl bg-white dark:bg-[#14171C] border border-[#E2E5E9] dark:border-[#252A33] shadow-xs flex flex-col gap-3">
-              <div className="w-9 h-9 rounded-md bg-[#F1F3F5] dark:bg-[#1D2128] text-[#059669] flex items-center justify-center font-bold">
+            <div className="p-6 rounded-xl bg-white dark:bg-[#14171C] border border-[#E2E5E9] dark:border-[#252A33] shadow-xs hover:shadow-lg hover:border-emerald-400/30 dark:hover:border-emerald-500/30 hover:-translate-y-1 transition-all duration-300 flex flex-col gap-3 group">
+              <div className="w-9 h-9 rounded-md bg-[#F1F3F5] dark:bg-[#1D2128] text-[#059669] group-hover:bg-emerald-50 dark:group-hover:bg-emerald-950/40 group-hover:scale-105 transition-all flex items-center justify-center font-bold">
                 <Shield className="w-4 h-4" />
               </div>
               <h3 className="text-base font-semibold text-[#1A1D23] dark:text-[#F0F2F5]">Truthful Grounding</h3>
@@ -162,8 +167,8 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="p-6 rounded-xl bg-white dark:bg-[#14171C] border border-[#E2E5E9] dark:border-[#252A33] shadow-xs flex flex-col gap-3">
-              <div className="w-9 h-9 rounded-md bg-[#F1F3F5] dark:bg-[#1D2128] text-[#285FEA] flex items-center justify-center font-bold">
+            <div className="p-6 rounded-xl bg-white dark:bg-[#14171C] border border-[#E2E5E9] dark:border-[#252A33] shadow-xs hover:shadow-lg hover:border-blue-400/30 dark:hover:border-blue-500/30 hover:-translate-y-1 transition-all duration-300 flex flex-col gap-3 group">
+              <div className="w-9 h-9 rounded-md bg-[#F1F3F5] dark:bg-[#1D2128] text-[#285FEA] group-hover:bg-blue-50 dark:group-hover:bg-blue-950/40 group-hover:scale-105 transition-all flex items-center justify-center font-bold">
                 <Briefcase className="w-4 h-4" />
               </div>
               <h3 className="text-base font-semibold text-[#1A1D23] dark:text-[#F0F2F5]">Transparent Requirement Analysis</h3>
@@ -243,28 +248,37 @@ export default function HomePage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-              <div className="p-3 rounded-lg bg-white dark:bg-[#1D2128] border border-[#E2E5E9] dark:border-[#252A33] space-y-1">
+              <div className="p-3 rounded-lg bg-white dark:bg-[#1D2128] border border-[#E2E5E9] dark:border-[#252A33] hover:border-blue-400/50 hover:shadow-sm hover:-translate-y-0.5 transition-all space-y-1">
                 <div className="flex items-center justify-between font-semibold text-[#1A1D23] dark:text-[#F0F2F5]">
                   <span>Google</span>
-                  <span className="px-1.5 py-0.2 rounded bg-[#EDF3FD] dark:bg-[#13203D] text-[#1E4BC8] text-[10px] font-medium">Applied</span>
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#EDF3FD] dark:bg-[#13203D] text-[#1E4BC8] text-[10px] font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                    <span>Applied</span>
+                  </span>
                 </div>
                 <p className="text-[11px] text-[#5A6270] dark:text-[#9EA7B4]">Backend Engineer</p>
                 <div className="text-[10px] text-[#848D9A] pt-1">Resume: Modern v2</div>
               </div>
 
-              <div className="p-3 rounded-lg bg-white dark:bg-[#1D2128] border border-[#285FEA]/40 space-y-1">
+              <div className="p-3 rounded-lg bg-white dark:bg-[#1D2128] border border-[#285FEA]/40 hover:border-[#285FEA] hover:shadow-md hover:-translate-y-0.5 transition-all space-y-1">
                 <div className="flex items-center justify-between font-semibold text-[#1A1D23] dark:text-[#F0F2F5]">
                   <span>Stripe</span>
-                  <span className="px-1.5 py-0.2 rounded bg-[#ECFDF5] dark:bg-[#064E3B]/40 text-[#065F46] dark:text-[#A7F3D0] text-[10px] font-medium">Interviewing</span>
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#ECFDF5] dark:bg-[#064E3B]/40 text-[#065F46] dark:text-[#A7F3D0] text-[10px] font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>Interviewing</span>
+                  </span>
                 </div>
                 <p className="text-[11px] text-[#5A6270] dark:text-[#9EA7B4]">Product Analyst</p>
                 <div className="text-[10px] text-[#285FEA] font-medium pt-1">Technical Round</div>
               </div>
 
-              <div className="p-3 rounded-lg bg-white dark:bg-[#1D2128] border border-[#E2E5E9] dark:border-[#252A33] space-y-1">
+              <div className="p-3 rounded-lg bg-white dark:bg-[#1D2128] border border-[#E2E5E9] dark:border-[#252A33] hover:border-zinc-400/50 hover:shadow-sm hover:-translate-y-0.5 transition-all space-y-1">
                 <div className="flex items-center justify-between font-semibold text-[#1A1D23] dark:text-[#F0F2F5]">
                   <span>Linear</span>
-                  <span className="px-1.5 py-0.2 rounded bg-[#F1F3F5] dark:bg-[#1D2128] text-[#5A6270] text-[10px] font-medium">Bookmarked</span>
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#F1F3F5] dark:bg-[#1D2128] text-[#5A6270] text-[10px] font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
+                    <span>Bookmarked</span>
+                  </span>
                 </div>
                 <p className="text-[11px] text-[#5A6270] dark:text-[#9EA7B4]">Full Stack Engineer</p>
                 <div className="text-[10px] text-[#848D9A] pt-1">Resume: Simple ATS</div>

@@ -1303,7 +1303,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                       fontFamily={fontFamily}
                       showPhoto={showPhoto}
                       photoUrl={photoUrl}
-                      showHighlights={showHighlights}
+                      showHighlights={isExportModalOpen ? false : showHighlights}
                     />
                   );
                 })()}

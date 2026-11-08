@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Sparkles, 
@@ -18,6 +18,26 @@ import { ScoreMeter } from '@/components/resumes/ScoreMeter';
 
 export function InteractiveHeroStudio() {
   const [isOptimized, setIsOptimized] = useState(true);
+  const [liveScore, setLiveScore] = useState(0);
+
+  // Smooth count-up on load (0 -> 98) and animated easing when toggling
+  useEffect(() => {
+    const target = isOptimized ? 98 : 58;
+    const start = liveScore;
+    let startTime: number | null = null;
+    const duration = 1200; // ms
+
+    let animId: number;
+    const step = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      setLiveScore(Math.round(start + (target - start) * ease));
+      if (progress < 1) animId = requestAnimationFrame(step);
+    };
+    animId = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(animId);
+  }, [isOptimized]);
 
   return (
     <div className="relative w-full max-w-5xl mx-auto text-left">
@@ -58,7 +78,7 @@ export function InteractiveHeroStudio() {
                   isOptimized ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'
                 }`}
               />
-              <span>{isOptimized ? '98% ATS Pass' : '58% Needs Work'}</span>
+              <span className="font-mono">{isOptimized ? `${liveScore}% ATS Pass` : `${liveScore}% Needs Work`}</span>
             </span>
           </div>
         </div>
@@ -285,12 +305,12 @@ export function InteractiveHeroStudio() {
                     <TrendingUp className="w-3.5 h-3.5 text-blue-600" />
                     Live ATS Score Meter
                   </span>
-                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold font-mono ${
                     isOptimized 
                       ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
                       : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
                   }`}>
-                    {isOptimized ? 'Passed (98)' : 'Needs Review (58)'}
+                    {isOptimized ? `Passed (${liveScore})` : `Needs Review (${liveScore})`}
                   </span>
                 </div>
 

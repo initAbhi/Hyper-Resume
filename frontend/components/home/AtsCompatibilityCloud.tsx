@@ -96,16 +96,19 @@ export function AtsCompatibilityCloud() {
         Single-column document flow and clean text layers help ensure your qualifications extract accurately in systems like Workday, Greenhouse, Ashby, and Lever.
       </p>
 
-      {/* Logos Strip */}
-      <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4 items-center justify-center">
-        {atsEngines.map((engine) => (
-          <div
-            key={engine.name}
-            className="flex items-center justify-center p-3 rounded-lg bg-white dark:bg-[#14171C] border border-[#E2E5E9] dark:border-[#252A33] shadow-xs"
-          >
-            {engine.render()}
-          </div>
-        ))}
+      {/* Endless Moving ATS Cards Conveyor */}
+      <div className="mt-8 relative w-full overflow-hidden marquee-mask py-3 select-none">
+        <div className="flex animate-marquee gap-4 items-center">
+          {/* Repeating array 2x for seamless 50% infinite translation loop */}
+          {[...atsEngines, ...atsEngines].map((engine, idx) => (
+            <div
+              key={`${engine.name}-${idx}`}
+              className="flex items-center justify-center px-6 py-3.5 rounded-xl bg-white dark:bg-[#14171C] border border-[#E2E5E9] dark:border-[#252A33] shadow-xs hover:shadow-md hover:border-blue-400/60 dark:hover:border-blue-500/60 hover:-translate-y-0.5 transition-all duration-200 shrink-0 min-w-[145px] cursor-default"
+            >
+              {engine.render()}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

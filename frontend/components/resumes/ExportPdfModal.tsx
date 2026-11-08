@@ -53,6 +53,21 @@ export function ExportPdfModal({
         throw new Error('Resume container not found');
       }
 
+      // Temporarily strip proofreading/keyword highlight styling so the exported PDF is clean
+      container.classList.add('pdf-export-mode');
+      const marks = Array.from(container.querySelectorAll<HTMLElement>('.ats-keyword-highlight, mark'));
+      marks.forEach((m) => {
+        m.style.setProperty('background', 'transparent', 'important');
+        m.style.setProperty('background-color', 'transparent', 'important');
+        m.style.setProperty('border', 'none', 'important');
+        m.style.setProperty('padding', '0', 'important');
+        m.style.setProperty('color', 'inherit', 'important');
+        m.style.setProperty('box-shadow', 'none', 'important');
+      });
+
+      // Brief tick for DOM styles to apply
+      await new Promise((r) => setTimeout(r, 60));
+
       // Collect all discrete A4 pages
       let pageElements = Array.from(
         container.querySelectorAll<HTMLElement>('.resume-page-a4')
@@ -127,6 +142,19 @@ export function ExportPdfModal({
       setProgress(100);
       setIsDone(true);
     } finally {
+      const container = document.getElementById(targetContainerId);
+      if (container) {
+        container.classList.remove('pdf-export-mode');
+        const marks = Array.from(container.querySelectorAll<HTMLElement>('.ats-keyword-highlight, mark'));
+        marks.forEach((m) => {
+          m.style.removeProperty('background');
+          m.style.removeProperty('background-color');
+          m.style.removeProperty('border');
+          m.style.removeProperty('padding');
+          m.style.removeProperty('color');
+          m.style.removeProperty('box-shadow');
+        });
+      }
       isGeneratingRef.current = false;
     }
   }, [cleanFileName, targetContainerId, triggerDownload]);

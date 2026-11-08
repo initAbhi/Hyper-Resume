@@ -20,6 +20,41 @@ import { ScoreMeter } from '@/components/resumes/ScoreMeter';
 export function ReziStyleScoreFeatureSection() {
   const [activeSection, setActiveSection] = useState<'build' | 'score' | 'target'>('score');
 
+  const sectionData = {
+    build: {
+      score: 94,
+      candidate: 'Charles Bloomberg · Structural Audit',
+      criteria: [
+        { name: 'Single-Column Hierarchy', score: 100, color: 'text-emerald-400' },
+        { name: 'Standard Section Headings', score: 100, color: 'text-emerald-400' },
+        { name: 'Clean UTF-8 Parsing Flow', score: 98, color: 'text-emerald-400' },
+        { name: 'A4 Layout & Density Fit', score: 92, color: 'text-blue-400' },
+      ],
+    },
+    score: {
+      score: 85,
+      candidate: 'Charles Bloomberg · Live Audit',
+      criteria: [
+        { name: 'Content & Impact Verbs', score: 95, color: 'text-emerald-400' },
+        { name: 'Formatting & ATS Structure', score: 100, color: 'text-emerald-400' },
+        { name: 'Quantifiable Metrics (STAR)', score: 82, color: 'text-blue-400' },
+        { name: 'Job Keyword Alignment', score: 88, color: 'text-emerald-400' },
+      ],
+    },
+    target: {
+      score: 89,
+      candidate: 'Target: Lead Software Architect',
+      criteria: [
+        { name: 'Core Required Competencies', score: 94, color: 'text-emerald-400' },
+        { name: 'Cloud Architecture Evidence', score: 96, color: 'text-emerald-400' },
+        { name: 'Distributed Systems Keywords', score: 88, color: 'text-blue-400' },
+        { name: 'Buzzword Penalty Check', score: 100, color: 'text-emerald-400', passText: 'Clean' },
+      ],
+    },
+  };
+
+  const currentData = sectionData[activeSection];
+
   return (
     <div className="w-full rounded-2xl sm:rounded-3xl bg-zinc-950 text-white p-4 sm:p-8 lg:p-16 border border-zinc-800 relative overflow-hidden shadow-2xl">
       {/* Subtle background glow */}
@@ -120,23 +155,20 @@ export function ReziStyleScoreFeatureSection() {
               
               {/* Left inside: Meter */}
               <div className="sm:col-span-5 p-4 rounded-2xl bg-zinc-950/80 border border-zinc-800/80 flex flex-col items-center text-center">
-                <ScoreMeter score={85} />
+                <ScoreMeter score={currentData.score} variant="dark" textColor="text-white" />
                 <span className="text-[11px] text-zinc-400 mt-2 font-medium">
-                  Candidate: Charles Bloomberg
+                  {currentData.candidate}
                 </span>
               </div>
 
               {/* Right inside: Multi-criteria Breakdown */}
               <div className="sm:col-span-7 space-y-2 text-xs">
-                {[
-                  { name: 'Content & Impact Verbs', score: 95, color: 'text-emerald-400' },
-                  { name: 'Formatting & ATS Structure', score: 100, color: 'text-emerald-400' },
-                  { name: 'Quantifiable Metrics (STAR)', score: 82, color: 'text-blue-400' },
-                  { name: 'Job Keyword Alignment', score: 88, color: 'text-emerald-400' },
-                ].map((crit) => (
-                  <div key={crit.name} className="p-2.5 rounded-xl bg-zinc-950/60 border border-zinc-800/60 flex items-center justify-between">
+                {currentData.criteria.map((crit) => (
+                  <div key={crit.name} className="p-2.5 rounded-xl bg-zinc-950/60 border border-zinc-800/60 flex items-center justify-between transition-all duration-300">
                     <span className="text-zinc-300 font-medium">{crit.name}</span>
-                    <span className={`font-bold ${crit.color}`}>{crit.score}% Pass</span>
+                    <span className={`font-bold ${crit.color}`}>
+                      {(crit as any).passText || `${crit.score}% Pass`}
+                    </span>
                   </div>
                 ))}
               </div>
