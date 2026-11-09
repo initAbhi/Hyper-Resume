@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { SpotlightCard } from '@/components/reactbits/SpotlightCard';
 import { 
   ShieldCheck, 
   Search, 
@@ -38,7 +39,7 @@ export function CredibilityAndTrustSection() {
   ];
 
   return (
-    <section className="w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-white/[0.08] bg-[#090A10] text-white relative overflow-hidden">
+    <section className="w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8 bg-[#090A10] text-white relative overflow-hidden">
       
       {/* Ambient Radial Spotlight */}
       <div className="absolute top-1/2 left-1/3 -translate-y-1/2 w-[600px] h-[350px] bg-[#5525F5]/10 blur-3xl pointer-events-none rounded-full" />
@@ -47,7 +48,7 @@ export function CredibilityAndTrustSection() {
         
         {/* Editorial Section Header */}
         <div className="max-w-3xl space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white/[0.04] border border-white/[0.08] text-zinc-300 text-xs font-semibold tracking-wider uppercase font-mono shadow-inner">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white/[0.04] text-zinc-300 text-xs font-semibold tracking-wider uppercase font-mono shadow-inner">
             <span className="w-1.5 h-1.5 rounded-full bg-[#5525F5] animate-pulse" />
             <span>Guiding Principles</span>
           </div>
@@ -61,21 +62,23 @@ export function CredibilityAndTrustSection() {
           </p>
         </div>
 
-        {/* 4 Pillars Grid */}
+        {/* 4 Pillars Grid with SpotlightCards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {pillars.map((pillar) => {
             const Icon = pillar.icon;
             return (
-              <div
+              <SpotlightCard
                 key={pillar.title}
-                className="p-6 rounded-2xl bg-[#121422]/65 backdrop-blur-md border border-white/[0.08] shadow-lg flex flex-col justify-between space-y-4 hover:border-violet-500/50 hover:shadow-[0_0_30px_rgba(85,37,245,0.2)] hover:-translate-y-1 transition-all duration-300"
+                className="p-6 h-full flex flex-col justify-between space-y-4 shadow-lg hover:-translate-y-1 transition-all duration-300"
+                spotlightColor="rgba(139, 92, 246, 0.16)"
+                borderGlowColor="rgba(168, 85, 247, 0.45)"
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/[0.08] text-[#A5B4FC] flex items-center justify-center font-bold shadow-inner">
+                    <div className="w-10 h-10 rounded-xl bg-white/[0.05] text-[#A5B4FC] flex items-center justify-center font-bold shadow-inner">
                       <Icon className="w-5 h-5" />
                     </div>
-                    <span className="text-[10.5px] font-mono px-2 py-0.5 rounded bg-white/[0.06] text-zinc-300 border border-white/[0.08] font-semibold">
+                    <span className="text-[10.5px] font-mono px-2 py-0.5 rounded bg-white/[0.06] text-zinc-300 font-semibold">
                       {pillar.attribute}
                     </span>
                   </div>
@@ -89,11 +92,11 @@ export function CredibilityAndTrustSection() {
                   </p>
                 </div>
 
-                <div className="pt-3 border-t border-white/[0.08] flex items-center gap-2 text-xs text-zinc-300 font-medium">
+                <div className="pt-3 border-t border-white/[0.06] flex items-center gap-2 text-xs text-zinc-300 font-medium">
                   <Check className="w-3.5 h-3.5 text-emerald-400" />
                   <span>Enforced across all templates &amp; AI suggestions</span>
                 </div>
-              </div>
+              </SpotlightCard>
             );
           })}
         </div>

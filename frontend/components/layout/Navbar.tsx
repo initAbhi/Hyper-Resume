@@ -71,7 +71,7 @@ function NavbarInner() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-[#090A10]/80 backdrop-blur-xl border-b border-white/[0.08] transition-colors">
+    <header className="sticky top-0 z-50 w-full bg-[#090A10]/80 backdrop-blur-xl border-b border-white/[0.04] shadow-[0_4px_30px_rgba(0,0,0,0.5)] transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
         {/* Brand */}
         <div className="flex items-center gap-8">
