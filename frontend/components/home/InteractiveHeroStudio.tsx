@@ -23,7 +23,7 @@ import { ScoreMeter } from '@/components/resumes/ScoreMeter';
 export function InteractiveHeroStudio() {
   // 3 Modes: 'original' | 'intelligence' | 'optimized'
   const [activeStage, setActiveStage] = useState<'original' | 'intelligence' | 'optimized'>('optimized');
-  const [liveScore, setLiveScore] = useState(98);
+  const [liveScore, setLiveScore] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
 
   // Smooth count-up score animation on mode switch

@@ -27,7 +27,7 @@ export function AtsCompatibilityCloud() {
       color: '#005CB9',
       render: () => (
         <div className="flex items-center">
-          <span className="font-black text-base tracking-tighter text-[#005CB9] dark:text-[#38BDF8]">
+          <span className="font-black text-base tracking-tighter text-[#38BDF8]">
             workday
           </span>
           <span className="w-1.5 h-1.5 rounded-full bg-[#E57200] ml-0.5 inline-block" />
@@ -40,7 +40,7 @@ export function AtsCompatibilityCloud() {
       render: () => (
         <div className="flex items-center gap-1 font-bold text-base tracking-tight text-[#65B32E]">
           <span>bamboo</span>
-          <span className="text-zinc-800 dark:text-zinc-200 font-extrabold">HR</span>
+          <span className="text-white font-extrabold">HR</span>
         </div>
       ),
     },
@@ -85,15 +85,15 @@ export function AtsCompatibilityCloud() {
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 text-center">
-      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#F7F8FA] dark:bg-[#1A1D23] text-[#626B7A] dark:text-[#9EA7B4] text-xs font-semibold mb-3 border border-[#E6E8ED] dark:border-[#252A33] font-mono uppercase tracking-wider">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#3730F5] dark:bg-blue-400" />
+      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white/[0.04] text-zinc-300 text-xs font-semibold mb-3 border border-white/[0.08] font-mono uppercase tracking-wider">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#5525F5] animate-pulse" />
         <span>Standard Single-Column Layouts</span>
       </div>
 
-      <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#171923] dark:text-[#F0F2F5] tracking-tight">
+      <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white tracking-tight">
         Engineered for standard parsing conventions
       </h3>
-      <p className="text-xs sm:text-sm text-[#626B7A] dark:text-[#9EA7B4] mt-2 max-w-xl mx-auto leading-relaxed">
+      <p className="text-xs sm:text-sm text-zinc-400 mt-2 max-w-xl mx-auto leading-relaxed">
         Single-column document flow and clean text layers help ensure your qualifications extract accurately in systems like Workday, Greenhouse, Ashby, and Lever.
       </p>
 
@@ -104,7 +104,7 @@ export function AtsCompatibilityCloud() {
           {[...atsEngines, ...atsEngines].map((engine, idx) => (
             <div
               key={`${engine.name}-${idx}`}
-              className="flex items-center justify-center px-6 py-3.5 rounded-xl bg-white dark:bg-[#14171C] border border-[#E6E8ED] dark:border-[#252A33] shadow-xs hover:shadow-md hover:border-[#3730F5]/50 dark:hover:border-blue-500/50 hover:-translate-y-0.5 transition-all duration-200 shrink-0 min-w-[145px] cursor-default"
+              className="flex items-center justify-center px-6 py-3.5 rounded-xl bg-[#121422]/70 backdrop-blur-md border border-white/[0.08] shadow-lg hover:border-violet-500/50 hover:shadow-[0_0_30px_rgba(85,37,245,0.25)] hover:-translate-y-1 transition-all duration-300 shrink-0 min-w-[145px] cursor-default"
             >
               {engine.render()}
             </div>

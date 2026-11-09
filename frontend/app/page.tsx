@@ -16,15 +16,24 @@ import { FaqAndFinalCta } from '@/components/home/FaqAndFinalCta';
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col items-center overflow-x-hidden bg-white dark:bg-[#0C0D13] text-[#171923] dark:text-[#F0F2F5] selection:bg-[#3730F5]/10 selection:text-[#3730F5]">
+    <div className="flex flex-col items-center overflow-x-hidden bg-[#090A10] text-white selection:bg-[#5525F5]/30 selection:text-white min-h-screen relative w-full">
       
+      {/* Ambient Grid Pattern Overlay (Tactile Aceternity/Linear touch) */}
+      <div 
+        className="fixed inset-0 pointer-events-none opacity-[0.03] z-0" 
+        style={{
+          backgroundImage: 'radial-gradient(rgba(255,255,255,0.85) 1px, transparent 1px)',
+          backgroundSize: '28px 28px'
+        }}
+      />
+
       {/* =====================================================
           1. HERO SECTION (Dark Cinematic 3D Experience)
       ===================================================== */}
-      <section className="relative w-full pt-12 pb-20 sm:pt-16 sm:pb-28 px-4 sm:px-6 lg:px-8 border-b border-[#1E2235] bg-[#090A10] text-white overflow-hidden">
+      <section className="relative w-full pt-12 pb-20 sm:pt-16 sm:pb-28 px-4 sm:px-6 lg:px-8 border-b border-white/[0.08] bg-[#090A10] text-white overflow-hidden z-10">
         
         {/* Soft Radial Backlight & Cinematic Vignette */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[550px] bg-gradient-to-b from-[#5525F5]/18 via-[#4263FF]/10 to-transparent blur-3xl pointer-events-none rounded-full" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[550px] bg-gradient-to-b from-[#5525F5]/20 via-[#4263FF]/12 to-transparent blur-3xl pointer-events-none rounded-full" />
         <div className="absolute -top-32 -left-20 w-[450px] h-[450px] bg-[#5525F5]/15 blur-3xl pointer-events-none rounded-full" />
         
         <div className="max-w-7xl mx-auto relative z-10">
@@ -35,7 +44,7 @@ export default function HomePage() {
             <div className="lg:col-span-5 space-y-6 text-left">
               
               {/* Restrained Uppercase Eyebrow Label */}
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#161826] border border-[#262C42] text-zinc-300 text-xs font-semibold tracking-widest uppercase font-mono shadow-inner">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white/[0.04] border border-white/[0.08] text-zinc-300 text-xs font-semibold tracking-widest uppercase font-mono shadow-inner">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#5525F5] animate-pulse" />
                 <span>Intelligent Resume Architecture</span>
               </div>
@@ -62,14 +71,17 @@ export default function HomePage() {
                   </Button>
                 </Link>
                 <Link href="/tools/resume-checker" className="w-full sm:w-auto">
-                  <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-lg text-sm font-semibold h-11 px-6 border-[#363C58] bg-[#141726] text-white hover:border-[#4263FF] hover:bg-[#1C2034] transition-all">
+                  <button 
+                    type="button"
+                    className="w-full sm:w-auto inline-flex items-center justify-center rounded-lg text-sm font-semibold h-11 px-6 border border-white/15 bg-white/[0.06] hover:bg-white/[0.12] text-white hover:border-violet-400/60 transition-all shadow-sm backdrop-blur-md cursor-pointer"
+                  >
                     <span>Explore the Product</span>
-                  </Button>
+                  </button>
                 </Link>
               </div>
 
               {/* Trust-Oriented Product Attributes */}
-              <div className="pt-4 border-t border-[#1C2032] flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-zinc-400 font-medium">
+              <div className="pt-4 border-t border-white/[0.08] flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-zinc-400 font-medium">
                 <div className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                   <span>Standard single-column formats</span>
@@ -101,60 +113,74 @@ export default function HomePage() {
       {/* =====================================================
           2. COMPANY LOGOS ENDLESS CAROUSEL
       ===================================================== */}
-      <section className="w-full border-b border-[#E6E8ED] dark:border-[#252A33] bg-[#F7F8FA]/60 dark:bg-[#101216]/60">
+      <section className="w-full border-b border-white/[0.08] bg-[#090A10] relative z-10">
         <CompanyLogoCloud />
       </section>
 
       {/* =====================================================
           3. ATS COMPATIBILITY ENDLESS CAROUSEL
       ===================================================== */}
-      <section className="w-full border-b border-[#E6E8ED] dark:border-[#252A33] bg-white dark:bg-[#0C0D13]">
+      <section className="w-full border-b border-white/[0.08] bg-[#090A10] relative z-10">
         <AtsCompatibilityCloud />
       </section>
 
       {/* =====================================================
           4. ATS COMPATIBILITY & PARSER ARCHITECTURE
       ===================================================== */}
-      <AtsCompatibilitySection />
+      <div className="w-full relative z-10">
+        <AtsCompatibilitySection />
+      </div>
 
       {/* =====================================================
-          3. PRODUCT STORYTELLING (01 BUILD → 02 ANALYZE → 03 OPTIMIZE → 04 TAILOR)
+          5. PRODUCT STORYTELLING (01 BUILD → 02 ANALYZE → 03 OPTIMIZE → 04 TAILOR)
       ===================================================== */}
-      <ProductWorkflowStorytelling />
+      <div className="w-full relative z-10">
+        <ProductWorkflowStorytelling />
+      </div>
 
       {/* =====================================================
-          4. RESUME TEMPLATE GALLERY (Editorial Design Library)
+          6. RESUME TEMPLATE GALLERY (Editorial Design Library)
       ===================================================== */}
-      <section className="w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-[#E6E8ED] dark:border-[#252A33] bg-white dark:bg-[#0C0D13]">
+      <section className="w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-white/[0.08] bg-[#090A10] relative z-10">
         <div className="max-w-6xl mx-auto">
           <InteractiveTemplateShowcase />
         </div>
       </section>
 
       {/* =====================================================
-          5. SAMPLE LIBRARY (Show the Range of Use Cases)
+          7. SAMPLE LIBRARY (Show the Range of Use Cases)
       ===================================================== */}
-      <SampleLibraryShowcase />
+      <div className="w-full relative z-10">
+        <SampleLibraryShowcase />
+      </div>
 
       {/* =====================================================
-          6. PRODUCT WORKSPACE (Application Pipeline)
+          8. PRODUCT WORKSPACE (Application Pipeline)
       ===================================================== */}
-      <ApplicationPipelineWorkspace />
+      <div className="w-full relative z-10">
+        <ApplicationPipelineWorkspace />
+      </div>
 
       {/* =====================================================
-          7. TRUST, CREDIBILITY AND TRANSPARENCY
+          9. TRUST, CREDIBILITY AND TRANSPARENCY
       ===================================================== */}
-      <CredibilityAndTrustSection />
+      <div className="w-full relative z-10">
+        <CredibilityAndTrustSection />
+      </div>
 
       {/* =====================================================
-          8. TRANSPARENT PRICING
+          10. TRANSPARENT PRICING
       ===================================================== */}
-      <PricingSection />
+      <div className="w-full relative z-10">
+        <PricingSection />
+      </div>
 
       {/* =====================================================
-          9. FREQUENTLY ASKED QUESTIONS & FINAL CALL TO ACTION
+          11. FREQUENTLY ASKED QUESTIONS & FINAL CALL TO ACTION
       ===================================================== */}
-      <FaqAndFinalCta />
+      <div className="w-full relative z-10">
+        <FaqAndFinalCta />
+      </div>
 
     </div>
   );

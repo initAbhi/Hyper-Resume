@@ -6,9 +6,7 @@ import {
   Search, 
   FileText, 
   Lock, 
-  Sparkles, 
   Check, 
-  UserCheck 
 } from 'lucide-react';
 
 export function CredibilityAndTrustSection() {
@@ -40,20 +38,25 @@ export function CredibilityAndTrustSection() {
   ];
 
   return (
-    <section className="w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-[#E6E8ED] dark:border-[#252A33] bg-[#F7F8FA] dark:bg-[#101216]">
-      <div className="max-w-6xl mx-auto space-y-12">
+    <section className="w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-white/[0.08] bg-[#090A10] text-white relative overflow-hidden">
+      
+      {/* Ambient Radial Spotlight */}
+      <div className="absolute top-1/2 left-1/3 -translate-y-1/2 w-[600px] h-[350px] bg-[#5525F5]/10 blur-3xl pointer-events-none rounded-full" />
+
+      <div className="max-w-6xl mx-auto space-y-12 relative z-10">
         
         {/* Editorial Section Header */}
         <div className="max-w-3xl space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white dark:bg-[#1A1D23] border border-[#E6E8ED] dark:border-[#252A33] text-[#626B7A] dark:text-[#9EA7B4] text-xs font-semibold tracking-wider uppercase font-mono">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white/[0.04] border border-white/[0.08] text-zinc-300 text-xs font-semibold tracking-wider uppercase font-mono shadow-inner">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#5525F5] animate-pulse" />
             <span>Guiding Principles</span>
           </div>
           
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#171923] dark:text-[#F0F2F5] tracking-tight leading-tight">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight leading-tight">
             Built on evidence, not exaggeration.
           </h2>
           
-          <p className="text-sm sm:text-base text-[#626B7A] dark:text-[#9EA7B4] leading-relaxed">
+          <p className="text-sm sm:text-base text-zinc-400 leading-relaxed">
             A credible career technology company should empower your authentic qualifications, not invent false claims. We hold our product to uncompromising standards of transparency and evidence.
           </p>
         </div>
@@ -65,29 +68,29 @@ export function CredibilityAndTrustSection() {
             return (
               <div
                 key={pillar.title}
-                className="p-6 rounded-2xl bg-white dark:bg-[#14171C] border border-[#E6E8ED] dark:border-[#252A33] shadow-xs flex flex-col justify-between space-y-4 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                className="p-6 rounded-2xl bg-[#121422]/65 backdrop-blur-md border border-white/[0.08] shadow-lg flex flex-col justify-between space-y-4 hover:border-violet-500/50 hover:shadow-[0_0_30px_rgba(85,37,245,0.2)] hover:-translate-y-1 transition-all duration-300"
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="w-10 h-10 rounded-xl bg-[#F7F8FA] dark:bg-[#1D2128] border border-[#E6E8ED] dark:border-[#252A33] text-[#3730F5] dark:text-blue-400 flex items-center justify-center font-bold">
+                    <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/[0.08] text-[#A5B4FC] flex items-center justify-center font-bold shadow-inner">
                       <Icon className="w-5 h-5" />
                     </div>
-                    <span className="text-[10.5px] font-mono px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-semibold">
+                    <span className="text-[10.5px] font-mono px-2 py-0.5 rounded bg-white/[0.06] text-zinc-300 border border-white/[0.08] font-semibold">
                       {pillar.attribute}
                     </span>
                   </div>
 
-                  <h3 className="text-base font-bold text-[#171923] dark:text-[#F0F2F5]">
+                  <h3 className="text-base font-bold text-white">
                     {pillar.title}
                   </h3>
 
-                  <p className="text-xs sm:text-sm text-[#626B7A] dark:text-[#9EA7B4] leading-relaxed">
+                  <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
                     {pillar.desc}
                   </p>
                 </div>
 
-                <div className="pt-3 border-t border-[#E6E8ED] dark:border-[#252A33] flex items-center gap-2 text-xs text-[#3730F5] dark:text-blue-400 font-medium">
-                  <Check className="w-3.5 h-3.5" />
+                <div className="pt-3 border-t border-white/[0.08] flex items-center gap-2 text-xs text-zinc-300 font-medium">
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
                   <span>Enforced across all templates &amp; AI suggestions</span>
                 </div>
               </div>
@@ -99,4 +102,3 @@ export function CredibilityAndTrustSection() {
     </section>
   );
 }
-

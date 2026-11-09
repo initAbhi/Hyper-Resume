@@ -11,7 +11,9 @@ import {
   AlertCircle,
   FileSearch,
   Check,
-  Eye
+  Eye,
+  Terminal,
+  Cpu
 } from 'lucide-react';
 
 export function AtsCompatibilitySection() {
@@ -45,20 +47,25 @@ export function AtsCompatibilitySection() {
   ];
 
   return (
-    <section className="w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-[#E6E8ED] dark:border-[#252A33] bg-[#F7F8FA] dark:bg-[#101216]">
-      <div className="max-w-6xl mx-auto space-y-12">
+    <section className="w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-white/[0.08] bg-[#090A10] text-white relative overflow-hidden">
+      
+      {/* Ambient Radial Spotlight */}
+      <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[600px] h-[400px] bg-[#5525F5]/10 blur-3xl pointer-events-none rounded-full" />
+
+      <div className="max-w-6xl mx-auto space-y-12 relative z-10">
         
         {/* Editorial Header */}
         <div className="max-w-3xl space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white dark:bg-[#1A1D23] border border-[#E6E8ED] dark:border-[#252A33] text-[#626B7A] dark:text-[#9EA7B4] text-xs font-semibold tracking-wider uppercase font-mono">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white/[0.04] border border-white/[0.08] text-zinc-300 text-xs font-semibold tracking-wider uppercase font-mono">
+            <Cpu className="w-3.5 h-3.5 text-[#5525F5]" />
             <span>Parser Architecture</span>
           </div>
           
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#171923] dark:text-[#F0F2F5] tracking-tight leading-tight">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight leading-tight">
             Designed for people. Structured for parsing.
           </h2>
           
-          <p className="text-sm sm:text-base text-[#626B7A] dark:text-[#9EA7B4] leading-relaxed">
+          <p className="text-sm sm:text-base text-zinc-400 leading-relaxed">
             Clean document hierarchy, conventional section structures, and readable text layers help ensure your resume is accurately interpreted by recruiting systems and human reviewers alike.
           </p>
         </div>
@@ -75,126 +82,135 @@ export function AtsCompatibilitySection() {
                   key={p.id}
                   type="button"
                   onClick={() => setActiveTab(p.id as any)}
-                  className={`w-full text-left p-4 sm:p-5 rounded-xl border transition-all duration-200 cursor-pointer ${
+                  className={`w-full text-left p-4 sm:p-5 rounded-2xl border transition-all duration-200 cursor-pointer ${
                     isActive
-                      ? 'bg-white dark:bg-[#171923] border-[#3730F5] dark:border-blue-500 shadow-sm ring-1 ring-[#3730F5]/20'
-                      : 'bg-white/60 dark:bg-[#14171C]/60 border-[#E6E8ED] dark:border-[#252A33] hover:bg-white dark:hover:bg-[#171923] hover:border-zinc-300 dark:hover:border-zinc-700'
+                      ? 'bg-[#151827] border-[#5525F5] shadow-lg shadow-violet-500/20 ring-1 ring-[#5525F5]/30'
+                      : 'bg-[#10121C]/60 backdrop-blur-md border-white/[0.08] hover:bg-[#141724] hover:border-white/20'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-mono uppercase tracking-wider text-[#626B7A] dark:text-[#9EA7B4]">
+                    <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">
                       {p.subtitle}
                     </span>
                     <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-semibold ${
                       isActive 
-                        ? 'bg-[#3730F5]/10 text-[#3730F5] dark:text-blue-400' 
-                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'
+                        ? 'bg-[#5525F5]/20 text-[#A5B4FC] border border-[#5525F5]/40' 
+                        : 'bg-white/[0.04] text-zinc-400 border border-white/[0.06]'
                     }`}>
                       {p.metric}
                     </span>
                   </div>
-                  <h3 className="text-sm sm:text-base font-bold text-[#171923] dark:text-[#F0F2F5] mt-1.5">
+
+                  <h3 className="text-sm sm:text-base font-bold text-white mt-1.5">
                     {p.title}
                   </h3>
-                  <p className="text-xs text-[#626B7A] dark:text-[#9EA7B4] mt-1.5 leading-relaxed">
+
+                  <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
                     {p.desc}
                   </p>
+
+                  <div className="mt-3 pt-3 border-t border-white/[0.06] flex items-center gap-1.5 text-[11px] text-[#A5B4FC] font-medium">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>{p.highlight}</span>
+                  </div>
                 </button>
               );
             })}
           </div>
 
-          {/* Right Column: High-Fidelity Technical Document Inspector */}
-          <div className="lg:col-span-7 bg-white dark:bg-[#14171C] rounded-2xl border border-[#E6E8ED] dark:border-[#252A33] shadow-sm overflow-hidden">
+          {/* Right Column: Live ATS Parser Inspection Terminal Stream */}
+          <div className="lg:col-span-7 bg-[#0E101B]/90 backdrop-blur-xl rounded-2xl border border-white/[0.1] shadow-2xl overflow-hidden">
             
-            {/* Inspector Chrome Bar */}
-            <div className="px-4 py-3 bg-[#F7F8FA] dark:bg-[#1D2128] border-b border-[#E6E8ED] dark:border-[#252A33] flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <FileSearch className="w-4 h-4 text-[#3730F5] dark:text-blue-400" />
-                <span className="font-semibold text-[#171923] dark:text-[#F0F2F5]">
-                  ATS Parser Inspection Stream
-                </span>
+            {/* Terminal Chrome Bar */}
+            <div className="px-4 py-3 bg-[#131624] border-b border-white/[0.08] flex items-center justify-between text-xs font-mono">
+              <div className="flex items-center gap-2 text-zinc-200">
+                <Terminal className="w-4 h-4 text-emerald-400" />
+                <span className="font-semibold">ATS Parser Inspection Stream</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10.5px] font-mono bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 font-semibold">
-                  <CheckCircle2 className="w-3 h-3" />
-                  100% Parsable Layer
-                </span>
-              </div>
+              <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                100% Parsable Layer
+              </span>
             </div>
 
-            {/* Inspector Display Content */}
-            <div className="p-5 sm:p-6 space-y-5">
+            {/* Parser Stream Nodes Demonstration */}
+            <div className="p-5 sm:p-6 space-y-4 font-mono text-xs">
               
-              {/* Document Stream Hierarchy */}
-              <div className="space-y-3 font-mono text-xs">
+              {/* Stream Nodes */}
+              <div className="space-y-3">
                 
-                {/* Node 1: Header */}
-                <div className="p-3 rounded-lg bg-[#F7F8FA] dark:bg-[#101216] border border-[#E6E8ED] dark:border-[#252A33] flex items-start justify-between gap-4">
-                  <div className="space-y-1">
-                    <span className="text-[10px] text-zinc-400 uppercase tracking-wider block">
-                      NODE 01: CANDIDATE IDENTITY & CONTACT
-                    </span>
-                    <p className="text-zinc-800 dark:text-zinc-200 font-semibold">
-                      Alex Morgan <span className="font-normal text-zinc-500">· Senior Product Analyst</span>
-                    </p>
-                    <p className="text-[11px] text-zinc-500">
-                      alex.morgan@email.com · (415) 555-0192 · San Francisco, CA
-                    </p>
-                  </div>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
-                    PASS
-                  </span>
-                </div>
-
-                {/* Node 2: Experience Landmark */}
-                <div className={`p-3 rounded-lg border transition-all ${
-                  activeTab === 'flow' || activeTab === 'headings'
-                    ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/40'
-                    : 'bg-[#F7F8FA] dark:bg-[#101216] border-[#E6E8ED] dark:border-[#252A33]'
+                {/* Node 1: Candidate Identity */}
+                <div className={`p-3 rounded-xl border transition-all ${
+                  activeTab === 'flow' 
+                    ? 'bg-blue-500/10 border-blue-500/40 text-blue-200' 
+                    : 'bg-[#141724] border-white/[0.06] text-zinc-300'
                 }`}>
                   <div className="flex items-start justify-between gap-4">
                     <div className="space-y-1">
-                      <span className="text-[10px] text-blue-600 dark:text-blue-400 uppercase tracking-wider block font-bold">
+                      <span className="text-[10px] text-blue-400 uppercase tracking-wider block font-bold">
+                        NODE 01: CANDIDATE IDENTITY & CONTACT
+                      </span>
+                      <p className="text-white font-semibold">
+                        Alex Morgan <span className="text-zinc-500 font-normal">—</span> Senior Product Analyst
+                      </p>
+                      <p className="text-[11px] text-zinc-400">
+                        alex.morgan@email.com · (415) 555-0192 · San Francisco, CA
+                      </p>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold shrink-0 border border-emerald-500/30">
+                      PASS
+                    </span>
+                  </div>
+                </div>
+
+                {/* Node 2: Experience Landmark */}
+                <div className={`p-3 rounded-xl border transition-all ${
+                  activeTab === 'flow' || activeTab === 'headings'
+                    ? 'bg-blue-500/10 border-blue-500/40'
+                    : 'bg-[#141724] border-white/[0.06]'
+                }`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-blue-400 uppercase tracking-wider block font-bold">
                         NODE 02: SECTION_TOKEN [EXPERIENCE]
                       </span>
-                      <p className="text-zinc-800 dark:text-zinc-200 font-semibold">
-                        ClearPath Analytics <span className="text-zinc-400 font-normal">—</span> Senior Product Analyst
+                      <p className="text-white font-semibold">
+                        ClearPath Analytics <span className="text-zinc-500 font-normal">—</span> Senior Product Analyst
                       </p>
-                      <p className="text-[11px] text-zinc-500">
+                      <p className="text-[11px] text-zinc-400">
                         Date Range: 2022 – Present (Current Position Verified)
                       </p>
                     </div>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold shrink-0 border border-emerald-500/30">
                       RECOGNIZED
                     </span>
                   </div>
                 </div>
 
                 {/* Node 3: STAR Bullet Vector Text */}
-                <div className={`p-3 rounded-lg border transition-all ${
+                <div className={`p-3 rounded-xl border transition-all ${
                   activeTab === 'text'
-                    ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/40'
-                    : 'bg-[#F7F8FA] dark:bg-[#101216] border-[#E6E8ED] dark:border-[#252A33]'
+                    ? 'bg-emerald-500/10 border-emerald-500/40'
+                    : 'bg-[#141724] border-white/[0.06]'
                 }`}>
                   <div className="flex items-start justify-between gap-4">
                     <div className="space-y-1.5">
-                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block font-bold">
+                      <span className="text-[10px] text-emerald-400 uppercase tracking-wider block font-bold">
                         NODE 03: BULLET_ACHIEVEMENT [TEXT_LAYER_RAW]
                       </span>
-                      <p className="text-xs text-zinc-700 dark:text-zinc-300 font-sans leading-relaxed">
+                      <p className="text-xs text-zinc-200 font-sans leading-relaxed">
                         &quot;Spearheaded 22 checkout pricing A/B experiments, identifying 3 high-converting funnels that increased quarterly ARR by $180K and reduced checkout drop-off by 14%.&quot;
                       </p>
                       <div className="flex flex-wrap gap-2 text-[10px] pt-1">
-                        <span className="text-emerald-700 dark:text-emerald-300 bg-emerald-100/60 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded">
+                        <span className="text-emerald-300 bg-emerald-950/60 border border-emerald-800/40 px-2 py-0.5 rounded">
                           Action Verb: Spearheaded
                         </span>
-                        <span className="text-blue-700 dark:text-blue-300 bg-blue-100/60 dark:bg-blue-950/50 px-1.5 py-0.5 rounded">
+                        <span className="text-blue-300 bg-blue-950/60 border border-blue-800/40 px-2 py-0.5 rounded">
                           Metric: $180K ARR (+14%)
                         </span>
                       </div>
                     </div>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold shrink-0 border border-emerald-500/30">
                       EXTRACTED
                     </span>
                   </div>
@@ -203,21 +219,21 @@ export function AtsCompatibilitySection() {
               </div>
 
               {/* Verified Architecture Attributes Checklist */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-[#E6E8ED] dark:border-[#252A33] text-[11px] text-[#626B7A] dark:text-[#9EA7B4]">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 border-t border-white/[0.08] text-[11px] text-zinc-400">
                 <div className="flex items-center gap-1.5">
-                  <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                   <span>Single-Column Flow</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                   <span>Standard Headings</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                   <span>Zero Table Traps</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                   <span>Clean UTF-8 PDF</span>
                 </div>
               </div>
@@ -231,4 +247,3 @@ export function AtsCompatibilitySection() {
     </section>
   );
 }
-

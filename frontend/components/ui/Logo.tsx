@@ -8,6 +8,7 @@ export interface LogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
   priority?: boolean;
+  theme?: 'light' | 'dark' | 'auto';
 }
 
 const sizeConfig = {
@@ -38,6 +39,7 @@ export function Logo({
   size = 'md',
   className = '',
   priority = true,
+  theme = 'auto',
 }: LogoProps) {
   const cfg = sizeConfig[size] || sizeConfig.md;
 
@@ -77,8 +79,8 @@ export function Logo({
   // Pure HTML Typography Wordmark (sharp, crisp, accessible)
   const Wordmark = () => (
     <span className={`tracking-tight select-none font-sans leading-none flex items-center ${cfg.textSize}`}>
-      <span className="text-[#1A1D23] dark:text-[#F0F2F5]">Hype</span>
-      <span className="text-[#285FEA]">Resume</span>
+      <span className={theme === 'dark' ? 'text-white' : 'text-[#1A1D23] dark:text-[#F0F2F5]'}>Hype</span>
+      <span className="text-[#3872FA]">Resume</span>
     </span>
   );
 
