@@ -334,18 +334,18 @@ export function InteractiveHeroStudio() {
                 </div>
               </div>
 
-              {/* Instant Action CTA Card */}
-              <div className="p-4 sm:p-5 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-50/80 via-indigo-50/40 to-blue-50/20 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-800/90 border border-blue-200/80 dark:border-zinc-800 space-y-3.5 shadow-sm">
+              {/* Instant Action Card */}
+              <div className="p-4 sm:p-5 rounded-xl sm:rounded-2xl bg-white dark:bg-zinc-900 border border-[#E6E8ED] dark:border-zinc-800 space-y-3.5 shadow-xs">
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-blue-600 text-white shrink-0 shadow-xs shadow-blue-500/30">
+                  <div className="p-2 rounded-xl bg-[#3730F5] text-white shrink-0 shadow-xs">
                     <Zap className="w-4 h-4" />
                   </div>
                   <div>
                     <h5 className="text-xs sm:text-sm font-bold text-zinc-950 dark:text-white leading-tight">
-                      Build Your ATS Resume in 3 Minutes
+                      Build Your ATS Resume in Minutes
                     </h5>
                     <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                      Free export • 100% unwatermarked PDF
+                      Standard single-column • Free vector PDF export
                     </p>
                   </div>
                 </div>
@@ -353,7 +353,7 @@ export function InteractiveHeroStudio() {
                 <Link href="/login" className="block w-full">
                   <button
                     type="button"
-                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-xs shadow-sm shadow-blue-600/20 transition-all cursor-pointer"
+                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#3730F5] hover:bg-[#2820D4] active:scale-[0.99] text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
                   >
                     <span>Start Building Free</span>
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -368,7 +368,7 @@ export function InteractiveHeroStudio() {
                   <span>•</span>
                   <span className="flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    Instant download
+                    Unwatermarked PDF
                   </span>
                 </div>
               </div>

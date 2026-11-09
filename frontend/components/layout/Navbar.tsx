@@ -71,24 +71,24 @@ function NavbarInner() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-zinc-200/60 dark:border-zinc-800/60 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <header className="sticky top-0 z-50 w-full bg-white/90 dark:bg-[#0C0D13]/90 backdrop-blur-md border-b border-[#E6E8ED] dark:border-[#252A33] transition-colors">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
         {/* Brand */}
         <div className="flex items-center gap-8">
           <Link
             href="/"
-            className="flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-lg"
+            className="flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3730F5] rounded-lg"
             aria-label="HypeResume Home"
           >
             <Logo variant="full" size="md" priority />
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-1 text-sm" aria-label="Main Navigation">
+          <nav className="hidden lg:flex items-center gap-1 text-xs" aria-label="Main Navigation">
             {/* Product Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <button
-                className="flex items-center gap-1 px-3 py-2 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors font-medium"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors font-medium cursor-pointer"
                 onClick={() => setIsProductOpen(!isProductOpen)}
                 aria-expanded={isProductOpen}
               >
@@ -97,16 +97,16 @@ function NavbarInner() {
               </button>
               
               {isProductOpen && (
-                <div className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-800 p-2 animate-slide-up z-50">
+                <div className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-[#14171C] rounded-xl shadow-xl border border-[#E6E8ED] dark:border-[#252A33] p-2 animate-slide-up z-50">
                   {productLinks.map((link) => (
                     <Link
                       key={link.href}
                       href={link.href}
-                      className="flex flex-col gap-0.5 px-3 py-2.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                      className="flex flex-col gap-0.5 px-3 py-2 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
                       onClick={() => setIsProductOpen(false)}
                     >
-                      <span className="text-sm font-medium text-zinc-900 dark:text-white">{link.label}</span>
-                      <span className="text-xs text-zinc-500 dark:text-zinc-400">{link.desc}</span>
+                      <span className="text-xs font-semibold text-zinc-900 dark:text-white">{link.label}</span>
+                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{link.desc}</span>
                     </Link>
                   ))}
                 </div>
@@ -122,9 +122,9 @@ function NavbarInner() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`px-3 py-2 rounded-lg font-medium transition-colors ${
+                  className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
                     isActive
-                      ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40'
+                      ? 'text-[#3730F5] dark:text-blue-400 bg-blue-50/70 dark:bg-blue-950/40 font-semibold'
                       : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/50'
                   }`}
                 >
@@ -140,11 +140,11 @@ function NavbarInner() {
           <ThemeToggle id="desktop-theme-toggle" />
           {isAuthenticated ? (
             <>
-              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-full">
+              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-full font-mono">
                 {creditBalance} credits
               </span>
               <Link href="/app">
-                <Button variant="primary" size="sm">
+                <Button variant="primary" size="sm" className="bg-[#3730F5] hover:bg-[#2820D4] text-xs h-8 px-3.5 shadow-xs">
                   Dashboard
                 </Button>
               </Link>
@@ -152,13 +152,13 @@ function NavbarInner() {
           ) : (
             <>
               <Link href="/login">
-                <Button variant="ghost" size="sm" className="text-zinc-600 dark:text-zinc-400">
+                <Button variant="ghost" size="sm" className="text-xs h-8 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900">
                   Log in
                 </Button>
               </Link>
               <Link href="/tools/resume-checker">
-                <Button variant="primary" size="sm" className="shadow-sm group">
-                  Try for free
+                <Button size="sm" className="bg-[#3730F5] hover:bg-[#2820D4] text-white text-xs font-semibold h-8 px-3.5 shadow-xs group">
+                  <span>Try for free</span>
                   <ArrowRight className="w-3.5 h-3.5 ml-1 transition-transform group-hover:translate-x-0.5" />
                 </Button>
               </Link>
