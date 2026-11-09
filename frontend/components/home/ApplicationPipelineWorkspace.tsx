@@ -79,7 +79,7 @@ export function ApplicationPipelineWorkspace() {
   ];
 
   return (
-    <section className="w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8 bg-[#090A10] text-white relative overflow-hidden">
+    <section className="w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-white/[0.08] bg-[#090A10] text-white relative overflow-hidden">
       
       {/* Soft Ambient Glow */}
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-[#5525F5]/10 blur-3xl pointer-events-none rounded-full" />
@@ -88,7 +88,7 @@ export function ApplicationPipelineWorkspace() {
         
         {/* Editorial Section Header */}
         <div className="max-w-3xl space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white/[0.04] text-zinc-300 text-xs font-semibold tracking-wider uppercase font-mono shadow-inner">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white/[0.04] border border-white/[0.08] text-zinc-300 text-xs font-semibold tracking-wider uppercase font-mono shadow-inner">
             <span className="w-1.5 h-1.5 rounded-full bg-[#5525F5] animate-pulse" />
             <span>Unified Workflow</span>
           </div>
@@ -103,14 +103,10 @@ export function ApplicationPipelineWorkspace() {
         </div>
 
         {/* Realistic Pipeline Board Preview */}
-        <div className="rounded-2xl bg-[#0E101D] p-4 sm:p-6 shadow-2xl overflow-hidden"
-          style={{
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 25px 60px -20px rgba(0,0,0,0.8)'
-          }}
-        >
+        <div className="rounded-2xl border border-white/[0.08] bg-[#0E101B]/90 backdrop-blur-xl p-4 sm:p-6 shadow-2xl overflow-hidden">
           
           {/* Board Top Toolbar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-5 border-b border-white/[0.06] gap-3 text-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-5 border-b border-white/[0.08] gap-3 text-xs">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 font-bold text-white">
                 <Briefcase className="w-4 h-4 text-[#A5B4FC]" />
@@ -123,7 +119,7 @@ export function ApplicationPipelineWorkspace() {
               <Link href="/login">
                 <button 
                   type="button"
-                  className="inline-flex items-center justify-center rounded-lg text-xs font-semibold px-3 h-8 gap-1.5 bg-white/[0.05] hover:bg-white/[0.1] text-white hover:text-fuchsia-300 transition-all shadow-sm cursor-pointer"
+                  className="inline-flex items-center justify-center rounded-lg text-xs font-semibold px-3 h-8 gap-1.5 border border-white/15 bg-white/[0.06] hover:bg-white/[0.12] text-white hover:border-violet-400/60 transition-all shadow-sm backdrop-blur-md cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Log Application</span>
@@ -137,7 +133,7 @@ export function ApplicationPipelineWorkspace() {
             {columns.map((col) => (
               <div
                 key={col.title}
-                className="p-3.5 rounded-xl bg-[#131526]/80 space-y-3"
+                className="p-3.5 rounded-xl bg-[#121422]/70 backdrop-blur-md border border-white/[0.08] space-y-3"
               >
                 {/* Column Header */}
                 <div className="flex items-center justify-between text-xs font-semibold text-white">
@@ -154,10 +150,10 @@ export function ApplicationPipelineWorkspace() {
                   {col.cards.map((c) => (
                     <div
                       key={c.company}
-                      className={`p-3.5 rounded-xl space-y-2 transition-all duration-200 ${
+                      className={`p-3.5 rounded-xl border space-y-2 transition-all duration-200 ${
                         c.highlight
-                          ? 'bg-gradient-to-b from-[#1F1B3C] to-[#16182B] shadow-[0_0_25px_rgba(85,37,245,0.25)] ring-1 ring-violet-500/30'
-                          : 'bg-[#181B2E] hover:bg-[#1D2138] shadow-sm'
+                          ? 'border-violet-500/50 bg-gradient-to-b from-[#1E1B38] to-[#151726] shadow-[0_0_25px_rgba(85,37,245,0.25)] ring-1 ring-violet-500/30'
+                          : 'border-white/[0.08] bg-[#181B2B]/80 hover:border-violet-500/40 hover:shadow-[0_0_20px_rgba(85,37,245,0.2)]'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -169,12 +165,12 @@ export function ApplicationPipelineWorkspace() {
                             {c.role}
                           </div>
                         </div>
-                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400">
+                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                           {c.score}
                         </span>
                       </div>
 
-                      <div className="pt-2 border-t border-white/[0.04] space-y-1 text-[10.5px]">
+                      <div className="pt-2 border-t border-white/[0.08] space-y-1 text-[10.5px]">
                         <div className="flex items-center gap-1.5 text-zinc-300">
                           <FileText className="w-3 h-3 text-[#A5B4FC] shrink-0" />
                           <span className="truncate">{c.resume}</span>
@@ -192,7 +188,7 @@ export function ApplicationPipelineWorkspace() {
           </div>
 
           {/* Bottom Workspace Action */}
-          <div className="mt-5 pt-4 border-t border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between text-xs text-zinc-400 gap-3">
+          <div className="mt-5 pt-4 border-t border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between text-xs text-zinc-400 gap-3">
             <span>Associate exact resume versions, interview dates, and recruiter contact notes in one private system.</span>
             <Link href="/login" className="font-semibold text-[#A5B4FC] hover:text-white inline-flex items-center gap-1 transition-colors">
               <span>Open Application Workspace</span>

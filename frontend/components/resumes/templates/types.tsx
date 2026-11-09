@@ -85,7 +85,7 @@ export function renderHighlightedText(
       return (
         <mark
           key={i}
-          className="ats-keyword-highlight bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 px-1 py-0.5 rounded-[3px] border border-emerald-200/60 dark:border-emerald-800/40 transition-colors font-medium inline-block"
+          className="ats-keyword-highlight bg-rose-100/90 dark:bg-rose-950/40 text-rose-950 dark:text-rose-200 px-1 py-0.5 rounded-[3px] border border-rose-200/60 dark:border-rose-800/40 transition-colors font-medium inline-block"
           style={{ lineHeight: 'inherit' }}
         >
           {part}

@@ -4,7 +4,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, ArrowRight, Check, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { TiltedCard } from '@/components/reactbits/TiltedCard';
 
 interface TemplateItem {
   name: string;
@@ -175,12 +174,9 @@ export function InteractiveTemplateShowcase() {
     <div className="w-full space-y-10 text-white">
       
       {/* Editorial Section Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-white/[0.04]">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-white/[0.08]">
         <div className="space-y-3 max-w-2xl">
-          <div 
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white/[0.04] text-zinc-300 text-xs font-semibold tracking-wider uppercase font-mono"
-            style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' }}
-          >
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white/[0.04] border border-white/[0.08] text-zinc-300 text-xs font-semibold tracking-wider uppercase font-mono shadow-inner">
             <span className="w-1.5 h-1.5 rounded-full bg-[#5525F5] animate-pulse" />
             <span>Template Architecture</span>
           </div>
@@ -193,10 +189,7 @@ export function InteractiveTemplateShowcase() {
         </div>
 
         {/* Category Filter Tabs */}
-        <div 
-          className="flex items-center gap-1.5 p-1 bg-[#121422]/90 backdrop-blur-md rounded-xl overflow-x-auto no-scrollbar shrink-0 self-start md:self-end shadow-md"
-          style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' }}
-        >
+        <div className="flex items-center gap-1.5 p-1 bg-[#121422]/80 backdrop-blur-md rounded-xl border border-white/[0.08] overflow-x-auto no-scrollbar shrink-0 self-start md:self-end shadow-inner">
           {CATEGORIES.map((cat) => {
             const isSelected = activeCategory === cat.id;
             return (
@@ -232,78 +225,67 @@ export function InteractiveTemplateShowcase() {
                 setActiveIndex(idx);
                 scrollToIndex(idx);
               }}
-              className="snap-start shrink-0 w-[82vw] xs:w-[75vw] sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] cursor-pointer"
+              className={`snap-start group relative rounded-2xl bg-[#121422]/70 backdrop-blur-md p-4 sm:p-5 border transition-all duration-300 cursor-pointer select-none shrink-0 w-[82vw] xs:w-[75vw] sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] ${
+                isActive 
+                  ? 'border-[#5525F5] shadow-[0_0_35px_rgba(85,37,245,0.25)] ring-1 ring-[#5525F5]/40' 
+                  : 'border-white/[0.08] hover:border-violet-500/40 hover:shadow-[0_0_30px_rgba(85,37,245,0.2)] hover:-translate-y-1'
+              }`}
             >
-              <TiltedCard maxRotate={8} scaleOnHover={1.03}>
+              {/* Paper Preview Frame */}
+              <div className="relative w-full rounded-xl bg-white overflow-hidden border border-white/[0.1] shadow-xl aspect-[1/1.3] flex items-center justify-center">
+                <img
+                  src={tpl.img}
+                  alt={`${tpl.name} resume template preview`}
+                  loading="lazy"
+                  className="w-full h-full object-cover object-top select-none pointer-events-none"
+                />
+
+                {/* Hover / Active Quick Actions */}
                 <div
-                  className={`group relative rounded-2xl bg-[#0F111D] p-4 sm:p-5 transition-all duration-300 shadow-xl ${
-                    isActive 
-                      ? 'shadow-[0_0_35px_rgba(85,37,245,0.3)] ring-1 ring-violet-500/50' 
-                      : 'hover:shadow-[0_0_30px_rgba(85,37,245,0.18)]'
+                  className={`absolute inset-x-0 bottom-3 flex items-center justify-center gap-2 z-10 transition-all duration-200 ${
+                    isActive
+                      ? 'opacity-100 translate-y-0'
+                      : 'opacity-0 group-hover:opacity-100 translate-y-1'
                   }`}
-                  style={{
-                    boxShadow: isActive 
-                      ? 'inset 0 1px 0 rgba(255,255,255,0.15), 0 20px 40px -15px rgba(0,0,0,0.8), 0 0 35px rgba(85,37,245,0.25)' 
-                      : 'inset 0 1px 0 rgba(255,255,255,0.06), 0 15px 30px -10px rgba(0,0,0,0.6)'
-                  }}
                 >
-                  {/* Paper Preview Frame */}
-                  <div className="relative w-full rounded-xl bg-white overflow-hidden shadow-2xl aspect-[1/1.3] flex items-center justify-center">
-                    <img
-                      src={tpl.img}
-                      alt={`${tpl.name} resume template preview`}
-                      loading="lazy"
-                      className="w-full h-full object-cover object-top select-none pointer-events-none"
-                    />
-
-                    {/* Hover / Active Quick Actions */}
-                    <div
-                      className={`absolute inset-x-0 bottom-3 flex items-center justify-center gap-2 z-10 transition-all duration-200 ${
-                        isActive
-                          ? 'opacity-100 translate-y-0'
-                          : 'opacity-0 group-hover:opacity-100 translate-y-1'
-                      }`}
-                    >
-                      <Link
-                        href={`/login?template=${encodeURIComponent(tpl.name.toLowerCase())}`}
-                        className="px-4 py-2 rounded-lg bg-[#5525F5] hover:bg-[#4318D8] text-white font-semibold text-xs shadow-lg shadow-violet-500/30 transition-all cursor-pointer"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Use Template
-                      </Link>
-                      <Link
-                        href="/examples"
-                        className="px-3.5 py-2 rounded-lg bg-black/85 hover:bg-black text-white font-medium text-xs backdrop-blur-md transition-all shadow-md"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        View Samples
-                      </Link>
-                    </div>
-                  </div>
-
-                  {/* Template Meta */}
-                  <div className="pt-3.5 flex items-baseline justify-between gap-2">
-                    <div>
-                      <h3 className="text-sm font-bold text-white group-hover:text-violet-300 transition-colors">
-                        {tpl.name}
-                      </h3>
-                      <p className="text-[11px] text-zinc-400 mt-0.5 line-clamp-1">
-                        {tpl.desc}
-                      </p>
-                    </div>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/[0.05] text-zinc-300 font-semibold shrink-0">
-                      {tpl.tag}
-                    </span>
-                  </div>
+                  <Link
+                    href={`/login?template=${encodeURIComponent(tpl.name.toLowerCase())}`}
+                    className="px-4 py-2 rounded-lg bg-[#5525F5] hover:bg-[#4318D8] text-white font-semibold text-xs shadow-lg shadow-violet-500/30 transition-all cursor-pointer border border-violet-400/30"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Use Template
+                  </Link>
+                  <Link
+                    href="/examples"
+                    className="px-3.5 py-2 rounded-lg bg-black/80 hover:bg-black text-white font-medium text-xs backdrop-blur-md transition-all border border-white/20"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    View Samples
+                  </Link>
                 </div>
-              </TiltedCard>
+              </div>
+
+              {/* Template Meta */}
+              <div className="pt-3.5 flex items-baseline justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-bold text-white group-hover:text-violet-300 transition-colors">
+                    {tpl.name}
+                  </h3>
+                  <p className="text-[11px] text-zinc-400 mt-0.5 line-clamp-1">
+                    {tpl.desc}
+                  </p>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/[0.06] text-zinc-300 border border-white/[0.08] font-semibold shrink-0">
+                  {tpl.tag}
+                </span>
+              </div>
             </div>
           );
         })}
       </div>
 
       {/* Carousel Footer & Pagination Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-white/[0.04] text-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-white/[0.08] text-xs">
         <div className="text-zinc-400 flex items-center gap-2">
           <span className="font-semibold text-white">{activeTemplate.name}</span>
           <span>·</span>
@@ -315,7 +297,7 @@ export function InteractiveTemplateShowcase() {
             type="button"
             onClick={handlePrev}
             title="Previous template"
-            className="w-8 h-8 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] flex items-center justify-center text-zinc-300 hover:text-white transition-colors cursor-pointer shadow-xs"
+            className="w-8 h-8 rounded-lg bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.12] flex items-center justify-center text-zinc-300 hover:text-white transition-colors cursor-pointer"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -323,7 +305,7 @@ export function InteractiveTemplateShowcase() {
             type="button"
             onClick={handleNext}
             title="Next template"
-            className="w-8 h-8 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] flex items-center justify-center text-zinc-300 hover:text-white transition-colors cursor-pointer shadow-xs"
+            className="w-8 h-8 rounded-lg bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.12] flex items-center justify-center text-zinc-300 hover:text-white transition-colors cursor-pointer"
           >
             <ChevronRight className="w-4 h-4" />
           </button>

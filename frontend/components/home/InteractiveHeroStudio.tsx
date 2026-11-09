@@ -23,22 +23,18 @@ import { ScoreMeter } from '@/components/resumes/ScoreMeter';
 export function InteractiveHeroStudio() {
   // 3 Modes: 'original' | 'intelligence' | 'optimized'
   const [activeStage, setActiveStage] = useState<'original' | 'intelligence' | 'optimized'>('optimized');
-  const [liveScore, setLiveScore] = useState(98);
+  const [liveScore, setLiveScore] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
-  const mountedRef = React.useRef(false);
 
-  // Smooth count-up score animation on mount & mode switch
+  // Smooth count-up score animation on mode switch
   useEffect(() => {
     let target = 98;
     if (activeStage === 'original') target = 58;
     if (activeStage === 'intelligence') target = 86;
 
-    // On initial mount, start from 0 and animate to target
-    const start = mountedRef.current ? liveScore : 0;
-    mountedRef.current = true;
-
+    const start = liveScore;
     let startTime: number | null = null;
-    const duration = 750; // ms
+    const duration = 900; // ms
 
     let animId: number;
     const step = (timestamp: number) => {
@@ -59,10 +55,7 @@ export function InteractiveHeroStudio() {
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6 px-1">
         
         {/* Stage Switcher Tabs */}
-        <div 
-          className="inline-flex items-center p-1 rounded-xl bg-[#10121D] shadow-lg max-w-full overflow-x-auto"
-          style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' }}
-        >
+        <div className="inline-flex items-center p-1 rounded-xl bg-[#11131C] border border-[#222638] shadow-lg max-w-full overflow-x-auto">
           <button
             onClick={() => setActiveStage('original')}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 cursor-pointer whitespace-nowrap ${
@@ -118,10 +111,7 @@ export function InteractiveHeroStudio() {
 
       {/* 3D THEATER STAGE (Perspective Viewport inspired by reference photo) */}
       <div 
-        className="relative w-full rounded-3xl p-4 sm:p-8 lg:p-10 bg-[#090A10] shadow-2xl overflow-hidden perspective-1400"
-        style={{
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 30px 80px -20px rgba(0,0,0,0.9)'
-        }}
+        className="relative w-full rounded-3xl p-4 sm:p-8 lg:p-10 bg-[#090A10] border border-[#1E2235] shadow-2xl overflow-hidden perspective-1400"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
@@ -345,13 +335,13 @@ export function InteractiveHeroStudio() {
               LAYER 2: FLOATING ATS SCORE AUDIT GAUGE (Top-Right Satellite)
           ======================================================== */}
           <div 
-            className="absolute -top-4 sm:-top-8 -right-2 sm:-right-8 w-[240px] sm:w-[280px] rounded-2xl bg-[#0D0F1A]/95 backdrop-blur-xl p-4 text-white shadow-2xl preserve-3d animate-float-panel-top hidden md:block"
+            className="absolute -top-4 sm:-top-8 -right-2 sm:-right-8 w-[240px] sm:w-[280px] rounded-2xl bg-[#11131E]/95 backdrop-blur-md border border-[#262B40] p-4 text-white shadow-2xl preserve-3d animate-float-panel-top hidden md:block"
             style={{
               transform: 'translateZ(70px)',
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 20px 50px -10px rgba(0,0,0,0.85), 0 0 35px -5px rgba(85,37,245,0.35)',
+              boxShadow: '0 20px 50px -10px rgba(0,0,0,0.8), 0 0 30px -5px rgba(85,37,245,0.4)',
             }}
           >
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.06] mb-3">
+            <div className="flex items-center justify-between pb-3 border-b border-[#22273A] mb-3">
               <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-200">
                 <TrendingUp className="w-4 h-4 text-[#4263FF]" />
                 <span>Live ATS Score</span>
@@ -372,7 +362,7 @@ export function InteractiveHeroStudio() {
             </div>
 
             {/* Breakdown Sub-meters */}
-            <div className="space-y-1.5 mt-3 pt-3 border-t border-white/[0.06] text-[11px]">
+            <div className="space-y-1.5 mt-3 pt-3 border-t border-[#22273A] text-[11px]">
               <div className="flex justify-between items-center text-zinc-300">
                 <span>Action & Impact Verbs</span>
                 <span className="font-bold text-emerald-400 font-mono">
@@ -396,13 +386,13 @@ export function InteractiveHeroStudio() {
               LAYER 3: JOB REQUIREMENT MATCH PANEL (Bottom-Left Satellite)
           ======================================================== */}
           <div 
-            className="absolute -bottom-6 -left-2 sm:-left-8 w-[250px] sm:w-[290px] rounded-2xl bg-[#0D0F1A]/95 backdrop-blur-xl p-4 text-white shadow-2xl preserve-3d animate-float-panel-bottom hidden md:block"
+            className="absolute -bottom-6 -left-2 sm:-left-8 w-[250px] sm:w-[290px] rounded-2xl bg-[#11131E]/95 backdrop-blur-md border border-[#262B40] p-4 text-white shadow-2xl preserve-3d animate-float-panel-bottom hidden md:block"
             style={{
               transform: 'translateZ(60px)',
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 20px 50px -10px rgba(0,0,0,0.85), 0 0 35px -5px rgba(66,99,255,0.3)',
+              boxShadow: '0 20px 50px -10px rgba(0,0,0,0.8), 0 0 30px -5px rgba(66,99,255,0.3)',
             }}
           >
-            <div className="flex items-center justify-between pb-2.5 border-b border-white/[0.06] mb-3">
+            <div className="flex items-center justify-between pb-2.5 border-b border-[#22273A] mb-3">
               <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-200">
                 <Target className="w-4 h-4 text-[#5525F5]" />
                 <span>Job Requirement Match</span>
@@ -411,18 +401,12 @@ export function InteractiveHeroStudio() {
             </div>
 
             <div className="space-y-2 text-[11px]">
-              <div 
-                className="flex items-center justify-between p-2 rounded-xl bg-[#131524] shadow-xs"
-                style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)' }}
-              >
+              <div className="flex items-center justify-between p-1.5 rounded-lg bg-[#181B29] border border-[#252A3F]">
                 <span className="text-zinc-300">SQL / Analytics Engineering</span>
                 <span className="text-emerald-400 font-bold font-mono text-[10px]">Verified Match</span>
               </div>
               
-              <div 
-                className="flex items-center justify-between p-2 rounded-xl bg-[#131524] shadow-xs"
-                style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)' }}
-              >
+              <div className="flex items-center justify-between p-1.5 rounded-lg bg-[#181B29] border border-[#252A3F]">
                 <span className="text-zinc-300">A/B Testing & ARR Impact</span>
                 <span className={`font-bold font-mono text-[10px] ${
                   activeStage === 'original' ? 'text-amber-400' : 'text-emerald-400'
@@ -431,17 +415,14 @@ export function InteractiveHeroStudio() {
                 </span>
               </div>
 
-              <div 
-                className="flex items-center justify-between p-2 rounded-xl bg-[#131524] shadow-xs"
-                style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)' }}
-              >
+              <div className="flex items-center justify-between p-1.5 rounded-lg bg-[#181B29] border border-[#252A3F]">
                 <span className="text-zinc-300">Single-Column A4 Parsing</span>
                 <span className="text-blue-400 font-bold font-mono text-[10px]">Deterministic</span>
               </div>
             </div>
 
             {/* Application Branching Pill */}
-            <div className="mt-3 pt-2.5 border-t border-white/[0.06] flex items-center justify-between text-[10px] text-zinc-400 font-mono">
+            <div className="mt-3 pt-2.5 border-t border-[#22273A] flex items-center justify-between text-[10px] text-zinc-400 font-mono">
               <span className="flex items-center gap-1">
                 <Layers className="w-3 h-3 text-[#5525F5]" />
                 <span>Branch: Tailored v2</span>
@@ -453,7 +434,7 @@ export function InteractiveHeroStudio() {
         </div>
 
         {/* Bottom Interactive Hint */}
-        <div className="mt-6 pt-4 border-t border-white/[0.05] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-400">
+        <div className="mt-6 pt-4 border-t border-[#1C2030] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-400">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#5525F5] animate-ping" />
             <span>Click tabs above to toggle between Original Draft, ATS Intelligence, and Job-Matched STAR.</span>

@@ -16,6 +16,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { BeamsBackground, BlurHighlight } from '@/components/reactbits';
 
 export function ProductWorkflowStorytelling() {
   // State for interactive storytelling demonstrations
@@ -89,8 +90,11 @@ export function ProductWorkflowStorytelling() {
       {/* =====================================================
           STORYTELLING 01: BUILD A STRUCTURED RESUME
       ===================================================== */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative rounded-3xl p-2 sm:p-4 overflow-hidden">
+        {/* React Bits: Beams Volumetric Ribbon Canvas in Background */}
+        <BeamsBackground beamColor="rgba(85, 37, 245, 0.12)" density={5} />
+        
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center relative z-10">
           
           {/* Editorial Content */}
           <div className="lg:col-span-5 space-y-4">
@@ -127,20 +131,17 @@ export function ProductWorkflowStorytelling() {
             </div>
           </div>
 
-          {/* High-Fidelity Master Editor Demonstration */}
-          <div 
-            className="lg:col-span-7 bg-[#0E101D] rounded-2xl shadow-2xl overflow-hidden"
-            style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 20px 50px -15px rgba(0,0,0,0.8)' }}
-          >
+          {/* High-Fidelity Master Editor Demonstration (Dark Glassmorphic Frame) */}
+          <div className="lg:col-span-7 bg-[#0E101B]/90 backdrop-blur-xl rounded-2xl border border-white/[0.08] shadow-2xl overflow-hidden">
             {/* Editor Top Navigation */}
-            <div className="px-4 py-3 bg-[#131624] border-b border-white/[0.04] flex items-center justify-between text-xs">
+            <div className="px-4 py-3 bg-[#131624] border-b border-white/[0.08] flex items-center justify-between text-xs">
               <div className="flex items-center gap-2 font-medium text-white">
                 <FileText className="w-4 h-4 text-[#5525F5]" />
                 <span className="font-semibold">Master Profile Editor</span>
                 <span className="text-[10px] text-zinc-400 font-mono">• Saved to private storage</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/[0.06] text-zinc-300 font-semibold shadow-xs">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/[0.06] text-zinc-300 font-semibold border border-white/[0.08]">
                   A4 · 1 Sheet Fitted
                 </span>
               </div>
@@ -150,7 +151,7 @@ export function ProductWorkflowStorytelling() {
             <div className="p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-12 gap-5 text-xs">
               
               {/* Left Form Navigator */}
-              <div className="sm:col-span-4 space-y-1.5 border-r border-white/[0.04] pr-4">
+              <div className="sm:col-span-4 space-y-1.5 border-r border-white/[0.08] pr-4">
                 {[
                   { name: '1. Contact & Identity', active: false, count: '6 fields' },
                   { name: '2. Professional Summary', active: false, count: '3 lines' },
@@ -214,12 +215,9 @@ export function ProductWorkflowStorytelling() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
           
           {/* Job Analyzer Visual (Left on Desktop) */}
-          <div 
-            className="lg:col-span-7 order-2 lg:order-1 bg-[#0E101D] rounded-2xl shadow-2xl overflow-hidden"
-            style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 20px 50px -15px rgba(0,0,0,0.8)' }}
-          >
+          <div className="lg:col-span-7 order-2 lg:order-1 bg-[#0E101B]/90 backdrop-blur-xl rounded-2xl border border-white/[0.08] shadow-2xl overflow-hidden">
             {/* Header */}
-            <div className="px-4 py-3 bg-[#131624] border-b border-white/[0.04] flex items-center justify-between text-xs">
+            <div className="px-4 py-3 bg-[#131624] border-b border-white/[0.08] flex items-center justify-between text-xs">
               <div className="flex items-center gap-2 font-medium text-white">
                 <Search className="w-4 h-4 text-[#5525F5]" />
                 <span className="font-semibold">Job Description Requirement Mapping</span>
@@ -232,7 +230,7 @@ export function ProductWorkflowStorytelling() {
             </div>
 
             {/* Target Job Meta */}
-            <div className="p-4 border-b border-white/[0.04] bg-[#141724] flex items-center justify-between text-xs">
+            <div className="p-4 border-b border-white/[0.08] bg-[#141724] flex items-center justify-between text-xs">
               <div>
                 <span className="text-[10px] uppercase font-mono text-zinc-400 block">Target Opportunity</span>
                 <span className="font-bold text-white text-sm">Senior Backend Engineer</span>
@@ -240,10 +238,7 @@ export function ProductWorkflowStorytelling() {
               </div>
               
               {/* Filter Tabs */}
-              <div 
-                className="flex items-center gap-1 p-0.5 bg-[#0C0E17] rounded-lg text-[11px] font-semibold"
-                style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)' }}
-              >
+              <div className="flex items-center gap-1 p-0.5 bg-[#0C0E17] rounded-lg text-[11px] font-semibold border border-white/[0.06]">
                 <button
                   type="button"
                   onClick={() => setFilterType('all')}
@@ -280,8 +275,8 @@ export function ProductWorkflowStorytelling() {
               </div>
             </div>
 
-            {/* Requirements Evidence List */}
-            <div className="p-4 sm:p-5 space-y-2.5 text-xs">
+            {/* Requirements Evidence List with React Bits BlurHighlight */}
+            <BlurHighlight className="p-4 sm:p-5 space-y-2.5 text-xs">
               {filteredRequirements.map((req) => {
                 const isSupported = req.status === 'supported';
                 return (
@@ -333,10 +328,10 @@ export function ProductWorkflowStorytelling() {
                   </div>
                 );
               })}
-            </div>
+            </BlurHighlight>
 
             {/* Bottom Insight */}
-            <div className="p-3 bg-[#131624] border-t border-white/[0.04] text-[11px] text-zinc-400 flex items-center justify-between">
+            <div className="p-3 bg-[#131624] border-t border-white/[0.08] text-[11px] text-zinc-400 flex items-center justify-between">
               <span>Evaluates documented experience only. Does not invent unevidenced qualifications.</span>
               <span className="font-mono text-zinc-300 font-semibold">Zero Hallucinations</span>
             </div>
@@ -371,7 +366,7 @@ export function ProductWorkflowStorytelling() {
               <Link href="/tools/job-match">
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center rounded-lg text-xs font-semibold px-4 h-9 gap-1.5 bg-white/[0.06] text-white hover:bg-white/[0.12] hover:text-fuchsia-300 shadow-sm backdrop-blur-md cursor-pointer transition-all"
+                  className="inline-flex items-center justify-center rounded-lg text-xs font-semibold px-4 h-9 gap-1.5 border border-white/20 bg-white/[0.05] text-white hover:bg-white/[0.12] hover:border-violet-400/60 shadow-sm backdrop-blur-md cursor-pointer transition-all"
                 >
                   <span>Try Job Match Analyzer</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -424,13 +419,10 @@ export function ProductWorkflowStorytelling() {
             </div>
           </div>
 
-          {/* Interactive Bullet Transformation Visual */}
-          <div 
-            className="lg:col-span-7 bg-[#0E101D] rounded-2xl shadow-2xl overflow-hidden"
-            style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 20px 50px -15px rgba(0,0,0,0.8)' }}
-          >
+          {/* Interactive Bullet Transformation Visual (Dark Glass Frame) */}
+          <div className="lg:col-span-7 bg-[#0E101B]/90 backdrop-blur-xl rounded-2xl border border-white/[0.08] shadow-2xl overflow-hidden">
             {/* Header */}
-            <div className="px-4 py-3 bg-[#131624] border-b border-white/[0.04] flex items-center justify-between text-xs">
+            <div className="px-4 py-3 bg-[#131624] border-b border-white/[0.08] flex items-center justify-between text-xs">
               <div className="flex items-center gap-2 font-medium text-white">
                 <Sparkles className="w-4 h-4 text-[#5525F5]" />
                 <span className="font-semibold">STAR Impact Transformation Demonstration</span>
@@ -489,7 +481,7 @@ export function ProductWorkflowStorytelling() {
                   <span className="px-2 py-0.5 rounded bg-blue-950/60 text-blue-300 border border-blue-800/40 font-medium">
                     ✓ Metric: 32% latency reduction
                   </span>
-                  <span className="px-2 py-0.5 rounded bg-white/[0.06] text-zinc-300 font-medium">
+                  <span className="px-2 py-0.5 rounded bg-white/[0.06] text-zinc-300 border border-white/[0.08] font-medium">
                     ✓ Scope: Core workflows
                   </span>
                 </div>
@@ -546,19 +538,18 @@ export function ProductWorkflowStorytelling() {
               {/* CARD 1: BACKEND ENGINEER (Angled Left) */}
               <div
                 onClick={() => setActiveVariant('backend')}
-                className={`absolute w-full max-w-[360px] sm:max-w-[420px] rounded-2xl p-5 transition-all duration-500 cursor-pointer shadow-xl preserve-3d ${
+                className={`absolute w-full max-w-[360px] sm:max-w-[420px] rounded-2xl p-5 border transition-all duration-500 cursor-pointer shadow-xl preserve-3d ${
                   activeVariant === 'backend'
-                    ? 'z-30 bg-[#161928] border border-[#5525F5] shadow-2xl shadow-violet-500/25 scale-105'
-                    : 'z-10 bg-[#10121C]/80 backdrop-blur-md opacity-80 hover:opacity-100 hover:border-violet-500/30'
+                    ? 'z-30 bg-[#161928] border-[#5525F5] shadow-2xl shadow-violet-500/25 scale-105'
+                    : 'z-10 bg-[#10121C]/80 backdrop-blur-md border-white/[0.08] opacity-80 hover:opacity-100 hover:border-white/20'
                 }`}
                 style={{
                   transform: activeVariant === 'backend'
                     ? 'translateZ(50px) translateY(0px) rotateY(0deg)'
                     : 'translateZ(10px) translateX(-50px) translateY(-15px) rotateY(-12deg) rotateZ(-3deg)',
-                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)'
                 }}
               >
-                <div className="flex items-center justify-between border-b border-white/[0.04] pb-2 mb-3">
+                <div className="flex items-center justify-between border-b border-white/[0.08] pb-2 mb-3">
                   <div>
                     <span className="text-[10px] font-mono uppercase text-zinc-400 font-semibold block">Tailored Variant 01</span>
                     <h4 className="text-sm font-bold text-white">Backend Systems Engineer</h4>
@@ -574,7 +565,7 @@ export function ProductWorkflowStorytelling() {
 
                 <div className="flex flex-wrap gap-1">
                   {['NestJS', 'PostgreSQL', 'Redis', 'BullMQ', 'AWS EC2'].map((s) => (
-                    <span key={s} className="px-2 py-0.5 text-[9.5px] rounded bg-white/[0.06] text-zinc-300 shadow-xs">
+                    <span key={s} className="px-2 py-0.5 text-[9.5px] rounded bg-white/[0.06] text-zinc-300 border border-white/[0.08]">
                       {s}
                     </span>
                   ))}
@@ -584,19 +575,18 @@ export function ProductWorkflowStorytelling() {
               {/* CARD 2: PRODUCT ANALYST (Center / High Elevation) */}
               <div
                 onClick={() => setActiveVariant('analyst')}
-                className={`absolute w-full max-w-[360px] sm:max-w-[420px] rounded-2xl p-5 transition-all duration-500 cursor-pointer shadow-xl preserve-3d ${
+                className={`absolute w-full max-w-[360px] sm:max-w-[420px] rounded-2xl p-5 border transition-all duration-500 cursor-pointer shadow-xl preserve-3d ${
                   activeVariant === 'analyst'
-                    ? 'z-30 bg-[#161928] border border-[#5525F5] shadow-2xl shadow-violet-500/25 scale-105'
-                    : 'z-15 bg-[#10121C]/80 backdrop-blur-md opacity-80 hover:opacity-100 hover:border-violet-500/30'
+                    ? 'z-30 bg-[#161928] border-[#5525F5] shadow-2xl shadow-violet-500/25 scale-105'
+                    : 'z-15 bg-[#10121C]/80 backdrop-blur-md border-white/[0.08] opacity-80 hover:opacity-100 hover:border-white/20'
                 }`}
                 style={{
                   transform: activeVariant === 'analyst'
                     ? 'translateZ(50px) translateY(0px) rotateY(0deg)'
                     : 'translateZ(20px) translateY(10px) rotateY(0deg)',
-                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)'
                 }}
               >
-                <div className="flex items-center justify-between border-b border-white/[0.04] pb-2 mb-3">
+                <div className="flex items-center justify-between border-b border-white/[0.08] pb-2 mb-3">
                   <div>
                     <span className="text-[10px] font-mono uppercase text-[#A5B4FC] font-semibold block">Tailored Variant 02 · Recommended</span>
                     <h4 className="text-sm font-bold text-white">Senior Product Analyst</h4>
@@ -612,7 +602,7 @@ export function ProductWorkflowStorytelling() {
 
                 <div className="flex flex-wrap gap-1">
                   {['SQL & dbt', 'A/B Testing', 'Tableau', 'Amplitude', 'Retention Funnels'].map((s) => (
-                    <span key={s} className="px-2 py-0.5 text-[9.5px] rounded bg-[#5525F5]/20 text-[#A5B4FC] font-medium shadow-xs">
+                    <span key={s} className="px-2 py-0.5 text-[9.5px] rounded bg-[#5525F5]/20 text-[#A5B4FC] border border-[#5525F5]/40 font-medium">
                       {s}
                     </span>
                   ))}
@@ -622,19 +612,18 @@ export function ProductWorkflowStorytelling() {
               {/* CARD 3: SOLUTIONS ARCHITECT (Angled Right) */}
               <div
                 onClick={() => setActiveVariant('solutions')}
-                className={`absolute w-full max-w-[360px] sm:max-w-[420px] rounded-2xl p-5 transition-all duration-500 cursor-pointer shadow-xl preserve-3d ${
+                className={`absolute w-full max-w-[360px] sm:max-w-[420px] rounded-2xl p-5 border transition-all duration-500 cursor-pointer shadow-xl preserve-3d ${
                   activeVariant === 'solutions'
-                    ? 'z-30 bg-[#161928] border border-[#5525F5] shadow-2xl shadow-violet-500/25 scale-105'
-                    : 'z-10 bg-[#10121C]/80 backdrop-blur-md opacity-80 hover:opacity-100 hover:border-violet-500/30'
+                    ? 'z-30 bg-[#161928] border-[#5525F5] shadow-2xl shadow-violet-500/25 scale-105'
+                    : 'z-10 bg-[#10121C]/80 backdrop-blur-md border-white/[0.08] opacity-80 hover:opacity-100 hover:border-white/20'
                 }`}
                 style={{
                   transform: activeVariant === 'solutions'
                     ? 'translateZ(50px) translateY(0px) rotateY(0deg)'
                     : 'translateZ(10px) translateX(50px) translateY(-15px) rotateY(12deg) rotateZ(3deg)',
-                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)'
                 }}
               >
-                <div className="flex items-center justify-between border-b border-white/[0.04] pb-2 mb-3">
+                <div className="flex items-center justify-between border-b border-white/[0.08] pb-2 mb-3">
                   <div>
                     <span className="text-[10px] font-mono uppercase text-zinc-400 font-semibold block">Tailored Variant 03</span>
                     <h4 className="text-sm font-bold text-white">Cloud Solutions Architect</h4>
@@ -650,7 +639,7 @@ export function ProductWorkflowStorytelling() {
 
                 <div className="flex flex-wrap gap-1">
                   {['AWS VPC', 'Terraform', 'Docker', 'Prometheus', 'SLA 99.99%'].map((s) => (
-                    <span key={s} className="px-2 py-0.5 text-[9.5px] rounded bg-white/[0.06] text-zinc-300 shadow-xs">
+                    <span key={s} className="px-2 py-0.5 text-[9.5px] rounded bg-white/[0.06] text-zinc-300 border border-white/[0.08]">
                       {s}
                     </span>
                   ))}
@@ -660,10 +649,7 @@ export function ProductWorkflowStorytelling() {
             </div>
 
             {/* Bottom Meta */}
-            <div 
-              className="mt-4 px-3 py-2 rounded-xl bg-[#131624] text-[11px] text-zinc-400 text-center"
-              style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)' }}
-            >
+            <div className="mt-4 px-3 py-2 rounded-xl bg-[#131624] border border-white/[0.08] text-[11px] text-zinc-400 text-center">
               Each variant preserves its own version history, job match analysis, and clean PDF export.
             </div>
           </div>

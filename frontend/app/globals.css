@@ -276,9 +276,7 @@ body {
 .pdf-export-mode .ats-keyword-highlight,
 .pdf-export-mode mark,
 #resume-document-print.pdf-export-mode .ats-keyword-highlight,
-#resume-document-print.pdf-export-mode mark,
-.hide-highlights .ats-keyword-highlight,
-.hide-highlights mark {
+.hide-highlights .ats-keyword-highlight {
   background: transparent !important;
   background-color: transparent !important;
   border: none !important;
@@ -365,24 +363,6 @@ body {
 /* 3D Dimensional Utilities & Glow */
 .preserve-3d {
   transform-style: preserve-3d;
-}
-
-@keyframes gradient-text-flow {
-  0% {
-    background-position: 0% center;
-  }
-  100% {
-    background-position: 200% center;
-  }
-}
-
-@keyframes star-border-spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
 }
 
 .perspective-1000 {
@@ -620,16 +600,12 @@ body {
   }
 
   /* Preserve colors in resume — only hide keyword highlights in print */
-  #resume-document-print .ats-keyword-highlight,
-  #resume-document-print mark {
+  #resume-document-print .ats-keyword-highlight {
     background: transparent !important;
-    background-color: transparent !important;
     border: none !important;
-    border-color: transparent !important;
     padding: 0 !important;
     color: inherit !important;
     font-weight: inherit !important;
-    box-shadow: none !important;
   }
 
   #resume-document-print h1,

@@ -1,94 +1,86 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
-export interface NeonRevealProps {
+interface NeonRevealProps {
   children?: React.ReactNode;
+  tubeColor?: string;
+  lightColor?: string;
+  direction?: 'down' | 'up';
+  delay?: number;
+  duration?: number;
   className?: string;
-  neonColor?: string; // Hex or rgba
-  glowIntensity?: number; // 0 to 1
-  beamHeight?: number; // Height of light cone in px
-  tubeWidth?: string; // Width of neon tube (e.g. '85%', 'full')
-  revealDelay?: number;
 }
 
 export function NeonReveal({
   children,
+  tubeColor = '#B163E9',
+  lightColor = '#5525F5',
+  direction = 'down',
+  delay = 100,
+  duration = 2000,
   className = '',
-  neonColor = '#D946EF',
-  glowIntensity = 0.85,
-  beamHeight = 420,
-  tubeWidth = '80%',
 }: NeonRevealProps) {
+  const [isLit, setIsLit] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLit(true);
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [delay]);
+
   return (
-    <div className={`relative w-full flex flex-col items-center overflow-hidden ${className}`}>
-      
-      {/* ========================================================
-          1. NEON TUBE (Horizontal glowing light source)
-      ======================================================== */}
+    <div className={`relative w-full overflow-hidden ${className}`}>
+      {/* The Neon Glass Tube (Top or Bottom) */}
       <div 
-        className="relative z-20 flex items-center justify-center pointer-events-none"
-        style={{ width: tubeWidth }}
-      >
-        {/* Core High-Intensity Tube */}
-        <div 
-          className="w-full h-[2.5px] rounded-full bg-gradient-to-r from-transparent via-white to-transparent"
-          style={{
-            boxShadow: `
-              0 0 10px 2px rgba(255, 255, 255, 0.9),
-              0 0 20px 4px ${neonColor},
-              0 0 45px 12px rgba(139, 92, 246, ${glowIntensity * 0.75}),
-              0 0 90px 25px rgba(85, 37, 245, ${glowIntensity * 0.45})
-            `
-          }}
-        />
+        className={`absolute left-1/2 -translate-x-1/2 z-20 transition-all ease-out pointer-events-none ${
+          direction === 'down' ? 'top-0' : 'bottom-0'
+        }`}
+        style={{
+          width: isLit ? '86%' : '0%',
+          maxWidth: '900px',
+          height: '2px',
+          transitionDuration: `${duration}ms`,
+          background: `linear-gradient(90deg, transparent 0%, #FFFFFF 20%, ${tubeColor} 50%, #FFFFFF 80%, transparent 100%)`,
+          boxShadow: isLit 
+            ? `0 0 12px 2px #FFFFFF, 0 0 24px 6px ${tubeColor}, 0 0 48px 12px ${lightColor}`
+            : 'none',
+          opacity: isLit ? 1 : 0,
+        }}
+      />
 
-        {/* Ambient Tube Halo */}
-        <div 
-          className="absolute inset-x-0 -top-3 h-7 rounded-full blur-md pointer-events-none opacity-90"
-          style={{
-            background: `linear-gradient(90deg, transparent 0%, ${neonColor} 50%, transparent 100%)`
-          }}
-        />
-      </div>
+      {/* Volumetric Downward Light Flood (Conical / Radial Glow) */}
+      <div
+        className={`absolute left-1/2 -translate-x-1/2 pointer-events-none transition-opacity duration-1000 z-10 ${
+          direction === 'down' ? 'top-0' : 'bottom-0'
+        }`}
+        style={{
+          width: '100%',
+          maxWidth: '1200px',
+          height: '420px',
+          opacity: isLit ? 0.35 : 0,
+          background: direction === 'down'
+            ? `radial-gradient(ellipse 80% 60% at 50% 0%, ${lightColor} 0%, rgba(85,37,245,0.15) 45%, transparent 75%)`
+            : `radial-gradient(ellipse 80% 60% at 50% 100%, ${lightColor} 0%, rgba(85,37,245,0.15) 45%, transparent 75%)`,
+          filter: 'blur(30px)',
+        }}
+      />
 
-      {/* ========================================================
-          2. ATMOSPHERIC DOWNWARD LIGHT CONE (Stage Spotlight)
-      ======================================================== */}
+      {/* Subtle Dust/Energy Particles or Ambient Glow beneath tube */}
       <div 
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-5xl pointer-events-none z-10 transition-opacity duration-1000"
-        style={{ height: `${beamHeight}px` }}
-      >
-        {/* Trapezoidal Volumetric Beam */}
-        <div 
-          className="w-full h-full opacity-70"
-          style={{
-            clipPath: 'polygon(12% 0%, 88% 0%, 100% 100%, 0% 100%)',
-            background: `linear-gradient(180deg, 
-              rgba(217, 70, 239, 0.28) 0%, 
-              rgba(139, 92, 246, 0.15) 35%, 
-              rgba(66, 99, 255, 0.05) 70%, 
-              transparent 100%)`,
-            filter: 'blur(36px)',
-          }}
-        />
+        className="absolute left-1/2 -translate-x-1/2 -top-1 w-3/4 max-w-[700px] h-12 pointer-events-none z-10 transition-opacity duration-700"
+        style={{
+          opacity: isLit ? 0.6 : 0,
+          background: `radial-gradient(ellipse at 50% 0%, ${tubeColor} 0%, transparent 70%)`,
+          filter: 'blur(10px)',
+        }}
+      />
 
-        {/* Secondary Soft Radial Focus */}
-        <div 
-          className="absolute -top-10 left-1/2 -translate-x-1/2 w-[70%] h-48 rounded-full blur-3xl pointer-events-none"
-          style={{
-            background: `radial-gradient(ellipse at center, rgba(217, 70, 239, 0.3) 0%, rgba(139, 92, 246, 0.15) 50%, transparent 80%)`
-          }}
-        />
-      </div>
-
-      {/* ========================================================
-          3. REVEALED CONTENT (Bathed in neon light)
-      ======================================================== */}
-      <div className="relative z-20 w-full pt-8 sm:pt-12">
+      {/* Content wrapper */}
+      <div className="relative z-10">
         {children}
       </div>
-
     </div>
   );
 }
