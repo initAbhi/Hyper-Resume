@@ -98,7 +98,7 @@ export function ProductWorkflowStorytelling() {
           {/* Editorial Content */}
           <div className="lg:col-span-5 space-y-4">
             <span className="text-xs font-mono font-bold tracking-widest text-[#3730F5] dark:text-blue-400 uppercase">
-              01 / BUILD
+              01 / STRUCTURE
             </span>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-[#171923] dark:text-[#F0F2F5] leading-tight">
               Start with the experience you already have.
@@ -339,10 +339,10 @@ export function ProductWorkflowStorytelling() {
           {/* Editorial Content (Right on Desktop) */}
           <div className="lg:col-span-5 order-1 lg:order-2 space-y-4">
             <span className="text-xs font-mono font-bold tracking-widest text-[#3730F5] dark:text-blue-400 uppercase">
-              02 / ANALYZE
+              02 / UNDERSTAND
             </span>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-[#171923] dark:text-[#F0F2F5] leading-tight">
-              Know what the role is actually asking for.
+              Understand the opportunity before you apply.
             </h2>
             <p className="text-sm sm:text-base text-[#626B7A] dark:text-[#9EA7B4] leading-relaxed">
               Analyze a job description to understand its core requirements, identify relevant qualifications, and see where your documented experience already provides genuine evidence.
@@ -383,10 +383,10 @@ export function ProductWorkflowStorytelling() {
           {/* Editorial Content */}
           <div className="lg:col-span-5 space-y-4">
             <span className="text-xs font-mono font-bold tracking-widest text-[#3730F5] dark:text-blue-400 uppercase">
-              03 / OPTIMIZE
+              03 / REFINE
             </span>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-[#171923] dark:text-[#F0F2F5] leading-tight">
-              Make your experience easier to understand.
+              Make your real achievements stand out.
             </h2>
             <p className="text-sm sm:text-base text-[#626B7A] dark:text-[#9EA7B4] leading-relaxed">
               Improve the clarity, structure, and impact of your existing achievements while strictly preserving the facts behind your experience.
@@ -508,88 +508,134 @@ export function ProductWorkflowStorytelling() {
       </section>
 
       {/* =====================================================
-          STORYTELLING 04: TAILOR APPLICATIONS FOR SPECIFIC JOBS
+          STORYTELLING 04: ADAPT APPLICATIONS FOR SPECIFIC JOBS
       ===================================================== */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
           
-          {/* Visual: Role-Specific Tailored Variations (Left on Desktop) */}
-          <div className="lg:col-span-7 order-2 lg:order-1 bg-white dark:bg-[#14171C] rounded-2xl border border-[#E6E8ED] dark:border-[#252A33] shadow-lg overflow-hidden">
-            {/* Header */}
-            <div className="px-4 py-3 bg-[#F7F8FA] dark:bg-[#1D2128] border-b border-[#E6E8ED] dark:border-[#252A33] flex items-center justify-between text-xs">
+          {/* Visual: Dimensional 3D Document Fan-Out (Left on Desktop) */}
+          <div className="lg:col-span-7 order-2 lg:order-1 relative perspective-1200 py-6">
+            
+            {/* Ambient Violet Glow */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#5525F5]/10 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Top Branch Header & Quick Selectors */}
+            <div className="flex items-center justify-between mb-4 px-2 text-xs">
               <div className="flex items-center gap-2 font-medium text-[#171923] dark:text-[#F0F2F5]">
-                <GitFork className="w-4 h-4 text-[#3730F5] dark:text-blue-400" />
-                <span>1 Master Profile → 3 Tailored Application Versions</span>
+                <GitFork className="w-4 h-4 text-[#5525F5] dark:text-blue-400" />
+                <span className="font-semibold">1 Master Profile → 3 Tailored 3D Documents</span>
               </div>
-              <span className="text-[10px] font-mono text-zinc-400">Independent Versions</span>
+              <span className="text-[10px] font-mono text-zinc-400">Tap document to inspect</span>
             </div>
 
-            {/* Variant Switcher Pills */}
-            <div className="p-3 bg-zinc-50/60 dark:bg-zinc-900/40 border-b border-[#E6E8ED] dark:border-[#252A33] flex items-center gap-2">
-              {[
-                { id: 'backend', label: 'Backend Role' },
-                { id: 'analyst', label: 'Product Analyst' },
-                { id: 'solutions', label: 'Solutions Architect' },
-              ].map((v) => {
-                const isActive = activeVariant === v.id;
-                return (
-                  <button
-                    key={v.id}
-                    type="button"
-                    onClick={() => setActiveVariant(v.id as any)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                      isActive
-                        ? 'bg-white dark:bg-zinc-900 text-[#3730F5] dark:text-blue-400 shadow-xs border border-[#3730F5]/30'
-                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'
-                    }`}
-                  >
-                    {v.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Active Variant Card Display */}
-            <div className="p-5 sm:p-6 space-y-4 text-xs">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <span className="text-[10px] font-mono uppercase text-zinc-400 block">Target Application Profile</span>
-                  <h4 className="text-base font-bold text-zinc-950 dark:text-white mt-0.5">
-                    {variants[activeVariant].role}
-                  </h4>
-                  <p className="text-xs text-zinc-500 font-medium mt-0.5">
-                    Focus: {variants[activeVariant].target}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <span className="text-[10px] font-mono text-zinc-400 block">Match Score</span>
-                  <span className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                    {variants[activeVariant].matchScore}
+            {/* 3D Dimensional Fanned-Out Cards Container */}
+            <div className="relative min-h-[360px] sm:min-h-[400px] w-full preserve-3d flex items-center justify-center">
+              
+              {/* CARD 1: BACKEND ENGINEER (Angled Left) */}
+              <div
+                onClick={() => setActiveVariant('backend')}
+                className={`absolute w-full max-w-[360px] sm:max-w-[420px] rounded-2xl p-5 border transition-all duration-500 cursor-pointer shadow-xl preserve-3d ${
+                  activeVariant === 'backend'
+                    ? 'z-30 bg-white dark:bg-[#141720] border-[#5525F5] shadow-2xl shadow-violet-500/20 scale-105'
+                    : 'z-10 bg-zinc-50 dark:bg-[#101218] border-zinc-200 dark:border-zinc-800 opacity-80 hover:opacity-100'
+                }`}
+                style={{
+                  transform: activeVariant === 'backend'
+                    ? 'translateZ(50px) translateY(0px) rotateY(0deg)'
+                    : 'translateZ(10px) translateX(-50px) translateY(-15px) rotateY(-12deg) rotateZ(-3deg)',
+                }}
+              >
+                <div className="flex items-center justify-between border-b border-zinc-200/80 dark:border-zinc-800 pb-2 mb-3">
+                  <div>
+                    <span className="text-[10px] font-mono uppercase text-zinc-400 font-semibold block">Tailored Variant 01</span>
+                    <h4 className="text-sm font-bold text-zinc-900 dark:text-white">Backend Systems Engineer</h4>
+                  </div>
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                    94% Match
                   </span>
                 </div>
-              </div>
 
-              {/* Primary Emphasized Bullet */}
-              <div className="p-3.5 rounded-xl bg-[#F7F8FA] dark:bg-[#101216] border border-[#E6E8ED] dark:border-[#252A33] space-y-1">
-                <span className="text-[10px] font-mono uppercase text-blue-600 dark:text-blue-400 font-bold block">
-                  Emphasized Experience Bullet:
-                </span>
-                <p className="text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed font-medium">
-                  &ldquo;{variants[activeVariant].primaryHighlight}&rdquo;
+                <p className="text-[11.5px] text-zinc-700 dark:text-zinc-300 leading-relaxed font-medium mb-3">
+                  &ldquo;Architected distributed BullMQ queue workers and Redis caching layers, scaling API throughput to 18,000 req/sec.&rdquo;
                 </p>
+
+                <div className="flex flex-wrap gap-1">
+                  {['NestJS', 'PostgreSQL', 'Redis', 'BullMQ', 'AWS EC2'].map((s) => (
+                    <span key={s} className="px-1.5 py-0.5 text-[9.5px] rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
+                      {s}
+                    </span>
+                  ))}
+                </div>
               </div>
 
-              {/* Emphasized Skill Tags */}
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-mono uppercase text-zinc-400 font-semibold block">
-                  Top Priority Skill Tokens Extracted:
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {variants[activeVariant].skillsEmphasized.map((s) => (
-                    <span
-                      key={s}
-                      className="px-2 py-0.5 rounded text-[10.5px] font-medium bg-blue-50 dark:bg-blue-950/40 text-[#3730F5] dark:text-blue-300 border border-blue-200/80 dark:border-blue-900/40"
-                    >
+              {/* CARD 2: PRODUCT ANALYST (Center / High Elevation) */}
+              <div
+                onClick={() => setActiveVariant('analyst')}
+                className={`absolute w-full max-w-[360px] sm:max-w-[420px] rounded-2xl p-5 border transition-all duration-500 cursor-pointer shadow-xl preserve-3d ${
+                  activeVariant === 'analyst'
+                    ? 'z-30 bg-white dark:bg-[#141720] border-[#5525F5] shadow-2xl shadow-violet-500/20 scale-105'
+                    : 'z-15 bg-zinc-50 dark:bg-[#101218] border-zinc-200 dark:border-zinc-800 opacity-80 hover:opacity-100'
+                }`}
+                style={{
+                  transform: activeVariant === 'analyst'
+                    ? 'translateZ(50px) translateY(0px) rotateY(0deg)'
+                    : 'translateZ(20px) translateY(10px) rotateY(0deg)',
+                }}
+              >
+                <div className="flex items-center justify-between border-b border-zinc-200/80 dark:border-zinc-800 pb-2 mb-3">
+                  <div>
+                    <span className="text-[10px] font-mono uppercase text-[#5525F5] dark:text-blue-400 font-semibold block">Tailored Variant 02 · Recommended</span>
+                    <h4 className="text-sm font-bold text-zinc-900 dark:text-white">Senior Product Analyst</h4>
+                  </div>
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                    98% Match
+                  </span>
+                </div>
+
+                <p className="text-[11.5px] text-zinc-700 dark:text-zinc-300 leading-relaxed font-medium mb-3">
+                  &ldquo;Spearheaded 22 checkout pricing A/B experiments, identifying 3 high-converting funnels that increased quarterly ARR by $180K.&rdquo;
+                </p>
+
+                <div className="flex flex-wrap gap-1">
+                  {['SQL & dbt', 'A/B Testing', 'Tableau', 'Amplitude', 'Retention Funnels'].map((s) => (
+                    <span key={s} className="px-1.5 py-0.5 text-[9.5px] rounded bg-blue-50 dark:bg-blue-950/40 text-[#5525F5] dark:text-blue-300 font-medium">
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* CARD 3: SOLUTIONS ARCHITECT (Angled Right) */}
+              <div
+                onClick={() => setActiveVariant('solutions')}
+                className={`absolute w-full max-w-[360px] sm:max-w-[420px] rounded-2xl p-5 border transition-all duration-500 cursor-pointer shadow-xl preserve-3d ${
+                  activeVariant === 'solutions'
+                    ? 'z-30 bg-white dark:bg-[#141720] border-[#5525F5] shadow-2xl shadow-violet-500/20 scale-105'
+                    : 'z-10 bg-zinc-50 dark:bg-[#101218] border-zinc-200 dark:border-zinc-800 opacity-80 hover:opacity-100'
+                }`}
+                style={{
+                  transform: activeVariant === 'solutions'
+                    ? 'translateZ(50px) translateY(0px) rotateY(0deg)'
+                    : 'translateZ(10px) translateX(50px) translateY(-15px) rotateY(12deg) rotateZ(3deg)',
+                }}
+              >
+                <div className="flex items-center justify-between border-b border-zinc-200/80 dark:border-zinc-800 pb-2 mb-3">
+                  <div>
+                    <span className="text-[10px] font-mono uppercase text-zinc-400 font-semibold block">Tailored Variant 03</span>
+                    <h4 className="text-sm font-bold text-zinc-900 dark:text-white">Cloud Solutions Architect</h4>
+                  </div>
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                    91% Match
+                  </span>
+                </div>
+
+                <p className="text-[11.5px] text-zinc-700 dark:text-zinc-300 leading-relaxed font-medium mb-3">
+                  &ldquo;Designed multi-region failover and containerized microservices architectures delivering 99.99% uptime SLAs across AWS regions.&rdquo;
+                </p>
+
+                <div className="flex flex-wrap gap-1">
+                  {['AWS VPC', 'Terraform', 'Docker', 'Prometheus', 'SLA 99.99%'].map((s) => (
+                    <span key={s} className="px-1.5 py-0.5 text-[9.5px] rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
                       {s}
                     </span>
                   ))}
@@ -599,39 +645,39 @@ export function ProductWorkflowStorytelling() {
             </div>
 
             {/* Bottom Meta */}
-            <div className="p-3 bg-[#F7F8FA] dark:bg-[#1D2128] border-t border-[#E6E8ED] dark:border-[#252A33] text-[11px] text-zinc-500">
-              Each variant preserves its own version history, job match analysis, and PDF export.
+            <div className="mt-4 px-3 py-2 rounded-lg bg-[#F7F8FA] dark:bg-[#161822] border border-[#E6E8ED] dark:border-[#252A33] text-[11px] text-zinc-500 text-center">
+              Each variant preserves its own version history, job match analysis, and clean PDF export.
             </div>
           </div>
 
           {/* Editorial Content (Right on Desktop) */}
           <div className="lg:col-span-5 order-1 lg:order-2 space-y-4">
-            <span className="text-xs font-mono font-bold tracking-widest text-[#3730F5] dark:text-blue-400 uppercase">
-              04 / TAILOR
+            <span className="text-xs font-mono font-bold tracking-widest text-[#5525F5] dark:text-blue-400 uppercase">
+              04 / ADAPT
             </span>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-[#171923] dark:text-[#F0F2F5] leading-tight">
-              One professional profile. Applications shaped around each opportunity.
+              One professional profile. Multiple focused applications.
             </h2>
             <p className="text-sm sm:text-base text-[#626B7A] dark:text-[#9EA7B4] leading-relaxed">
               Use your authentic experience to prepare focused, high-relevance applications for the specific jobs you want—without maintaining fragmented Word documents across dozens of folders.
             </p>
             <div className="pt-2 flex flex-col gap-2.5 text-xs text-[#626B7A] dark:text-[#9EA7B4]">
               <div className="flex items-center gap-2">
-                <Check className="w-4 h-4 text-[#3730F5] dark:text-blue-400 shrink-0" />
+                <Check className="w-4 h-4 text-[#5525F5] dark:text-blue-400 shrink-0" />
                 <span>Single master profile branches into unlimited tailored versions</span>
               </div>
               <div className="flex items-center gap-2">
-                <Check className="w-4 h-4 text-[#3730F5] dark:text-blue-400 shrink-0" />
+                <Check className="w-4 h-4 text-[#5525F5] dark:text-blue-400 shrink-0" />
                 <span>Highlights relevant achievements while retaining factual continuity</span>
               </div>
               <div className="flex items-center gap-2">
-                <Check className="w-4 h-4 text-[#3730F5] dark:text-blue-400 shrink-0" />
+                <Check className="w-4 h-4 text-[#5525F5] dark:text-blue-400 shrink-0" />
                 <span>Always know which resume version was submitted to each company</span>
               </div>
             </div>
             <div className="pt-3">
               <Link href="/login">
-                <Button size="sm" className="rounded-md bg-[#3730F5] hover:bg-[#2820D4] text-white text-xs font-semibold px-4 h-9 gap-1.5 shadow-xs">
+                <Button size="sm" className="rounded-md bg-[#5525F5] hover:bg-[#4318D8] text-white text-xs font-semibold px-4 h-9 gap-1.5 shadow-sm">
                   <span>Start Tailoring Free</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Button>

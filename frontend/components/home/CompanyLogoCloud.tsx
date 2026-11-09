@@ -84,19 +84,19 @@ export function CompanyLogoCloud() {
   ];
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 text-center">
-      <p className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-8">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 text-center">
+      <p className="text-xs font-semibold uppercase tracking-widest text-[#626B7A] dark:text-[#9EA7B4] mb-7 font-mono">
         Helping ambitious professionals land interviews at top companies such as
       </p>
 
       {/* Endless Moving Logos Marquee (Smooth reverse direction for balanced motion) */}
-      <div className="relative w-full overflow-hidden marquee-mask py-3 select-none">
-        <div className="flex animate-marquee-reverse gap-10 sm:gap-14 md:gap-18 items-center">
+      <div className="relative w-full overflow-hidden marquee-mask py-2 select-none">
+        <div className="flex animate-marquee-reverse gap-10 sm:gap-14 md:gap-16 items-center">
           {/* Repeating array 2x for seamless 50% infinite translation loop */}
           {[...companies, ...companies].map((company, idx) => (
             <div
               key={`${company.name}-${idx}`}
-              className="shrink-0 flex items-center grayscale hover:grayscale-0 opacity-75 hover:opacity-100 transition-all duration-300 hover:scale-105 cursor-default"
+              className="shrink-0 flex items-center grayscale hover:grayscale-0 opacity-70 hover:opacity-100 transition-all duration-300 hover:scale-105 cursor-default"
             >
               {company.render()}
             </div>

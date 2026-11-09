@@ -84,15 +84,16 @@ export function AtsCompatibilityCloud() {
   ];
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 text-center">
-      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F1F3F5] dark:bg-[#1D2128] text-[#5A6270] dark:text-[#9EA7B4] text-xs font-semibold mb-3 border border-[#E2E5E9] dark:border-[#252A33]">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 text-center">
+      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#F7F8FA] dark:bg-[#1A1D23] text-[#626B7A] dark:text-[#9EA7B4] text-xs font-semibold mb-3 border border-[#E6E8ED] dark:border-[#252A33] font-mono uppercase tracking-wider">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#3730F5] dark:bg-blue-400" />
         <span>Standard Single-Column Layouts</span>
       </div>
 
-      <h3 className="text-lg sm:text-xl font-bold text-[#1A1D23] dark:text-[#F0F2F5] tracking-tight">
+      <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#171923] dark:text-[#F0F2F5] tracking-tight">
         Engineered for standard parsing conventions
       </h3>
-      <p className="text-xs sm:text-sm text-[#5A6270] dark:text-[#9EA7B4] mt-1.5 max-w-xl mx-auto leading-relaxed">
+      <p className="text-xs sm:text-sm text-[#626B7A] dark:text-[#9EA7B4] mt-2 max-w-xl mx-auto leading-relaxed">
         Single-column document flow and clean text layers help ensure your qualifications extract accurately in systems like Workday, Greenhouse, Ashby, and Lever.
       </p>
 
@@ -103,7 +104,7 @@ export function AtsCompatibilityCloud() {
           {[...atsEngines, ...atsEngines].map((engine, idx) => (
             <div
               key={`${engine.name}-${idx}`}
-              className="flex items-center justify-center px-6 py-3.5 rounded-xl bg-white dark:bg-[#14171C] border border-[#E2E5E9] dark:border-[#252A33] shadow-xs hover:shadow-md hover:border-blue-400/60 dark:hover:border-blue-500/60 hover:-translate-y-0.5 transition-all duration-200 shrink-0 min-w-[145px] cursor-default"
+              className="flex items-center justify-center px-6 py-3.5 rounded-xl bg-white dark:bg-[#14171C] border border-[#E6E8ED] dark:border-[#252A33] shadow-xs hover:shadow-md hover:border-[#3730F5]/50 dark:hover:border-blue-500/50 hover:-translate-y-0.5 transition-all duration-200 shrink-0 min-w-[145px] cursor-default"
             >
               {engine.render()}
             </div>

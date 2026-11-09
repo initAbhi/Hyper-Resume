@@ -12,20 +12,29 @@ import {
   ShieldCheck,
   TrendingUp,
   Award,
-  Zap
+  Zap,
+  Target,
+  Layers,
+  ChevronRight,
+  ExternalLink
 } from 'lucide-react';
 import { ScoreMeter } from '@/components/resumes/ScoreMeter';
 
 export function InteractiveHeroStudio() {
-  const [isOptimized, setIsOptimized] = useState(true);
-  const [liveScore, setLiveScore] = useState(0);
+  // 3 Modes: 'original' | 'intelligence' | 'optimized'
+  const [activeStage, setActiveStage] = useState<'original' | 'intelligence' | 'optimized'>('optimized');
+  const [liveScore, setLiveScore] = useState(98);
+  const [isHovered, setIsHovered] = useState(false);
 
-  // Smooth count-up on load (0 -> 98) and animated easing when toggling
+  // Smooth count-up score animation on mode switch
   useEffect(() => {
-    const target = isOptimized ? 98 : 58;
+    let target = 98;
+    if (activeStage === 'original') target = 58;
+    if (activeStage === 'intelligence') target = 86;
+
     const start = liveScore;
     let startTime: number | null = null;
-    const duration = 1200; // ms
+    const duration = 900; // ms
 
     let animId: number;
     const step = (timestamp: number) => {
@@ -37,346 +46,411 @@ export function InteractiveHeroStudio() {
     };
     animId = requestAnimationFrame(step);
     return () => cancelAnimationFrame(animId);
-  }, [isOptimized]);
+  }, [activeStage]);
 
   return (
-    <div className="relative w-full max-w-5xl mx-auto text-left">
-      {/* Sleek Container Window Frame */}
-      <div className="rounded-2xl sm:rounded-3xl border border-zinc-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xl shadow-blue-500/5 overflow-hidden transition-all">
+    <div className="relative w-full max-w-6xl mx-auto select-none">
+      
+      {/* Interactive Stage Selector Controls (Apple / Linear style Segmented Pill) */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6 px-1">
         
-        {/* macOS Window Chrome Header */}
-        <div className="flex items-center justify-between px-3.5 sm:px-6 py-3 bg-[#131722] text-white border-b border-zinc-800/80 gap-2">
-          {/* Traffic lights + Filename */}
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#FF5F56] inline-block shadow-xs" />
-              <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#FFBD2E] inline-block shadow-xs" />
-              <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#27C93F] inline-block shadow-xs" />
-            </div>
-            
-            <div className="h-3.5 w-px bg-zinc-700/60 hidden sm:block shrink-0" />
-            
-            <div className="flex items-center gap-1.5 text-xs font-mono text-zinc-300 min-w-0">
-              <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-              <span className="truncate max-w-[130px] xs:max-w-[200px] sm:max-w-none text-[11px] sm:text-xs">
-                Alex_Morgan_Product_Analyst.pdf
-              </span>
-            </div>
-          </div>
+        {/* Stage Switcher Tabs */}
+        <div className="inline-flex items-center p-1 rounded-xl bg-[#11131C] border border-[#222638] shadow-lg max-w-full overflow-x-auto">
+          <button
+            onClick={() => setActiveStage('original')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 cursor-pointer whitespace-nowrap ${
+              activeStage === 'original'
+                ? 'bg-[#1C2030] text-rose-400 font-semibold shadow-xs'
+                : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            1. Original Draft
+          </button>
+          
+          <button
+            onClick={() => setActiveStage('intelligence')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 cursor-pointer whitespace-nowrap ${
+              activeStage === 'intelligence'
+                ? 'bg-[#1C2030] text-blue-400 font-semibold shadow-xs'
+                : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            2. ATS Intelligence
+          </button>
 
-          {/* ATS Status Pill - Strictly No-Wrap & Responsive */}
-          <div className="shrink-0">
-            <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all whitespace-nowrap ${
-                isOptimized
-                  ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 shadow-xs shadow-emerald-500/10'
-                  : 'bg-rose-500/15 text-rose-400 border-rose-500/30 shadow-xs shadow-rose-500/10'
-              }`}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                  isOptimized ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'
-                }`}
-              />
-              <span className="font-mono">{isOptimized ? `${liveScore}% ATS Pass` : `${liveScore}% Needs Work`}</span>
-            </span>
-          </div>
+          <button
+            onClick={() => setActiveStage('optimized')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+              activeStage === 'optimized'
+                ? 'bg-[#5525F5] text-white font-semibold shadow-xs shadow-violet-500/25'
+                : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>3. Job-Matched STAR</span>
+          </button>
         </div>
 
-        {/* Content Area */}
-        <div className="p-3 sm:p-5 lg:p-7 bg-zinc-50/70 dark:bg-zinc-950/50">
-          
-          {/* Interactive Mode Switcher (Clean, mobile-first segmented controller) */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 sm:pb-4 mb-4 border-b border-zinc-200/80 dark:border-zinc-800">
-            <div className="w-full sm:w-auto grid grid-cols-2 p-1 bg-zinc-200/70 dark:bg-zinc-800/90 rounded-xl border border-zinc-200/90 dark:border-zinc-700/60 text-xs font-semibold">
-              <button
-                type="button"
-                onClick={() => setIsOptimized(false)}
-                className={`flex items-center justify-center gap-1.5 py-2 px-2.5 sm:px-3.5 rounded-lg transition-all cursor-pointer ${
-                  !isOptimized
-                    ? 'bg-white dark:bg-zinc-900 text-rose-600 dark:text-rose-400 shadow-xs font-bold'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
-                }`}
-              >
-                <span className="truncate">1. Original Draft</span>
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold shrink-0 ${
-                  !isOptimized
-                    ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
-                    : 'bg-zinc-300/60 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400'
-                }`}>
-                  58
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsOptimized(true)}
-                className={`flex items-center justify-center gap-1.5 py-2 px-2.5 sm:px-3.5 rounded-lg transition-all cursor-pointer ${
-                  isOptimized
-                    ? 'bg-blue-600 text-white shadow-xs shadow-blue-500/25 font-bold'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5 text-blue-200 shrink-0" />
-                <span className="truncate">2. AI Optimized</span>
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold shrink-0 ${
-                  isOptimized
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-zinc-300/60 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400'
-                }`}>
-                  98
-                </span>
-              </button>
-            </div>
-
-            <div className="flex items-center justify-center sm:justify-start gap-1.5 text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">
-              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shrink-0" />
-              <span>Tap buttons to preview ATS transformation</span>
-            </div>
-          </div>
-
-          {/* Studio Grid: Document Canvas + Assistant Card */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
-            
-            {/* Left: Document Sheet Preview (Executive ATS standard document) */}
-            <div className="lg:col-span-7 bg-white dark:bg-zinc-900 p-4 sm:p-6 lg:p-7 rounded-xl sm:rounded-2xl border border-zinc-200/90 dark:border-zinc-800 shadow-sm transition-all">
-              
-              {/* Document Header */}
-              <div className="border-b border-zinc-900 dark:border-zinc-200 pb-3 mb-3.5 text-center">
-                <h3 className="text-xl sm:text-2xl font-black tracking-tight text-zinc-950 dark:text-white uppercase font-sans">
-                  Alex Morgan
-                </h3>
-                <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[10.5px] sm:text-xs text-zinc-600 dark:text-zinc-400 mt-1.5 font-medium">
-                  <span>San Francisco, CA</span>
-                  <span className="text-zinc-300 dark:text-zinc-700">•</span>
-                  <span>(415) 555-0192</span>
-                  <span className="text-zinc-300 dark:text-zinc-700">•</span>
-                  <span className="truncate">alex.morgan@email.com</span>
-                  <span className="text-zinc-300 dark:text-zinc-700 hidden sm:inline">•</span>
-                  <span className="hidden sm:inline">linkedin.com/in/alexmorgan</span>
-                </div>
-              </div>
-
-              {/* Experience Section */}
-              <div className="space-y-3.5 text-xs">
-                <div>
-                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-zinc-900 dark:text-zinc-100 border-b border-zinc-900 dark:border-zinc-700 pb-1 mb-2.5">
-                    Professional Experience
-                  </h4>
-                  
-                  {/* Job Title & Date with anti-break protection */}
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-baseline gap-0.5 sm:gap-2 font-bold text-zinc-950 dark:text-zinc-100">
-                    <span className="text-[12px] sm:text-[13px] leading-snug">
-                      ClearPath Analytics <span className="font-normal text-zinc-400">—</span> Senior Product Analyst
-                    </span>
-                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium shrink-0 whitespace-nowrap">
-                      2022 – Present
-                    </span>
-                  </div>
-
-                  <ul className="mt-2.5 space-y-2.5 text-zinc-700 dark:text-zinc-300">
-                    {/* Bullet 1 */}
-                    <li className="flex items-start gap-2">
-                      <span className="text-zinc-400 dark:text-zinc-500 font-bold shrink-0 mt-0.5">•</span>
-                      <span className="leading-relaxed">
-                        Built automated dbt SQL pipelines processing 12M+ weekly active user events with zero data regression.
-                      </span>
-                    </li>
-
-                    {/* The Interactive AI Optimized Bullet (Diff Card) */}
-                    <li
-                      className={`rounded-xl border transition-all duration-300 overflow-hidden ${
-                        isOptimized
-                          ? 'bg-emerald-500/[0.06] dark:bg-emerald-500/[0.12] border-emerald-500/40 dark:border-emerald-500/30 shadow-xs'
-                          : 'bg-rose-500/[0.06] dark:bg-rose-500/[0.12] border-rose-500/40 dark:border-rose-500/30'
-                      }`}
-                    >
-                      {/* Top micro-banner */}
-                      <div className={`px-3 py-1.5 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider border-b ${
-                        isOptimized
-                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-800 dark:text-emerald-300'
-                          : 'bg-rose-500/10 border-rose-500/20 text-rose-800 dark:text-rose-300'
-                      }`}>
-                        <div className="flex items-center gap-1.5">
-                          {isOptimized ? (
-                            <>
-                              <Sparkles className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                              <span>AI Optimized (STAR Framework)</span>
-                            </>
-                          ) : (
-                            <>
-                              <AlertTriangle className="w-3 h-3 text-rose-600 dark:text-rose-400" />
-                              <span>Original Draft (Needs Work)</span>
-                            </>
-                          )}
-                        </div>
-                        <span className={`px-2 py-0.5 rounded-full font-mono text-[9.5px] ${
-                          isOptimized
-                            ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-200'
-                            : 'bg-rose-500/20 text-rose-700 dark:text-rose-200'
-                        }`}>
-                          {isOptimized ? '+40 pts' : 'Score: 58'}
-                        </span>
-                      </div>
-
-                      {/* Content Body */}
-                      <div className="p-3 sm:p-3.5 space-y-2">
-                        {isOptimized ? (
-                          <>
-                            <p className="text-zinc-900 dark:text-zinc-100 leading-relaxed font-medium">
-                              <strong className="text-zinc-950 dark:text-white">Spearheaded 22 checkout pricing A/B experiments</strong>, identifying 3 high-converting funnels that{' '}
-                              <strong className="text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-1 py-0.5 rounded">
-                                increased quarterly ARR by $180K
-                              </strong>{' '}
-                              and reduced checkout drop-off by{' '}
-                              <strong className="text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-1 py-0.5 rounded">
-                                14%
-                              </strong>.
-                            </p>
-                            
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1.5 border-t border-emerald-500/20 text-[10px] text-emerald-700 dark:text-emerald-300 font-semibold">
-                              <span className="inline-flex items-center gap-1">
-                                <CheckCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                                STAR Metric Verified
-                              </span>
-                              <span className="inline-flex items-center gap-1">
-                                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                                100% Truthful Scaffolding
-                              </span>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <p className="text-zinc-500 dark:text-zinc-400 line-through leading-relaxed">
-                              Collaborated with product managers on checkout pricing tests.
-                            </p>
-                            
-                            <div className="space-y-1 pt-1 border-t border-rose-500/20 text-[10.5px] text-rose-700 dark:text-rose-300">
-                              <div className="flex items-start gap-1.5">
-                                <span className="text-rose-500 font-bold shrink-0">✕</span>
-                                <span><strong>Passive action verb:</strong> &ldquo;Collaborated&rdquo; lacks ownership and impact.</span>
-                              </div>
-                              <div className="flex items-start gap-1.5">
-                                <span className="text-rose-500 font-bold shrink-0">✕</span>
-                                <span><strong>Zero business metrics:</strong> Lacks revenue, conversion lift, or scale numbers.</span>
-                              </div>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </li>
-
-                    {/* Bullet 3 */}
-                    <li className="flex items-start gap-2">
-                      <span className="text-zinc-400 dark:text-zinc-500 font-bold shrink-0 mt-0.5">•</span>
-                      <span className="leading-relaxed">
-                        Engineered Tableau &amp; Amplitude dashboards adopted by 45+ executives for quarterly retention roadmap.
-                      </span>
-                    </li>
-                  </ul>
-                </div>
-
-                {/* Core Competencies */}
-                <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800">
-                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-zinc-900 dark:text-zinc-100 mb-1.5">
-                    Core Competencies &amp; Technical Skills
-                  </h4>
-                  <div className="flex flex-wrap gap-1.5">
-                    {['SQL (PostgreSQL, BigQuery)', 'dbt', 'A/B Testing', 'Amplitude', 'Python', 'Tableau'].map((skill) => (
-                      <span
-                        key={skill}
-                        className="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10.5px] font-medium"
-                      >
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right: Live AI Score & STAR Assistant */}
-            <div className="lg:col-span-5 space-y-4">
-              
-              {/* Score Meter Card */}
-              <div className="p-4 sm:p-5 rounded-xl sm:rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 shadow-sm flex flex-col items-center text-center">
-                <div className="w-full flex items-center justify-between pb-2.5 border-b border-zinc-100 dark:border-zinc-800 text-xs">
-                  <span className="font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider flex items-center gap-1.5">
-                    <TrendingUp className="w-3.5 h-3.5 text-blue-600" />
-                    Live ATS Score Meter
-                  </span>
-                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold font-mono ${
-                    isOptimized 
-                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
-                      : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
-                  }`}>
-                    {isOptimized ? `Passed (${liveScore})` : `Needs Review (${liveScore})`}
-                  </span>
-                </div>
-
-                <div className="pt-3 pb-1 w-full">
-                  <ScoreMeter score={isOptimized ? 98 : 58} />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 w-full mt-3 text-left text-xs">
-                  <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-700/60">
-                    <span className="text-[10px] text-zinc-400 uppercase font-bold block mb-0.5">Action Verbs</span>
-                    <span className="font-bold text-zinc-900 dark:text-zinc-100 text-[11.5px] sm:text-xs">
-                      {isOptimized ? '100% Leadership' : '42% Weak/Passive'}
-                    </span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-700/60">
-                    <span className="text-[10px] text-zinc-400 uppercase font-bold block mb-0.5">Quantified Lift</span>
-                    <span className="font-bold text-zinc-900 dark:text-zinc-100 text-[11.5px] sm:text-xs">
-                      {isOptimized ? '$180K + 14%' : 'Zero metrics'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Instant Action Card */}
-              <div className="p-4 sm:p-5 rounded-xl sm:rounded-2xl bg-white dark:bg-zinc-900 border border-[#E6E8ED] dark:border-zinc-800 space-y-3.5 shadow-xs">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-[#3730F5] text-white shrink-0 shadow-xs">
-                    <Zap className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h5 className="text-xs sm:text-sm font-bold text-zinc-950 dark:text-white leading-tight">
-                      Build Your ATS Resume in Minutes
-                    </h5>
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                      Standard single-column • Free vector PDF export
-                    </p>
-                  </div>
-                </div>
-
-                <Link href="/login" className="block w-full">
-                  <button
-                    type="button"
-                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#3730F5] hover:bg-[#2820D4] active:scale-[0.99] text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
-                  >
-                    <span>Start Building Free</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </Link>
-                
-                <div className="flex items-center justify-center gap-3 text-[10.5px] text-zinc-500 dark:text-zinc-400">
-                  <span className="flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    No credit card
-                  </span>
-                  <span>•</span>
-                  <span className="flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    Unwatermarked PDF
-                  </span>
-                </div>
-              </div>
-
-            </div>
-          </div>
+        {/* Live Status Pill */}
+        <div className="flex items-center gap-2 text-xs font-mono">
+          <span className="text-zinc-400 hidden sm:inline">Engine Status:</span>
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold border ${
+            activeStage === 'optimized' 
+              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+              : activeStage === 'intelligence'
+              ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+              : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${
+              activeStage === 'optimized' ? 'bg-emerald-400 animate-pulse' : activeStage === 'intelligence' ? 'bg-blue-400 animate-pulse' : 'bg-rose-400'
+            }`} />
+            {activeStage === 'optimized' ? 'Verified 98% Pass' : activeStage === 'intelligence' ? 'Scanning Token Layers' : 'Needs Optimization'}
+          </span>
         </div>
       </div>
+
+      {/* 3D THEATER STAGE (Perspective Viewport inspired by reference photo) */}
+      <div 
+        className="relative w-full rounded-3xl p-4 sm:p-8 lg:p-10 bg-[#090A10] border border-[#1E2235] shadow-2xl overflow-hidden perspective-1400"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        
+        {/* Directional Raking Light & Violet Glow from Beneath (Directly from user reference photo) */}
+        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-gradient-to-b from-[#5525F5]/25 via-[#4263FF]/15 to-transparent blur-3xl pointer-events-none rounded-full" />
+        <div className="absolute -bottom-28 right-10 w-[500px] h-[350px] bg-[#5525F5]/20 blur-3xl pointer-events-none rounded-full" />
+        
+        {/* Subtle Fine Coordinate Grid */}
+        <div 
+          className="absolute inset-0 opacity-[0.04] pointer-events-none" 
+          style={{
+            backgroundImage: 'radial-gradient(rgba(255,255,255,0.8) 1px, transparent 1px)',
+            backgroundSize: '24px 24px'
+          }}
+        />
+
+        {/* 3D Preserved Container */}
+        <div 
+          className="relative w-full min-h-[580px] lg:min-h-[640px] preserve-3d transition-transform duration-700 ease-out flex items-center justify-center"
+          style={{
+            transform: isHovered 
+              ? 'rotateX(8deg) rotateY(-4deg) rotateZ(0deg)' 
+              : 'rotateX(11deg) rotateY(-8deg) rotateZ(1deg)',
+          }}
+        >
+
+          {/* ========================================================
+              LAYER 0: DARK MATTE PEDESTAL BASE (From Reference Image)
+          ======================================================== */}
+          <div 
+            className="absolute inset-x-4 sm:inset-x-10 bottom-6 sm:bottom-8 h-[380px] rounded-2xl bg-[#0F111A] border border-[#23273A] shadow-2xl preserve-3d"
+            style={{
+              transform: 'translateZ(-40px)',
+              boxShadow: '0 30px 80px -20px rgba(0,0,0,0.8), 0 0 50px -10px rgba(85,37,245,0.3)',
+            }}
+          >
+            {/* Matte debossed grooves / card slots from reference render */}
+            <div className="absolute top-4 left-6 flex items-center gap-2">
+              <span className="w-16 h-1.5 rounded-full bg-[#1A1D2C] border-t border-[#2A2E44]" />
+              <span className="w-8 h-1.5 rounded-full bg-[#1A1D2C] border-t border-[#2A2E44]" />
+            </div>
+
+            <div className="absolute bottom-4 right-6 flex items-center gap-2 text-[10px] font-mono text-zinc-500">
+              <span>HYPE-RESUME / CORE-ARCH</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#5525F5]" />
+            </div>
+          </div>
+
+          {/* ========================================================
+              LAYER 1: MAIN FLOATING A4 RESUME DOCUMENT
+          ======================================================== */}
+          <div 
+            className="relative z-10 w-full max-w-[520px] rounded-2xl bg-white text-zinc-900 shadow-2xl p-6 sm:p-8 preserve-3d transition-all duration-500 border border-zinc-200/80"
+            style={{
+              transform: 'translateZ(30px)',
+              boxShadow: '0 25px 60px -15px rgba(0,0,0,0.45), 0 0 35px -5px rgba(85,37,245,0.25)',
+            }}
+          >
+            
+            {/* Luminous laser scanning beam (active during ATS Intelligence stage) */}
+            {activeStage === 'intelligence' && (
+              <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#4263FF] to-transparent animate-scan-beam z-30 pointer-events-none shadow-[0_0_15px_#4263FF]" />
+            )}
+
+            {/* Resume Document Header */}
+            <div className="border-b border-zinc-200 pb-4 mb-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-black text-zinc-900 tracking-tight">
+                    ALEX MORGAN
+                  </h1>
+                  <p className="text-xs sm:text-sm font-semibold text-[#5525F5] mt-0.5 font-sans">
+                    Senior Product Analyst · Experimentation & Growth
+                  </p>
+                </div>
+                
+                {/* Document format badge */}
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-zinc-100 text-zinc-600 border border-zinc-200 shrink-0">
+                  A4 · UTF-8
+                </span>
+              </div>
+
+              {/* Contact meta strip */}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-zinc-500 mt-2 font-mono">
+                <span>San Francisco, CA</span>
+                <span>•</span>
+                <span>alex.morgan@email.com</span>
+                <span>•</span>
+                <span className="text-[#4263FF]">linkedin.com/in/alexmorgan</span>
+              </div>
+            </div>
+
+            {/* Experience Section */}
+            <div className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="font-bold text-zinc-900 uppercase tracking-wider text-[11px]">
+                    Professional Experience
+                  </span>
+                  <span className="text-[10px] font-mono text-zinc-400">2021 — PRESENT</span>
+                </div>
+                
+                <div className="flex items-baseline justify-between text-xs">
+                  <span className="font-semibold text-zinc-800">ClearPath Analytics — Senior Product Analyst</span>
+                  <span className="text-[10px] text-zinc-500">San Francisco</span>
+                </div>
+              </div>
+
+              {/* Standard Bullet (Unchanged Baseline) */}
+              <div className="flex items-start gap-2 text-[11.5px] text-zinc-600 leading-relaxed">
+                <span className="text-zinc-400 font-bold shrink-0 mt-0.5">•</span>
+                <span>
+                  Built automated dbt SQL pipelines processing 12M+ weekly active user events with zero data regression across production models.
+                </span>
+              </div>
+
+              {/* ========================================================
+                  DYNAMIC BULLET: TRANSFORMING (ORIGINAL vs. STAR OPTIMIZED)
+              ======================================================== */}
+              <div 
+                className={`p-3 rounded-xl border transition-all duration-300 relative ${
+                  activeStage === 'original'
+                    ? 'bg-rose-50/70 border-rose-200 text-zinc-700'
+                    : 'bg-gradient-to-r from-emerald-50/90 via-blue-50/60 to-purple-50/40 border-emerald-300 shadow-sm'
+                }`}
+              >
+                {/* Bullet Transformation Badge */}
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider font-mono ${
+                    activeStage === 'original' ? 'text-rose-600' : 'text-emerald-700'
+                  }`}>
+                    {activeStage === 'original' ? (
+                      <>
+                        <AlertTriangle className="w-3 h-3" />
+                        <span>Original Draft (Vague / Missing Proof)</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3 h-3 text-[#5525F5]" />
+                        <span>AI Optimized (STAR / XYZ Framework)</span>
+                      </>
+                    )}
+                  </span>
+
+                  <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
+                    activeStage === 'original' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-800'
+                  }`}>
+                    {activeStage === 'original' ? '+0 Pts' : '+40 Pts ATS Lift'}
+                  </span>
+                </div>
+
+                {/* Bullet Content */}
+                <p className="text-[12px] leading-relaxed text-zinc-800">
+                  {activeStage === 'original' ? (
+                    <span>
+                      Responsible for checkout experiments and analyzing funnel drop-offs with cross-functional product and engineering teams.
+                    </span>
+                  ) : (
+                    <span>
+                      <strong className="text-zinc-950 font-bold underline decoration-[#5525F5]/40 decoration-2">
+                        Spearheaded 22 checkout pricing A/B experiments
+                      </strong>
+                      , identifying 3 high-converting funnels that{' '}
+                      <span className="bg-emerald-100 text-emerald-900 px-1 py-0.5 rounded font-semibold">
+                        increased quarterly ARR by $180K
+                      </span>{' '}
+                      and reduced checkout drop-off by{' '}
+                      <span className="bg-blue-100 text-blue-900 px-1 py-0.5 rounded font-semibold">
+                        14%
+                      </span>.
+                    </span>
+                  )}
+                </p>
+
+                {/* Grounding Verification Markers */}
+                {activeStage !== 'original' && (
+                  <div className="flex items-center gap-3 mt-2 pt-2 border-t border-emerald-200/60 text-[10px] text-zinc-600">
+                    <span className="inline-flex items-center gap-1 font-medium text-emerald-700">
+                      <CheckCheck className="w-3 h-3" />
+                      <span>STAR Metric Verified</span>
+                    </span>
+                    <span>•</span>
+                    <span className="inline-flex items-center gap-1 font-medium text-zinc-600">
+                      <ShieldCheck className="w-3 h-3 text-[#5525F5]" />
+                      <span>100% Fact-Grounded</span>
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Second Supporting Bullet */}
+              <div className="flex items-start gap-2 text-[11.5px] text-zinc-600 leading-relaxed">
+                <span className="text-zinc-400 font-bold shrink-0 mt-0.5">•</span>
+                <span>
+                  Engineered Tableau & Amplitude executive retention cockpits adopted by 45+ stakeholders for monthly roadmap prioritization.
+                </span>
+              </div>
+
+              {/* Skills Tag Cloud */}
+              <div className="pt-2 border-t border-zinc-200">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 font-mono block mb-1.5">
+                  Core Competencies & Verified Skills
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {['SQL (PostgreSQL, BigQuery)', 'dbt', 'A/B Testing', 'Amplitude', 'Python', 'Tableau'].map((skill) => (
+                    <span
+                      key={skill}
+                      className="px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 text-[10px] font-medium border border-zinc-200/80"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* ========================================================
+              LAYER 2: FLOATING ATS SCORE AUDIT GAUGE (Top-Right Satellite)
+          ======================================================== */}
+          <div 
+            className="absolute -top-4 sm:-top-8 -right-2 sm:-right-8 w-[240px] sm:w-[280px] rounded-2xl bg-[#11131E]/95 backdrop-blur-md border border-[#262B40] p-4 text-white shadow-2xl preserve-3d animate-float-panel-top hidden md:block"
+            style={{
+              transform: 'translateZ(70px)',
+              boxShadow: '0 20px 50px -10px rgba(0,0,0,0.8), 0 0 30px -5px rgba(85,37,245,0.4)',
+            }}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-[#22273A] mb-3">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-200">
+                <TrendingUp className="w-4 h-4 text-[#4263FF]" />
+                <span>Live ATS Score</span>
+              </div>
+              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                liveScore >= 80 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+              }`}>
+                {liveScore >= 80 ? 'Passed (98)' : 'Review (58)'}
+              </span>
+            </div>
+
+            {/* Gauge */}
+            <div className="flex flex-col items-center py-1">
+              <ScoreMeter score={liveScore} variant="dark" textColor="text-white" />
+              <p className="text-[10px] text-zinc-400 font-mono mt-1">
+                Candidate: Alex Morgan
+              </p>
+            </div>
+
+            {/* Breakdown Sub-meters */}
+            <div className="space-y-1.5 mt-3 pt-3 border-t border-[#22273A] text-[11px]">
+              <div className="flex justify-between items-center text-zinc-300">
+                <span>Action & Impact Verbs</span>
+                <span className="font-bold text-emerald-400 font-mono">
+                  {activeStage === 'original' ? '52%' : '100%'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-zinc-300">
+                <span>Quantifiable STAR Lift</span>
+                <span className="font-bold text-emerald-400 font-mono">
+                  {activeStage === 'original' ? '30%' : '$180K + 14%'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-zinc-300">
+                <span>Deterministic ATS Format</span>
+                <span className="font-bold text-blue-400 font-mono">100% Pass</span>
+              </div>
+            </div>
+          </div>
+
+          {/* ========================================================
+              LAYER 3: JOB REQUIREMENT MATCH PANEL (Bottom-Left Satellite)
+          ======================================================== */}
+          <div 
+            className="absolute -bottom-6 -left-2 sm:-left-8 w-[250px] sm:w-[290px] rounded-2xl bg-[#11131E]/95 backdrop-blur-md border border-[#262B40] p-4 text-white shadow-2xl preserve-3d animate-float-panel-bottom hidden md:block"
+            style={{
+              transform: 'translateZ(60px)',
+              boxShadow: '0 20px 50px -10px rgba(0,0,0,0.8), 0 0 30px -5px rgba(66,99,255,0.3)',
+            }}
+          >
+            <div className="flex items-center justify-between pb-2.5 border-b border-[#22273A] mb-3">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-200">
+                <Target className="w-4 h-4 text-[#5525F5]" />
+                <span>Job Requirement Match</span>
+              </div>
+              <span className="text-[10px] font-mono text-zinc-400">Target: Stripe</span>
+            </div>
+
+            <div className="space-y-2 text-[11px]">
+              <div className="flex items-center justify-between p-1.5 rounded-lg bg-[#181B29] border border-[#252A3F]">
+                <span className="text-zinc-300">SQL / Analytics Engineering</span>
+                <span className="text-emerald-400 font-bold font-mono text-[10px]">Verified Match</span>
+              </div>
+              
+              <div className="flex items-center justify-between p-1.5 rounded-lg bg-[#181B29] border border-[#252A3F]">
+                <span className="text-zinc-300">A/B Testing & ARR Impact</span>
+                <span className={`font-bold font-mono text-[10px] ${
+                  activeStage === 'original' ? 'text-amber-400' : 'text-emerald-400'
+                }`}>
+                  {activeStage === 'original' ? 'Needs STAR Proof' : 'Verified Match'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between p-1.5 rounded-lg bg-[#181B29] border border-[#252A3F]">
+                <span className="text-zinc-300">Single-Column A4 Parsing</span>
+                <span className="text-blue-400 font-bold font-mono text-[10px]">Deterministic</span>
+              </div>
+            </div>
+
+            {/* Application Branching Pill */}
+            <div className="mt-3 pt-2.5 border-t border-[#22273A] flex items-center justify-between text-[10px] text-zinc-400 font-mono">
+              <span className="flex items-center gap-1">
+                <Layers className="w-3 h-3 text-[#5525F5]" />
+                <span>Branch: Tailored v2</span>
+              </span>
+              <span className="text-emerald-400 font-bold">A4 Ready</span>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Bottom Interactive Hint */}
+        <div className="mt-6 pt-4 border-t border-[#1C2030] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-400">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#5525F5] animate-ping" />
+            <span>Click tabs above to toggle between Original Draft, ATS Intelligence, and Job-Matched STAR.</span>
+          </div>
+
+          <Link 
+            href="/login" 
+            className="inline-flex items-center gap-1 text-white hover:text-[#4263FF] font-medium transition-colors cursor-pointer"
+          >
+            <span>Start Building with Your Profile</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+      </div>
+
     </div>
   );
 }

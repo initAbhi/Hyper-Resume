@@ -360,6 +360,100 @@ body {
   animation: pulse-subtle 3s ease-in-out infinite;
 }
 
+/* 3D Dimensional Utilities & Glow */
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.perspective-1200 {
+  perspective: 1200px;
+}
+
+.perspective-1600 {
+  perspective: 1600px;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+@keyframes scan-beam {
+  0% {
+    top: 0%;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+.animate-scan-beam {
+  animation: scan-beam 3.2s ease-in-out infinite;
+}
+
+@keyframes float-hero-doc {
+  0%, 100% {
+    transform: rotateX(11deg) rotateY(-8deg) rotateZ(1deg) translateY(0px) translateZ(40px);
+  }
+  50% {
+    transform: rotateX(13deg) rotateY(-6deg) rotateZ(1.5deg) translateY(-10px) translateZ(50px);
+  }
+}
+
+.animate-float-hero-doc {
+  animation: float-hero-doc 8s ease-in-out infinite;
+}
+
+@keyframes float-panel-top {
+  0%, 100% {
+    transform: translateY(0px) translateZ(65px);
+  }
+  50% {
+    transform: translateY(-8px) translateZ(75px);
+  }
+}
+
+.animate-float-panel-top {
+  animation: float-panel-top 6s ease-in-out infinite 0.5s;
+}
+
+@keyframes float-panel-bottom {
+  0%, 100% {
+    transform: translateY(0px) translateZ(55px);
+  }
+  50% {
+    transform: translateY(-6px) translateZ(65px);
+  }
+}
+
+.animate-float-panel-bottom {
+  animation: float-panel-bottom 7s ease-in-out infinite 1s;
+}
+
+.glow-violet-rim {
+  box-shadow: 
+    0 0 0 1px rgba(110, 86, 255, 0.3),
+    0 8px 32px -8px rgba(85, 37, 245, 0.4),
+    0 24px 64px -12px rgba(66, 99, 255, 0.25);
+}
+
+.glow-violet-deep {
+  box-shadow:
+    0 0 80px -20px rgba(85, 37, 245, 0.5),
+    0 0 140px -40px rgba(66, 99, 255, 0.35);
+}
+
 /* ========== ATS PRINT & PDF EXPORT ========== */
 
 /* Force color rendering in print for all resume templates */
