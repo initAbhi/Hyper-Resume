@@ -10,6 +10,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { TemplateProps, renderHighlightedText, LinkedinIcon, GithubIcon } from './types';
+import { CustomSectionsBlock } from './CustomSectionsBlock';
 
 /**
  * Deedy Resume Template
@@ -327,6 +328,13 @@ export function DeedyTemplate({
               </div>
             </section>
           )}
+
+          <CustomSectionsBlock
+            content={content}
+            accentColor={accentColor}
+            highlightKeywords={highlightKeywords}
+            showHighlights={showHighlights}
+          />
         </main>
       </div>
     </div>

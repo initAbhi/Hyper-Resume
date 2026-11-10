@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { TemplateProps, renderHighlightedText } from './types';
+import { CustomSectionsBlock } from './CustomSectionsBlock';
 
 export function ClassicTemplate({
   content,
@@ -147,6 +148,14 @@ export function ClassicTemplate({
           </div>
         </section>
       )}
+
+      <CustomSectionsBlock
+        content={content}
+        accentColor={accentColor}
+        highlightKeywords={highlightKeywords}
+        showHighlights={showHighlights}
+        spacingClassName="mt-3.5 space-y-1.5"
+      />
     </div>
   );
 }

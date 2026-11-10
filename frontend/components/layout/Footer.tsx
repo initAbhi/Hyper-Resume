@@ -8,7 +8,7 @@ import { DappledLight } from '@/components/reactbits';
 
 export function Footer() {
   const pathname = usePathname();
-  if (pathname?.startsWith('/app') || pathname?.startsWith('/admin')) return null;
+  if (pathname?.startsWith('/app') || pathname?.startsWith('/admin') || pathname?.startsWith('/r/')) return null;
 
   const productLinks = [
     { label: 'AI Resume Builder', href: '/login' },

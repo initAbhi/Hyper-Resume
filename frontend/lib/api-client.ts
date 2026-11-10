@@ -68,7 +68,60 @@ export interface CurrentUserResponse {
   creditBalance: number;
 }
 
+export type BuiltInSectionKey =
+  | 'summary'
+  | 'experience'
+  | 'projects'
+  | 'skills'
+  | 'education'
+  | 'certifications';
+
+export type ResumeSectionKey = BuiltInSectionKey | `custom:${string}`;
+
+export type CustomSectionKind =
+  | 'publications'
+  | 'awards'
+  | 'volunteer'
+  | 'languages'
+  | 'custom';
+
+export interface CustomSectionEntry {
+  id: string;
+  heading: string;
+  subtitle?: string;
+  dateRange?: string;
+  locationOrLink?: string;
+  bullets: string[];
+}
+
+export interface CustomResumeSection {
+  id: string;
+  title: string;
+  kind: CustomSectionKind;
+  entries: CustomSectionEntry[];
+}
+
+export interface ResumeLayoutSettings {
+  sectionOrder?: ResumeSectionKey[];
+  hiddenSections?: ResumeSectionKey[];
+  fontSizeScale?: number;
+  lineHeight?: number;
+  sectionSpacing?: number;
+  pageMargin?: number;
+  accentColor?: string;
+  fontFamily?: 'sans' | 'serif' | 'mono';
+}
+
+export interface ResumeContentMeta {
+  targetRole?: string;
+  targetCompany?: string;
+  tailoredFromMatchId?: string;
+  tailoredFromResumeId?: string;
+}
+
 export interface ResumeContent {
+  meta?: ResumeContentMeta;
+  layout?: ResumeLayoutSettings;
   contact: {
     fullName: string;
     email: string;
@@ -114,6 +167,7 @@ export interface ResumeContent {
     issuer: string;
     issueDate?: string;
   }>;
+  customSections?: CustomResumeSection[];
 }
 
 export interface Resume {
@@ -229,26 +283,286 @@ export interface ResumeAdaptation {
   updatedAt: string;
 }
 
+export interface BulletVariantOption {
+  style: 'Impact (XYZ)' | 'Executive (STAR)' | 'Technical & Concise';
+  bullet: string;
+  actionVerbUsed: string;
+  framework: 'STAR' | 'XYZ';
+  rationale: string;
+}
+
+export interface BulletImproveResponse {
+  improvedBullet: string;
+  originalBullet: string;
+  framework: 'STAR' | 'XYZ';
+  actionVerbUsed: string;
+  explanation: string;
+  factualVerificationNotes: string;
+  variants: BulletVariantOption[];
+  provider?: string;
+}
+
+export interface BulletGenerateResponse {
+  roleTitle: string;
+  bullets: BulletVariantOption[];
+  factualVerificationNotes: string;
+  provider?: string;
+}
+
+export type WritingCheckCategory =
+  | 'spelling'
+  | 'grammar'
+  | 'buzzword'
+  | 'weak_phrasing';
+
+export type WritingCheckSeverity = 'error' | 'warning' | 'suggestion';
+
+export interface WritingIssueItem {
+  id: string;
+  category: WritingCheckCategory;
+  severity: WritingCheckSeverity;
+  locationType:
+    | 'headline'
+    | 'summary'
+    | 'experience_bullet'
+    | 'project_description';
+  locationLabel: string;
+  expIdx?: number;
+  bulletIdx?: number;
+  projIdx?: number;
+  matchedText: string;
+  suggestedReplacement: string;
+  originalText: string;
+  rewrittenText: string;
+  reason: string;
+}
+
+export interface WritingCheckRequest {
+  headline?: string;
+  summary?: string;
+  targetRole?: string;
+  experience: Array<{
+    title?: string;
+    company?: string;
+    current?: boolean;
+    endDate?: string;
+    bullets: string[];
+  }>;
+  projects?: Array<{
+    name?: string;
+    description?: string;
+  }>;
+}
+
+export interface WritingCheckResponse {
+  overallWritingScore: number;
+  summaryNote: string;
+  issues: WritingIssueItem[];
+  factualVerificationNotes: string;
+  provider?: string;
+}
+
+export type AtsAuditDimensionKey =
+  | 'formatting'
+  | 'metrics'
+  | 'action_verbs'
+  | 'technical_depth'
+  | 'brevity';
+
+export interface AtsAuditDimension {
+  key: AtsAuditDimensionKey;
+  label: string;
+  weight: number;
+  score: number;
+  status: 'strong' | 'moderate' | 'needs_work';
+  summary: string;
+}
+
+export interface AtsParserRisk {
+  id: string;
+  severity: 'critical' | 'warning' | 'pass';
+  category: 'contact' | 'sections' | 'dates' | 'formatting' | 'length';
+  message: string;
+  fixHint?: string;
+}
+
+export interface AtsStackAlignment {
+  totalSkills: number;
+  corroboratedSkills: string[];
+  unreferencedSkills: string[];
+}
+
+export interface AtsBulletQualityItem {
+  bullet: string;
+  section?: 'Experience' | 'Projects';
+  contextLabel?: string;
+  wordCount?: number;
+  hasActionVerb: boolean;
+  hasMetric: boolean;
+  lengthStatus?: 'short' | 'ideal' | 'long';
+  feedback: string;
+}
+
+export interface ResumeAuditFindings {
+  actionVerbsCount: number;
+  metricsCount: number;
+  missingSections: string[];
+  detectedSections?: string[];
+  formattingFlags: string[];
+  wordCount?: number;
+  idealBulletCount?: number;
+  shortBulletsCount?: number;
+  longBulletsCount?: number;
+  dimensions?: AtsAuditDimension[];
+  parserRisks?: AtsParserRisk[];
+  stackAlignment?: AtsStackAlignment;
+  bulletQuality: AtsBulletQualityItem[];
+  writingQuality?: {
+    score: number;
+    issueCount: number;
+    spellingCount: number;
+    grammarCount: number;
+    buzzwordCount: number;
+    weakPhrasingCount: number;
+  };
+}
+
+export interface PlainTextAtsAuditResponse {
+  score: number;
+  findings: ResumeAuditFindings;
+  recommendations: string[];
+  writingAudit: WritingCheckResponse;
+}
+
+export interface PublicParseAndAuditResponse {
+  fileName: string;
+  extractedTextLength: number;
+  extractedText: string;
+  draft: ParsedProfileDraft;
+  audit: PlainTextAtsAuditResponse;
+}
+
+export interface JobMatchScoreComponents {
+  requiredSkillsScore: number;
+  preferredSkillsScore: number;
+  experienceScore: number;
+  responsibilityScore: number;
+  formattingScore: number;
+}
+
+export interface JobMatchRequirementAnalysis {
+  requirementId: string;
+  text?: string;
+  type?: string;
+  importance?: 'critical' | 'high' | 'medium' | 'low' | string;
+  keywords?: string[];
+  status: 'supported' | 'needs_confirmation' | 'not_evidenced' | 'not_applicable';
+  confidence: number;
+  evidenceQuotes: string[];
+  explanation: string;
+  suggestedAction: string;
+}
+
+export interface PublicJobMatchResponse {
+  overallScore: number;
+  scoreComponents: JobMatchScoreComponents;
+  requirementsAnalysis: JobMatchRequirementAnalysis[];
+  recommendations: string[];
+  parsedRequirementsCount: number;
+  provider?: string;
+}
+
 export interface ResumeAnalysis {
   id: string;
   userId: string;
   resumeId: string;
   analysisType: 'ats_audit' | 'job_match' | 'bullet_improve';
   score: number;
-  findings: {
-    actionVerbsCount: number;
-    metricsCount: number;
-    missingSections: string[];
-    formattingFlags: string[];
-    bulletQuality: Array<{
-      bullet: string;
-      hasActionVerb: boolean;
-      hasMetric: boolean;
-      feedback: string;
-    }>;
-  };
+  findings: ResumeAuditFindings;
   recommendations: string[];
   createdAt: string;
+}
+
+export type ResumeShareEventType =
+  | 'view'
+  | 'download_pdf'
+  | 'download_docx'
+  | 'print'
+  | 'contact_click';
+
+export interface ResumeShareSettings {
+  id: string;
+  resumeId: string;
+  userId: string;
+  slug: string;
+  isActive: boolean;
+  allowPdfDownload: boolean;
+  allowDocxDownload: boolean;
+  hideContactDetails: boolean;
+  recruiterNote?: string | null;
+  expiresAt?: string | null;
+  viewCount: number;
+  uniqueVisitorCount: number;
+  downloadCount: number;
+  lastViewedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ShareAnalyticsReport {
+  totalViews: number;
+  uniqueVisitors: number;
+  pdfDownloads: number;
+  docxDownloads: number;
+  totalDownloads: number;
+  printActions: number;
+  contactClicks: number;
+  lastViewedAt: string | null;
+  dailyTrend: Array<{
+    date: string;
+    label: string;
+    views: number;
+    downloads: number;
+  }>;
+  deviceBreakdown: Array<{ device: string; count: number }>;
+  referrerBreakdown: Array<{ referrer: string; count: number }>;
+  recentEvents: Array<{
+    id: string;
+    eventType: ResumeShareEventType;
+    referrer: string;
+    deviceType: string;
+    browser: string;
+    os: string;
+    createdAt: string;
+  }>;
+}
+
+export interface ResumeShareWithAnalytics {
+  share: ResumeShareSettings | null;
+  analytics: ShareAnalyticsReport;
+}
+
+export interface ResumeShareSummaryItem {
+  resumeId: string;
+  slug: string;
+  isActive: boolean;
+  viewCount: number;
+  uniqueVisitorCount: number;
+  downloadCount: number;
+  lastViewedAt: string | null;
+}
+
+export interface PublicSharedResumePayload {
+  slug: string;
+  resumeId: string;
+  resumeTitle: string;
+  templateKey: string;
+  content: ResumeContent;
+  recruiterNote: string | null;
+  allowPdfDownload: boolean;
+  allowDocxDownload: boolean;
+  hideContactDetails: boolean;
+  updatedAt: string;
 }
 
 export interface JobDescription {
@@ -261,8 +575,9 @@ export interface JobDescription {
   parsedRequirements?: Array<{
     id: string;
     text: string;
-    type: 'required_skill' | 'preferred_skill' | 'experience' | 'education' | 'responsibility';
-    weight: number;
+    type: 'required_skill' | 'preferred_skill' | 'experience' | 'education' | 'responsibility' | 'domain';
+    importance?: 'critical' | 'high' | 'medium' | 'low' | string;
+    weight?: number;
     keywords: string[];
   }>;
   createdAt: string;
@@ -280,6 +595,10 @@ export interface JobMatchAnalysisResult {
   summary: string;
   matchedRequirements: Array<{
     requirementId: string;
+    text?: string;
+    type?: string;
+    importance?: 'critical' | 'high' | 'medium' | 'low' | string;
+    keywords?: string[];
     status: 'supported' | 'needs_confirmation' | 'not_evidenced' | 'not_applicable';
     confidence: number;
     evidenceQuotes: string[];
@@ -288,6 +607,45 @@ export interface JobMatchAnalysisResult {
   }>;
   missingKeywords: string[];
   recommendedImprovements: string[];
+}
+
+export interface JobTailorSuggestionsResponse {
+  matchId: string;
+  resumeId: string;
+  jobDescriptionId: string;
+  jobTitle: string;
+  companyName?: string;
+  suggestedHeadline: string;
+  suggestedSummary: string;
+  bulletImprovements: Array<{
+    company: string;
+    originalBullet: string;
+    tailoredBullet: string;
+    matchedKeywords: string[];
+  }>;
+  factualVerificationNotes: string;
+  provider?: string;
+}
+
+export interface CreateTailoredResumeFromMatchRequest {
+  name?: string;
+  applyHeadline?: string;
+  applySummary?: string;
+  bulletUpdates?: Array<{
+    company?: string;
+    originalBullet: string;
+    tailoredBullet: string;
+  }>;
+}
+
+export interface CreateTailoredResumeFromMatchResponse {
+  resume: Resume;
+  appliedChanges: {
+    headlineApplied: boolean;
+    summaryApplied: boolean;
+    bulletsApplied: number;
+    warnings: string[];
+  };
 }
 
 export interface JobMatch {
@@ -564,6 +922,173 @@ export interface CandidateProfile {
     issuer: string;
     issueDate?: string;
   }>;
+  customSections?: CustomResumeSection[];
+}
+
+export type SummaryTone =
+  | 'Executive'
+  | 'Impact & Metrics'
+  | 'Technical & Concise';
+
+export interface SummaryGenerateRequest {
+  currentHeadline?: string;
+  currentSummary?: string;
+  targetRole?: string;
+  skills: string[];
+  experience: Array<{
+    title: string;
+    company: string;
+    bullets: string[];
+  }>;
+  projects?: Array<{
+    name: string;
+    description: string;
+  }>;
+}
+
+export interface SummaryGenerateResponse {
+  headlineSuggestions: Array<{
+    style: string;
+    headline: string;
+  }>;
+  summaryOptions: Array<{
+    tone: SummaryTone;
+    summary: string;
+    focus: string;
+  }>;
+  factualVerificationNotes: string;
+  provider?: string;
+}
+
+export type SectionRewriteSectionType =
+  | 'summary'
+  | 'experience'
+  | 'projects'
+  | 'custom';
+
+export type SectionRewriteTone =
+  | 'executive'
+  | 'impact'
+  | 'concise'
+  | 'technical'
+  | 'expand';
+
+export interface SectionRewriteRequest {
+  sectionType: SectionRewriteSectionType;
+  sectionTitle?: string;
+  tone: SectionRewriteTone;
+  targetRole?: string;
+  instruction?: string;
+  candidateSkills?: string[];
+  summaryText?: string;
+  experienceEntries?: Array<{
+    title: string;
+    company: string;
+    bullets: string[];
+  }>;
+  projectEntries?: Array<{
+    name: string;
+    description: string;
+    highlights?: string[];
+  }>;
+  customEntries?: Array<{
+    heading: string;
+    subtitle?: string;
+    bullets: string[];
+  }>;
+}
+
+export interface SectionRewriteResponse {
+  sectionType: SectionRewriteSectionType;
+  tone: SectionRewriteTone;
+  summaryRewrite?: {
+    original: string;
+    rewritten: string;
+  };
+  experienceRewrites?: Array<{
+    index: number;
+    title: string;
+    company: string;
+    originalBullets: string[];
+    rewrittenBullets: string[];
+  }>;
+  projectRewrites?: Array<{
+    index: number;
+    name: string;
+    originalDescription: string;
+    rewrittenDescription: string;
+    originalHighlights: string[];
+    rewrittenHighlights: string[];
+  }>;
+  customRewrites?: Array<{
+    index: number;
+    heading: string;
+    originalBullets: string[];
+    rewrittenBullets: string[];
+  }>;
+  changesSummary: string;
+  factualVerificationNotes: string;
+  warnings?: string[];
+  provider?: string;
+}
+
+export type CoverLetterTone =
+  | 'Executive'
+  | 'Enthusiastic'
+  | 'Technical'
+  | 'Concise';
+
+export type CoverLetterTemplateKey = 'executive' | 'modern' | 'classic';
+
+export type CoverLetterSectionFocus = 'all' | 'opening' | 'body' | 'closing';
+
+export interface CoverLetter {
+  id: string;
+  userId: string;
+  resumeId?: string | null;
+  jobMatchId?: string | null;
+  title: string;
+  targetRole: string;
+  companyName: string;
+  hiringManager?: string | null;
+  jobDescription?: string | null;
+  tone: CoverLetterTone;
+  templateKey: CoverLetterTemplateKey;
+  accentColor: string;
+  senderName: string;
+  senderEmail?: string | null;
+  senderPhone?: string | null;
+  senderLocation?: string | null;
+  recipientLine?: string | null;
+  salutation: string;
+  openingParagraph: string;
+  bodyParagraphs: string[];
+  closingParagraph: string;
+  signOff: string;
+  highlightedKeywords: string[];
+  factualVerificationNotes?: string | null;
+  provider?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VectorPdfExportResponse {
+  blob: Blob;
+  fileName: string;
+  atsVerified: boolean;
+  extractableChars: number;
+  extractableWords: number;
+  pageCount: number;
+  sizeBytes: number;
+}
+
+export interface ParsedLinkedInMeta {
+  isLinkedInPdf: boolean;
+  linkedinSlug?: string;
+  hasCustomSlug?: boolean;
+  detectedSections: string[];
+  headlineCharCount: number;
+  summaryCharCount: number;
 }
 
 export interface ParsedProfileDraft {
@@ -608,7 +1133,226 @@ export interface ParsedProfileDraft {
     issuer: string;
     issueDate?: string;
   }>;
+  languages?: string[];
+  sourceType?: 'linkedin_pdf' | 'standard_resume';
+  linkedinMeta?: ParsedLinkedInMeta;
   confidenceScore: number;
+}
+
+export type LinkedInOptimizeTone =
+  | 'Executive'
+  | 'Impact & Metrics'
+  | 'Storytelling'
+  | 'Technical SEO';
+
+export type LinkedInAuditSourceType = 'linkedin_pdf' | 'resume' | 'manual';
+
+export interface LinkedInHeadlineOption {
+  id: string;
+  style: string;
+  headline: string;
+  charCount: number;
+  keywordsIncluded: string[];
+  whyItWorks: string;
+}
+
+export interface LinkedInAboutOption {
+  id: string;
+  tone: string;
+  about: string;
+  previewHook: string;
+  charCount: number;
+  keywordsIncluded: string[];
+}
+
+export interface LinkedInExperienceOptimization {
+  company: string;
+  title: string;
+  recruiterSearchHeadline: string;
+  roleKeywords: string[];
+  optimizedBullets: Array<{
+    original: string;
+    optimized: string;
+    matchedKeywords: string[];
+  }>;
+}
+
+export interface LinkedInSkillsStrategy {
+  top3PinnedSkills: string[];
+  evidencedSkillsToAdd: string[];
+  targetRoleKeywordsToConfirm: string[];
+}
+
+export interface LinkedInFeaturedPrompt {
+  title: string;
+  itemType: 'Link' | 'Document' | 'Project';
+  suggestedUrl?: string;
+  description: string;
+}
+
+export interface LinkedInOptimizeResult {
+  headlineSuggestions: LinkedInHeadlineOption[];
+  aboutOptions: LinkedInAboutOption[];
+  experienceOptimizations: LinkedInExperienceOptimization[];
+  skillsStrategy: LinkedInSkillsStrategy;
+  featuredSuggestions: LinkedInFeaturedPrompt[];
+  factualVerificationNotes: string;
+  provider?: string;
+}
+
+export interface LinkedInSectionDiagnostic {
+  id: string;
+  label: string;
+  score: number;
+  maxScore: number;
+  status: 'strong' | 'needs_work' | 'critical';
+  finding: string;
+  recommendation: string;
+}
+
+export interface LinkedInChecklistItem {
+  id: string;
+  title: string;
+  impact: 'High' | 'Medium';
+  completed: boolean;
+  detail: string;
+}
+
+export interface LinkedInScoreReport {
+  overallScore: number;
+  gradeLabel: string;
+  subScores: {
+    headline: number;
+    about: number;
+    experience: number;
+    skills: number;
+    completeness: number;
+    contactFeatured: number;
+  };
+  headlineCharCount: number;
+  aboutCharCount: number;
+  aboutFoldPreview: string;
+  skillsCount: number;
+  experienceCount: number;
+  evidencedKeywordCoveragePct: number;
+  urlHealth: {
+    url: string;
+    slug: string;
+    hasCustomSlug: boolean;
+    suggestedSlug: string;
+    note: string;
+  };
+  diagnostics: LinkedInSectionDiagnostic[];
+  checklist: LinkedInChecklistItem[];
+}
+
+export interface LinkedInAppliedState {
+  appliedHeadline?: string;
+  appliedAbout?: string;
+  appliedSkills?: string[];
+  checkedChecklistIds?: string[];
+  syncedToResume?: boolean;
+  syncedToProfile?: boolean;
+  lastAppliedAt?: string;
+}
+
+export interface LinkedInAudit {
+  id: string;
+  userId: string;
+  resumeId?: string | null;
+  title: string;
+  targetRole: string;
+  industry?: string | null;
+  tone: LinkedInOptimizeTone;
+  sourceType: LinkedInAuditSourceType;
+  linkedinUrl?: string | null;
+  overallScore: number;
+  profileSnapshot: ResumeContent;
+  scoreReport: LinkedInScoreReport;
+  optimizations: LinkedInOptimizeResult;
+  appliedState: LinkedInAppliedState;
+  provider?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LinkedInPdfImportResponse {
+  fileName: string;
+  extractedTextLength: number;
+  draft: ParsedProfileDraft;
+  createdResume: Resume | null;
+  audit: LinkedInAudit;
+}
+
+export type DiscoveredJobSource =
+  | 'Greenhouse'
+  | 'Ashby'
+  | 'Lever'
+  | 'Remotive'
+  | 'Arbeitnow'
+  | 'Snapshot';
+
+export type DiscoveredWorkplaceType = 'Remote' | 'Hybrid' | 'Onsite';
+
+export interface CuratedAtsBoard {
+  token: string;
+  name: string;
+  provider: 'greenhouse' | 'ashby' | 'lever';
+  category: string;
+}
+
+export interface DiscoveredJobItem {
+  id: string;
+  externalId: string;
+  title: string;
+  company: string;
+  location: string;
+  workplaceType: DiscoveredWorkplaceType;
+  employmentType: string;
+  source: DiscoveredJobSource;
+  boardToken?: string;
+  applyUrl: string;
+  postedAt: string;
+  salaryRange?: string;
+  tags: string[];
+  snippet: string;
+  descriptionText: string;
+  isLive: boolean;
+  matchScore?: number;
+  matchedSkills?: string[];
+  missingKeywords?: string[];
+  isSavedInTracker?: boolean;
+  trackedApplicationId?: string;
+}
+
+export interface DiscoveredSourceStatus {
+  source: string;
+  ok: boolean;
+  count: number;
+  cached: boolean;
+  error?: string;
+}
+
+export interface JobDiscoverySearchResponse {
+  jobs: DiscoveredJobItem[];
+  total: number;
+  liveCount: number;
+  sourcesStatus: DiscoveredSourceStatus[];
+  fetchedAt: string;
+  feedMode: 'live' | 'offline_fallback';
+  scoredAgainstResumeId?: string;
+  scoredAgainstResumeName?: string;
+}
+
+export interface SaveDiscoveredJobResponse {
+  alreadyTracked: boolean;
+  application: JobApplication;
+  jobDescription: JobDescription | null;
+}
+
+export interface RunDiscoveredMatchResponse {
+  jobDescription: JobDescription;
+  match: JobMatch;
 }
 
 export class ApiClient {
@@ -1007,6 +1751,14 @@ export class ApiClient {
     return res.data;
   }
 
+  async duplicateResume(resumeId: string, name?: string) {
+    const res = await this.request<Resume>(`/resumes/${resumeId}/duplicate`, {
+      method: 'POST',
+      body: JSON.stringify(name?.trim() ? { name: name.trim() } : {}),
+    });
+    return res.data;
+  }
+
   async listVersions(resumeId: string) {
     const res = await this.request<ResumeVersion[]>(`/resumes/${resumeId}/versions`);
     return res.data;
@@ -1023,11 +1775,318 @@ export class ApiClient {
     return res.data;
   }
 
+  async restoreVersion(resumeId: string, versionId: string) {
+    const res = await this.request<Resume>(
+      `/resumes/${resumeId}/versions/${versionId}/restore`,
+      {
+        method: 'POST',
+      },
+    );
+    return res.data;
+  }
+
   async runAnalysis(
     resumeId: string,
     dto: { analysisType: 'ats_check' | 'ats_audit' | 'comprehensive_audit' | 'job_match' | 'bullet_improve'; jobDescriptionId?: string },
   ) {
     const res = await this.request<ResumeAnalysis>(`/resumes/${resumeId}/analyses`, {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+    return res.data;
+  }
+
+  async auditPlainTextResume(dto: { resumeText: string; targetRole?: string }) {
+    const endpoint = this.token ? '/ai/ats-audit' : '/ai/public/ats-audit';
+    const res = await this.request<PlainTextAtsAuditResponse>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+    return res.data;
+  }
+
+  async analyzePublicJobMatch(dto: {
+    resumeText: string;
+    jobDescriptionText: string;
+    targetRole?: string;
+  }) {
+    const res = await this.request<PublicJobMatchResponse>('/job-matches/public/analyze', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+    return res.data;
+  }
+
+  private async postBinaryExport(
+    endpoint: string,
+    dto: Record<string, unknown>,
+    defaultFileName: string,
+    isRetry: boolean = false,
+  ): Promise<VectorPdfExportResponse> {
+    return this.requestBinaryDownload(
+      'POST',
+      endpoint,
+      dto,
+      defaultFileName,
+      isRetry,
+    );
+  }
+
+  private async requestBinaryDownload(
+    method: 'POST' | 'GET',
+    endpoint: string,
+    dto: Record<string, unknown> | undefined,
+    defaultFileName: string,
+    isRetry: boolean = false,
+    includeAuth: boolean = true,
+  ): Promise<VectorPdfExportResponse> {
+    const url = `${this.getBaseUrl()}${endpoint}`;
+    const requestId = this.generateRequestId();
+    const headers: Record<string, string> = {
+      'X-Request-ID': requestId,
+    };
+    if (method === 'POST') {
+      headers['Content-Type'] = 'application/json';
+    }
+    if (includeAuth && this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(url, {
+      method,
+      credentials: 'include',
+      headers,
+      body: method === 'POST' ? JSON.stringify(dto || {}) : undefined,
+    });
+
+    if (!response.ok) {
+      if (includeAuth && response.status === 401 && !isRetry && this.refreshToken) {
+        const refreshed = await this.tryRefreshToken();
+        if (refreshed) {
+          return this.requestBinaryDownload(
+            method,
+            endpoint,
+            dto,
+            defaultFileName,
+            true,
+            includeAuth,
+          );
+        }
+      }
+
+      let errMsg = `Document export failed (${response.status})`;
+      let errCode = 'DOCUMENT_EXPORT_ERROR';
+      try {
+        const errJson = await response.json();
+        errMsg = errJson.message || errJson.error?.message || errMsg;
+        errCode = errJson.code || errJson.error?.code || errCode;
+      } catch {
+        // Non-JSON error
+      }
+
+      throw new ApiError({
+        statusCode: response.status,
+        code: errCode,
+        message: errMsg,
+        details: [],
+        requestId,
+      });
+    }
+
+    const blob = await response.blob();
+    const atsVerified = response.headers.get('X-ATS-Text-Verified') === 'true';
+    const extractableChars = Number(response.headers.get('X-ATS-Extractable-Chars') || '0');
+    const extractableWords = Number(response.headers.get('X-ATS-Extractable-Words') || '0');
+    const pageCount = Number(response.headers.get('X-PDF-Page-Count') || '1');
+    const sizeBytes = Number(
+      response.headers.get('X-DOCX-Size-Bytes') ||
+        response.headers.get('X-PDF-Size-Bytes') ||
+        blob.size ||
+        '0',
+    );
+
+    let fileName =
+      (dto && typeof dto.fileName === 'string' && dto.fileName.trim()) ||
+      defaultFileName;
+    const contentDisp = response.headers.get('Content-Disposition');
+    if (contentDisp) {
+      const match = /filename="?([^"]+)"?/i.exec(contentDisp);
+      if (match?.[1]) {
+        try {
+          fileName = decodeURIComponent(match[1]);
+        } catch {
+          fileName = match[1];
+        }
+      }
+    }
+
+    return {
+      blob,
+      fileName,
+      atsVerified,
+      extractableChars,
+      extractableWords,
+      pageCount,
+      sizeBytes,
+    };
+  }
+
+  async exportResumePdf(
+    resumeId: string,
+    dto: {
+      html: string;
+      styles?: string;
+      pageSize?: 'A4' | 'US Letter';
+      fileName?: string;
+      htmlClassName?: string;
+      rootStyle?: string;
+    },
+  ): Promise<VectorPdfExportResponse> {
+    return this.postBinaryExport(`/resumes/${resumeId}/export/pdf`, dto, 'Resume.pdf');
+  }
+
+  async exportResumeDocx(
+    resumeId: string,
+    dto?: {
+      pageSize?: 'A4' | 'US Letter';
+      fileName?: string;
+    },
+  ): Promise<VectorPdfExportResponse> {
+    return this.postBinaryExport(
+      `/resumes/${resumeId}/export/docx`,
+      dto || {},
+      'Resume.docx',
+    );
+  }
+
+  // --- Recruiter Share Links & View Analytics Endpoints ---
+  async listSharesSummary() {
+    const res = await this.request<ResumeShareSummaryItem[]>('/resumes/shares/summary');
+    return Array.isArray(res.data) ? res.data : [];
+  }
+
+  async getResumeShareAnalytics(resumeId: string) {
+    const res = await this.request<ResumeShareWithAnalytics>(
+      `/resumes/${resumeId}/share`,
+    );
+    return res.data;
+  }
+
+  async upsertResumeShare(
+    resumeId: string,
+    dto: {
+      isActive?: boolean;
+      slug?: string;
+      allowPdfDownload?: boolean;
+      allowDocxDownload?: boolean;
+      hideContactDetails?: boolean;
+      recruiterNote?: string | null;
+      expiresAt?: string | null;
+    },
+  ) {
+    const res = await this.request<ResumeShareWithAnalytics>(
+      `/resumes/${resumeId}/share`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(dto),
+      },
+    );
+    return res.data;
+  }
+
+  async regenerateResumeShareSlug(resumeId: string) {
+    const res = await this.request<ResumeShareWithAnalytics>(
+      `/resumes/${resumeId}/share/regenerate-slug`,
+      { method: 'POST' },
+    );
+    return res.data;
+  }
+
+  async resetResumeShareAnalytics(resumeId: string) {
+    const res = await this.request<ResumeShareWithAnalytics>(
+      `/resumes/${resumeId}/share/analytics`,
+      { method: 'DELETE' },
+    );
+    return res.data;
+  }
+
+  async getPublicResumeBySlug(slug: string, track: boolean = true) {
+    const query = track ? '' : '?track=0';
+    const res = await this.request<PublicSharedResumePayload>(
+      `/public/resumes/${encodeURIComponent(slug)}${query}`,
+    );
+    return res.data;
+  }
+
+  async recordPublicShareEvent(slug: string, eventType: ResumeShareEventType) {
+    const res = await this.request<{ recorded: boolean; eventType: ResumeShareEventType }>(
+      `/public/resumes/${encodeURIComponent(slug)}/events`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ eventType }),
+      },
+    );
+    return res.data;
+  }
+
+  async exportPublicResumeDocx(
+    slug: string,
+    pageSize: 'A4' | 'US Letter' = 'A4',
+  ): Promise<VectorPdfExportResponse> {
+    return this.requestBinaryDownload(
+      'GET',
+      `/public/resumes/${encodeURIComponent(slug)}/docx?pageSize=${encodeURIComponent(pageSize)}`,
+      undefined,
+      `${slug}.docx`,
+      false,
+      false,
+    );
+  }
+
+  async exportPublicResumePdf(
+    slug: string,
+    dto: {
+      html: string;
+      styles?: string;
+      pageSize?: 'A4' | 'US Letter';
+      fileName?: string;
+      htmlClassName?: string;
+      rootStyle?: string;
+    },
+  ): Promise<VectorPdfExportResponse> {
+    return this.requestBinaryDownload(
+      'POST',
+      `/public/resumes/${encodeURIComponent(slug)}/pdf`,
+      dto,
+      `${slug}.pdf`,
+      false,
+      false,
+    );
+  }
+
+  // --- AI Bullet Optimization & Generation Endpoints ---
+  async improveBullet(dto: {
+    bulletText: string;
+    targetRole?: string;
+    metricHint?: string;
+  }) {
+    const endpoint = this.token ? '/ai/bullet-improve' : '/ai/public/bullet-improve';
+    const res = await this.request<BulletImproveResponse>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+    return res.data;
+  }
+
+  async generateBullets(dto: {
+    roleTitle: string;
+    companyName?: string;
+    focusArea?: string;
+    existingBullets?: string[];
+    targetRole?: string;
+  }) {
+    const endpoint = this.token ? '/ai/bullet-generate' : '/ai/public/bullet-generate';
+    const res = await this.request<BulletGenerateResponse>(endpoint, {
       method: 'POST',
       body: JSON.stringify(dto),
     });
@@ -1101,6 +2160,20 @@ export class ApiClient {
       method: 'POST',
       body: formData,
     });
+    return res.data;
+  }
+
+  async parseAndAuditUploadedResume(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await this.request<PublicParseAndAuditResponse>(
+      '/resume-parsing/public/parse-and-audit',
+      {
+        method: 'POST',
+        body: formData,
+      },
+    );
     return res.data;
   }
 
@@ -1179,6 +2252,10 @@ export class ApiClient {
 
     const matchedRequirements = rawReqs.map((r: any) => ({
       requirementId: r.requirementId || r.id || 'req',
+      text: r.text || '',
+      type: r.type || 'required_skill',
+      importance: r.importance || 'medium',
+      keywords: Array.isArray(r.keywords) ? r.keywords : [],
       status: r.status || 'needs_confirmation',
       confidence: Number(r.confidence ?? 80),
       evidenceQuotes: Array.isArray(r.evidenceQuotes) ? r.evidenceQuotes : [],
@@ -1228,6 +2305,13 @@ export class ApiClient {
     };
   }
 
+  async listJobMatches(resumeId?: string) {
+    const query = resumeId ? `?resumeId=${encodeURIComponent(resumeId)}` : '';
+    const res = await this.request<any[]>(`/job-matches${query}`);
+    const list = Array.isArray(res.data) ? res.data : [];
+    return list.map((m) => this.normalizeJobMatch(m));
+  }
+
   async createJobMatch(dto: { resumeId: string; jobDescriptionId: string }) {
     const res = await this.request<any>('/job-matches', {
       method: 'POST',
@@ -1239,6 +2323,175 @@ export class ApiClient {
   async getJobMatch(matchId: string) {
     const res = await this.request<any>(`/job-matches/${matchId}`);
     return this.normalizeJobMatch(res.data);
+  }
+
+  async generateJobTailoring(matchId: string) {
+    const res = await this.request<JobTailorSuggestionsResponse>(`/job-matches/${matchId}/tailor-suggestions`, {
+      method: 'POST',
+    });
+    return res.data;
+  }
+
+  async createTailoredResumeFromMatch(
+    matchId: string,
+    dto: CreateTailoredResumeFromMatchRequest,
+  ) {
+    const res = await this.request<CreateTailoredResumeFromMatchResponse>(
+      `/job-matches/${matchId}/tailor-resume`,
+      {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      },
+    );
+    return res.data;
+  }
+
+  async generateSummaryAndHeadlines(dto: SummaryGenerateRequest) {
+    const res = await this.request<SummaryGenerateResponse>('/ai/summary-generate', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+    return res.data;
+  }
+
+  async rewriteSection(dto: SectionRewriteRequest) {
+    const res = await this.request<SectionRewriteResponse>('/ai/section-rewrite', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+    return res.data;
+  }
+
+  async checkWritingQuality(dto: WritingCheckRequest) {
+    const res = await this.request<WritingCheckResponse>('/ai/writing-check', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+    return res.data;
+  }
+
+  async checkWritingQualityPublic(dto: WritingCheckRequest) {
+    const res = await this.request<WritingCheckResponse>('/ai/public/writing-check', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+    return res.data;
+  }
+
+  // --- Cover Letters Endpoints ---
+  async listCoverLetters(resumeId?: string) {
+    const query = resumeId ? `?resumeId=${encodeURIComponent(resumeId)}` : '';
+    const res = await this.request<CoverLetter[]>(`/cover-letters${query}`);
+    return Array.isArray(res.data) ? res.data : [];
+  }
+
+  async getCoverLetter(id: string) {
+    const res = await this.request<CoverLetter>(`/cover-letters/${id}`);
+    return res.data;
+  }
+
+  async generateCoverLetter(dto: {
+    resumeId: string;
+    targetRole: string;
+    companyName: string;
+    hiringManager?: string;
+    jobDescription?: string;
+    jobMatchId?: string;
+    tone?: CoverLetterTone;
+    templateKey?: CoverLetterTemplateKey;
+    accentColor?: string;
+    customFocus?: string;
+  }) {
+    const res = await this.request<CoverLetter>('/cover-letters/generate', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+    return res.data;
+  }
+
+  async regenerateCoverLetter(
+    id: string,
+    dto: {
+      tone?: CoverLetterTone;
+      sectionFocus?: CoverLetterSectionFocus;
+      jobDescription?: string;
+      hiringManager?: string;
+      customFocus?: string;
+    },
+  ) {
+    const res = await this.request<CoverLetter>(`/cover-letters/${id}/regenerate`, {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+    return res.data;
+  }
+
+  async updateCoverLetter(
+    id: string,
+    dto: Partial<{
+      title: string;
+      targetRole: string;
+      companyName: string;
+      hiringManager: string;
+      tone: CoverLetterTone;
+      templateKey: CoverLetterTemplateKey;
+      accentColor: string;
+      senderName: string;
+      senderEmail: string;
+      senderPhone: string;
+      senderLocation: string;
+      recipientLine: string;
+      salutation: string;
+      openingParagraph: string;
+      bodyParagraphs: string[];
+      closingParagraph: string;
+      signOff: string;
+    }>,
+  ) {
+    const res = await this.request<CoverLetter>(`/cover-letters/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(dto),
+    });
+    return res.data;
+  }
+
+  async deleteCoverLetter(id: string) {
+    const res = await this.request<{ deleted: boolean; id: string }>(`/cover-letters/${id}`, {
+      method: 'DELETE',
+    });
+    return res.data;
+  }
+
+  async exportCoverLetterPdf(
+    id: string,
+    dto: {
+      html: string;
+      styles?: string;
+      pageSize?: 'A4' | 'US Letter';
+      fileName?: string;
+      htmlClassName?: string;
+      rootStyle?: string;
+    },
+  ): Promise<VectorPdfExportResponse> {
+    return this.postBinaryExport(
+      `/cover-letters/${id}/export/pdf`,
+      dto,
+      'Cover-Letter.pdf',
+    );
+  }
+
+  async exportCoverLetterDocx(
+    id: string,
+    dto?: {
+      pageSize?: 'A4' | 'US Letter';
+      fileName?: string;
+    },
+  ): Promise<VectorPdfExportResponse> {
+    return this.postBinaryExport(
+      `/cover-letters/${id}/export/docx`,
+      dto || {},
+      'Cover-Letter.docx',
+    );
   }
 
   // --- Applications Endpoints ---
@@ -1568,6 +2821,163 @@ export class ApiClient {
     const res = await this.request<AdminCreditAuditItem[]>(`/admin/credits/ledger?limit=${limit}`);
     return res.data;
   }
+
+  // --- LinkedIn Profile Optimizer & PDF Importer ---
+  async listLinkedInAudits() {
+    const res = await this.request<LinkedInAudit[]>('/linkedin/audits');
+    return Array.isArray(res.data) ? res.data : [];
+  }
+
+  async getLinkedInAudit(auditId: string) {
+    const res = await this.request<LinkedInAudit>(`/linkedin/audits/${auditId}`);
+    return res.data;
+  }
+
+  async optimizeLinkedInProfile(dto: {
+    resumeId?: string;
+    targetRole: string;
+    industry?: string;
+    tone?: LinkedInOptimizeTone;
+    targetJobDescription?: string;
+    linkedinUrl?: string;
+    customHeadline?: string;
+    customAbout?: string;
+    saveAudit?: boolean;
+  }) {
+    const res = await this.request<LinkedInAudit>('/linkedin/optimize', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+    return res.data;
+  }
+
+  async importLinkedInPdf(
+    file: File,
+    options?: {
+      createResume?: boolean;
+      syncToProfile?: boolean;
+      resumeName?: string;
+      targetRole?: string;
+      industry?: string;
+    },
+  ) {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (options?.createResume !== undefined) {
+      formData.append('createResume', String(options.createResume));
+    }
+    if (options?.syncToProfile !== undefined) {
+      formData.append('syncToProfile', String(options.syncToProfile));
+    }
+    if (options?.resumeName) {
+      formData.append('resumeName', options.resumeName);
+    }
+    if (options?.targetRole) {
+      formData.append('targetRole', options.targetRole);
+    }
+    if (options?.industry) {
+      formData.append('industry', options.industry);
+    }
+
+    const res = await this.request<LinkedInPdfImportResponse>('/linkedin/import-pdf', {
+      method: 'POST',
+      body: formData,
+    });
+    return res.data;
+  }
+
+  async applyLinkedInAuditUpdates(
+    auditId: string,
+    dto: {
+      appliedHeadline?: string;
+      appliedAbout?: string;
+      appliedSkills?: string[];
+      checkedChecklistIds?: string[];
+      syncToResume?: boolean;
+      syncToProfile?: boolean;
+    },
+  ) {
+    const res = await this.request<{ audit: LinkedInAudit; syncedResume: Resume | null }>(
+      `/linkedin/audits/${auditId}/apply`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(dto),
+      },
+    );
+    return res.data;
+  }
+
+  async deleteLinkedInAudit(auditId: string) {
+    const res = await this.request<{ deleted: true }>(`/linkedin/audits/${auditId}`, {
+      method: 'DELETE',
+    });
+    return res.data;
+  }
+
+  // --- Live Job Board Discovery ---
+  async listDiscoveredBoards() {
+    const res = await this.request<CuratedAtsBoard[]>('/job-discovery/boards');
+    return Array.isArray(res.data) ? res.data : [];
+  }
+
+  async searchDiscoveredJobs(params?: {
+    q?: string;
+    source?: 'all' | 'greenhouse' | 'ashby' | 'lever' | 'remotive' | 'arbeitnow';
+    workplace?: 'all' | 'remote' | 'hybrid' | 'onsite';
+    boardToken?: string;
+    boardProvider?: 'greenhouse' | 'ashby' | 'lever';
+    resumeId?: string;
+    sort?: 'match' | 'recent';
+    refresh?: boolean;
+  }) {
+    const query = new URLSearchParams();
+    if (params?.q?.trim()) query.set('q', params.q.trim());
+    if (params?.source) query.set('source', params.source);
+    if (params?.workplace) query.set('workplace', params.workplace);
+    if (params?.boardToken?.trim()) query.set('boardToken', params.boardToken.trim());
+    if (params?.boardProvider) query.set('boardProvider', params.boardProvider);
+    if (params?.resumeId) query.set('resumeId', params.resumeId);
+    if (params?.sort) query.set('sort', params.sort);
+    if (params?.refresh) query.set('refresh', 'true');
+    const qs = query.toString();
+    const res = await this.request<JobDiscoverySearchResponse>(
+      `/job-discovery/search${qs ? `?${qs}` : ''}`,
+    );
+    return res.data;
+  }
+
+  async saveDiscoveredJobToTracker(dto: {
+    title: string;
+    company: string;
+    location?: string;
+    applyUrl?: string;
+    source?: string;
+    descriptionText: string;
+    resumeId?: string;
+  }) {
+    const res = await this.request<SaveDiscoveredJobResponse>('/job-discovery/save-to-tracker', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+    return res.data;
+  }
+
+  async runDiscoveredJobMatch(dto: {
+    title: string;
+    company: string;
+    applyUrl?: string;
+    descriptionText: string;
+    resumeId: string;
+  }) {
+    const res = await this.request<RunDiscoveredMatchResponse>('/job-discovery/run-match', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+    return {
+      jobDescription: res.data.jobDescription,
+      match: this.normalizeJobMatch(res.data.match),
+    };
+  }
 }
 
 export interface AdminAnalyticsOverview {
@@ -1706,6 +3116,24 @@ export interface PaymentRecord {
   status: 'pending' | 'succeeded' | 'failed' | 'refunded';
   metadata?: Record<string, unknown>;
   createdAt: string;
+}
+
+export function downloadExportBlob(
+  blob: Blob,
+  fileName: string,
+  fallbackExt: '.pdf' | '.docx',
+): void {
+  const safeName = fileName.toLowerCase().endsWith(fallbackExt)
+    ? fileName
+    : `${fileName}${fallbackExt}`;
+  const blobUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.download = safeName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
 }
 
 export const apiClient = new ApiClient();

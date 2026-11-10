@@ -9,6 +9,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { TemplateProps, renderHighlightedText, LinkedinIcon, GithubIcon } from './types';
+import { CustomSectionsBlock } from './CustomSectionsBlock';
 
 export function ModernTemplate({
   content,
@@ -219,6 +220,15 @@ export function ModernTemplate({
           </div>
         </section>
       )}
+
+      <CustomSectionsBlock
+        content={content}
+        accentColor={accentColor}
+        highlightKeywords={highlightKeywords}
+        showHighlights={showHighlights}
+        variant="bar"
+        spacingClassName="mt-4 space-y-2"
+      />
     </div>
   );
 }

@@ -10,7 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Resume } from './entities/resume.entity.js';
 import { ResumeVersion } from './entities/resume-version.entity.js';
-import { ResumeAnalysis, type ResumeAuditFindings } from './entities/resume-analysis.entity.js';
+import { ResumeAnalysis } from './entities/resume-analysis.entity.js';
 import { ResumeAdaptation } from './entities/resume-adaptation.entity.js';
 import type { ResumeContent } from './entities/resume.types.js';
 import { CandidateProfile } from '../profiles/entities/candidate-profile.entity.js';
@@ -25,6 +25,7 @@ import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 import { CREDIT_COSTS, CreditsService } from '../credits/credits.service.js';
 import { AiService } from '../ai/ai.service.js';
 import { validateAndReconstructAdaptation } from '../ai/utils/factual-integrity-validator.js';
+import { evaluateStructuredResumeAts } from '../ai/utils/ats-audit-engine.js';
 
 @Injectable()
 export class ResumesService {
@@ -74,6 +75,15 @@ export class ResumesService {
       };
     }
 
+    const clonedContent: ResumeContent = structuredClone(initialContent);
+    if (dto.targetRole?.trim() || dto.targetCompany?.trim()) {
+      clonedContent.meta = {
+        ...clonedContent.meta,
+        ...(dto.targetRole?.trim() ? { targetRole: dto.targetRole.trim() } : {}),
+        ...(dto.targetCompany?.trim() ? { targetCompany: dto.targetCompany.trim() } : {}),
+      };
+    }
+
     const resume = this.resumeRepository.create({
       userId,
       name: dto.name.trim(),
@@ -82,7 +92,7 @@ export class ResumesService {
       isMaster: dto.isMaster || false,
       isArchived: false,
       version: 1,
-      content: initialContent,
+      content: clonedContent,
     });
 
     const savedResume = await this.resumeRepository.save(resume);
@@ -167,14 +177,36 @@ export class ResumesService {
     await this.archiveResume(userId, resumeId);
   }
 
-  async duplicateResume(userId: string, resumeId: string): Promise<Resume> {
+  async duplicateResume(
+    userId: string,
+    resumeId: string,
+    customName?: string,
+  ): Promise<Resume> {
     const source = await this.getResume(userId, resumeId);
+    const clonedContent: ResumeContent = structuredClone(source.content || {
+      contact: { fullName: '', email: '' },
+      headline: '',
+      summary: '',
+      skills: [],
+      experience: [],
+      education: [],
+    });
+    clonedContent.meta = {
+      ...clonedContent.meta,
+      tailoredFromResumeId: source.id,
+    };
+
+    const nextName =
+      customName?.trim() || `${source.name.replace(/\s*\(Copy\)$/i, '')} (Copy)`;
+
     return this.createResume(userId, {
-      name: `${source.name} (Copy)`,
+      name: nextName.slice(0, 200),
+      targetRole: clonedContent.meta?.targetRole,
+      targetCompany: clonedContent.meta?.targetCompany,
       templateKey: source.templateKey,
       locale: source.locale,
       isMaster: false,
-      content: source.content,
+      content: clonedContent,
     });
   }
 
@@ -246,7 +278,22 @@ export class ResumesService {
       throw new NotFoundException('Version snapshot not found');
     }
 
-    resume.content = version.contentSnapshot;
+    // Preserve any edits made since the latest snapshot before overwriting
+    const latestVersion = await this.versionRepository.findOne({
+      where: { resumeId },
+      order: { versionNumber: 'DESC' },
+    });
+
+    if (
+      !latestVersion ||
+      JSON.stringify(latestVersion.contentSnapshot) !== JSON.stringify(resume.content)
+    ) {
+      await this.createVersion(userId, resumeId, {
+        changeSummary: `Auto-backup before restoring v${version.versionNumber}`,
+      });
+    }
+
+    resume.content = JSON.parse(JSON.stringify(version.contentSnapshot));
     const restored = await this.resumeRepository.save(resume);
 
     // Save a new version representing the restore event
@@ -265,12 +312,15 @@ export class ResumesService {
   ): Promise<ResumeAnalysis> {
     const resume = await this.getResume(userId, resumeId);
 
-    // Run structural ATS audit
-    const findings = this.performAtsAudit(resume.content);
-    const score = this.calculateAuditScore(findings);
-    const recommendations = this.generateAuditRecommendations(findings);
+    // Run 5-dimension structural ATS & parser risk audit
+    const { score, findings, recommendations } = evaluateStructuredResumeAts(
+      resume.content,
+      undefined,
+      resume.content?.meta?.targetRole,
+    );
 
     const analysis = this.analysisRepository.create({
+      userId,
       resumeId,
       analysisType: dto.analysisType || 'ats_check',
       score,
@@ -279,7 +329,7 @@ export class ResumesService {
     });
 
     const saved = await this.analysisRepository.save(analysis);
-    this.logger.log(`Ran analysis for resume ${resumeId} (score: ${score}/100, type: ${saved.analysisType})`);
+    this.logger.log(`Ran 5-dimension ATS analysis for resume ${resumeId} (score: ${score}/100, type: ${saved.analysisType})`);
     return saved;
   }
 
@@ -640,106 +690,5 @@ export class ResumesService {
     );
 
     return newResume;
-  }
-
-  private performAtsAudit(content: ResumeContent): ResumeAuditFindings {
-    const missingSections: string[] = [];
-    const formattingFlags: string[] = [];
-
-    // Check essential sections
-    if (!content.summary || content.summary.trim().length === 0) missingSections.push('Professional Summary');
-    if (!content.experience || content.experience.length === 0) missingSections.push('Work Experience');
-    if (!content.skills || content.skills.length === 0) missingSections.push('Core Skills');
-    if (!content.education || content.education.length === 0) missingSections.push('Education');
-
-    // Check contact formatting
-    if (!content.contact?.email || !content.contact.email.includes('@')) {
-      formattingFlags.push('Missing or invalid email address');
-    }
-    if (!content.contact?.fullName) {
-      formattingFlags.push('Missing candidate full name');
-    }
-
-    let actionVerbsCount = 0;
-    let metricsCount = 0;
-    const bulletQuality: Array<{ bullet: string; hasActionVerb: boolean; hasMetric: boolean; feedback: string }> = [];
-
-    const actionVerbRegex = /^(architected|spearheaded|engineered|orchestrated|designed|developed|built|led|optimized|streamlined|delivered|deployed|migrated|scaled|automated|refactored)/i;
-    const metricRegex = /\d+%|\$\d+|\b\d+\s*(?:ms|users?|clients?|customers?|events?|qps|rps|tps|gb|tb|pb)\b/i;
-
-    (content.experience || []).forEach((exp) => {
-      (exp.bullets || []).forEach((b) => {
-        const hasActionVerb = actionVerbRegex.test(b.trim());
-        const hasMetric = metricRegex.test(b);
-
-        if (hasActionVerb) actionVerbsCount++;
-        if (hasMetric) metricsCount++;
-
-        let bScore = 50;
-        if (hasActionVerb) bScore += 25;
-        if (hasMetric) bScore += 25;
-
-        bulletQuality.push({
-          bullet: b,
-          hasActionVerb,
-          hasMetric,
-          feedback: hasActionVerb && hasMetric
-            ? 'Strong action verb and quantifiable metric.'
-            : !hasActionVerb
-            ? 'Start with a strong action verb (e.g. Architected, Spearheaded).'
-            : 'Add measurable metrics, percentages, or scale.',
-        });
-      });
-    });
-
-    return {
-      actionVerbsCount,
-      metricsCount,
-      missingSections,
-      formattingFlags,
-      bulletQuality,
-    };
-  }
-
-  private calculateAuditScore(findings: ResumeAuditFindings): number {
-    let score = 100;
-
-    // Deduct for missing sections
-    score -= findings.missingSections.length * 20;
-
-    // Deduct for formatting issues
-    score -= findings.formattingFlags.length * 10;
-
-    // Evaluate metrics density
-    const totalBullets = findings.bulletQuality.length;
-    if (totalBullets > 0) {
-      const metricRatio = findings.metricsCount / totalBullets;
-      if (metricRatio < 0.4) score -= 15;
-      else if (metricRatio < 0.6) score -= 5;
-
-      const verbRatio = findings.actionVerbsCount / totalBullets;
-      if (verbRatio < 0.5) score -= 10;
-    } else {
-      score -= 30;
-    }
-
-    return Math.max(10, Math.min(100, score));
-  }
-
-  private generateAuditRecommendations(findings: ResumeAuditFindings): string[] {
-    const recs: string[] = [];
-    if (findings.missingSections.length > 0) {
-      recs.push(`Add missing essential sections: ${findings.missingSections.join(', ')}.`);
-    }
-    if (findings.metricsCount < (findings.bulletQuality.length * 0.5)) {
-      recs.push('Quantify at least 50% of your experience bullets with measurable metrics, percentages, or scale.');
-    }
-    if (findings.formattingFlags.length > 0) {
-      recs.push(`Address contact formatting alerts: ${findings.formattingFlags.join(', ')}.`);
-    }
-    if (recs.length === 0) {
-      recs.push('Resume follows ATS single-column formatting standards and displays strong evidence density.');
-    }
-    return recs;
   }
 }

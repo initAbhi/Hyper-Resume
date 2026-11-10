@@ -13,6 +13,7 @@ import {
   Code2,
 } from 'lucide-react';
 import { TemplateProps, renderHighlightedText, LinkedinIcon, GithubIcon } from './types';
+import { CustomSectionsBlock } from './CustomSectionsBlock';
 
 /**
  * Awesome CV Template
@@ -334,6 +335,13 @@ export function AwesomeCVTemplate({
             </div>
           </section>
         )}
+
+        <CustomSectionsBlock
+          content={content}
+          accentColor={accentColor}
+          highlightKeywords={highlightKeywords}
+          showHighlights={showHighlights}
+        />
       </div>
     </div>
   );

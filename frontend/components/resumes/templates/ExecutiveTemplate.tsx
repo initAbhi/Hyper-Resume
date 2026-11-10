@@ -12,6 +12,7 @@ import {
   Award,
 } from 'lucide-react';
 import { TemplateProps, renderHighlightedText, LinkedinIcon, GithubIcon } from './types';
+import { CustomSectionsBlock } from './CustomSectionsBlock';
 
 /**
  * Executive Leadership Template
@@ -320,6 +321,14 @@ export function ExecutiveTemplate({
             </section>
           )}
         </div>
+
+        <CustomSectionsBlock
+          content={content}
+          accentColor={accentColor}
+          highlightKeywords={highlightKeywords}
+          showHighlights={showHighlights}
+          variant="bar"
+        />
       </div>
     </div>
   );

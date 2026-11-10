@@ -13,6 +13,7 @@ import {
   FolderGit2,
 } from 'lucide-react';
 import { TemplateProps, renderHighlightedText, LinkedinIcon, GithubIcon } from './types';
+import { CustomSectionsBlock } from './CustomSectionsBlock';
 
 export function CrestTemplate({
   content,
@@ -196,6 +197,13 @@ export function CrestTemplate({
                 </div>
               </section>
             )}
+
+            <CustomSectionsBlock
+              content={content}
+              accentColor={accentColor}
+              highlightKeywords={highlightKeywords}
+              showHighlights={showHighlights}
+            />
           </div>
 
           {/* Right Column: Skills & Education */}

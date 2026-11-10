@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { ResumesService } from './resumes.service.js';
 
 describe('ResumesService', () => {
@@ -138,10 +138,127 @@ describe('ResumesService', () => {
         analysisType: 'ats_check',
       });
 
+      expect(mockAnalysisRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-1',
+          resumeId: 'res-1',
+        }),
+      );
       expect(analysis.score).toBeGreaterThanOrEqual(70);
       expect(analysis.findings.actionVerbsCount).toBe(2);
       expect(analysis.findings.metricsCount).toBe(1);
+      expect(analysis.findings.writingQuality?.score).toBe(100);
+      expect(analysis.findings.dimensions).toHaveLength(5);
+      expect(analysis.findings.parserRisks?.length).toBeGreaterThan(0);
+      expect(analysis.findings.stackAlignment?.totalSkills).toBe(2);
       expect(analysis.recommendations).toBeDefined();
+    });
+  });
+
+  describe('restoreVersion', () => {
+    it('should create an auto-backup if content diverged, restore snapshot content, and record restore event', async () => {
+      const currentContent = { headline: 'Unsaved headline draft', summary: 'New', skills: [] };
+      const snapshotV1 = { headline: 'Original v1 headline', summary: 'Initial', skills: [{ name: 'Go' }] };
+
+      mockResumeRepo.findOne.mockResolvedValue({
+        id: 'res-1',
+        userId: 'user-1',
+        version: 4,
+        isArchived: false,
+        content: currentContent,
+      });
+
+      mockVersionRepo.findOne
+        // 1st call: target version to restore
+        .mockResolvedValueOnce({
+          id: 'ver-1',
+          resumeId: 'res-1',
+          versionNumber: 1,
+          contentSnapshot: snapshotV1,
+        })
+        // 2nd call: latest version check for pre-restore auto-backup
+        .mockResolvedValueOnce({
+          id: 'ver-2',
+          resumeId: 'res-1',
+          versionNumber: 2,
+          contentSnapshot: { headline: 'Older v2 headline', summary: 'Old', skills: [] },
+        })
+        // 3rd call: createVersion(Auto-backup) latest check
+        .mockResolvedValueOnce({
+          id: 'ver-2',
+          resumeId: 'res-1',
+          versionNumber: 2,
+        })
+        // 4th call: createVersion(Restored) latest check
+        .mockResolvedValueOnce({
+          id: 'ver-3',
+          resumeId: 'res-1',
+          versionNumber: 3,
+        });
+
+      const restored = await service.restoreVersion('user-1', 'res-1', 'ver-1');
+
+      expect(restored.content).toEqual(snapshotV1);
+      expect(mockVersionRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          changeSummary: 'Auto-backup before restoring v1',
+          versionNumber: 3,
+        }),
+      );
+      expect(mockVersionRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          changeSummary: 'Restored from version 1',
+          versionNumber: 4,
+        }),
+      );
+    });
+
+    it('should throw NotFoundException when restoring non-existent version', async () => {
+      mockResumeRepo.findOne.mockResolvedValue({
+        id: 'res-1',
+        userId: 'user-1',
+        version: 2,
+        isArchived: false,
+      });
+      mockVersionRepo.findOne.mockResolvedValueOnce(null);
+
+      await expect(
+        service.restoreVersion('user-1', 'res-1', 'missing-ver'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should duplicate an existing resume cleanly with (Copy) name, preserved target metadata, and isMaster false', async () => {
+      mockResumeRepo.findOne.mockResolvedValue({
+        id: 'res-master-1',
+        userId: 'user-1',
+        name: 'Master Engineering Profile',
+        templateKey: 'jake-ats',
+        locale: 'en-US',
+        isMaster: true,
+        isArchived: false,
+        version: 4,
+        content: {
+          meta: { targetRole: 'Staff Backend Engineer', targetCompany: 'Stripe' },
+          contact: { fullName: 'Alex', email: 'alex@example.com' },
+          headline: 'Staff Backend Engineer',
+          summary: 'Experienced backend architect.',
+          skills: [{ name: 'Go' }],
+          experience: [],
+          education: [],
+        },
+      });
+      mockResumeRepo.create.mockImplementation((d: any) => ({ id: 'res-copy-2', ...d }));
+      mockResumeRepo.save.mockImplementation(async (d: any) => d);
+      mockVersionRepo.create.mockImplementation((d: any) => d);
+      mockVersionRepo.save.mockResolvedValue({});
+
+      const cloned = await service.duplicateResume('user-1', 'res-master-1');
+
+      expect(cloned.name).toBe('Master Engineering Profile (Copy)');
+      expect(cloned.isMaster).toBe(false);
+      expect(cloned.templateKey).toBe('jake-ats');
+      expect(cloned.content.meta?.tailoredFromResumeId).toBe('res-master-1');
+      expect(cloned.content.meta?.targetRole).toBe('Staff Backend Engineer');
     });
   });
 });

@@ -11,6 +11,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { TemplateProps, renderHighlightedText, LinkedinIcon, GithubIcon } from './types';
+import { CustomSectionsBlock } from './CustomSectionsBlock';
 
 export function DoubleColumnTemplate({
   content,
@@ -95,7 +96,7 @@ export function DoubleColumnTemplate({
     <div className={`w-full max-w-[794px] mx-auto text-left leading-relaxed ${fontClass} ${className}`}>
       {/* ================= PAGE 1 ================= */}
       <div
-        className="resume-page-a4"
+        className="resume-page-a4 flex flex-col justify-between"
         id="resume-page-1"
         style={{ boxSizing: 'border-box' }}
       >
@@ -279,6 +280,15 @@ export function DoubleColumnTemplate({
                   </div>
                 </section>
               )}
+
+              {!needsSecondPage && (
+                <CustomSectionsBlock
+                  content={content}
+                  accentColor={accentColor}
+                  highlightKeywords={highlightKeywords}
+                  showHighlights={showHighlights}
+                />
+              )}
             </div>
 
             {/* Right Column (5 cols / 42%): EDUCATION & KEY SKILLS */}
@@ -372,7 +382,7 @@ export function DoubleColumnTemplate({
       {/* ================= PAGE 2 ================= */}
       {needsSecondPage && (
         <div
-          className="resume-page-a4"
+          className="resume-page-a4 flex flex-col justify-between"
           id="resume-page-2"
           style={{ boxSizing: 'border-box' }}
         >
@@ -457,6 +467,13 @@ export function DoubleColumnTemplate({
                     </div>
                   </section>
                 )}
+
+                <CustomSectionsBlock
+                  content={content}
+                  accentColor={accentColor}
+                  highlightKeywords={highlightKeywords}
+                  showHighlights={showHighlights}
+                />
               </div>
 
               {/* Right Area (5 cols): Tools & Technologies */}

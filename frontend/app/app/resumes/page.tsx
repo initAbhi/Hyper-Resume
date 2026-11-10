@@ -20,8 +20,18 @@ import {
   FileCheck,
   Search,
   Filter,
+  Eye,
+  ExternalLink,
+  Copy,
 } from 'lucide-react';
-import { apiClient, Resume, ParsedProfileDraft, ResumeContent } from '@/lib/api-client';
+import { LinkedInIcon } from '@/components/linkedin/LinkedInIcon';
+import {
+  apiClient,
+  Resume,
+  ParsedProfileDraft,
+  ResumeContent,
+  type ResumeShareSummaryItem,
+} from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 
 export default function ResumesListPage() {
@@ -32,6 +42,13 @@ export default function ResumesListPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'master' | 'tailored'>('all');
+  const [shareSummaries, setShareSummaries] = useState<Record<string, ResumeShareSummaryItem>>({});
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [duplicateToast, setDuplicateToast] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const toastRef = useRef<HTMLDivElement | null>(null);
 
   // Create Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -72,14 +89,21 @@ export default function ResumesListPage() {
 
   useEffect(() => {
     let isMounted = true;
-    apiClient
-      .listResumes()
-      .then((data) => {
+    Promise.all([
+      apiClient.listResumes(),
+      apiClient.listSharesSummary().catch(() => [] as ResumeShareSummaryItem[]),
+    ])
+      .then(([data, shares]) => {
         if (isMounted) {
           const safeResumes = Array.isArray(data)
             ? data
             : ((data as unknown) as { items: Resume[] })?.items || [];
           setResumes(safeResumes);
+          const map: Record<string, ResumeShareSummaryItem> = {};
+          for (const s of shares) {
+            map[s.resumeId] = s;
+          }
+          setShareSummaries(map);
         }
       })
       .catch((err: unknown) => {
@@ -175,7 +199,7 @@ export default function ResumesListPage() {
     }
   };
 
-  const handleConfirmImport = async () => {
+  const handleConfirmImport = async (destination: 'editor' | 'linkedin' = 'editor') => {
     if (!parsedDraft) return;
 
     setIsSubmitting(true);
@@ -218,13 +242,58 @@ export default function ResumesListPage() {
       });
 
       setIsUploadModalOpen(false);
-      router.push(`/app/resumes/${resume.id}`);
+      if (destination === 'linkedin') {
+        router.push(`/app/linkedin?resumeId=${resume.id}`);
+      } else {
+        router.push(`/app/resumes/${resume.id}`);
+      }
     } catch (err: unknown) {
       setUploadError(
         err instanceof Error ? err.message : 'Failed to save imported resume.',
       );
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const dismissToast = () => {
+    const el = toastRef.current;
+    if (el && typeof el.hidePopover === 'function' && el.matches(':popover-open')) {
+      try {
+        el.hidePopover();
+      } catch {}
+    }
+    setDuplicateToast(null);
+  };
+
+  const handleDuplicateResume = async (resumeId: string) => {
+    if (duplicatingId) return;
+    setErrorMessage(null);
+    setDuplicatingId(resumeId);
+    try {
+      const cloned = await apiClient.duplicateResume(resumeId);
+      setResumes((prev) => [cloned, ...prev]);
+      setDuplicateToast({ id: cloned.id, name: cloned.name });
+      requestAnimationFrame(() => {
+        const el = toastRef.current;
+        if (
+          el &&
+          Object.hasOwn(HTMLElement.prototype, 'popover') &&
+          typeof el.showPopover === 'function'
+        ) {
+          try {
+            if (!el.matches(':popover-open')) {
+              el.showPopover();
+            }
+          } catch {}
+        }
+      });
+    } catch (err: unknown) {
+      setErrorMessage(
+        err instanceof Error ? err.message : 'Failed to duplicate resume',
+      );
+    } finally {
+      setDuplicatingId(null);
     }
   };
 
@@ -243,9 +312,11 @@ export default function ResumesListPage() {
     if (filterType === 'tailored' && r.isMaster) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
+      const role = r.targetRole || r.content?.meta?.targetRole || '';
+      const company = r.targetCompany || r.content?.meta?.targetCompany || '';
       const matchName = r.name.toLowerCase().includes(q);
-      const matchRole = r.targetRole?.toLowerCase().includes(q);
-      const matchCompany = r.targetCompany?.toLowerCase().includes(q);
+      const matchRole = role.toLowerCase().includes(q);
+      const matchCompany = company.toLowerCase().includes(q);
       if (!matchName && !matchRole && !matchCompany) return false;
     }
     return true;
@@ -263,7 +334,13 @@ export default function ResumesListPage() {
             Maintain your master career profile and manage tailored versions with verified evidence.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link href="/app/linkedin">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <LinkedInIcon className="w-3.5 h-3.5 text-[#0A66C2]" />
+              <span>LinkedIn Studio</span>
+            </Button>
+          </Link>
           <Button
             variant="outline"
             size="sm"
@@ -393,43 +470,87 @@ export default function ResumesListPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredResumes.map((resume) => (
-            <div
-              key={resume.id}
-              className="p-5 rounded-lg border border-[#E2E5E9] dark:border-[#252A33] bg-white dark:bg-[#14171C] hover:border-[#CBD0D7] dark:hover:border-[#333945] transition-all flex flex-col justify-between shadow-xs group"
-            >
-              <div>
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div className="flex items-center gap-2.5">
+          {filteredResumes.map((resume) => {
+            const resolvedRole =
+              resume.targetRole ||
+              resume.content?.meta?.targetRole ||
+              resume.content?.headline?.split('|')[0]?.trim() ||
+              'General';
+            const resolvedCompany =
+              resume.targetCompany || resume.content?.meta?.targetCompany;
+            const isDuplicatingThis = duplicatingId === resume.id;
+
+            return (
+              <article
+                key={resume.id}
+                data-testid={`resume-card-${resume.id}`}
+                className="p-5 rounded-lg border border-[#E2E5E9] dark:border-[#252A33] bg-white dark:bg-[#14171C] hover:border-[#CBD0D7] dark:hover:border-[#333945] transition-all flex flex-col justify-between shadow-xs group"
+              >
+                <header className="flex items-start justify-between gap-3 mb-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
                     <div className="w-8 h-8 rounded bg-[#F1F3F5] dark:bg-[#1D2128] text-[#285FEA] flex items-center justify-center shrink-0">
                       <FileText className="w-4 h-4" />
                     </div>
-                    <div>
-                      <h2 className="font-semibold text-[#1A1D23] dark:text-[#F0F2F5] text-sm group-hover:text-[#285FEA] transition-colors">
+                    <div className="min-w-0">
+                      <h2 className="font-semibold text-[#1A1D23] dark:text-[#F0F2F5] text-sm group-hover:text-[#285FEA] transition-colors truncate">
                         <Link href={`/app/resumes/${resume.id}`}>
                           {resume.name}
                         </Link>
                       </h2>
                       <p className="text-[11px] text-[#848D9A]">
-                        Updated {new Date(resume.updatedAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })} · v{resume.version}
+                        Updated{' '}
+                        {new Date(resume.updatedAt).toLocaleDateString([], {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}{' '}
+                        · v{resume.version}
+                        {resolvedCompany ? ` · ${resolvedCompany}` : ''}
                       </p>
                     </div>
                   </div>
-                  {resume.isMaster && (
-                    <Badge variant="neutral" className="text-[10px]">
-                      Master Profile
-                    </Badge>
-                  )}
-                </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {resume.isMaster ? (
+                      <Badge variant="neutral" className="text-[10px]">
+                        Master Profile
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="info"
+                        className="text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200 dark:border-blue-800"
+                      >
+                        Tailored Draft
+                      </Badge>
+                    )}
+                    {shareSummaries[resume.id]?.isActive && (
+                      <a
+                        href={`/r/${shareSummaries[resume.id].slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:underline whitespace-nowrap shrink-0"
+                        title="Open live public Recruiter View"
+                      >
+                        <Eye className="w-3 h-3 shrink-0" />
+                        <span>
+                          {shareSummaries[resume.id].viewCount}{' '}
+                          {shareSummaries[resume.id].viewCount === 1
+                            ? 'view'
+                            : 'views'}
+                        </span>
+                        <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+                      </a>
+                    )}
+                  </div>
+                </header>
 
                 <div className="mt-3 pt-3 border-t border-[#F1F3F5] dark:border-[#1D2128] grid grid-cols-3 gap-2 text-center">
                   <div className="p-1.5 rounded bg-[#F7F8FA] dark:bg-[#1D2128]/50">
                     <div className="text-[10px] text-[#848D9A]">Target Role</div>
                     <div
                       className="text-xs font-medium text-[#1A1D23] dark:text-[#F0F2F5] truncate mt-0.5"
-                      title={resume.targetRole || 'Not specified'}
+                      title={resolvedRole}
                     >
-                      {resume.targetRole || 'General'}
+                      {resolvedRole}
                     </div>
                   </div>
                   <div className="p-1.5 rounded bg-[#F7F8FA] dark:bg-[#1D2128]/50">
@@ -445,33 +566,54 @@ export default function ResumesListPage() {
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="mt-4 pt-3 border-t border-[#F1F3F5] dark:border-[#1D2128] flex items-center justify-between">
-                <Link
-                  href={`/app/resumes/${resume.id}`}
-                  className="text-xs font-semibold text-[#285FEA] hover:underline inline-flex items-center gap-1"
-                >
-                  Open Editor &rarr;
-                </Link>
-                <div className="flex items-center gap-1.5">
+                <footer className="mt-4 pt-3 border-t border-[#F1F3F5] dark:border-[#1D2128] flex items-center justify-between gap-2">
                   <Link
-                    href={`/app/match?resumeId=${resume.id}`}
-                    className="px-2 py-1 text-xs rounded border border-[#E2E5E9] dark:border-[#252A33] hover:bg-[#F7F8FA] dark:hover:bg-[#1D2128] text-[#5A6270] dark:text-[#9EA7B4] transition-colors"
+                    href={`/app/resumes/${resume.id}`}
+                    className="text-xs font-semibold text-[#285FEA] hover:underline inline-flex items-center gap-1"
                   >
-                    Match JD
+                    Open Editor &rarr;
                   </Link>
-                  <button
-                    onClick={() => handleArchiveResume(resume.id)}
-                    className="p-1 rounded text-[#848D9A] hover:text-[#DC2626] transition-colors"
-                    title="Archive resume"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      data-testid={`duplicate-resume-btn-${resume.id}`}
+                      disabled={isDuplicatingThis || duplicatingId !== null}
+                      onClick={() => handleDuplicateResume(resume.id)}
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded border border-[#E2E5E9] dark:border-[#252A33] hover:bg-[#F7F8FA] dark:hover:bg-[#1D2128] text-[#5A6270] dark:text-[#9EA7B4] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5] transition-colors cursor-pointer disabled:opacity-50"
+                      title="Duplicate resume as a new draft"
+                    >
+                      {isDuplicatingThis ? (
+                        <progress
+                          aria-label="Duplicating resume"
+                          className="hr-loading-spinner"
+                          style={{ '--size': '12px' } as React.CSSProperties}
+                        />
+                      ) : (
+                        <Copy className="w-3 h-3" />
+                      )}
+                      <span>{isDuplicatingThis ? 'Cloning...' : 'Duplicate'}</span>
+                    </button>
+                    <Link
+                      href={`/app/match?resumeId=${resume.id}`}
+                      className="px-2 py-1 text-xs rounded border border-[#E2E5E9] dark:border-[#252A33] hover:bg-[#F7F8FA] dark:hover:bg-[#1D2128] text-[#5A6270] dark:text-[#9EA7B4] transition-colors"
+                    >
+                      Match JD
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => handleArchiveResume(resume.id)}
+                      className="p-1 rounded text-[#848D9A] hover:text-[#DC2626] transition-colors cursor-pointer"
+                      aria-label={`Archive ${resume.name}`}
+                      title="Archive resume"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </footer>
+              </article>
+            );
+          })}
         </div>
       )}
 
@@ -546,9 +688,9 @@ export default function ResumesListPage() {
           <Card className="w-full max-w-lg shadow-lg bg-white dark:bg-[#14171C]">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
-                <CardTitle className="text-base">Import Resume Document</CardTitle>
+                <CardTitle className="text-base">Import Resume or LinkedIn PDF</CardTitle>
                 <CardDescription>
-                  Upload your existing PDF or DOCX file to extract verified career facts.
+                  Upload your LinkedIn &ldquo;Save to PDF&rdquo; export, PDF resume, or DOCX file to extract verified career facts.
                 </CardDescription>
               </div>
               <button
@@ -565,41 +707,65 @@ export default function ResumesListPage() {
               )}
 
               {!parsedDraft ? (
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="p-8 border border-dashed border-[#CBD0D7] dark:border-[#333945] hover:border-[#285FEA] rounded-lg flex flex-col items-center justify-center text-center cursor-pointer transition-colors bg-[#F7F8FA] dark:bg-[#1D2128]/40"
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    className="hidden"
-                    onChange={handleFileUpload}
-                  />
-                  <div className="w-9 h-9 rounded-full bg-white dark:bg-[#14171C] text-[#285FEA] border border-[#E2E5E9] dark:border-[#252A33] flex items-center justify-center mb-2 shadow-2xs">
-                    <Upload className="w-4 h-4" />
+                <div className="space-y-3">
+                  <div className="p-2.5 rounded-md border border-[#BAE6FD] dark:border-[#1E3A8A] bg-[#F0F9FF] dark:bg-[#0F172A]/60 text-[11px] text-[#075985] dark:text-[#BAE6FD] flex items-start gap-2">
+                    <LinkedInIcon className="w-3.5 h-3.5 text-[#0A66C2] shrink-0 mt-0.5" />
+                    <span>
+                      <strong>LinkedIn Tip:</strong> On your LinkedIn profile, click <strong>Resources</strong> (or More) &rarr; <strong>Save to PDF</strong> and upload here to automatically isolate roles, Top Skills, Certifications, and Languages.
+                    </span>
                   </div>
-                  <p className="text-xs font-semibold text-[#1A1D23] dark:text-[#F0F2F5]">
-                    {uploadFile ? uploadFile.name : 'Select or drag a PDF / DOCX file'}
-                  </p>
-                  <p className="text-[11px] text-[#848D9A] mt-0.5">
-                    Up to 10MB · Plain text extraction preserves verified facts
-                  </p>
-                  {isUploading && (
-                    <div className="mt-3 flex items-center gap-1.5 text-xs text-[#285FEA] font-medium animate-pulse">
-                      <Clock className="w-3.5 h-3.5 animate-spin" />
-                      Parsing career history with AI extraction engine...
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-8 border border-dashed border-[#CBD0D7] dark:border-[#333945] hover:border-[#285FEA] rounded-lg flex flex-col items-center justify-center text-center cursor-pointer transition-colors bg-[#F7F8FA] dark:bg-[#1D2128]/40"
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      className="hidden"
+                      onChange={handleFileUpload}
+                    />
+                    <div className="w-9 h-9 rounded-full bg-white dark:bg-[#14171C] text-[#285FEA] border border-[#E2E5E9] dark:border-[#252A33] flex items-center justify-center mb-2 shadow-2xs">
+                      <Upload className="w-4 h-4" />
                     </div>
-                  )}
+                    <p className="text-xs font-semibold text-[#1A1D23] dark:text-[#F0F2F5]">
+                      {uploadFile ? uploadFile.name : 'Select or drag a LinkedIn PDF / Resume PDF / DOCX'}
+                    </p>
+                    <p className="text-[11px] text-[#848D9A] mt-0.5">
+                      Up to 10MB · Preserves verified career history cleanly
+                    </p>
+                    {isUploading && (
+                      <div className="mt-3 flex items-center gap-1.5 text-xs text-[#285FEA] font-medium animate-pulse">
+                        <Clock className="w-3.5 h-3.5 animate-spin" />
+                        Parsing career history with AI extraction engine...
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="p-2.5 rounded-md bg-[#ECFDF5] dark:bg-[#064E3B]/30 border border-[#A7F3D0]/60 dark:border-[#047857]/40 text-xs text-[#065F46] dark:text-[#A7F3D0] flex items-center gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-[#059669] shrink-0" />
-                    <span>
-                      Successfully extracted {(parsedDraft.experience || []).length} positions and {(parsedDraft.skills || []).length} verified skills.
-                    </span>
-                  </div>
+                  {(parsedDraft.experience || []).length === 0 &&
+                  (parsedDraft.skills || []).length === 0 &&
+                  !parsedDraft.summary ? (
+                    <Alert variant="destructive">
+                      Minimal readable text was detected in this document. Please check that the file is not scanned or image-based.
+                    </Alert>
+                  ) : (
+                    <div className="p-2.5 rounded-md bg-[#ECFDF5] dark:bg-[#064E3B]/30 border border-[#A7F3D0]/60 dark:border-[#047857]/40 text-xs text-[#065F46] dark:text-[#A7F3D0] flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#059669] shrink-0" />
+                        <span>
+                          Extracted {(parsedDraft.experience || []).length} positions and {(parsedDraft.skills || []).length} verified skills.
+                        </span>
+                      </div>
+                      {parsedDraft.sourceType === 'linkedin_pdf' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#0A66C2] text-white">
+                          <LinkedInIcon className="w-2.5 h-2.5" />
+                          LinkedIn Profile PDF Detected
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   <Input
                     id="import-resume-name"
@@ -610,6 +776,15 @@ export default function ResumesListPage() {
                   />
 
                   <div className="p-2.5 rounded-md border border-[#E2E5E9] dark:border-[#252A33] text-xs space-y-1.5 bg-[#F7F8FA] dark:bg-[#1D2128]/50">
+                    {parsedDraft.contact?.fullName && (
+                      <div>
+                        <span className="font-semibold text-[#5A6270] dark:text-[#9EA7B4]">Candidate: </span>
+                        <span className="text-[#1A1D23] dark:text-[#F0F2F5]">
+                          {parsedDraft.contact.fullName}
+                          {parsedDraft.contact.email ? ` · ${parsedDraft.contact.email}` : ''}
+                        </span>
+                      </div>
+                    )}
                     <div>
                       <span className="font-semibold text-[#5A6270] dark:text-[#9EA7B4]">Headline: </span>
                       <span className="text-[#1A1D23] dark:text-[#F0F2F5]">{parsedDraft.headline || 'None detected'}</span>
@@ -621,12 +796,28 @@ export default function ResumesListPage() {
                         {(parsedDraft.skills || []).length > 8 ? '...' : ''}
                       </span>
                     </div>
+                    {(parsedDraft.languages?.length || 0) > 0 && (
+                      <div>
+                        <span className="font-semibold text-[#5A6270] dark:text-[#9EA7B4]">Languages (Separated): </span>
+                        <span className="text-[#1A1D23] dark:text-[#F0F2F5]">
+                          {parsedDraft.languages?.join(', ')}
+                        </span>
+                      </div>
+                    )}
+                    {(parsedDraft.certifications?.length || 0) > 0 && (
+                      <div>
+                        <span className="font-semibold text-[#5A6270] dark:text-[#9EA7B4]">Certifications: </span>
+                        <span className="text-[#1A1D23] dark:text-[#F0F2F5]">
+                          {parsedDraft.certifications.length} detected
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
             </CardContent>
 
-            <div className="p-3.5 border-t border-[#F1F3F5] dark:border-[#1D2128] flex justify-end gap-2">
+            <div className="p-3.5 border-t border-[#F1F3F5] dark:border-[#1D2128] flex flex-wrap justify-end gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -635,20 +826,72 @@ export default function ResumesListPage() {
                 Cancel
               </Button>
               {parsedDraft && (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleConfirmImport}
-                  isLoading={isSubmitting}
-                >
-                  <FileCheck className="w-3.5 h-3.5 mr-1.5" />
-                  Save & Open in Editor
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleConfirmImport('linkedin')}
+                    isLoading={isSubmitting}
+                    className="gap-1.5 border-[#0A66C2]/40 text-[#0A66C2] hover:bg-[#EFF6FF]"
+                  >
+                    <LinkedInIcon className="w-3.5 h-3.5" />
+                    Save &amp; Optimize LinkedIn
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleConfirmImport('editor')}
+                    isLoading={isSubmitting}
+                  >
+                    <FileCheck className="w-3.5 h-3.5 mr-1.5" />
+                    Save &amp; Open in Editor
+                  </Button>
+                </>
               )}
             </div>
           </Card>
         </div>
       )}
+
+      {/* Persistent Manual Popover Toast Notification Region */}
+      <div role="region" aria-label="Notifications" aria-live="polite">
+        <div
+          ref={toastRef}
+          id="duplicate-resume-toast"
+          popover="manual"
+          data-testid="duplicate-resume-toast"
+          hidden={!duplicateToast}
+          className="hr-toast-popover fixed bottom-5 right-5 top-auto left-auto m-0 items-center gap-3 px-4 py-3 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-white dark:bg-[#14171C] text-xs shadow-xl max-w-md"
+        >
+          {duplicateToast && (
+            <>
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-[#1A1D23] dark:text-[#F0F2F5] truncate">
+                  Cloned &ldquo;{duplicateToast.name}&rdquo;
+                </p>
+                <p className="text-[11px] text-[#5A6270] dark:text-[#9EA7B4]">
+                  Ready to customize without changing your Master profile.
+                </p>
+              </div>
+              <Link
+                href={`/app/resumes/${duplicateToast.id}`}
+                className="font-semibold text-[#285FEA] hover:underline whitespace-nowrap shrink-0"
+              >
+                Open Clone &rarr;
+              </Link>
+              <button
+                type="button"
+                aria-label="Close duplicate confirmation notification"
+                onClick={dismissToast}
+                className="p-1 rounded text-[#848D9A] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5] cursor-pointer shrink-0"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

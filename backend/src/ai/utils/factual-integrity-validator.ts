@@ -28,9 +28,9 @@ export interface FactualValidationResult {
   recommendedBenchmarkSkills: string[];
 }
 
-const METRIC_NUMERIC_REGEX = /\b(?:\$\d+[\d,]*(?:\.\d+)?(?:k|m|b)?|\d+(?:\.\d+)?%|\d+x|\d+[\d,]*(?:\+)?\s*(?:ms|second|min|hour|day|user|client|customer|request|event|qps|tps|rps|pb|tb|gb|mb|k|m|b)\b)/gi;
+const METRIC_NUMERIC_REGEX = /(?<![\w$])(?:\$\d+[\d,]*(?:\.\d+)?(?:k|m|b)?|\d+(?:\.\d+)?%|\d+x|\d+[\d,]*(?:\+)?\s*(?:ms|second|min|hour|day|user|client|customer|request|event|qps|tps|rps|pb|tb|gb|mb|k|m|b))(?![\w%])/gi;
 
-const SEMANTIC_CLAIMS_REGEX = /\b(?:doubled|tripled|quadrupled|halved|millions?\s+of|billions?\s+of|thousands?\s+of|10x|5x|2x|3x|cut\s+(?:latency|costs?|time|spend)\s+by|reduced\s+(?:latency|costs?|time|spend)\s+by|increased\s+(?:revenue|performance|throughput|traffic)\s+by)\b/gi;
+const SEMANTIC_CLAIMS_REGEX = /\b(?:(?:doubl(?:ed|ing)|tripl(?:ed|ing)|quadrupl(?:ed|ing)|halv(?:ed|ing))(?:\s+(?:throughput|traffic|revenue|latency|costs?))?(?:\s+by)?|millions?\s+of|billions?\s+of|thousands?\s+of|10x|5x|2x|3x|cut\s+(?:latency|costs?|time|spend)\s+by|reduced\s+(?:latency|costs?|time|spend)\s+by|increased\s+(?:revenue|performance|throughput|traffic)\s+by)\b/gi;
 
 const CONFIRMATION_PLACEHOLDER = '[Confirm measurable impact: e.g. latency reduction or scale]';
 
@@ -95,20 +95,23 @@ export function validateAndSanitizeMetrics(
     return { sanitizedText: adaptedText, metricFlag: false, warnings: [] };
   }
 
-  // Sanitize by replacing unsupported metrics with placeholder
+  // Sanitize longest tokens first (e.g. "$9m" before "9", "45%" before "45")
+  const orderedUnsupported = [...unsupportedTokens].sort((a, b) => b.length - a.length);
   let sanitized = adaptedText;
-  for (const token of unsupportedTokens) {
-    // Avoid escaping errors for special chars
+  for (const token of orderedUnsupported) {
     const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(`\\b${escaped}\\b`, 'gi');
-    sanitized = sanitized.replace(regex, CONFIRMATION_PLACEHOLDER);
+    const regex = new RegExp(`(?<![\\w$])${escaped}(?![\\w%])`, 'gi');
+    sanitized = sanitized.replace(regex, () => CONFIRMATION_PLACEHOLDER);
   }
 
-  // Collapse consecutive duplicate placeholders if any
-  sanitized = sanitized.replace(
-    new RegExp(`(?:${CONFIRMATION_PLACEHOLDER}\\s*){2,}`, 'g'),
-    `${CONFIRMATION_PLACEHOLDER} `,
-  ).trim();
+  // Collapse consecutive duplicate placeholders cleanly with escaped literal bracket sequence
+  const escapedPlaceholder = CONFIRMATION_PLACEHOLDER.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    '\\$&',
+  );
+  sanitized = sanitized
+    .replace(new RegExp(`(?:${escapedPlaceholder}\\s*){2,}`, 'g'), () => `${CONFIRMATION_PLACEHOLDER} `)
+    .trim();
 
   const warnings = [
     `Unverified metric or scale claim detected in ${fieldLabel} (${unsupportedTokens.slice(0, 3).join(', ')}). Replaced with confirmation placeholder.`,

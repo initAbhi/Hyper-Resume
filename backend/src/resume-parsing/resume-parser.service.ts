@@ -5,9 +5,16 @@ import {
   PayloadTooLargeException,
 } from '@nestjs/common';
 import pdf from 'pdf-parse-fork';
+import mammoth from 'mammoth';
+import AdmZip from 'adm-zip';
 import zlib from 'node:zlib';
 import { AiService } from '../ai/ai.service.js';
 import type { ParsedProfileDraft } from '../ai/interfaces/ai-provider.interface.js';
+import {
+  detectLinkedInProfilePdf,
+  normalizeParsedProfileDraft,
+  parseLinkedInProfileText,
+} from './linkedin-pdf-parser.util.js';
 
 @Injectable()
 export class ResumeParserService {
@@ -16,13 +23,14 @@ export class ResumeParserService {
 
   constructor(private readonly aiService: AiService) {}
 
-  async parseUploadedFile(
+  async parseUploadedFileWithRawText(
     fileBuffer: Buffer,
     originalName: string,
     mimeType: string,
   ): Promise<{
     fileName: string;
     extractedTextLength: number;
+    extractedText: string;
     draft: ParsedProfileDraft;
   }> {
     if (!fileBuffer || fileBuffer.length === 0) {
@@ -46,23 +54,69 @@ export class ResumeParserService {
 
     this.logger.log(`Extracted ${text.length} characters from "${originalName}", initiating AI profile draft parsing`);
 
-    // Pass extracted text to AI extraction engine
-    const draft = await this.aiService.parseResumeText(text);
+    const detection = detectLinkedInProfilePdf(text);
+    let rawDraft: ParsedProfileDraft;
+    try {
+      rawDraft = await this.aiService.parseResumeText(text);
+    } catch (err) {
+      if (detection.isLinkedInPdf) {
+        rawDraft = parseLinkedInProfileText(text);
+      } else {
+        throw err;
+      }
+    }
 
-    this.logger.log(`Successfully generated profile draft from "${originalName}"`);
+    const draft = normalizeParsedProfileDraft(rawDraft, text);
+
+    this.logger.log(
+      `Successfully generated ${draft.sourceType || 'standard_resume'} draft from "${originalName}"`,
+    );
 
     return {
       fileName: originalName,
       extractedTextLength: text.length,
+      extractedText: text,
       draft,
     };
   }
 
-  private async extractTextFromBuffer(
+  async parseUploadedFile(
+    fileBuffer: Buffer,
+    originalName: string,
+    mimeType: string,
+  ): Promise<{
+    fileName: string;
+    extractedTextLength: number;
+    draft: ParsedProfileDraft;
+  }> {
+    const res = await this.parseUploadedFileWithRawText(fileBuffer, originalName, mimeType);
+    return {
+      fileName: res.fileName,
+      extractedTextLength: res.extractedTextLength,
+      draft: res.draft,
+    };
+  }
+
+  public async extractTextFromBuffer(
     buffer: Buffer,
     mimeType: string,
     fileName: string,
   ): Promise<string> {
+    const isLegacyDoc =
+      mimeType === 'application/msword' ||
+      fileName.toLowerCase().endsWith('.doc') ||
+      (buffer.length >= 4 &&
+        buffer[0] === 0xd0 &&
+        buffer[1] === 0xcf &&
+        buffer[2] === 0x11 &&
+        buffer[3] === 0xe0);
+
+    if (isLegacyDoc) {
+      throw new BadRequestException(
+        'Legacy binary .doc format is not supported. Please save your resume as .docx or .pdf and upload again.',
+      );
+    }
+
     const isPdf =
       mimeType === 'application/pdf' ||
       fileName.toLowerCase().endsWith('.pdf') ||
@@ -140,21 +194,95 @@ export class ResumeParserService {
     return readable;
   }
 
-  private extractFromDocx(buffer: Buffer): string {
-    const raw = buffer.toString('binary');
-    const xmlMatch = /<w:t[^>]*>(.*?)<\/w:t>/g;
-    const textPieces: string[] = [];
-    let match: RegExpExecArray | null;
-
-    while ((match = xmlMatch.exec(raw)) !== null) {
-      textPieces.push(match[1]);
+  private async extractFromDocx(buffer: Buffer): Promise<string> {
+    if (buffer.length < 4 || buffer[0] !== 0x50 || buffer[1] !== 0x4b) {
+      throw new BadRequestException(
+        'Invalid DOCX archive signature. Please upload a valid .docx Word document.',
+      );
     }
 
-    if (textPieces.length === 0) {
-      const cleaned = raw.replace(/<[^>]+>/g, ' ').replace(/[^a-zA-Z0-9\s.,@:;()-]/g, ' ');
-      return cleaned.replace(/\s+/g, ' ');
+    const sections: string[] = [];
+
+    // 1. Primary extractor: mammoth parses OOXML paragraphs, tables, and lists cleanly
+    try {
+      const mammothResult = await mammoth.extractRawText({ buffer });
+      if (mammothResult.value && mammothResult.value.trim().length > 0) {
+        sections.push(mammothResult.value.trim());
+      }
+    } catch (err: any) {
+      this.logger.warn(`Mammoth DOCX extraction warning: ${err?.message || err}`);
     }
 
-    return textPieces.join(' ');
+    // 2. Zip XML pass: extract header/footer contact blocks and act as document.xml fallback
+    try {
+      const zip = new AdmZip(buffer);
+      const entries = zip.getEntries();
+
+      const headerFooterText = entries
+        .filter((e) => /^word\/(header|footer)\d*\.xml$/i.test(e.entryName))
+        .map((e) => this.extractXmlParagraphText(e.getData().toString('utf-8')))
+        .filter(Boolean);
+
+      if (headerFooterText.length > 0) {
+        sections.unshift(headerFooterText.join('\n'));
+      }
+
+      if (sections.join('\n').trim().length < 50) {
+        const docEntry = entries.find((e) => e.entryName === 'word/document.xml');
+        if (docEntry) {
+          const docXmlText = this.extractXmlParagraphText(
+            docEntry.getData().toString('utf-8'),
+          );
+          if (docXmlText) sections.push(docXmlText);
+        }
+      }
+    } catch (err: any) {
+      if (sections.length === 0) {
+        this.logger.warn(`DOCX ZIP extraction failed: ${err?.message || err}`);
+        throw new BadRequestException(
+          'Unable to read DOCX archive. Ensure the file is an unencrypted .docx Word document.',
+        );
+      }
+    }
+
+    return sections
+      .join('\n\n')
+      .replace(/[ \t]+/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  private extractXmlParagraphText(xml: string): string {
+    if (!xml) return '';
+    const withBreaks = xml
+      .replace(/<\/w:p>/gi, '\n')
+      .replace(/<w:br\s*\/?>/gi, '\n')
+      .replace(/<w:tab\s*\/?>/gi, ' ');
+
+    const matches = withBreaks.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>|\n/g) || [];
+    const text = matches
+      .map((token) =>
+        token === '\n' ? '\n' : token.replace(/<\/?w:t[^>]*>/gi, ''),
+      )
+      .join('');
+
+    return this.decodeXmlEntities(text)
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .join('\n');
+  }
+
+  private decodeXmlEntities(input: string): string {
+    return input
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+      .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) =>
+        String.fromCharCode(parseInt(hex, 16)),
+      );
   }
 }

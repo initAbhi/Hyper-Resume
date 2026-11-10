@@ -1,4 +1,57 @@
+export type BuiltInSectionKey =
+  | 'summary'
+  | 'experience'
+  | 'projects'
+  | 'skills'
+  | 'education'
+  | 'certifications';
+
+export type ResumeSectionKey = BuiltInSectionKey | `custom:${string}`;
+
+export type CustomSectionKind =
+  | 'publications'
+  | 'awards'
+  | 'volunteer'
+  | 'languages'
+  | 'custom';
+
+export interface CustomSectionEntry {
+  id: string;
+  heading: string;
+  subtitle?: string;
+  dateRange?: string;
+  locationOrLink?: string;
+  bullets: string[];
+}
+
+export interface CustomResumeSection {
+  id: string;
+  title: string;
+  kind: CustomSectionKind;
+  entries: CustomSectionEntry[];
+}
+
+export interface ResumeLayoutSettings {
+  sectionOrder?: ResumeSectionKey[];
+  hiddenSections?: ResumeSectionKey[];
+  fontSizeScale?: number;
+  lineHeight?: number;
+  sectionSpacing?: number;
+  pageMargin?: number;
+  accentColor?: string;
+  fontFamily?: 'sans' | 'serif' | 'mono';
+}
+
+export interface ResumeContentMeta {
+  targetRole?: string;
+  targetCompany?: string;
+  tailoredFromMatchId?: string;
+  tailoredFromResumeId?: string;
+}
+
 export interface ResumeContent {
+  meta?: ResumeContentMeta;
+  layout?: ResumeLayoutSettings;
   contact: {
     fullName: string;
     email: string;
@@ -42,4 +95,5 @@ export interface ResumeContent {
     issuer: string;
     issueDate?: string;
   }>;
+  customSections?: CustomResumeSection[];
 }

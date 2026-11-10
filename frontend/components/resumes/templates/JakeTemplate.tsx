@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { TemplateProps, renderHighlightedText } from './types';
+import { CustomSectionsBlock } from './CustomSectionsBlock';
 
 /**
  * Jake's Resume Template
@@ -262,6 +263,13 @@ export function JakeTemplate({
             </p>
           </section>
         )}
+
+        <CustomSectionsBlock
+          content={content}
+          accentColor={accentColor}
+          highlightKeywords={highlightKeywords}
+          showHighlights={showHighlights}
+        />
       </div>
     </div>
   );

@@ -68,7 +68,7 @@ function NavbarInner() {
     return () => { document.body.style.overflow = ''; };
   }, [isMobileMenuOpen]);
 
-  if (pathname?.startsWith('/app') || pathname?.startsWith('/admin')) {
+  if (pathname?.startsWith('/app') || pathname?.startsWith('/admin') || pathname?.startsWith('/r/')) {
     return null;
   }
 

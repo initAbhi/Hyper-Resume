@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { TemplateProps, renderHighlightedText } from './types';
+import { CustomSectionsBlock } from './CustomSectionsBlock';
 
 export function IvyLeagueTemplate({
   content,
@@ -162,6 +163,15 @@ export function IvyLeagueTemplate({
           </p>
         </section>
       )}
+
+      <CustomSectionsBlock
+        content={content}
+        accentColor={accentColor}
+        highlightKeywords={highlightKeywords}
+        showHighlights={showHighlights}
+        variant="serif"
+        spacingClassName="mt-4 space-y-2"
+      />
     </div>
   );
 }

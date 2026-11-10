@@ -2,179 +2,163 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { X, FileText, Briefcase, CheckCircle2 } from 'lucide-react';
-import * as htmlToImage from 'html-to-image';
-import { jsPDF } from 'jspdf';
+import {
+  X,
+  FileText,
+  Briefcase,
+  CheckCircle2,
+  Download,
+  ExternalLink,
+  Printer,
+  ShieldCheck,
+  AlertTriangle,
+} from 'lucide-react';
+import { apiClient, downloadExportBlob } from '@/lib/api-client';
+import { analytics } from '@/lib/analytics';
+import { buildVectorPdfPayload } from '@/lib/pdf-html-serializer';
 
 interface ExportPdfModalProps {
   isOpen: boolean;
   onClose: () => void;
+  resumeId: string;
   resumeName: string;
+  pageSize?: 'A4' | 'US Letter';
   targetContainerId?: string;
 }
 
-export function ExportPdfModal({
-  isOpen,
+interface ExportVerificationMeta {
+  atsVerified: boolean;
+  extractableChars: number;
+  extractableWords: number;
+  pageCount: number;
+  sizeBytes: number;
+}
+
+export function ExportPdfModal(props: ExportPdfModalProps) {
+  if (!props.isOpen) return null;
+  return <ExportPdfModalDialog {...props} />;
+}
+
+function ExportPdfModalDialog({
   onClose,
+  resumeId,
   resumeName,
+  pageSize = 'A4',
   targetContainerId = 'resume-document-print',
 }: ExportPdfModalProps) {
-  const [progress, setProgress] = useState(20);
+  const [progress, setProgress] = useState(15);
+  const [statusLabel, setStatusLabel] = useState('Preparing vector layout...');
   const [isDone, setIsDone] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [verification, setVerification] = useState<ExportVerificationMeta | null>(null);
+  const [isExportingDocx, setIsExportingDocx] = useState(false);
   const isGeneratingRef = useRef(false);
+  const blobUrlRef = useRef<string | null>(null);
 
-  const cleanFileName = (resumeName || 'Resume').trim().replace(/[/\\?%*:|"<>]/g, '-') + '.pdf';
+  const cleanFileName =
+    (resumeName || 'Resume').trim().replace(/[/\\?%*:|"<>]/g, '-') + '.pdf';
 
-  const triggerDownload = useCallback((blobUrl: string) => {
-    try {
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = cleanFileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    } catch (e) {
-      console.warn('Auto download failed, fallback to manual click', e);
-    }
-  }, [cleanFileName]);
+  const triggerDownload = useCallback(
+    (blobUrl: string) => {
+      try {
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = cleanFileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } catch (e) {
+        console.warn('Auto download failed, fallback to manual click', e);
+      }
+    },
+    [cleanFileName],
+  );
 
   const runExport = useCallback(async () => {
     try {
       setErrorMessage(null);
+      setVerification(null);
       setProgress(25);
+      setStatusLabel('Serializing template styles & layout...');
 
-      // Brief tick for DOM layout
-      await new Promise((r) => setTimeout(r, 200));
+      await new Promise((r) => setTimeout(r, 120));
 
-      const container = document.getElementById(targetContainerId);
-      if (!container) {
-        throw new Error('Resume container not found');
-      }
-
-      // Temporarily strip proofreading/keyword highlight styling so the exported PDF is clean
-      container.classList.add('pdf-export-mode');
-      const marks = Array.from(container.querySelectorAll<HTMLElement>('.ats-keyword-highlight, mark'));
-      marks.forEach((m) => {
-        m.style.setProperty('background', 'transparent', 'important');
-        m.style.setProperty('background-color', 'transparent', 'important');
-        m.style.setProperty('border', 'none', 'important');
-        m.style.setProperty('padding', '0', 'important');
-        m.style.setProperty('color', 'inherit', 'important');
-        m.style.setProperty('box-shadow', 'none', 'important');
-      });
-
-      // Brief tick for DOM styles to apply
-      await new Promise((r) => setTimeout(r, 60));
-
-      // Collect all discrete A4 pages
-      let pageElements = Array.from(
-        container.querySelectorAll<HTMLElement>('.resume-page-a4')
+      const payload = buildVectorPdfPayload(
+        targetContainerId,
+        cleanFileName,
+        pageSize,
       );
 
-      if (pageElements.length === 0) {
-        const directChild = container.firstElementChild as HTMLElement;
-        pageElements = directChild ? [directChild] : [container];
+      setProgress(55);
+      setStatusLabel('Rendering true vector ATS PDF...');
+
+      const result = await apiClient.exportResumePdf(resumeId, payload);
+
+      setProgress(90);
+      setStatusLabel('Verifying ATS text layer...');
+
+      const blobUrl = URL.createObjectURL(result.blob);
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
       }
-
-      setProgress(35);
-
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-        compress: true,
-      });
-
-      const pageWidthMm = 210;
-      const pageHeightMm = 297;
-
-      for (let i = 0; i < pageElements.length; i++) {
-        const pageEl = pageElements[i];
-
-        // Smooth visual pacing for progress
-        await new Promise((r) => setTimeout(r, 120));
-
-        // High-fidelity capture via html-to-image (native browser SVG pipeline, supports oklch/lab/custom fonts)
-        const dataUrl = await htmlToImage.toPng(pageEl, {
-          quality: 0.98,
-          pixelRatio: 2, // 2x DPI for crisp text
-          backgroundColor: '#ffffff',
-          cacheBust: true,
-          filter: (node) => {
-            // Skip any print:hidden or modal elements that might be inside
-            if (node instanceof HTMLElement && (node.classList.contains('print:hidden') || node.id === 'export-pdf-modal')) {
-              return false;
-            }
-            return true;
-          },
-        });
-
-        if (i > 0) {
-          pdf.addPage('a4', 'portrait');
-        }
-
-        pdf.addImage(dataUrl, 'PNG', 0, 0, pageWidthMm, pageHeightMm, undefined, 'FAST');
-
-        const stepProgress = Math.min(95, Math.round(35 + ((i + 1) / pageElements.length) * 55));
-        setProgress(stepProgress);
-      }
-
-      await new Promise((r) => setTimeout(r, 150));
-      setProgress(100);
-      setIsDone(true);
-
-      // Generate blob for direct file download
-      const blob = pdf.output('blob');
-      const blobUrl = URL.createObjectURL(blob);
+      blobUrlRef.current = blobUrl;
       setPdfBlobUrl(blobUrl);
 
-      // Trigger direct file download
-      try {
-        pdf.save(cleanFileName);
-      } catch {
-        triggerDownload(blobUrl);
-      }
-    } catch (err: unknown) {
-      console.error('PDF Export Error:', err);
-      setErrorMessage(err instanceof Error ? err.message : 'Failed to generate PDF');
+      setVerification({
+        atsVerified: result.atsVerified,
+        extractableChars: result.extractableChars,
+        extractableWords: result.extractableWords,
+        pageCount: result.pageCount,
+        sizeBytes: result.sizeBytes,
+      });
+
       setProgress(100);
+      setStatusLabel('100% Complete!');
+      setIsDone(true);
+
+      analytics.track('export_completed', {
+        fileFormat: 'pdf',
+        source: 'vector_pdf_modal',
+      });
+
+      triggerDownload(blobUrl);
+    } catch (err: unknown) {
+      console.error('Vector PDF Export Error:', err);
+      setErrorMessage(
+        err instanceof Error
+          ? err.message
+          : 'Failed to generate vector PDF. You can use browser Print to PDF as fallback.',
+      );
+      setProgress(100);
+      setStatusLabel('Export failed');
       setIsDone(true);
     } finally {
-      const container = document.getElementById(targetContainerId);
-      if (container) {
-        container.classList.remove('pdf-export-mode');
-        const marks = Array.from(container.querySelectorAll<HTMLElement>('.ats-keyword-highlight, mark'));
-        marks.forEach((m) => {
-          m.style.removeProperty('background');
-          m.style.removeProperty('background-color');
-          m.style.removeProperty('border');
-          m.style.removeProperty('padding');
-          m.style.removeProperty('color');
-          m.style.removeProperty('box-shadow');
-        });
-      }
       isGeneratingRef.current = false;
     }
-  }, [cleanFileName, targetContainerId, triggerDownload]);
+  }, [cleanFileName, pageSize, resumeId, targetContainerId, triggerDownload]);
 
   useEffect(() => {
-    if (!isOpen) {
-      setProgress(20);
-      setIsDone(false);
-      setErrorMessage(null);
-      setPdfBlobUrl(null);
-      isGeneratingRef.current = false;
-      return;
-    }
+    const timer = setTimeout(() => {
+      if (isGeneratingRef.current) return;
+      isGeneratingRef.current = true;
+      void runExport();
+    }, 0);
 
-    if (isGeneratingRef.current) return;
-    isGeneratingRef.current = true;
-    runExport();
-  }, [isOpen, runExport]);
+    return () => {
+      clearTimeout(timer);
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
+    };
+  }, [runExport]);
 
-  if (!isOpen) return null;
+  const formattedSize = verification
+    ? verification.sizeBytes < 1024 * 1024
+      ? `${(verification.sizeBytes / 1024).toFixed(1)} KB`
+      : `${(verification.sizeBytes / (1024 * 1024)).toFixed(2)} MB`
+    : null;
 
   return (
     <div
@@ -183,7 +167,7 @@ export function ExportPdfModal({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-[460px] bg-white rounded-2xl shadow-xl border border-zinc-200 p-6 space-y-5 animate-in zoom-in-95 duration-200 text-zinc-900"
+        className="relative w-full max-w-[480px] bg-white rounded-2xl shadow-xl border border-zinc-200 p-6 space-y-5 animate-in zoom-in-95 duration-200 text-zinc-900"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
@@ -195,42 +179,136 @@ export function ExportPdfModal({
           <X className="w-4 h-4" />
         </button>
 
-        {/* Header (Exact Enhancv Copy & Hierarchy) */}
+        {/* Header */}
         <div className="text-center space-y-1">
           <h2 className="text-xl font-bold tracking-tight text-zinc-900 font-rubik">
-            Preparing the file
+            {errorMessage ? 'PDF Export Issue' : isDone ? 'Vector ATS PDF Ready' : 'Preparing the file'}
           </h2>
-          <p className="text-xs font-semibold text-[#00c599]">
-            {isDone ? '100% Complete!' : `${progress}% Complete...`}
+          <p className={`text-xs font-semibold ${errorMessage ? 'text-rose-600' : 'text-[#00c599]'}`}>
+            {isDone && !errorMessage ? '100% Complete!' : `${progress}% · ${statusLabel}`}
           </p>
         </div>
 
-        {/* Sleek Teal Progress Bar (Enhancv 1:1) */}
+        {/* Progress Bar */}
         <div className="w-full bg-zinc-100 rounded-full h-2.5 overflow-hidden">
           <div
-            className="h-full bg-[#00c599] rounded-full transition-all duration-300 ease-out"
+            className={`h-full rounded-full transition-all duration-300 ease-out ${
+              errorMessage ? 'bg-rose-500' : 'bg-[#00c599]'
+            }`}
             style={{ width: `${progress}%` }}
           />
         </div>
 
-        {/* Context Card: Resume Ready & Direct Download */}
-        <div className="p-3.5 rounded-xl border border-zinc-100 bg-zinc-50/80 flex items-center justify-between gap-3">
-          <div className="space-y-0.5 min-w-0">
-            <p className="text-[11px] text-zinc-700">
-              Your resume <strong className="font-semibold text-zinc-900">{resumeName || 'Resume'}</strong> is ready.
-            </p>
-            <p className="text-[11px] text-zinc-400">
-              Formatted as high-resolution vector A4 pages for ATS & recruiter review.
-            </p>
-          </div>
+        {/* Verification & File Summary Card */}
+        {!errorMessage ? (
+          <div className="p-3.5 rounded-xl border border-zinc-200/80 bg-zinc-50/80 space-y-2.5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="space-y-0.5 min-w-0">
+                <p className="text-[11.5px] text-zinc-700 truncate">
+                  <strong className="font-semibold text-zinc-900">{cleanFileName}</strong>
+                </p>
+                <p className="text-[11px] text-zinc-500">
+                  True selectable vector text with clickable links for ATS parsers.
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
+                  <span>Vector {pageSize}</span>
+                </span>
+              </div>
+            </div>
 
-          <div className="shrink-0 text-right space-y-1">
-            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200">
-              <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
-              <span>A4 PDF</span>
-            </span>
+            {verification && (
+              <div className="pt-2 border-t border-zinc-200/70 flex flex-wrap items-center justify-between gap-2 text-[10.5px]">
+                <span
+                  className={`inline-flex items-center gap-1 font-semibold ${
+                    verification.atsVerified ? 'text-emerald-700' : 'text-amber-700'
+                  }`}
+                >
+                  {verification.atsVerified ? (
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  ) : (
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                  )}
+                  <span>
+                    {verification.atsVerified
+                      ? `ATS Text Verified · ${verification.extractableWords} selectable words`
+                      : 'Low text content detected'}
+                  </span>
+                </span>
+                <span className="text-zinc-500 font-mono">
+                  {verification.pageCount} {verification.pageCount === 1 ? 'Page' : 'Pages'} · {formattedSize}
+                </span>
+              </div>
+            )}
           </div>
-        </div>
+        ) : (
+          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 space-y-2.5">
+            <p className="text-[11.5px] text-rose-700 font-medium">{errorMessage}</p>
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                setTimeout(() => window.print(), 150);
+              }}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-rose-200 text-rose-700 hover:bg-rose-100/50 transition-colors"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Use Browser Print to PDF Fallback</span>
+            </button>
+          </div>
+        )}
+
+        {/* Primary Download / Preview Actions */}
+        {pdfBlobUrl && !errorMessage && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => triggerDownload(pdfBlobUrl)}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold transition-colors cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download PDF</span>
+              </button>
+              <a
+                href={pdfBlobUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-zinc-200 hover:bg-zinc-50 text-zinc-800 text-xs font-semibold transition-colors"
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-zinc-500" />
+                <span>Preview in Tab</span>
+              </a>
+            </div>
+            <button
+              type="button"
+              data-testid="modal-export-docx-btn"
+              disabled={isExportingDocx}
+              onClick={async () => {
+                setIsExportingDocx(true);
+                try {
+                  const res = await apiClient.exportResumeDocx(resumeId, {
+                    pageSize,
+                    fileName: resumeName,
+                  });
+                  downloadExportBlob(res.blob, res.fileName, '.docx');
+                } finally {
+                  setIsExportingDocx(false);
+                }
+              }}
+              className="w-full inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-blue-200 bg-blue-50/60 hover:bg-blue-100/70 text-blue-700 text-xs font-semibold transition-colors disabled:opacity-60 cursor-pointer"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>
+                {isExportingDocx
+                  ? 'Building Editable Word (.docx)...'
+                  : 'Download Editable Word (.docx)'}
+              </span>
+            </button>
+          </div>
+        )}
 
         {/* What To Do Next Section */}
         <div className="space-y-2.5 pt-1">
@@ -239,74 +317,45 @@ export function ExportPdfModal({
           </h3>
 
           <div className="grid grid-cols-2 gap-2.5">
-            {/* Card 1: Add Cover Letter */}
             <Link
-              href="/app/match"
+              href={`/app/match?resumeId=${resumeId}`}
               className="p-3.5 rounded-xl border border-emerald-100 bg-[#f0fdf9] hover:bg-[#e6faf4] transition-all group flex flex-col justify-between space-y-2 text-left relative"
             >
               <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-emerald-500" />
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-900">
                   <FileText className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Add Cover Letter</span>
+                  <span>Match to a Job</span>
                 </div>
                 <p className="text-[10px] text-zinc-500 leading-snug">
-                  Create a cover letter that complements your resume and boosts your application.
+                  Audit this resume against a real job description for keyword gaps.
                 </p>
               </div>
               <span className="text-[10px] font-bold text-emerald-600 group-hover:underline pt-1">
-                GENERATE COVER LETTER &gt;
+                RUN JOB MATCH &gt;
               </span>
             </Link>
 
-            {/* Card 2: Find More Jobs */}
             <Link
-              href="/app/match"
+              href="/app/interview"
               className="p-3.5 rounded-xl border border-purple-100 bg-[#faf5ff] hover:bg-[#f3e8ff] transition-all group flex flex-col justify-between space-y-2 text-left relative"
             >
               <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-purple-500" />
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-900">
                   <Briefcase className="w-3.5 h-3.5 text-purple-600" />
-                  <span>Find More Jobs</span>
+                  <span>AI Mock Interview</span>
                 </div>
                 <p className="text-[10px] text-zinc-500 leading-snug">
-                  Find relevant roles to apply to using your new resume.
+                  Practice answering STAR questions grounded in this exact resume.
                 </p>
               </div>
               <span className="text-[10px] font-bold text-purple-600 group-hover:underline pt-1">
-                BROWSE JOBS &gt;
+                START INTERVIEW &gt;
               </span>
             </Link>
           </div>
         </div>
-
-        {/* Manual Direct Download Link (Fallback) */}
-        <div className="pt-1 text-center text-[11px] text-zinc-400">
-          <span>* If the download doesn&apos;t start automatically in a few seconds, please </span>
-          {pdfBlobUrl ? (
-            <button
-              onClick={() => triggerDownload(pdfBlobUrl)}
-              className="text-[#00c599] font-semibold underline hover:text-emerald-700 cursor-pointer"
-            >
-              click here
-            </button>
-          ) : (
-            <button
-              onClick={runExport}
-              className="text-[#00c599] font-semibold underline hover:text-emerald-700 cursor-pointer"
-            >
-              click here to retry
-            </button>
-          )}
-          <span>.</span>
-        </div>
-
-        {errorMessage && (
-          <div className="text-[11px] text-rose-600 text-center bg-rose-50 p-2 rounded-lg border border-rose-100">
-            {errorMessage}
-          </div>
-        )}
       </div>
     </div>
   );

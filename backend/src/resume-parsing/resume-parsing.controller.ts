@@ -1,15 +1,21 @@
 import {
   BadRequestException,
   Controller,
+  HttpCode,
+  HttpStatus,
   Post,
+  Req,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ResumeParserService } from './resume-parser.service.js';
 import { PdfCompressionService } from './pdf-compression.service.js';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
+import { createPublicRateLimiter } from '../common/utils/public-rate-limit.util.js';
+import { analyzePlainResumeTextAts } from '../ai/utils/ats-audit-engine.js';
 
 export interface UploadedFilePayload {
   buffer: Buffer;
@@ -25,14 +31,44 @@ const COMPRESSION_FILE_INTERCEPTOR_OPTIONS = {
 };
 
 @Controller('resume-parsing')
-@UseGuards(JwtAuthGuard)
 export class ResumeParsingController {
+  private readonly enforcePublicUploadLimit = createPublicRateLimiter(10, 10 * 60 * 1000);
+
   constructor(
     private readonly parserService: ResumeParserService,
     private readonly compressionService: PdfCompressionService,
   ) {}
 
+  @Post('public/parse-and-audit')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('file'))
+  async parseAndAuditPublic(
+    @Req() req: Request,
+    @UploadedFile() file?: UploadedFilePayload,
+  ) {
+    this.enforcePublicUploadLimit(req);
+    if (!file) {
+      throw new BadRequestException('A PDF or DOCX file must be provided in the multipart request');
+    }
+
+    const parsed = await this.parserService.parseUploadedFileWithRawText(
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+    );
+    const audit = analyzePlainResumeTextAts(parsed.extractedText, parsed.draft.headline);
+
+    return {
+      fileName: parsed.fileName,
+      extractedTextLength: parsed.extractedTextLength,
+      extractedText: parsed.extractedText,
+      draft: parsed.draft,
+      audit,
+    };
+  }
+
   @Post('upload')
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('file'))
   async uploadAndParse(
     @UploadedFile() file?: UploadedFilePayload,
@@ -49,6 +85,7 @@ export class ResumeParsingController {
   }
 
   @Post('compress')
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('file', COMPRESSION_FILE_INTERCEPTOR_OPTIONS))
   async compressPdf(
     @UploadedFile() file?: UploadedFilePayload,
@@ -77,6 +114,7 @@ export class ResumeParsingController {
   }
 
   @Post('compress-and-parse')
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('file', COMPRESSION_FILE_INTERCEPTOR_OPTIONS))
   async compressAndParse(
     @UploadedFile() file?: UploadedFilePayload,

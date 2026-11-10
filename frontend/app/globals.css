@@ -259,7 +259,7 @@ body {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: 34px 40px;
 }
 
@@ -555,15 +555,31 @@ body {
     margin: 0 auto !important;
     width: 210mm !important;
     min-height: 297mm !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  #resume-page-1,
+  #resume-page-2 {
     height: 297mm !important;
     max-height: 297mm !important;
+    overflow: hidden !important;
+    justify-content: space-between !important;
     page-break-after: always !important;
     break-after: page !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    overflow: hidden !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
+  }
+
+  #resume-page-1:last-child,
+  #resume-page-2:last-child {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
 
   .resume-page-a4:not([class*="p-0"]) {
@@ -630,3 +646,503 @@ body {
     break-inside: avoid !important;
   }
 }
+
+/* Semantic Native <progress> Bar Styling (WebKit & Moz pseudo-elements separated) */
+progress.hr-progress {
+  --progress-bar-radius: 9999px;
+  --progress-bar-track: #e2e5e9;
+  --progress-bar-fill: #285fea;
+  appearance: none;
+  border: 0 solid;
+  overflow: clip;
+  border-radius: var(--progress-bar-radius);
+  background: var(--progress-bar-track);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.08);
+  container-type: inline-size;
+  --progress-bar-indeterminate-size: 30%;
+  --progress-bar-indeterminate-animation-duration: 1.5s;
+}
+
+.dark progress.hr-progress {
+  --progress-bar-track: #252a33;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  progress.hr-progress {
+    --progress-bar-indeterminate-animation-duration: 10s;
+  }
+}
+
+progress.hr-progress:indeterminate {
+  --progress-bar-animation: progress-bar-indeterminate var(--progress-bar-indeterminate-animation-duration) infinite linear;
+}
+
+progress.hr-progress::-webkit-progress-bar {
+  background: transparent;
+}
+
+progress.hr-progress::-webkit-progress-value {
+  background: var(--progress-bar-fill);
+  border-radius: var(--progress-bar-radius);
+  transition: inline-size 0.3s ease;
+  animation: var(--progress-bar-animation, none);
+}
+
+progress.hr-progress::-moz-progress-bar {
+  background: var(--progress-bar-fill);
+  border-radius: var(--progress-bar-radius);
+  transition: inline-size 0.3s ease;
+  animation: var(--progress-bar-animation, none);
+}
+
+@keyframes progress-bar-indeterminate {
+  from,
+  to {
+    inline-size: var(--progress-bar-indeterminate-size);
+    margin-right: auto;
+  }
+  from {
+    translate: -100%;
+  }
+  to {
+    translate: 100cqi;
+  }
+}
+
+/* Single-row accessible tablist scroller */
+.hr-tablist-scroll {
+  scrollbar-width: none;
+  scroll-snap-type: inline proximity;
+}
+
+.hr-tablist-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Semantic Native <progress> Indeterminate Spinner */
+@property --hr-arc-start {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@property --hr-arc-end {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@property --hr-spinner-dash-animation {
+  syntax: "*";
+  inherits: false;
+  initial-value: , hr-progress-dash 3s ease-in-out infinite;
+}
+
+progress.hr-loading-spinner:indeterminate::-webkit-progress-bar {
+  display: none;
+  background: none;
+}
+
+progress.hr-loading-spinner:indeterminate::-webkit-progress-value {
+  display: none;
+  background: none;
+}
+
+progress.hr-loading-spinner:indeterminate::-moz-progress-bar {
+  display: none;
+  background: none;
+}
+
+progress.hr-loading-spinner:indeterminate {
+  --_from: calc(90deg + var(--hr-arc-start, 0deg));
+  --_to: calc(90deg + var(--hr-arc-end, 158deg));
+  --size: 20px;
+  --thickness: 2.5px;
+  --spinner-color: #285fea;
+  --track-color: #e2e5e9;
+  --spinner-duration: 1.4s;
+  --_used-spinner-duration: var(--spinner-duration);
+
+  position: relative;
+  display: inline-block;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  appearance: none;
+  background: conic-gradient(
+      from var(--_from),
+      var(--spinner-color) calc(var(--_to) - var(--_from)),
+      transparent 0
+    )
+    var(--track-color);
+  animation:
+    hr-progress-spin var(--_used-spinner-duration) linear infinite
+    var(--hr-spinner-dash-animation, );
+}
+
+.dark progress.hr-loading-spinner:indeterminate {
+  --spinner-color: #3b75f2;
+  --track-color: #252a33;
+}
+
+@supports (background-clip: border-area) {
+  progress.hr-loading-spinner:indeterminate {
+    background-clip: border-area;
+    border: var(--thickness) solid transparent;
+    background-origin: border-box;
+  }
+}
+
+@supports not (background-clip: border-area) {
+  progress.hr-loading-spinner:indeterminate {
+    --clip-boundary: calc(100% - var(--thickness));
+    mask-image: radial-gradient(
+      farthest-side,
+      transparent var(--clip-boundary),
+      black var(--clip-boundary)
+    );
+    border: 0;
+  }
+}
+
+@media (forced-colors: active) {
+  progress.hr-loading-spinner:indeterminate {
+    forced-color-adjust: none;
+    --spinner-color: CanvasText;
+    --track-color: Canvas;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  progress.hr-loading-spinner:indeterminate {
+    --_used-spinner-duration: 6s;
+    --hr-spinner-dash-animation: ;
+    --hr-arc-end: 158deg;
+  }
+}
+
+@keyframes hr-progress-spin {
+  to {
+    rotate: 1turn;
+  }
+}
+
+@keyframes hr-progress-dash {
+  from {
+    --hr-arc-start: 0deg;
+    --hr-arc-end: 3deg;
+  }
+  50% {
+    --hr-arc-start: 100deg;
+    --hr-arc-end: 358deg;
+  }
+  to {
+    --hr-arc-start: 360deg;
+    --hr-arc-end: 363deg;
+  }
+}
+
+/* Native <details> Disclosure Styles */
+details.hr-job-details > summary {
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  cursor: pointer;
+}
+
+details.hr-job-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.hr-job-details > summary::before {
+  content: "";
+  inline-size: 0.9em;
+  block-size: 0.9em;
+  flex-shrink: 0;
+  background-color: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat center / contain;
+  rotate: -90deg;
+}
+
+details.hr-job-details[open] > summary::before {
+  rotate: 0deg;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  details.hr-job-details > summary::before {
+    transition: rotate 0.2s ease;
+  }
+
+  details.hr-job-details::details-content {
+    interpolate-size: allow-keywords;
+    overflow: clip;
+    contain: layout;
+    transition: block-size 0.25s ease-in-out, content-visibility 0.25s ease-in-out allow-discrete;
+  }
+
+  details.hr-job-details:not([open])::details-content {
+    block-size: 0;
+  }
+}
+
+/* Native Modal <dialog> Containment & Single-Row Accessible Editor Tabs */
+dialog.hr-native-dialog:modal {
+  position: fixed;
+  inset: 0;
+  overscroll-behavior: contain;
+  margin: auto;
+}
+
+dialog.hr-native-dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background: rgb(15 23 42 / 0.55);
+  backdrop-filter: blur(2px);
+}
+
+dialog.hr-native-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.hr-editor-tabs [role="tab"] {
+  position: relative;
+}
+
+.hr-editor-tabs [role="tab"][aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  inset: auto 8px 0 8px;
+  border-block-end: 2px solid currentColor;
+}
+
+/* Native Accessible Checkbox Hit Target & Brand Accent */
+.hr-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-block-size: 44px;
+  cursor: pointer;
+}
+
+.hr-checkbox-native {
+  accent-color: #285fea;
+  inline-size: 1.2em;
+  aspect-ratio: 1;
+  margin: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.hr-checkbox-native:focus-visible {
+  outline: 2px solid #285fea;
+  outline-offset: 2px;
+}
+
+/* Top-Layer Persistent Manual Toast Popover */
+[popover="manual"].hr-toast-popover {
+  position: fixed;
+  inset: auto 1.25rem 1.25rem auto;
+  margin: 0;
+  z-index: 60;
+  opacity: 0;
+}
+
+[popover="manual"].hr-toast-popover:is(:popover-open, .\:popover-open) {
+  display: flex;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [popover="manual"].hr-toast-popover {
+    transition: opacity 0.2s ease, transform 0.2s ease, overlay 0.2s allow-discrete, display 0.2s allow-discrete;
+    transition-behavior: allow-discrete;
+    transform: translateY(6px);
+  }
+
+  [popover="manual"].hr-toast-popover:is(:popover-open, .\:popover-open) {
+    transform: translateY(0);
+  }
+}
+
+/* Semantic Native Linear Progress Bar (.hr-score-progress) */
+progress.hr-score-progress {
+  appearance: none;
+  border: 0 solid;
+  overflow: clip;
+  display: block;
+  inline-size: 100%;
+  block-size: 0.45rem;
+  container-type: inline-size;
+  --progress-bar-radius: 1e5px;
+  --progress-bar-track: #e2e5e9;
+  border-radius: var(--progress-bar-radius);
+  background: var(--progress-bar-track);
+  box-shadow: inset 0 1px 1px rgb(0 0 0 / 0.06);
+}
+
+.dark progress.hr-score-progress {
+  --progress-bar-track: #252a33;
+}
+
+progress.hr-score-progress::-webkit-progress-bar {
+  background: transparent;
+}
+
+progress.hr-score-progress::-webkit-progress-value {
+  background: var(--progress-bar-fill, #285fea);
+  border-radius: var(--progress-bar-radius);
+  transition: inline-size 0.3s ease;
+}
+
+progress.hr-score-progress::-moz-progress-bar {
+  background: var(--progress-bar-fill, #285fea);
+  border-radius: var(--progress-bar-radius);
+  transition: inline-size 0.3s ease;
+}
+
+/* Registered Custom Property & Semantic Native Progress Ring */
+@property --value {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+.hr-progress-ring-wrapper {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: fit-content;
+}
+
+progress.hr-progress-ring {
+  appearance: none;
+  --size: 88px;
+  --thickness: 9px;
+  --track-color: #e2e5e9;
+  --fill-color: #285fea;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--fill-color) calc(var(--value) * 1%),
+    var(--track-color) 0
+  );
+  background-clip: border-area;
+  border: var(--thickness) solid transparent;
+  background-origin: border-box;
+  transition: --value 0s ease-in-out;
+}
+
+.dark progress.hr-progress-ring {
+  --track-color: #252a33;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  progress.hr-progress-ring {
+    transition-duration: 0.4s;
+  }
+}
+
+@supports not (background-clip: border-area) {
+  progress.hr-progress-ring {
+    mask-image: radial-gradient(
+      transparent calc(50% - var(--thickness)),
+      black calc(50% - var(--thickness) + 0.5px)
+    );
+    border: 0;
+  }
+}
+
+@media (forced-colors: active) {
+  progress.hr-progress-ring {
+    forced-color-adjust: none;
+    --fill-color: CanvasText;
+    --track-color: Canvas;
+  }
+}
+
+progress.hr-progress-ring::-webkit-progress-bar {
+  display: none;
+  background: none;
+}
+
+progress.hr-progress-ring::-webkit-progress-value {
+  display: none;
+  background: none;
+}
+
+progress.hr-progress-ring::-moz-progress-bar {
+  display: none;
+  background: none;
+}
+
+progress.hr-progress-ring::slider-fill {
+  display: none;
+  background: none;
+}
+
+.hr-progress-ring-content {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* Native Details Accordion with Intrinsic Size Animation */
+.hr-accordion details > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.hr-accordion details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.hr-accordion details > summary::before {
+  content: "";
+  inline-size: 0.48rem;
+  block-size: 0.48rem;
+  flex-shrink: 0;
+  border-inline-end: 1.75px solid currentColor;
+  border-block-end: 1.75px solid currentColor;
+  transform: rotate(-45deg);
+  margin-inline-start: 0.1rem;
+  opacity: 0.65;
+}
+
+.hr-accordion details[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+.hr-accordion details::details-content {
+  interpolate-size: allow-keywords;
+  overflow: clip;
+  contain: layout;
+}
+
+.hr-accordion details:not([open])::details-content {
+  block-size: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hr-accordion details > summary::before {
+    transition: transform 0.2s ease;
+  }
+
+  .hr-accordion details::details-content {
+    transition: block-size, content-visibility, display;
+    transition-duration: 0.25s;
+    transition-timing-function: ease-in-out;
+    transition-behavior: allow-discrete;
+  }
+}
+
+

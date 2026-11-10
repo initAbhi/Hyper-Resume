@@ -5,8 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  CheckCircle2,
-  AlertTriangle,
   XCircle,
   ArrowRight,
   Sparkles,
@@ -16,10 +14,16 @@ import {
   RefreshCw,
   FileCheck2,
   Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import Link from 'next/link';
-import { apiClient, PdfCompressionResponse } from '@/lib/api-client';
+import {
+  apiClient,
+  type PdfCompressionResponse,
+  type PlainTextAtsAuditResponse,
+} from '@/lib/api-client';
 import { analytics } from '@/lib/analytics';
+import { AtsAuditBreakdown } from '@/components/resumes/AtsAuditBreakdown';
 
 export type CheckerState =
   | 'IDLE'
@@ -50,15 +54,8 @@ export default function ResumeCheckerPage() {
   const [compressionMeta, setCompressionMeta] = useState<PdfCompressionResponse | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [results, setResults] = useState<{
-    score: number;
-    metricsCount: number;
-    actionVerbsCount: number;
-    wordCount: number;
-    detectedSections: string[];
-    missingSections: string[];
-    issues: { type: 'success' | 'warning' | 'error'; message: string }[];
-  } | null>(null);
+  const [results, setResults] = useState<PlainTextAtsAuditResponse | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   const sampleResume = `Abhishek Singh
 abhishek@example.com | +91 98765 43210 | Bengaluru, India | linkedin.com/in/abhishek-dev
@@ -82,106 +79,34 @@ B.Tech in Computer Science & Engineering — 2021
 SKILLS
 TypeScript, Node.js, Next.js, PostgreSQL, Docker, Redis, TailwindCSS, Git`;
 
-  const runAuditAnalysis = (textToAnalyze: string) => {
-    const text = textToAnalyze.toLowerCase();
-    const words = textToAnalyze.trim().split(/\s+/).filter(Boolean);
-    const wordCount = words.length;
+  const runServerAudit = async (textToAnalyze: string, source: string = 'resume_checker') => {
+    if (!textToAnalyze.trim()) return;
+    setAnalysisError(null);
+    setCheckerState('ATS_ANALYSIS_IN_PROGRESS');
+    analytics.track('resume_checker_started', { source });
 
-    // Detect common sections
-    const standardSections = ['summary', 'experience', 'education', 'skills', 'projects'];
-    const detectedSections = standardSections.filter((s) => text.includes(s));
-    const missingSections = standardSections.filter((s) => !text.includes(s));
-
-    // Action verbs check
-    const actionVerbs = [
-      'architected',
-      'developed',
-      'engineered',
-      'spearheaded',
-      'optimized',
-      'reduced',
-      'increased',
-      'partnered',
-      'designed',
-      'built',
-      'created',
-      'led',
-    ];
-    const actionVerbsFound = actionVerbs.filter((v) => text.includes(v));
-
-    // Metrics check (digits, percentages, multipliers)
-    const metricsMatches = textToAnalyze.match(/\b\d+(\.\d+)?%|\b\d+x|\b\d+k|\b\d+m|\b\d+\+/gi) || [];
-
-    // Calculate honest compatibility score
-    let score = 50;
-    if (detectedSections.length >= 4) score += 20;
-    if (metricsMatches.length >= 3) score += 15;
-    if (actionVerbsFound.length >= 4) score += 10;
-    if (wordCount >= 200 && wordCount <= 700) score += 5;
-
-    const issues: { type: 'success' | 'warning' | 'error'; message: string }[] = [];
-
-    if (metricsMatches.length >= 3) {
-      issues.push({
-        type: 'success',
-        message: `Found ${metricsMatches.length} quantifiable achievements (% or numbers). Excellent evidence-based impact.`,
+    try {
+      const audit = await apiClient.auditPlainTextResume({
+        resumeText: textToAnalyze,
       });
-    } else {
-      issues.push({
-        type: 'warning',
-        message: 'Low quantifiable outcomes detected. Add metrics (e.g. latency reduced by X%, users served) to prove scale.',
+      setResults(audit);
+      setCheckerState('COMPLETED');
+      analytics.track('analysis_completed', {
+        matchScoreBucket: audit.score >= 80 ? 'high' : audit.score >= 60 ? 'medium' : 'low',
+        source,
       });
+    } catch (err: unknown) {
+      setAnalysisError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to evaluate resume via backend ATS audit engine. Please verify at least 25 characters.',
+      );
+      setCheckerState('IDLE');
     }
-
-    if (actionVerbsFound.length >= 4) {
-      issues.push({
-        type: 'success',
-        message: `Strong active leadership verbs detected (${actionVerbsFound.slice(0, 4).join(', ')}).`,
-      });
-    } else {
-      issues.push({
-        type: 'warning',
-        message: 'Consider replacing passive verbs (e.g. "responsible for") with active impact verbs.',
-      });
-    }
-
-    if (missingSections.length > 0) {
-      issues.push({
-        type: 'error',
-        message: `Standard ATS section headers missing: ${missingSections.join(', ')}.`,
-      });
-    } else {
-      issues.push({
-        type: 'success',
-        message: 'All standard ATS section headers present and correctly formatted.',
-      });
-    }
-
-    const finalScore = Math.min(100, score);
-    setResults({
-      score: finalScore,
-      metricsCount: metricsMatches.length,
-      actionVerbsCount: actionVerbsFound.length,
-      wordCount,
-      detectedSections,
-      missingSections,
-      issues,
-    });
-
-    analytics.track('analysis_completed', {
-      matchScoreBucket: finalScore >= 80 ? 'high' : finalScore >= 60 ? 'medium' : 'low',
-      source: 'resume_checker',
-    });
   };
 
   const handleAnalyze = () => {
-    if (!resumeText.trim()) return;
-    analytics.track('resume_checker_started', { source: 'resume_checker' });
-    setCheckerState('ATS_ANALYSIS_IN_PROGRESS');
-    setTimeout(() => {
-      runAuditAnalysis(resumeText);
-      setCheckerState('COMPLETED');
-    }, 400);
+    void runServerAudit(resumeText, 'resume_checker');
   };
 
   /**
@@ -192,6 +117,7 @@ TypeScript, Node.js, Next.js, PostgreSQL, Docker, Redis, TailwindCSS, Git`;
     if (!file) return;
 
     setUploadError(null);
+    setAnalysisError(null);
     setCompressionMeta(null);
     setPendingFile(file);
 
@@ -212,23 +138,28 @@ TypeScript, Node.js, Next.js, PostgreSQL, Docker, Redis, TailwindCSS, Git`;
       return;
     }
 
-    // Scenario A: File is within 10 MB limit -> Normal flow unchanged
+    // Scenario A: File is within 10 MB limit -> Real backend parse + 5-dimension ATS audit
     setCheckerState('ATS_ANALYSIS_IN_PROGRESS');
     analytics.track('resume_checker_started', { source: 'file_upload' });
 
     try {
-      const data = await apiClient.uploadAndParseResume(file);
+      const parsedAndAudited = await apiClient.parseAndAuditUploadedResume(file);
       analytics.track('resume_upload_completed', {
-        fileFormat: file.name.endsWith('.docx') ? 'docx' : 'pdf',
+        fileFormat: file.name.toLowerCase().endsWith('.docx') ? 'docx' : 'pdf',
       });
 
-      const bullets = (data.draft.experience || []).flatMap((exp) => exp.bullets || []);
-      const skills = (data.draft.skills || []).map((s) => s.name).join(', ');
-      const reconstructed = `${data.draft.headline || 'Software Engineer'}\n\nSUMMARY\n${data.draft.summary || ''}\n\nEXPERIENCE\n${bullets.map((b) => `• ${b}`).join('\n')}\n\nSKILLS\n${skills}`;
-
-      setResumeText(reconstructed);
-      runAuditAnalysis(reconstructed);
+      setResumeText(parsedAndAudited.extractedText);
+      setResults(parsedAndAudited.audit);
       setCheckerState('COMPLETED');
+      analytics.track('analysis_completed', {
+        matchScoreBucket:
+          parsedAndAudited.audit.score >= 80
+            ? 'high'
+            : parsedAndAudited.audit.score >= 60
+              ? 'medium'
+              : 'low',
+        source: 'file_upload',
+      });
     } catch (err: unknown) {
       setUploadError(
         err instanceof Error ? err.message : 'Failed to parse file. Please paste plain text.',
@@ -248,6 +179,7 @@ TypeScript, Node.js, Next.js, PostgreSQL, Docker, Redis, TailwindCSS, Git`;
 
     setCheckerState('COMPRESSING');
     setUploadError(null);
+    setAnalysisError(null);
 
     // Provide transition feedback for verification phase
     const verifyTimer = setTimeout(() => {
@@ -277,17 +209,14 @@ TypeScript, Node.js, Next.js, PostgreSQL, Docker, Redis, TailwindCSS, Git`;
       const reconstructed = `${result.parsed.draft.headline || 'Software Engineer'}\n\nSUMMARY\n${result.parsed.draft.summary || ''}\n\nEXPERIENCE\n${bullets.map((b) => `• ${b}`).join('\n')}\n\nSKILLS\n${skills}`;
 
       setResumeText(reconstructed);
-      runAuditAnalysis(reconstructed);
-
-      // Allow user to see the success stats banner
-      setCheckerState('COMPLETED');
+      await runServerAudit(reconstructed, 'compressed_pdf_upload');
     } catch (err: unknown) {
       clearTimeout(verifyTimer);
       setCheckerState('COMPRESSION_FAILED');
       setUploadError(
         err instanceof Error
           ? err.message
-          : 'Could not complete PDF compression. Please check that the PDF is valid and not password-protected.',
+          : 'Could not complete PDF compression. Please sign in if using PDF files over 10 MB, or paste plain text.',
       );
     }
   };
@@ -503,7 +432,7 @@ TypeScript, Node.js, Next.js, PostgreSQL, Docker, Redis, TailwindCSS, Git`;
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".pdf,.docx,application/pdf"
+                  accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                   className="hidden"
                   onChange={handleFileUpload}
                 />
@@ -522,7 +451,7 @@ TypeScript, Node.js, Next.js, PostgreSQL, Docker, Redis, TailwindCSS, Git`;
                   size="sm"
                   onClick={() => {
                     setResumeText(sampleResume);
-                    runAuditAnalysis(sampleResume);
+                    void runServerAudit(sampleResume, 'resume_checker_sample');
                   }}
                   className="text-xs"
                   disabled={isProcessing}
@@ -535,6 +464,15 @@ TypeScript, Node.js, Next.js, PostgreSQL, Docker, Redis, TailwindCSS, Git`;
               {uploadError && checkerState !== 'COMPRESSION_FAILED' && (
                 <div className="mb-3 p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs">
                   {uploadError}
+                </div>
+              )}
+              {analysisError && (
+                <div
+                  role="alert"
+                  className="mb-3 p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-center gap-2"
+                >
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{analysisError}</span>
                 </div>
               )}
               <textarea
@@ -568,51 +506,53 @@ TypeScript, Node.js, Next.js, PostgreSQL, Docker, Redis, TailwindCSS, Git`;
             <Card className="border-blue-200 dark:border-blue-900 shadow-md">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Compatibility Score</CardTitle>
+                  <CardTitle className="text-base">5-Dimension ATS Report</CardTitle>
                   <div className="text-2xl font-black text-blue-600">
                     {results.score}/100
                   </div>
                 </div>
-                <CardDescription>Internal structural compatibility indicator.</CardDescription>
+                <CardDescription>
+                  Server-verified structural formatting, parser risk, bullet impact, and stack alignment audit.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-3 gap-1.5 sm:gap-2 text-center">
-                  <div className="p-2 sm:p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-                    <div className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100">{results.metricsCount}</div>
-                    <div className="text-[9.5px] sm:text-[10px] text-zinc-500 uppercase font-semibold truncate">Metrics</div>
-                  </div>
-                  <div className="p-2 sm:p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-                    <div className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100">{results.actionVerbsCount}</div>
-                    <div className="text-[9.5px] sm:text-[10px] text-zinc-500 uppercase font-semibold truncate">Action Verbs</div>
-                  </div>
-                  <div className="p-2 sm:p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-                    <div className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100">{results.detectedSections.length}/5</div>
-                    <div className="text-[9.5px] sm:text-[10px] text-zinc-500 uppercase font-semibold truncate">Sections</div>
-                  </div>
-                </div>
+                <AtsAuditBreakdown
+                  score={results.score}
+                  findings={results.findings}
+                  recommendations={results.recommendations}
+                  showScoreRing
+                />
 
-                <div className="space-y-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">
-                    Key Recommendations
-                  </span>
-                  {results.issues.map((issue, idx) => (
-                    <div
-                      key={idx}
-                      className={`p-3 rounded-lg text-xs flex items-start gap-2.5 border ${
-                        issue.type === 'success'
-                          ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                          : issue.type === 'warning'
-                          ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                          : 'bg-rose-50 dark:bg-rose-950/30 text-rose-900 dark:text-rose-300 border-rose-200 dark:border-rose-800'
-                      }`}
-                    >
-                      {issue.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />}
-                      {issue.type === 'warning' && <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />}
-                      {issue.type === 'error' && <XCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />}
-                      <span>{issue.message}</span>
+                {results.writingAudit.issues.length > 0 && (
+                  <div className="space-y-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+                        Grammar, Spelling &amp; Buzzwords
+                      </span>
+                      <span className="text-[11px] font-mono font-semibold text-amber-700 dark:text-amber-300">
+                        {results.writingAudit.overallWritingScore}/100
+                      </span>
                     </div>
-                  ))}
-                </div>
+                    <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                      {results.writingAudit.issues.slice(0, 6).map((w) => (
+                        <div
+                          key={w.id}
+                          className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900 text-[11px] space-y-1"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-semibold text-rose-700 dark:text-rose-300 line-through">
+                              {w.matchedText}
+                            </span>
+                            <span className="font-semibold text-emerald-700 dark:text-emerald-300">
+                              -&gt; {w.suggestedReplacement}
+                            </span>
+                          </div>
+                          <p className="text-zinc-600 dark:text-zinc-400">{w.reason}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 space-y-2">
                   <Link href="/register" className="w-full block">

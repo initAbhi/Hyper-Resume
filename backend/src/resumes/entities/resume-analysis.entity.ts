@@ -10,17 +10,69 @@ import {
 import { User } from '../../users/entities/user.entity.js';
 import { Resume } from './resume.entity.js';
 
+export type AtsAuditDimensionKey =
+  | 'formatting'
+  | 'metrics'
+  | 'action_verbs'
+  | 'technical_depth'
+  | 'brevity';
+
+export interface AtsAuditDimension {
+  key: AtsAuditDimensionKey;
+  label: string;
+  weight: number;
+  score: number;
+  status: 'strong' | 'moderate' | 'needs_work';
+  summary: string;
+}
+
+export interface AtsParserRisk {
+  id: string;
+  severity: 'critical' | 'warning' | 'pass';
+  category: 'contact' | 'sections' | 'dates' | 'formatting' | 'length';
+  message: string;
+  fixHint?: string;
+}
+
+export interface AtsStackAlignment {
+  totalSkills: number;
+  corroboratedSkills: string[];
+  unreferencedSkills: string[];
+}
+
+export interface AtsBulletQualityItem {
+  bullet: string;
+  section?: 'Experience' | 'Projects';
+  contextLabel?: string;
+  wordCount?: number;
+  hasActionVerb: boolean;
+  hasMetric: boolean;
+  lengthStatus?: 'short' | 'ideal' | 'long';
+  feedback: string;
+}
+
 export interface ResumeAuditFindings {
   actionVerbsCount: number;
   metricsCount: number;
   missingSections: string[];
+  detectedSections?: string[];
   formattingFlags: string[];
-  bulletQuality: Array<{
-    bullet: string;
-    hasActionVerb: boolean;
-    hasMetric: boolean;
-    feedback: string;
-  }>;
+  wordCount?: number;
+  idealBulletCount?: number;
+  shortBulletsCount?: number;
+  longBulletsCount?: number;
+  dimensions?: AtsAuditDimension[];
+  parserRisks?: AtsParserRisk[];
+  stackAlignment?: AtsStackAlignment;
+  bulletQuality: AtsBulletQualityItem[];
+  writingQuality?: {
+    score: number;
+    issueCount: number;
+    spellingCount: number;
+    grammarCount: number;
+    buzzwordCount: number;
+    weakPhrasingCount: number;
+  };
 }
 
 @Entity('resume_analyses')

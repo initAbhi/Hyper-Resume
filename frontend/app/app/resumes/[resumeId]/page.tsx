@@ -1,10 +1,19 @@
 'use client';
 
-import React, { use, useState, useEffect, useRef, useCallback } from 'react';
+import React, {
+  use,
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useCallback,
+} from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import SummaryHeadlinePanel from '@/components/resumes/SummaryHeadlinePanel';
+import VersionHistoryDrawer from '@/components/resumes/VersionHistoryDrawer';
 import {
   ArrowLeft,
   Printer,
@@ -27,15 +36,37 @@ import {
   ArrowUpDown,
   Share2,
   Download,
+  ShieldCheck,
+  Wand2,
+  Loader2,
+  Mail,
+  SlidersHorizontal,
 } from 'lucide-react';
 import {
   apiClient,
+  downloadExportBlob,
   Resume,
   ResumeContent,
+  ResumeLayoutSettings,
   ResumeAnalysis,
   ResumeVersion,
+  BulletVariantOption,
+  WritingCheckResponse,
+  WritingIssueItem,
+  ResumeShareWithAnalytics,
   ApiError,
 } from '@/lib/api-client';
+import { applyResumeLayoutToDom } from '@/lib/resume-layout';
+import { analyzeResumeWriting, mergeWritingIssues } from '@/lib/writing-checker';
+import { SectionRearrangeDrawer } from '@/components/resumes/SectionRearrangeDrawer';
+import {
+  SectionRewriterDialog,
+  type SectionRewriterTarget,
+} from '@/components/resumes/SectionRewriterDialog';
+import { CustomSectionsPanel } from '@/components/resumes/CustomSectionsPanel';
+import { AtsAuditBreakdown } from '@/components/resumes/AtsAuditBreakdown';
+import { FixMistakesDrawer } from '@/components/resumes/FixMistakesDrawer';
+import { ShareAnalyticsDrawer } from '@/components/resumes/ShareAnalyticsDrawer';
 import { ScoreMeter } from '@/components/resumes/ScoreMeter';
 import { getTemplateComponent } from '@/components/resumes/templates';
 import { TemplatePicker } from '@/components/resumes/TemplatePicker';
@@ -48,7 +79,7 @@ interface ResumeEditorPageProps {
   params: Promise<{ resumeId: string }>;
 }
 
-type EditorSection = 'contact' | 'summary' | 'experience' | 'skills' | 'education' | 'projects' | 'certifications';
+type EditorSection = 'contact' | 'summary' | 'experience' | 'skills' | 'education' | 'projects' | 'custom' | 'certifications';
 
 export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
   const resolvedParams = use(params);
@@ -64,8 +95,13 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
   // Competitor-Grade Template & Customizer States
   const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
   const [isDesignPanelOpen, setIsDesignPanelOpen] = useState(false);
+  const [isRearrangeDrawerOpen, setIsRearrangeDrawerOpen] = useState(false);
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const resumePrintRef = useRef<HTMLDivElement | null>(null);
   const [isCheckTailorOpen, setIsCheckTailorOpen] = useState(false);
+  const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
+  const [activeMatchScore, setActiveMatchScore] = useState<number | null>(null);
+  const [activeJobKeywords, setActiveJobKeywords] = useState<string[]>([]);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [accentColor, setAccentColor] = useState('#2563eb');
   const [fontFamily, setFontFamily] = useState<'sans' | 'serif' | 'mono'>('sans');
@@ -91,6 +127,18 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
   const [analysis, setAnalysis] = useState<ResumeAnalysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+  // Grammar, Spelling & Buzzword Checker State
+  const [isFixMistakesOpen, setIsFixMistakesOpen] = useState(false);
+  const [aiWritingReport, setAiWritingReport] = useState<WritingCheckResponse | null>(null);
+  const [isRunningAiWritingCheck, setIsRunningAiWritingCheck] = useState(false);
+  const [aiWritingCheckError, setAiWritingCheckError] = useState<string | null>(null);
+  const [ignoredWritingIssueIds, setIgnoredWritingIssueIds] = useState<string[]>([]);
+
+  // Recruiter Share Link & View Analytics State
+  const [isShareDrawerOpen, setIsShareDrawerOpen] = useState(false);
+  const [shareState, setShareState] = useState<ResumeShareWithAnalytics | null>(null);
+  const [sectionRewriteTarget, setSectionRewriteTarget] = useState<SectionRewriterTarget | null>(null);
+
   // Active AI Bullet Rewrite Suggestion Modal/Popover State
   const [activeSuggestion, setActiveSuggestion] = useState<{
     expIdx: number;
@@ -99,6 +147,26 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
     suggested: string;
     why: string;
     framework: string;
+    factualNotes: string;
+    metricHint: string;
+    variants: BulletVariantOption[];
+    selectedVariantIdx: number;
+    isLoading: boolean;
+    error: string | null;
+    provider?: string;
+  } | null>(null);
+
+  // AI Bullet Generator State (per Experience role)
+  const [bulletGenModal, setBulletGenModal] = useState<{
+    expIdx: number;
+    roleTitle: string;
+    companyName: string;
+    focusArea: string;
+    isLoading: boolean;
+    error: string | null;
+    bullets: BulletVariantOption[];
+    factualNotes: string;
+    insertedIndices: number[];
   } | null>(null);
 
   // Version History State
@@ -106,6 +174,8 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
   const [isVersionDrawerOpen, setIsVersionDrawerOpen] = useState(false);
   const [versionNote, setVersionNote] = useState('');
   const [isSavingVersion, setIsSavingVersion] = useState(false);
+  const [isLoadingVersions, setIsLoadingVersions] = useState(false);
+  const [isExportingDocx, setIsExportingDocx] = useState(false);
 
   // Live ATS Score Calculator (mirrors backend scoring engine)
   const liveScore = React.useMemo(() => {
@@ -155,6 +225,59 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
     return Math.max(10, Math.min(100, score));
   }, [content]);
 
+  const localWritingReport = React.useMemo<WritingCheckResponse>(() => {
+    if (!content) {
+      return {
+        overallWritingScore: 100,
+        summaryNote: '',
+        issues: [],
+        factualVerificationNotes: '',
+      };
+    }
+    return analyzeResumeWriting(content);
+  }, [content]);
+
+  const activeWritingReport = React.useMemo<WritingCheckResponse>(() => {
+    if (!content || !aiWritingReport) return localWritingReport;
+    const stillValidAiIssues = (aiWritingReport.issues || []).filter((issue) => {
+      if (issue.locationType === 'headline') {
+        return (content.headline || '') === issue.originalText;
+      }
+      if (issue.locationType === 'summary') {
+        return (content.summary || '') === issue.originalText;
+      }
+      if (
+        issue.locationType === 'experience_bullet' &&
+        typeof issue.expIdx === 'number' &&
+        typeof issue.bulletIdx === 'number'
+      ) {
+        return (
+          (content.experience?.[issue.expIdx]?.bullets?.[issue.bulletIdx] || '') ===
+          issue.originalText
+        );
+      }
+      if (
+        issue.locationType === 'project_description' &&
+        typeof issue.projIdx === 'number'
+      ) {
+        return (
+          (content.projects?.[issue.projIdx]?.description || '') ===
+          issue.originalText
+        );
+      }
+      return false;
+    });
+    return mergeWritingIssues(localWritingReport, {
+      ...aiWritingReport,
+      issues: stillValidAiIssues,
+    });
+  }, [content, localWritingReport, aiWritingReport]);
+
+  const visibleWritingIssueCount = React.useMemo(() => {
+    const ignored = new Set(ignoredWritingIssueIds);
+    return activeWritingReport.issues.filter((i) => !ignored.has(i.id)).length;
+  }, [activeWritingReport.issues, ignoredWritingIssueIds]);
+
   // 1. Initial Data Fetch
   useEffect(() => {
     let isMounted = true;
@@ -177,9 +300,22 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
           setPhotoUrl(res.content.contact.photoUrl);
           setShowPhoto(true);
         }
+        if (res.content?.layout?.accentColor) {
+          setAccentColor(res.content.layout.accentColor);
+        }
+        if (res.content?.layout?.fontFamily) {
+          setFontFamily(res.content.layout.fontFamily);
+        }
         setServerVersion(res.version || 1);
         setSaveStatus('saved');
         setLastSavedTime(new Date(res.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+
+        apiClient
+          .getResumeShareAnalytics(resumeId)
+          .then((s) => {
+            if (isMounted) setShareState(s);
+          })
+          .catch(() => undefined);
       } catch (err: unknown) {
         if (!isMounted) return;
         setErrorMessage(
@@ -257,7 +393,6 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
     scheduleAutosave(next);
   };
 
-  // Run ATS Audit
   const handleRunAudit = async () => {
     if (!content) return;
     setIsAnalyzing(true);
@@ -273,23 +408,231 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
     }
   };
 
-  // Enhance Bullet with STAR / XYZ formula
-  const handleEnhanceBullet = (expIdx: number, bulletIdx: number, currentText: string) => {
-    // Generate grounded STAR/XYZ enhancement
-    const actionVerbs = ['Architected', 'Spearheaded', 'Engineered', 'Streamlined', 'Delivered'];
-    const chosenVerb = actionVerbs[Math.floor(Math.random() * actionVerbs.length)];
-    const metricAddition = currentText.match(/\d+/) ? '' : ' resulting in a 25% efficiency gain';
+  const handleRunAiWritingCheck = async () => {
+    if (!content) return;
+    setIsRunningAiWritingCheck(true);
+    setAiWritingCheckError(null);
+    try {
+      const res = await apiClient.checkWritingQuality({
+        headline: content.headline,
+        summary: content.summary,
+        targetRole: resume?.targetRole,
+        experience: (content.experience || []).map((exp) => ({
+          title: exp.title,
+          company: exp.company,
+          current: exp.current,
+          endDate: exp.endDate,
+          bullets: exp.bullets || [],
+        })),
+        projects: (content.projects || []).map((proj) => ({
+          name: proj.name,
+          description: proj.description,
+        })),
+      });
+      setAiWritingReport(res);
+    } catch (err: unknown) {
+      setAiWritingCheckError(
+        err instanceof Error ? err.message : 'AI writing audit failed. Local rule diagnostics remain active.',
+      );
+    } finally {
+      setIsRunningAiWritingCheck(false);
+    }
+  };
 
-    const enhanced = `${chosenVerb} ${currentText.replace(/^(I |We )?([a-zA-Z]+ed )?/i, '')}${metricAddition}.`;
+  const handleLocateWritingIssue = (issue: WritingIssueItem) => {
+    setIsFixMistakesOpen(false);
+    setMobileTab('editor');
+
+    let targetSection: EditorSection = 'summary';
+    let targetElId = 'summary-textarea';
+    if (issue.locationType === 'headline') {
+      targetSection = 'summary';
+      targetElId = 'summary-headline';
+    } else if (issue.locationType === 'summary') {
+      targetSection = 'summary';
+      targetElId = 'summary-textarea';
+    } else if (issue.locationType === 'experience_bullet') {
+      targetSection = 'experience';
+      targetElId = `exp-${issue.expIdx ?? 0}-bullet-${issue.bulletIdx ?? 0}`;
+    } else if (issue.locationType === 'project_description') {
+      targetSection = 'projects';
+      targetElId = `proj-${issue.projIdx ?? 0}-desc`;
+    }
+
+    setActiveSection(targetSection);
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        const el = document.getElementById(targetElId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.focus();
+        }
+      }, 60);
+    });
+  };
+
+  // Enhance Bullet with live Gemini AI STAR / XYZ formula
+  const runAiBulletImprove = async (
+    expIdx: number,
+    bulletIdx: number,
+    currentText: string,
+    metricHint: string = '',
+  ) => {
+    const trimmed = currentText.trim();
+    if (!trimmed) return;
+
+    const expRole = content?.experience?.[expIdx]?.title || resume?.targetRole || content?.headline;
 
     setActiveSuggestion({
       expIdx,
       bulletIdx,
       original: currentText,
-      suggested: enhanced,
-      why: 'Starts with a high-impact action verb and grounds the responsibility in measurable business impact (XYZ formula: Accomplished [X] as measured by [Y], by doing [Z]).',
+      suggested: '',
+      why: '',
       framework: 'STAR / XYZ',
+      factualNotes: '',
+      metricHint,
+      variants: [],
+      selectedVariantIdx: 0,
+      isLoading: true,
+      error: null,
     });
+
+    try {
+      const res = await apiClient.improveBullet({
+        bulletText: trimmed,
+        targetRole: expRole || undefined,
+        metricHint: metricHint.trim() || undefined,
+      });
+
+      const variants: BulletVariantOption[] =
+        res.variants && res.variants.length > 0
+          ? res.variants
+          : [
+              {
+                style: 'Impact (XYZ)',
+                bullet: res.improvedBullet,
+                actionVerbUsed: res.actionVerbUsed,
+                framework: res.framework,
+                rationale: res.explanation,
+              },
+            ];
+
+      setActiveSuggestion((prev) =>
+        prev
+          ? {
+              ...prev,
+              suggested: variants[0]?.bullet || res.improvedBullet,
+              why: variants[0]?.rationale || res.explanation,
+              framework: variants[0]?.framework || res.framework,
+              factualNotes: res.factualVerificationNotes,
+              variants,
+              selectedVariantIdx: 0,
+              isLoading: false,
+              error: null,
+              provider: res.provider,
+            }
+          : null,
+      );
+    } catch (err: unknown) {
+      setActiveSuggestion((prev) =>
+        prev
+          ? {
+              ...prev,
+              isLoading: false,
+              error: err instanceof Error ? err.message : 'AI bullet optimization failed. Please try again.',
+            }
+          : null,
+      );
+    }
+  };
+
+  const handleEnhanceBullet = (expIdx: number, bulletIdx: number, currentText: string) => {
+    if (!currentText.trim()) {
+      alert('Please write a brief draft bullet first before optimizing with AI.');
+      return;
+    }
+    void runAiBulletImprove(expIdx, bulletIdx, currentText, '');
+  };
+
+  const handleOpenBulletGenerator = (expIdx: number) => {
+    const exp = content?.experience?.[expIdx];
+    if (!exp) return;
+    setBulletGenModal({
+      expIdx,
+      roleTitle: exp.title || resume?.targetRole || 'Specialist',
+      companyName: exp.company || '',
+      focusArea: '',
+      isLoading: false,
+      error: null,
+      bullets: [],
+      factualNotes: '',
+      insertedIndices: [],
+    });
+  };
+
+  const handleRunBulletGenerator = async () => {
+    if (!bulletGenModal || !bulletGenModal.roleTitle.trim()) return;
+    const existingBullets = content?.experience?.[bulletGenModal.expIdx]?.bullets || [];
+
+    setBulletGenModal((prev) => (prev ? { ...prev, isLoading: true, error: null } : null));
+    try {
+      const res = await apiClient.generateBullets({
+        roleTitle: bulletGenModal.roleTitle.trim(),
+        companyName: bulletGenModal.companyName.trim() || undefined,
+        focusArea: bulletGenModal.focusArea.trim() || undefined,
+        existingBullets: existingBullets.filter(Boolean),
+        targetRole: resume?.targetRole || undefined,
+      });
+
+      setBulletGenModal((prev) =>
+        prev
+          ? {
+              ...prev,
+              isLoading: false,
+              bullets: res.bullets || [],
+              factualNotes: res.factualVerificationNotes || '',
+              insertedIndices: [],
+            }
+          : null,
+      );
+    } catch (err: unknown) {
+      setBulletGenModal((prev) =>
+        prev
+          ? {
+              ...prev,
+              isLoading: false,
+              error: err instanceof Error ? err.message : 'Failed to generate AI bullets.',
+            }
+          : null,
+      );
+    }
+  };
+
+  const handleInsertGeneratedBullet = (bulletText: string, idx: number) => {
+    if (!bulletGenModal) return;
+    const { expIdx } = bulletGenModal;
+    updateContent((prev) => {
+      const expList = [...(prev.experience || [])];
+      if (expList[expIdx]) {
+        const cleanedExisting = expList[expIdx].bullets.filter((b) => b.trim().length > 0);
+        expList[expIdx] = {
+          ...expList[expIdx],
+          bullets: [...cleanedExisting, bulletText],
+        };
+      }
+      return { ...prev, experience: expList };
+    });
+    setBulletGenModal((prev) =>
+      prev
+        ? {
+            ...prev,
+            insertedIndices: prev.insertedIndices.includes(idx)
+              ? prev.insertedIndices
+              : [...prev.insertedIndices, idx],
+          }
+        : null,
+    );
   };
 
   const handleApplySuggestion = () => {
@@ -307,32 +650,123 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
     setActiveSuggestion(null);
   };
 
-  // Version Snapshots
+  const handleMatchChange = useCallback((score: number | null, keywords: string[]) => {
+    setActiveMatchScore(score);
+    setActiveJobKeywords((prev) => {
+      if (prev.length === keywords.length && prev.every((k, i) => k === keywords[i])) {
+        return prev;
+      }
+      return keywords;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const mId = params.get('matchId');
+    const openTailor = params.get('tailor');
+    if (mId) setActiveMatchId(mId);
+    if (openTailor === '1' || openTailor === 'true') setIsCheckTailorOpen(true);
+  }, []);
+
+  // Version Snapshots & Rollback
   const handleOpenVersions = async () => {
     setIsVersionDrawerOpen(true);
+    setIsLoadingVersions(true);
     try {
       const data = await apiClient.listVersions(resumeId);
       setVersions(data);
     } catch {
       // Ignore version fetch error
+    } finally {
+      setIsLoadingVersions(false);
     }
   };
 
   const handleCreateVersionSnapshot = async () => {
-    if (!versionNote.trim()) return;
+    if (!versionNote.trim() || !content) return;
     setIsSavingVersion(true);
     try {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+      if (saveStatus === 'unsaved' || saveStatus === 'error') {
+        await performSave(content, resumeName, templateKey, serverVersion);
+      }
+
       const v = await apiClient.createVersion(resumeId, {
         changeSummary: versionNote.trim(),
       });
       setVersions((prev) => [v, ...prev]);
       setVersionNote('');
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to create snapshot');
     } finally {
       setIsSavingVersion(false);
     }
   };
+
+  const handleRestoreVersion = async (ver: ResumeVersion) => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    ++requestSeqRef.current;
+
+    const restored = await apiClient.restoreVersion(resumeId, ver.id);
+    setContent(restored.content);
+    setServerVersion(restored.version);
+    setHasConflict(false);
+    setSaveStatus('saved');
+    setLastSavedTime(
+      new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    );
+
+    const refreshed = await apiClient.listVersions(resumeId);
+    setVersions(refreshed);
+  };
+
+  const handleExportDocx = async () => {
+    if (!content || isExportingDocx) return;
+    setIsExportingDocx(true);
+    try {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+      if (saveStatus === 'unsaved' || saveStatus === 'error') {
+        await performSave(content, resumeName, templateKey, serverVersion);
+      }
+
+      const result = await apiClient.exportResumeDocx(resumeId, {
+        pageSize,
+        fileName: resumeName,
+      });
+      downloadExportBlob(result.blob, result.fileName, '.docx');
+    } catch (err) {
+      console.error('DOCX export error:', err);
+    } finally {
+      setIsExportingDocx(false);
+    }
+  };
+
+  const handleUpdateLayout = useCallback(
+    (nextLayout: ResumeLayoutSettings) => {
+      updateContent((prev) => ({
+        ...prev,
+        layout: nextLayout,
+      }));
+    },
+    [updateContent],
+  );
+
+  useLayoutEffect(() => {
+    if (!resumePrintRef.current || !content) return;
+    applyResumeLayoutToDom(
+      resumePrintRef.current,
+      content.layout,
+      content.customSections,
+    );
+  }, [content, templateKey, accentColor, fontFamily, showPhoto, showHighlights, isExportModalOpen, pageSize]);
 
   // Conflict Resolution
   const handleReloadServerVersion = async () => {
@@ -453,6 +887,18 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
             <span className="hidden sm:inline">Versions</span>
           </Button>
 
+          {/* Cover Letter Deep Link */}
+          <Link href={`/app/cover-letters?resumeId=${resumeId}`}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs"
+            >
+              <Mail className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+              <span className="hidden sm:inline">Cover Letter</span>
+            </Button>
+          </Link>
+
           {/* Direct PDF Export */}
           <Button
             variant="outline"
@@ -462,7 +908,22 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
           >
             <Download className="w-3.5 h-3.5 text-emerald-600" />
             <span className="hidden sm:inline">Download PDF</span>
-            <span className="sm:hidden">Download</span>
+            <span className="sm:hidden">PDF</span>
+          </Button>
+
+          {/* Direct Word (.docx) Export */}
+          <Button
+            id="export-resume-docx-btn"
+            variant="outline"
+            size="sm"
+            isLoading={isExportingDocx}
+            onClick={handleExportDocx}
+            className="gap-1.5 text-xs font-semibold px-2.5 sm:px-3 text-blue-700 dark:text-blue-300 border-blue-300/80 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+            title="Download editable Microsoft Word (.docx)"
+          >
+            <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+            <span className="hidden sm:inline">Export DOCX</span>
+            <span className="sm:hidden">DOCX</span>
           </Button>
 
           {/* Toggle AI Panel Button (Desktop) */}
@@ -481,16 +942,31 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
       {/* Competitor-Style Secondary Action Toolbar (Screenshot 1 & 3) */}
       <div className="print:hidden flex items-center justify-between py-2 px-3 sm:px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs shadow-xs overflow-x-auto gap-2">
         <div className="flex items-center gap-1 sm:gap-3 flex-wrap">
-          {/* Fix Mistakes Button */}
+          {/* Fix Mistakes Button (Live Grammar, Spelling & Buzzword Checker) */}
           <button
+            id="fix-mistakes-btn"
             type="button"
-            onClick={handleRunAudit}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            onClick={() => setIsFixMistakesOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            title="Inspect grammar, spelling, buzzwords, and weak phrasing with 1-click fixes"
           >
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <CheckCircle2
+              className={`w-4 h-4 ${
+                visibleWritingIssueCount === 0
+                  ? 'text-emerald-600'
+                  : 'text-amber-500'
+              }`}
+            />
             <span className="font-semibold">Fix Mistakes</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-500 text-white shadow-xs">
-              {analysis ? analysis.recommendations.length : 14}
+            <span
+              id="fix-mistakes-badge"
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold text-white shadow-xs ${
+                visibleWritingIssueCount === 0
+                  ? 'bg-emerald-600'
+                  : 'bg-rose-500'
+              }`}
+            >
+              {visibleWritingIssueCount}
             </span>
           </button>
 
@@ -503,23 +979,21 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
             <span className="font-mono font-bold text-[11px] text-blue-600 dark:text-blue-400">
               ATS
             </span>
-            <span className="font-semibold">Check & Tailor</span>
+            <span className="font-semibold">Check &amp; Tailor</span>
             <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-600 text-white shadow-xs">
-              {analysis?.score ?? liveScore}%
+              {activeMatchScore !== null ? `${activeMatchScore}%` : 'Match JD'}
             </span>
           </button>
 
           {/* Rearrange Section Button */}
           <button
+            id="rearrange-sections-btn"
             type="button"
-            onClick={() => {
-              const order: EditorSection[] = ['contact', 'summary', 'experience', 'skills', 'education', 'projects'];
-              const nextIdx = (order.indexOf(activeSection) + 1) % order.length;
-              setActiveSection(order[nextIdx]);
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            onClick={() => setIsRearrangeDrawerOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            title="Drag & drop to reorder or hide resume sections"
           >
-            <ArrowUpDown className="w-3.5 h-3.5 text-zinc-500" />
+            <ArrowUpDown className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
             <span>Rearrange</span>
           </button>
 
@@ -552,11 +1026,23 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
           <button
             type="button"
             onClick={() => setIsDesignPanelOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
             title="Customize typography & font family"
           >
             <Type className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
             <span>Font</span>
+          </button>
+
+          {/* Layout & Spacing Button (opens Design panel) */}
+          <button
+            id="design-spacing-btn"
+            type="button"
+            onClick={() => setIsDesignPanelOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            title="Customize font scale, line height, margins & section spacing"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+            <span>Spacing</span>
           </button>
 
           {/* Photo Button (opens 2-option Upload/Link modal) */}
@@ -600,17 +1086,23 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
           </button>
 
           <button
+            id="share-analytics-btn"
             type="button"
-            onClick={() => {
-              if (typeof window !== 'undefined') {
-                navigator.clipboard.writeText(window.location.href);
-                alert('Resume link copied to clipboard!');
-              }
-            }}
-            className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 transition-colors"
-            title="Share Resume Link"
+            onClick={() => setIsShareDrawerOpen(true)}
+            className={`px-2.5 py-1.5 rounded-lg border transition-colors flex items-center gap-1.5 text-[11px] font-semibold cursor-pointer ${
+              shareState?.share?.isActive
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300'
+                : 'border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200'
+            }`}
+            title="Public Recruiter Link & Share Analytics"
           >
-            <Share2 className="w-4 h-4" />
+            <Share2 className="w-3.5 h-3.5" />
+            <span>Share</span>
+            {shareState?.share?.isActive && (
+              <span className="px-1.5 py-0.2 rounded-full bg-emerald-600 text-white text-[10px] font-mono">
+                {shareState.analytics.totalViews}
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -689,8 +1181,12 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start print:block print:w-full print:m-0 print:p-0">
         {/* PANEL 1: Left Section Editor (4 or 5 cols depending on AI panel) - hidden on print */}
         <div className={`print:hidden ${isAiPanelOpen ? 'lg:col-span-4 xl:col-span-4' : 'lg:col-span-5'} space-y-3 ${mobileTab !== 'editor' ? 'hidden lg:block' : ''}`}>
-          {/* Section Navigation Tabs */}
-          <div className="flex items-center gap-1 p-1 rounded-lg bg-zinc-100 dark:bg-zinc-800/80 overflow-x-auto text-xs font-medium">
+          {/* Section Navigation Tabs (Single-Row Accessible Scrollable Tablist) */}
+          <div
+            role="tablist"
+            aria-label="Resume Editor Sections"
+            className="hr-editor-tabs flex items-center gap-1 p-1 rounded-lg bg-zinc-100 dark:bg-zinc-800/80 overflow-x-auto text-xs font-medium"
+          >
             {(
               [
                 { id: 'contact', label: 'Contact' },
@@ -699,12 +1195,48 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                 { id: 'skills', label: 'Skills' },
                 { id: 'education', label: 'Education' },
                 { id: 'projects', label: 'Projects' },
+                {
+                  id: 'custom',
+                  label:
+                    (content.customSections || []).length > 0
+                      ? `Custom (${(content.customSections || []).length})`
+                      : 'Custom',
+                },
               ] as const
-            ).map((s) => (
+            ).map((s, tabIdx, tabArr) => (
               <button
                 key={s.id}
-                onClick={() => setActiveSection(s.id)}
-                className={`px-3 py-1.5 rounded-md whitespace-nowrap transition-colors ${
+                type="button"
+                role="tab"
+                data-testid={`editor-tab-${s.id}`}
+                aria-selected={activeSection === s.id}
+                tabIndex={activeSection === s.id ? 0 : -1}
+                onClick={(e) => {
+                  setActiveSection(s.id);
+                  e.currentTarget.scrollIntoView({
+                    block: 'nearest',
+                    inline: 'nearest',
+                  });
+                }}
+                onKeyDown={(e) => {
+                  let nextIdx = -1;
+                  if (e.key === 'ArrowRight') nextIdx = (tabIdx + 1) % tabArr.length;
+                  else if (e.key === 'ArrowLeft')
+                    nextIdx = (tabIdx - 1 + tabArr.length) % tabArr.length;
+                  else if (e.key === 'Home') nextIdx = 0;
+                  else if (e.key === 'End') nextIdx = tabArr.length - 1;
+                  if (nextIdx >= 0) {
+                    e.preventDefault();
+                    const nextTab = tabArr[nextIdx];
+                    setActiveSection(nextTab.id);
+                    const tabBtn = e.currentTarget.parentElement?.querySelector<HTMLButtonElement>(
+                      `[data-testid="editor-tab-${nextTab.id}"]`,
+                    );
+                    tabBtn?.focus();
+                    tabBtn?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                  }
+                }}
+                className={`flex-none px-3 py-1.5 rounded-md whitespace-nowrap transition-colors cursor-pointer ${
                   activeSection === s.id
                     ? 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 font-semibold shadow-xs'
                     : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
@@ -802,75 +1334,98 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
             {/* 2. Professional Summary & Headline */}
             {activeSection === 'summary' && (
               <div className="space-y-4">
-                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                  Professional Headline & Summary
-                </h3>
-                <Input
-                  id="summary-headline"
-                  label="Professional Headline"
-                  placeholder="e.g. Senior Backend Engineer | Distributed Systems & Redis"
-                  value={content.headline}
-                  onChange={(e) =>
+                {Boolean(content.summary?.trim()) && (
+                  <div className="flex items-center justify-between gap-2 pb-2 border-b border-zinc-100 dark:border-zinc-800">
+                    <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
+                      Need a specific tone rewrite on your existing summary?
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      data-testid="rewrite-summary-section-btn"
+                      onClick={() =>
+                        setSectionRewriteTarget({
+                          sectionType: 'summary',
+                          sectionLabel: 'Professional Summary',
+                        })
+                      }
+                      className="gap-1 text-xs text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800"
+                    >
+                      <Wand2 className="w-3.5 h-3.5" />
+                      <span>AI Rewrite Section</span>
+                    </Button>
+                  </div>
+                )}
+                <SummaryHeadlinePanel
+                  content={content}
+                  onUpdateHeadline={(headline) =>
                     updateContent((prev) => ({
                       ...prev,
-                      headline: e.target.value,
+                      headline,
                     }))
                   }
-                  required
+                  onUpdateSummary={(summary) =>
+                    updateContent((prev) => ({
+                      ...prev,
+                      summary,
+                    }))
+                  }
                 />
-                <div>
-                  <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                    Professional Summary
-                  </label>
-                  <textarea
-                    rows={5}
-                    value={content.summary}
-                    onChange={(e) =>
-                      updateContent((prev) => ({
-                        ...prev,
-                        summary: e.target.value,
-                      }))
-                    }
-                    className="w-full text-xs p-3 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-600 leading-relaxed"
-                  />
-                  <div className="flex justify-between items-center text-[11px] text-zinc-500 mt-1">
-                    <span>Target: 2-4 sentences highlighting career impact</span>
-                    <span>{content.summary.split(/\s+/).filter(Boolean).length} words</span>
-                  </div>
-                </div>
               </div>
             )}
 
             {/* 3. Work Experience */}
             {activeSection === 'experience' && (
               <div className="space-y-5">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
                   <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                     Work Experience ({(content.experience || []).length})
                   </h3>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      updateContent((prev) => ({
-                        ...prev,
-                        experience: [
-                          {
-                            company: 'New Company',
-                            title: 'Role Title',
-                            startDate: '2023',
-                            current: true,
-                            bullets: ['Accomplished [X] by doing [Y], resulting in [Z].'],
-                          },
-                          ...(prev.experience || []),
-                        ],
-                      }))
-                    }
-                    className="gap-1 text-xs"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Role</span>
-                  </Button>
+                  <div className="flex items-center gap-1.5">
+                    {(content.experience || []).length > 0 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        data-testid="rewrite-experience-section-btn"
+                        onClick={() =>
+                          setSectionRewriteTarget({
+                            sectionType: 'experience',
+                            sectionLabel: 'Work Experience',
+                          })
+                        }
+                        className="gap-1 text-xs text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800"
+                      >
+                        <Wand2 className="w-3.5 h-3.5" />
+                        <span>AI Rewrite Section</span>
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        updateContent((prev) => ({
+                          ...prev,
+                          experience: [
+                            {
+                              company: 'New Company',
+                              title: 'Role Title',
+                              startDate: '2023',
+                              current: true,
+                              bullets: ['Accomplished [X] by doing [Y], resulting in [Z].'],
+                            },
+                            ...(prev.experience || []),
+                          ],
+                        }))
+                      }
+                      className="gap-1 text-xs"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Role</span>
+                    </Button>
+                  </div>
                 </div>
 
                 {(content.experience || []).map((exp, expIdx) => (
@@ -907,18 +1462,37 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                           className="text-xs font-semibold p-1.5 rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
                         />
                       </div>
-                      <button
-                        onClick={() =>
-                          updateContent((prev) => ({
-                            ...prev,
-                            experience: prev.experience.filter((_, i) => i !== expIdx),
-                          }))
-                        }
-                        className="p-1.5 text-zinc-400 hover:text-rose-600 transition-colors"
-                        title="Remove role"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          data-testid={`rewrite-experience-role-${expIdx}`}
+                          onClick={() =>
+                            setSectionRewriteTarget({
+                              sectionType: 'experience',
+                              sectionLabel: `${exp.title || 'Role'} @ ${exp.company || 'Company'}`,
+                              experienceIndex: expIdx,
+                            })
+                          }
+                          className="px-2 py-1 rounded text-[10.5px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 inline-flex items-center gap-1 transition-colors cursor-pointer"
+                          title="Rewrite all bullets in this role with AI"
+                        >
+                          <Wand2 className="w-3 h-3" />
+                          <span>Rewrite Role</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateContent((prev) => ({
+                              ...prev,
+                              experience: prev.experience.filter((_, i) => i !== expIdx),
+                            }))
+                          }
+                          className="p-1.5 text-zinc-400 hover:text-rose-600 transition-colors"
+                          title="Remove role"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-xs">
@@ -954,24 +1528,37 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                     <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-700">
                       <div className="flex items-center justify-between text-xs text-zinc-500">
                         <span>STAR / XYZ Impact Bullets</span>
-                        <button
-                          onClick={() =>
-                            updateContent((prev) => {
-                              const list = [...(prev.experience || [])];
-                              list[expIdx].bullets = [...list[expIdx].bullets, ''];
-                              return { ...prev, experience: list };
-                            })
-                          }
-                          className="text-blue-600 hover:underline font-semibold"
-                        >
-                          + Add Bullet
-                        </button>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenBulletGenerator(expIdx)}
+                            className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:underline font-semibold"
+                            title="Generate role-tailored STAR/XYZ bullets with AI"
+                          >
+                            <Wand2 className="w-3 h-3" />
+                            <span>AI Generate</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateContent((prev) => {
+                                const list = [...(prev.experience || [])];
+                                list[expIdx].bullets = [...list[expIdx].bullets, ''];
+                                return { ...prev, experience: list };
+                              })
+                            }
+                            className="text-blue-600 hover:underline font-semibold"
+                          >
+                            + Add Bullet
+                          </button>
+                        </div>
                       </div>
 
                       {exp.bullets.map((bullet, bulletIdx) => (
                         <div key={bulletIdx} className="space-y-1">
                           <div className="flex items-start gap-1.5">
                             <textarea
+                              id={`exp-${expIdx}-bullet-${bulletIdx}`}
                               rows={2}
                               value={bullet}
                               onChange={(e) =>
@@ -1184,31 +1771,52 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
             {/* 6. Projects Section */}
             {activeSection === 'projects' && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
                   <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                     Projects ({(content.projects || []).length})
                   </h3>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      updateContent((prev) => ({
-                        ...prev,
-                        projects: [
-                          ...(prev.projects || []),
-                          {
-                            name: 'Project Title',
-                            description: 'High-throughput system built with Node.js and PostgreSQL',
-                            highlights: ['Reduced latency by 40% across 500k queries'],
-                          },
-                        ],
-                      }))
-                    }
-                    className="gap-1 text-xs"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Project</span>
-                  </Button>
+                  <div className="flex items-center gap-1.5">
+                    {(content.projects || []).length > 0 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        data-testid="rewrite-projects-section-btn"
+                        onClick={() =>
+                          setSectionRewriteTarget({
+                            sectionType: 'projects',
+                            sectionLabel: 'Projects',
+                          })
+                        }
+                        className="gap-1 text-xs text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800"
+                      >
+                        <Wand2 className="w-3.5 h-3.5" />
+                        <span>AI Rewrite Section</span>
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        updateContent((prev) => ({
+                          ...prev,
+                          projects: [
+                            ...(prev.projects || []),
+                            {
+                              name: 'Project Title',
+                              description: 'High-throughput system built with Node.js and PostgreSQL',
+                              highlights: ['Reduced latency by 40% across 500k queries'],
+                            },
+                          ],
+                        }))
+                      }
+                      className="gap-1 text-xs"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Project</span>
+                    </Button>
+                  </div>
                 </div>
 
                 {(content.projects || []).map((proj, projIdx) => (
@@ -1231,6 +1839,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                         className="font-bold p-1 rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 flex-1 mr-2"
                       />
                       <button
+                        type="button"
                         onClick={() =>
                           updateContent((prev) => ({
                             ...prev,
@@ -1243,6 +1852,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                       </button>
                     </div>
                     <textarea
+                      id={`proj-${projIdx}-desc`}
                       rows={2}
                       placeholder="Project description and key technical architecture..."
                       value={proj.description}
@@ -1258,6 +1868,15 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                   </div>
                 ))}
               </div>
+            )}
+
+            {/* 7. Custom Sections */}
+            {activeSection === 'custom' && (
+              <CustomSectionsPanel
+                content={content}
+                onUpdateContent={updateContent}
+                onOpenSectionRewriter={(target) => setSectionRewriteTarget(target)}
+              />
             )}
           </div>
         </div>
@@ -1293,7 +1912,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
 
             {/* Scrollable Container on Mobile */}
             <div className="overflow-x-auto pb-2 print:overflow-visible print:pb-0">
-              <div id="resume-document-print" className="w-full">
+              <div ref={resumePrintRef} id="resume-document-print" className="w-full">
                 {(() => {
                   const TemplateComponent = getTemplateComponent(templateKey);
                   return (
@@ -1303,6 +1922,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                       fontFamily={fontFamily}
                       showPhoto={showPhoto}
                       photoUrl={photoUrl}
+                      highlightKeywords={activeJobKeywords.length > 0 ? activeJobKeywords : undefined}
                       showHighlights={isExportModalOpen ? false : showHighlights}
                     />
                   );
@@ -1370,39 +1990,12 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
               </div>
 
               {analysis ? (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-2 text-center text-xs">
-                    <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60">
-                      <div className="text-lg font-bold font-mono text-zinc-900 dark:text-zinc-100">
-                        {analysis.findings.metricsCount}
-                      </div>
-                      <div className="text-[10px] text-zinc-500 font-medium">Quantified Metrics</div>
-                    </div>
-                    <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60">
-                      <div className="text-lg font-bold font-mono text-zinc-900 dark:text-zinc-100">
-                        {analysis.findings.actionVerbsCount}
-                      </div>
-                      <div className="text-[10px] text-zinc-500 font-medium">Action Verbs</div>
-                    </div>
-                  </div>
-
-                  {/* Recommendations */}
-                  <div className="space-y-2">
-                    <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
-                      Targeted Improvements
-                    </span>
-                    <ul className="space-y-1.5 text-xs">
-                      {analysis.recommendations.map((rec, rIdx) => (
-                        <li
-                          key={rIdx}
-                          className="p-2.5 rounded-lg bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 text-amber-900 dark:text-amber-200 text-[11px] leading-relaxed"
-                        >
-                          {rec}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
+                <AtsAuditBreakdown
+                  findings={analysis.findings}
+                  recommendations={analysis.recommendations}
+                  compact
+                  onOpenFixMistakes={() => setIsFixMistakesOpen(true)}
+                />
               ) : (
                 <div className="text-center py-4 text-xs text-zinc-500">
                   <Sparkles className="w-4 h-4 mx-auto mb-1.5 text-zinc-400" />
@@ -1430,18 +2023,27 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
         )}
       </div>
 
-      {/* AI Suggestion Interactive Modal */}
+      {/* AI Suggestion Interactive Modal (Live Gemini STAR / XYZ Optimization) */}
       {activeSuggestion && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-          <div className="w-full max-w-lg rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xl p-5 space-y-4 animate-in fade-in zoom-in-95">
+          <div
+            id="ai-bullet-suggestion-modal"
+            className="w-full max-w-xl rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xl p-5 space-y-4 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto"
+          >
             <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
-                  Structured Bullet Improvement (STAR / XYZ)
+                  AI Bullet Optimization (STAR / XYZ)
                 </h3>
+                {activeSuggestion.provider && !activeSuggestion.isLoading && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-medium">
+                    {activeSuggestion.provider === 'mock' ? 'Deterministic Engine' : 'Gemini AI'}
+                  </span>
+                )}
               </div>
               <button
+                type="button"
                 onClick={() => setActiveSuggestion(null)}
                 className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
               >
@@ -1457,29 +2059,132 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                 </p>
               </div>
 
-              <div>
-                <span className="font-medium text-blue-600 dark:text-blue-400">Proposed Revision:</span>
-                <textarea
-                  rows={3}
-                  value={activeSuggestion.suggested}
-                  onChange={(e) =>
-                    setActiveSuggestion({
-                      ...activeSuggestion,
-                      suggested: e.target.value,
-                    })
+              {/* Optional Verified Metric Injection */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2 p-2.5 rounded-lg bg-zinc-50/70 dark:bg-zinc-800/40 border border-zinc-200/80 dark:border-zinc-700/80">
+                <div className="flex-1 space-y-1">
+                  <label className="text-[11px] font-medium text-zinc-700 dark:text-zinc-300 block">
+                    Verified Metric / Outcome (Optional — never fabricated)
+                  </label>
+                  <input
+                    id="modal-metric-hint"
+                    type="text"
+                    placeholder="e.g. reduced query latency by 35%, saved 12 hrs/week"
+                    value={activeSuggestion.metricHint}
+                    onChange={(e) =>
+                      setActiveSuggestion({
+                        ...activeSuggestion,
+                        metricHint: e.target.value,
+                      })
+                    }
+                    className="w-full px-2.5 py-1.5 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-blue-600"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={activeSuggestion.isLoading}
+                  onClick={() =>
+                    void runAiBulletImprove(
+                      activeSuggestion.expIdx,
+                      activeSuggestion.bulletIdx,
+                      activeSuggestion.original,
+                      activeSuggestion.metricHint,
+                    )
                   }
-                  className="w-full p-2.5 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50/20 dark:bg-blue-950/20 text-zinc-900 dark:text-zinc-100 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-600 leading-relaxed font-sans"
-                />
+                  className="text-xs shrink-0 gap-1.5"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${activeSuggestion.isLoading ? 'animate-spin' : ''}`} />
+                  <span>Regenerate</span>
+                </Button>
               </div>
 
-              <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-[11px] text-zinc-700 dark:text-zinc-300">
-                <span className="font-semibold text-zinc-900 dark:text-zinc-100">Rationale: </span>
-                {activeSuggestion.why}
-              </div>
+              {activeSuggestion.isLoading ? (
+                <div className="py-8 flex flex-col items-center justify-center gap-2.5 text-zinc-500">
+                  <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+                  <span className="text-xs font-medium">
+                    Generating grounded STAR &amp; XYZ variants with Gemini AI...
+                  </span>
+                </div>
+              ) : activeSuggestion.error ? (
+                <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs">
+                  {activeSuggestion.error}
+                </div>
+              ) : (
+                <>
+                  {/* Selectable AI Style Variants */}
+                  {activeSuggestion.variants.length > 0 && (
+                    <div className="space-y-1.5">
+                      <span className="font-medium text-zinc-500 block">Choose AI Style Variant:</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {activeSuggestion.variants.map((variant, vIdx) => (
+                          <button
+                            key={variant.style}
+                            type="button"
+                            onClick={() =>
+                              setActiveSuggestion({
+                                ...activeSuggestion,
+                                selectedVariantIdx: vIdx,
+                                suggested: variant.bullet,
+                                why: variant.rationale,
+                                framework: variant.framework,
+                              })
+                            }
+                            className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer ${
+                              activeSuggestion.selectedVariantIdx === vIdx
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                                : 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:border-blue-400'
+                            }`}
+                          >
+                            {variant.style}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-blue-600 dark:text-blue-400">
+                        Proposed Revision ({activeSuggestion.framework}):
+                      </span>
+                    </div>
+                    <textarea
+                      id="ai-suggested-bullet-textarea"
+                      rows={3}
+                      value={activeSuggestion.suggested}
+                      onChange={(e) =>
+                        setActiveSuggestion({
+                          ...activeSuggestion,
+                          suggested: e.target.value,
+                        })
+                      }
+                      className="w-full p-2.5 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50/20 dark:bg-blue-950/20 text-zinc-900 dark:text-zinc-100 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-600 leading-relaxed font-sans"
+                    />
+                  </div>
+
+                  {activeSuggestion.why && (
+                    <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-[11px] text-zinc-700 dark:text-zinc-300">
+                      <span className="font-semibold text-zinc-900 dark:text-zinc-100">Rationale: </span>
+                      {activeSuggestion.why}
+                    </div>
+                  )}
+
+                  {activeSuggestion.factualNotes && (
+                    <div className="p-2.5 rounded-lg bg-emerald-50/70 dark:bg-emerald-950/25 border border-emerald-200/80 dark:border-emerald-900 text-[11px] text-emerald-800 dark:text-emerald-200 flex items-start gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                      <span>
+                        <strong>Factual Guard:</strong> {activeSuggestion.factualNotes}
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-800 text-xs">
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => setActiveSuggestion(null)}
@@ -1487,11 +2192,141 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                 Reject
               </Button>
               <Button
+                id="accept-ai-bullet-btn"
+                type="button"
                 variant="primary"
                 size="sm"
+                disabled={activeSuggestion.isLoading || !activeSuggestion.suggested.trim()}
                 onClick={handleApplySuggestion}
               >
-                Accept & Insert
+                Accept &amp; Insert
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Bullet Generator Modal (Role-Based Drafts) */}
+      {bulletGenModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+          <div
+            id="ai-bullet-generator-modal"
+            className="w-full max-w-xl rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xl p-5 space-y-4 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2">
+                <Wand2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
+                  AI Bullet Generator — {bulletGenModal.roleTitle}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBulletGenModal(null)}
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">Role Title</label>
+                  <input
+                    type="text"
+                    value={bulletGenModal.roleTitle}
+                    onChange={(e) => setBulletGenModal({ ...bulletGenModal, roleTitle: e.target.value })}
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">Company</label>
+                  <input
+                    type="text"
+                    value={bulletGenModal.companyName}
+                    onChange={(e) => setBulletGenModal({ ...bulletGenModal, companyName: e.target.value })}
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
+                  Key Deliverables, Tech Stack, or Focus Area (Optional)
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Migrated billing webhook queue to BullMQ + Redis, improved observability with Grafana..."
+                  value={bulletGenModal.focusArea}
+                  onChange={(e) => setBulletGenModal({ ...bulletGenModal, focusArea: e.target.value })}
+                  className="w-full p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs"
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  id="run-editor-bullet-gen-btn"
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  isLoading={bulletGenModal.isLoading}
+                  onClick={() => void handleRunBulletGenerator()}
+                  className="gap-1.5 text-xs"
+                >
+                  <Wand2 className="w-3.5 h-3.5" />
+                  <span>{bulletGenModal.bullets.length > 0 ? 'Regenerate Drafts' : 'Generate 3 STAR/XYZ Bullets'}</span>
+                </Button>
+              </div>
+
+              {bulletGenModal.error && (
+                <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+                  {bulletGenModal.error}
+                </div>
+              )}
+
+              {bulletGenModal.bullets.length > 0 && (
+                <div className="space-y-2.5 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                  {bulletGenModal.factualNotes && (
+                    <p className="text-[11px] text-emerald-700 dark:text-emerald-300 bg-emerald-50/70 dark:bg-emerald-950/25 p-2 rounded-lg border border-emerald-200/70 dark:border-emerald-900">
+                      <ShieldCheck className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />
+                      {bulletGenModal.factualNotes}
+                    </p>
+                  )}
+
+                  {bulletGenModal.bullets.map((b, bIdx) => {
+                    const isInserted = bulletGenModal.insertedIndices.includes(bIdx);
+                    return (
+                      <div
+                        key={bIdx}
+                        className="p-3 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/40 space-y-2"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300">
+                            {b.style} · {b.framework}
+                          </span>
+                          <Button
+                            type="button"
+                            variant={isInserted ? 'outline' : 'primary'}
+                            size="sm"
+                            disabled={isInserted}
+                            onClick={() => handleInsertGeneratedBullet(b.bullet, bIdx)}
+                            className="h-7 text-[11px] px-2.5"
+                          >
+                            {isInserted ? 'Inserted ✓' : '+ Insert Bullet'}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-zinc-900 dark:text-zinc-100 leading-relaxed">{b.bullet}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-zinc-100 dark:border-zinc-800">
+              <Button type="button" variant="outline" size="sm" onClick={() => setBulletGenModal(null)}>
+                Done
               </Button>
             </div>
           </div>
@@ -1499,80 +2334,23 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
       )}
 
       {/* Version Snapshots Drawer */}
-      {isVersionDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs">
-          <div className="w-full max-w-md bg-white dark:bg-zinc-900 h-full p-6 space-y-5 overflow-y-auto shadow-2xl border-l border-zinc-200 dark:border-zinc-800">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800">
-              <div className="flex items-center gap-2">
-                <History className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />
-                <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
-                  Version History
-                </h3>
-              </div>
-              <button
-                onClick={() => setIsVersionDrawerOpen(false)}
-                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Create Snapshot Note */}
-            <div className="space-y-2">
-              <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                Create State Snapshot
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="e.g. Tailored for Senior Role at Stripe"
-                  value={versionNote}
-                  onChange={(e) => setVersionNote(e.target.value)}
-                  className="flex-1 text-xs p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                />
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleCreateVersionSnapshot}
-                  isLoading={isSavingVersion}
-                  disabled={!versionNote.trim()}
-                >
-                  Save
-                </Button>
-              </div>
-            </div>
-
-            {/* Versions List */}
-            <div className="space-y-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
-              <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-                Saved Snapshots ({versions.length})
-              </span>
-              {versions.length === 0 ? (
-                <p className="text-xs text-zinc-400">No version snapshots created yet.</p>
-              ) : (
-                <div className="space-y-2">
-                  {versions.map((ver) => (
-                    <div
-                      key={ver.id}
-                      className="p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40 text-xs space-y-1"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-zinc-900 dark:text-zinc-100">
-                          Version {ver.versionNumber}
-                        </span>
-                        <span className="text-[10px] text-zinc-400 font-mono">
-                          {new Date(ver.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <p className="text-zinc-600 dark:text-zinc-400">{ver.changeSummary}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <VersionHistoryDrawer
+        isOpen={isVersionDrawerOpen}
+        onClose={() => setIsVersionDrawerOpen(false)}
+        versions={versions}
+        isLoadingVersions={isLoadingVersions}
+        currentContent={content}
+        templateKey={templateKey}
+        accentColor={accentColor}
+        fontFamily={fontFamily}
+        showPhoto={showPhoto}
+        photoUrl={photoUrl}
+        versionNote={versionNote}
+        onVersionNoteChange={setVersionNote}
+        isSavingVersion={isSavingVersion}
+        onCreateSnapshot={handleCreateVersionSnapshot}
+        onRestoreVersion={handleRestoreVersion}
+      />
       {/* Template Picker Drawer */}
       <TemplatePicker
         isOpen={isTemplatePickerOpen}
@@ -1586,14 +2364,26 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
         onPageSizeChange={setPageSize}
       />
 
-      {/* Design & Typography Panel */}
+      {/* Design, Typography & Spacing Panel */}
       <DesignPanel
         isOpen={isDesignPanelOpen}
         onClose={() => setIsDesignPanelOpen(false)}
         accentColor={accentColor}
-        onAccentColorChange={setAccentColor}
+        onAccentColorChange={(newColor) => {
+          setAccentColor(newColor);
+          handleUpdateLayout({
+            ...(content.layout || {}),
+            accentColor: newColor,
+          });
+        }}
         fontFamily={fontFamily}
-        onFontFamilyChange={setFontFamily}
+        onFontFamilyChange={(newFont) => {
+          setFontFamily(newFont);
+          handleUpdateLayout({
+            ...(content.layout || {}),
+            fontFamily: newFont,
+          });
+        }}
         showPhoto={showPhoto}
         onShowPhotoChange={setShowPhoto}
         photoUrl={photoUrl}
@@ -1609,6 +2399,25 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
         }}
         showHighlights={showHighlights}
         onShowHighlightsChange={setShowHighlights}
+        layout={content.layout}
+        onLayoutChange={handleUpdateLayout}
+      />
+
+      {/* Section Drag-and-Drop Reorder Drawer */}
+      <SectionRearrangeDrawer
+        isOpen={isRearrangeDrawerOpen}
+        onClose={() => setIsRearrangeDrawerOpen(false)}
+        content={content}
+        onUpdateLayout={handleUpdateLayout}
+      />
+
+      {/* Native <dialog> AI Section Rewriter Modal */}
+      <SectionRewriterDialog
+        target={sectionRewriteTarget}
+        content={content}
+        targetRole={resume?.targetRole || undefined}
+        onClose={() => setSectionRewriteTarget(null)}
+        onApply={updateContent}
       />
 
       {/* Profile Photo Modal (Upload & Paste Link) */}
@@ -1630,22 +2439,61 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
         }}
       />
 
-      {/* Check & Tailor Drawer (Multi-Phase Job Match Animation & Report) */}
+      {/* Live Check & Tailor Drawer (Real Job Matching, Keyword Gap Analysis & AI Tailoring) */}
       <CheckAndTailorDrawer
         isOpen={isCheckTailorOpen}
         onClose={() => setIsCheckTailorOpen(false)}
-        targetRole={resume?.targetRole || 'MERN Stack Developer'}
-        targetCompany={resume?.targetCompany || 'Cloudesign'}
-        initialScore={analysis?.score ?? liveScore}
+        resumeId={resumeId}
+        resumeContent={content}
+        onUpdateContent={updateContent}
+        initialMatchId={activeMatchId}
+        onMatchChange={handleMatchChange}
         onToggleHighlights={setShowHighlights}
         isHighlightsEnabled={showHighlights}
       />
 
-      {/* Direct PDF Export Modal (Competitor Benchmark: 40% -> 100% Direct Download) */}
+      {/* Grammar, Spelling & Buzzword Audit Drawer */}
+      <FixMistakesDrawer
+        isOpen={isFixMistakesOpen}
+        onClose={() => setIsFixMistakesOpen(false)}
+        resumeTitle={resumeName}
+        resumeTargetRole={resume?.targetRole}
+        content={content}
+        localReport={localWritingReport}
+        aiReport={aiWritingReport}
+        activeReport={activeWritingReport}
+        ignoredIds={ignoredWritingIssueIds}
+        onIgnoreIssue={(id) =>
+          setIgnoredWritingIssueIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
+        }
+        onResetIgnored={() => setIgnoredWritingIssueIds([])}
+        onApplyContent={(nextContent) => {
+          setContent(nextContent);
+          scheduleAutosave(nextContent);
+        }}
+        onRunAiDeepCheck={handleRunAiWritingCheck}
+        isRunningAiCheck={isRunningAiWritingCheck}
+        aiCheckError={aiWritingCheckError}
+        onLocateIssue={handleLocateWritingIssue}
+      />
+
+      {/* Recruiter Share Link & View Analytics Drawer */}
+      <ShareAnalyticsDrawer
+        isOpen={isShareDrawerOpen}
+        onClose={() => setIsShareDrawerOpen(false)}
+        resumeId={resumeId}
+        resumeTitle={resumeName || 'Resume'}
+        shareState={shareState}
+        onShareStateChange={setShareState}
+      />
+
+      {/* Direct Vector ATS PDF Export Modal */}
       <ExportPdfModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
+        resumeId={resumeId}
         resumeName={resumeName || 'Resume'}
+        pageSize={pageSize}
         targetContainerId="resume-document-print"
       />
     </div>

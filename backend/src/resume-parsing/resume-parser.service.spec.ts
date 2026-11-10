@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { BadRequestException, PayloadTooLargeException } from '@nestjs/common';
+import { Document, Header, Packer, Paragraph } from 'docx';
 import { ResumeParserService } from './resume-parser.service.js';
 
 describe('ResumeParserService', () => {
@@ -65,5 +66,60 @@ describe('ResumeParserService', () => {
     expect(result.draft.headline).toBe('Senior Full Stack Engineer');
     expect(result.extractedTextLength).toBeGreaterThan(50);
     expect(mockAiService.parseResumeText).toHaveBeenCalled();
+  });
+
+  it('should cleanly extract text from real compressed OOXML .docx including header contact details', async () => {
+    const doc = new Document({
+      sections: [
+        {
+          headers: {
+            default: new Header({
+              children: [
+                new Paragraph('Priya Nair | priya.nair@example.com | Seattle, WA'),
+              ],
+            }),
+          },
+          children: [
+            new Paragraph('Principal Distributed Systems Engineer'),
+            new Paragraph({
+              text: 'Engineered Kafka settlement consumer processing 40M+ daily events at 99.99% SLA.',
+              bullet: { level: 0 },
+            }),
+            new Paragraph('Skills: Go, Kubernetes, Kafka, PostgreSQL, Redis'),
+          ],
+        },
+      ],
+    });
+
+    const docxBuffer = await Packer.toBuffer(doc);
+    const result = await service.parseUploadedFile(
+      docxBuffer,
+      'priya_resume.docx',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    );
+
+    expect(result.fileName).toBe('priya_resume.docx');
+    const extractedArg = mockAiService.parseResumeText.mock.calls[0][0] as string;
+    expect(extractedArg).toContain('priya.nair@example.com');
+    expect(extractedArg).toContain('40M+ daily events');
+    expect(extractedArg).toContain('Kubernetes');
+  });
+
+  it('should reject legacy binary .doc files with a clear BadRequestException', async () => {
+    const oleHeader = Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]);
+    await expect(
+      service.parseUploadedFile(oleHeader, 'legacy_resume.doc', 'application/msword'),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('should reject corrupt PK-prefixed .docx archives instead of passing binary garbage', async () => {
+    const corruptDocx = Buffer.from('PK\x03\x04corrupted-binary-stream-not-a-valid-zip');
+    await expect(
+      service.parseUploadedFile(
+        corruptDocx,
+        'corrupt.docx',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      ),
+    ).rejects.toThrow(BadRequestException);
   });
 });

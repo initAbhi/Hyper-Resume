@@ -5,6 +5,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/ca
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { constructMetadata } from '@/lib/seo';
+import { ResumeScoreInteractiveAudit } from '@/components/tools/ResumeScoreInteractiveAudit';
 
 export const metadata = constructMetadata({
   title: 'Resume Score & ATS Audit',
@@ -69,6 +70,8 @@ export default function ResumeScorePage() {
           </Card>
         ))}
       </div>
+
+      <ResumeScoreInteractiveAudit />
 
       <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-900 text-center flex flex-col items-center gap-4">
         <ShieldAlert className="w-8 h-8 text-blue-600" />

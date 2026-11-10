@@ -13,6 +13,7 @@ import {
   Clock,
   AlertCircle,
   Upload,
+  Mail,
 } from 'lucide-react';
 import { apiClient, Resume, JobApplication } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
@@ -156,7 +157,7 @@ export default function AppDashboardPage() {
       )}
 
       {/* Workflow Navigation Panels */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Link
           href="/app/resumes"
           className="p-4 rounded-lg bg-white dark:bg-[#14171C] border border-[#E2E5E9] dark:border-[#252A33] hover:border-[#CBD0D7] dark:hover:border-[#333945] transition-all flex flex-col justify-between group"
@@ -195,6 +196,27 @@ export default function AppDashboardPage() {
           </div>
           <div className="mt-4 pt-3 border-t border-[#F1F3F5] dark:border-[#1D2128] flex items-center justify-between text-xs text-[#5A6270] dark:text-[#9EA7B4]">
             <span>Evaluate job description</span>
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+          </div>
+        </Link>
+
+        <Link
+          href="/app/cover-letters"
+          className="p-4 rounded-lg bg-white dark:bg-[#14171C] border border-[#E2E5E9] dark:border-[#252A33] hover:border-[#CBD0D7] dark:hover:border-[#333945] transition-all flex flex-col justify-between group"
+        >
+          <div>
+            <div className="w-7 h-7 rounded bg-[#F1F3F5] dark:bg-[#1D2128] text-[#4F46E5] flex items-center justify-center mb-2.5">
+              <Mail className="w-3.5 h-3.5" />
+            </div>
+            <h3 className="text-sm font-semibold text-[#1A1D23] dark:text-[#F0F2F5] group-hover:text-[#4F46E5] transition-colors">
+              Cover Letter Studio
+            </h3>
+            <p className="text-xs text-[#5A6270] dark:text-[#9EA7B4] mt-1 leading-relaxed">
+              Generate tailored cover letters anchored in verified achievements &amp; export PDFs.
+            </p>
+          </div>
+          <div className="mt-4 pt-3 border-t border-[#F1F3F5] dark:border-[#1D2128] flex items-center justify-between text-xs text-[#5A6270] dark:text-[#9EA7B4]">
+            <span>Create tailored letter</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
           </div>
         </Link>

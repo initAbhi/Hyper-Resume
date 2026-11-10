@@ -11,6 +11,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { TemplateProps, renderHighlightedText, LinkedinIcon, GithubIcon } from './types';
+import { CustomSectionsBlock } from './CustomSectionsBlock';
 
 export function SidebarTemplate({
   content,
@@ -245,6 +246,15 @@ export function SidebarTemplate({
                 </div>
               </section>
             )}
+
+            {!needsSecondPage && (
+              <CustomSectionsBlock
+                content={content}
+                accentColor={accentColor}
+                highlightKeywords={highlightKeywords}
+                showHighlights={showHighlights}
+              />
+            )}
           </div>
 
           {/* RIGHT SIDEBAR (35% width, Deep Navy Background #142d4c) */}
@@ -435,6 +445,13 @@ export function SidebarTemplate({
                   </div>
                 </section>
               )}
+
+              <CustomSectionsBlock
+                content={content}
+                accentColor={accentColor}
+                highlightKeywords={highlightKeywords}
+                showHighlights={showHighlights}
+              />
             </div>
 
             {/* RIGHT SIDEBAR CONTINUATION (35% width, Navy background) */}

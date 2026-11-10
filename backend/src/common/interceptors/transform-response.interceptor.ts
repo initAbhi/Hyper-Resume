@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   Injectable,
   NestInterceptor,
+  StreamableFile,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -41,6 +42,10 @@ export class TransformResponseInterceptor<T>
 
     return next.handle().pipe(
       map((body) => {
+        if (body instanceof StreamableFile || Buffer.isBuffer(body)) {
+          return body;
+        }
+
         // If already structured with data and meta, return as is
         if (body && typeof body === 'object' && 'data' in body && 'meta' in body) {
           return body;

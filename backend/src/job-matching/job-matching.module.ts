@@ -8,12 +8,14 @@ import { JobMatchingService } from './job-matching.service.js';
 import { JobMatchingController } from './job-matching.controller.js';
 import { AiModule } from '../ai/ai.module.js';
 import { AuthModule } from '../auth/auth.module.js';
+import { ResumesModule } from '../resumes/resumes.module.js';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([JobMatch, Resume, JobDescription, CreditLedger]),
     AiModule,
     AuthModule,
+    ResumesModule,
   ],
   controllers: [JobMatchingController],
   providers: [JobMatchingService],

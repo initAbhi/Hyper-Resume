@@ -31,7 +31,9 @@ import {
   apiClient,
   Resume,
   JobMatch,
+  type JobTailorSuggestionsResponse,
 } from '@/lib/api-client';
+import { TailoredDraftDialog } from '@/components/match/TailoredDraftDialog';
 
 const SAMPLE_JOB_DESCRIPTION = `We are seeking a Senior Backend Engineer to join our high-growth platform team.
 
@@ -52,6 +54,7 @@ function JobMatchInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedResumeId = searchParams.get('resumeId');
+  const preselectedMatchId = searchParams.get('matchId');
 
   // Input State
   const [resumes, setResumes] = useState<Resume[]>([]);
@@ -69,6 +72,12 @@ function JobMatchInner() {
   const [completedMatch, setCompletedMatch] = useState<JobMatch | null>(null);
   const [requirementFilter, setRequirementFilter] = useState<'all' | 'supported' | 'needs_confirmation' | 'not_evidenced'>('all');
   const [copiedKeywords, setCopiedKeywords] = useState(false);
+
+  // Tailored Draft Preview Dialog State
+  const [isTailorDialogOpen, setIsTailorDialogOpen] = useState(false);
+  const [tailorSuggestions, setTailorSuggestions] = useState<JobTailorSuggestionsResponse | null>(null);
+  const [isLoadingTailorSuggestions, setIsLoadingTailorSuggestions] = useState(false);
+  const [tailorSuggestionsError, setTailorSuggestionsError] = useState<string | null>(null);
 
   // Load existing resumes on mount
   useEffect(() => {
@@ -94,6 +103,28 @@ function JobMatchInner() {
       isMounted = false;
     };
   }, [preselectedResumeId, selectedResumeId]);
+
+  // Hydrate preselected match report if navigated from Live Job Search
+  useEffect(() => {
+    if (!preselectedMatchId) return;
+    let isMounted = true;
+    apiClient
+      .getJobMatch(preselectedMatchId)
+      .then((match) => {
+        if (!isMounted) return;
+        setCompletedMatch(match);
+        if (match.resumeId) setSelectedResumeId(match.resumeId);
+        if (match.jobDescription?.companyName) setCompanyName(match.jobDescription.companyName);
+        if (match.jobDescription?.title) setJobTitle(match.jobDescription.title);
+        if (match.jobDescription?.originalText) {
+          setJobDescriptionText(match.jobDescription.originalText);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [preselectedMatchId]);
 
   const handlePasteClipboard = async () => {
     try {
@@ -160,25 +191,28 @@ function JobMatchInner() {
     }
   };
 
-  const handleCreateTailoredDraft = async () => {
-    if (!completedMatch) return;
+  const loadTailoringSuggestions = async (matchId: string) => {
+    setTailorSuggestions(null);
+    setTailorSuggestionsError(null);
+    setIsLoadingTailorSuggestions(true);
     try {
-      const selectedResume = resumes.find((r) => r.id === completedMatch.resumeId);
-      if (!selectedResume) return;
-
-      const tailoredName = `${jobTitle.trim() || 'Tailored'} (${companyName.trim() || 'Targeted'})`;
-      const newResume = await apiClient.createResume({
-        name: tailoredName,
-        targetRole: jobTitle.trim() || undefined,
-        targetCompany: companyName.trim() || undefined,
-        templateKey: selectedResume.templateKey,
-        content: selectedResume.content,
-      });
-
-      router.push(`/app/resumes/${newResume.id}`);
+      const suggestions = await apiClient.generateJobTailoring(matchId);
+      setTailorSuggestions(suggestions);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to create tailored draft');
+      setTailorSuggestionsError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to generate AI tailoring suggestions.',
+      );
+    } finally {
+      setIsLoadingTailorSuggestions(false);
     }
+  };
+
+  const handleCreateTailoredDraft = () => {
+    if (!completedMatch) return;
+    setIsTailorDialogOpen(true);
+    void loadTailoringSuggestions(completedMatch.id);
   };
 
   const selectedResume = resumes.find((r) => r.id === selectedResumeId);
@@ -523,9 +557,11 @@ function JobMatchInner() {
 
                 <button
                   type="button"
+                  data-testid="open-tailor-draft-dialog-btn"
                   onClick={handleCreateTailoredDraft}
                   className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-xs hover:shadow transition-all cursor-pointer"
                 >
+                  <Sparkles className="w-4 h-4" />
                   <span>Create Tailored Draft</span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -699,6 +735,29 @@ function JobMatchInner() {
           </div>
         );
       })()}
+
+      {/* Grounded AI Tailored Draft Preview & Creation Dialog */}
+      <TailoredDraftDialog
+        key={completedMatch?.id || 'no-match'}
+        isOpen={isTailorDialogOpen}
+        match={completedMatch}
+        sourceResume={selectedResume}
+        jobTitle={jobTitle || completedMatch?.jobDescription?.title || 'Tailored'}
+        companyName={companyName || completedMatch?.jobDescription?.companyName || ''}
+        suggestions={tailorSuggestions}
+        isLoadingSuggestions={isLoadingTailorSuggestions}
+        suggestionsError={tailorSuggestionsError}
+        onRetrySuggestions={() => {
+          if (completedMatch) void loadTailoringSuggestions(completedMatch.id);
+        }}
+        onClose={() => setIsTailorDialogOpen(false)}
+        onCreated={(newResumeId) => {
+          setIsTailorDialogOpen(false);
+          if (completedMatch) {
+            router.push(`/app/resumes/${newResumeId}?matchId=${completedMatch.id}&tailor=1`);
+          }
+        }}
+      />
     </div>
   );
 }

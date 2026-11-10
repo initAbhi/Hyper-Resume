@@ -24,6 +24,7 @@ export * from './JakeTemplate';
 export * from './AwesomeCVTemplate';
 export * from './DeedyTemplate';
 export * from './ExecutiveTemplate';
+export * from './ResumeTemplateRenderer';
 
 export interface TemplateDefinition {
   key: string;

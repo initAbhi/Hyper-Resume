@@ -456,29 +456,22 @@ export class PdfCompressionService {
         }
 
         for (const [name, refStr] of nameToRef.entries()) {
-          let pos = 0;
-          const needle = `/${name} Do`;
-          while ((pos = contentsStr.indexOf(needle, pos)) !== -1) {
-            const chunk = contentsStr.slice(Math.max(0, pos - 150), pos);
-            const cmMatches = [
-              ...chunk.matchAll(
-                /([0-9.-]+)\s+([0-9.-]+)\s+([0-9.-]+)\s+([0-9.-]+)\s+[0-9.-]+\s+[0-9.-]+\s+cm/g,
-              ),
-            ];
-            if (cmMatches.length > 0) {
-              const last = cmMatches[cmMatches.length - 1];
-              const a = Math.abs(parseFloat(last[1]));
-              const b = Math.abs(parseFloat(last[2]));
-              const c = Math.abs(parseFloat(last[3]));
-              const d = Math.abs(parseFloat(last[4]));
-              const renderedWidth = Math.sqrt(a * a + b * b);
-              const renderedHeight = Math.sqrt(c * c + d * d);
-              const prev = map.get(refStr);
-              if (!prev || (renderedWidth > prev.width && renderedHeight > prev.height)) {
-                map.set(refStr, { width: renderedWidth, height: renderedHeight });
-              }
+          const regex = new RegExp(
+            `([0-9.-]+)\\s+([0-9.-]+)\\s+([0-9.-]+)\\s+([0-9.-]+)\\s+([0-9.-]+)\\s+([0-9.-]+)\\s+cm[^Q]*?\\/${name}\\s+Do`,
+            'g',
+          );
+          let match: RegExpExecArray | null;
+          while ((match = regex.exec(contentsStr)) !== null) {
+            const a = Math.abs(parseFloat(match[1]));
+            const b = Math.abs(parseFloat(match[2]));
+            const c = Math.abs(parseFloat(match[3]));
+            const d = Math.abs(parseFloat(match[4]));
+            const renderedWidth = Math.sqrt(a * a + b * b);
+            const renderedHeight = Math.sqrt(c * c + d * d);
+            const prev = map.get(refStr);
+            if (!prev || (renderedWidth > prev.width && renderedHeight > prev.height)) {
+              map.set(refStr, { width: renderedWidth, height: renderedHeight });
             }
-            pos += needle.length;
           }
         }
       }

@@ -16,6 +16,10 @@ import { SystemSetting } from '../admin/entities/system-setting.entity.js';
 import { InterviewSession } from '../interviews/entities/interview-session.entity.js';
 import { InterviewQuestion } from '../interviews/entities/interview-question.entity.js';
 import { InterviewTurn } from '../interviews/entities/interview-turn.entity.js';
+import { CoverLetter } from '../cover-letters/entities/cover-letter.entity.js';
+import { ResumeShare } from '../resumes/entities/resume-share.entity.js';
+import { ResumeShareEvent } from '../resumes/entities/resume-share-event.entity.js';
+import { LinkedInAudit } from '../linkedin/entities/linkedin-audit.entity.js';
 
 export const ALL_ENTITIES = [
   User,
@@ -36,4 +40,8 @@ export const ALL_ENTITIES = [
   InterviewSession,
   InterviewQuestion,
   InterviewTurn,
+  CoverLetter,
+  ResumeShare,
+  ResumeShareEvent,
+  LinkedInAudit,
 ];

@@ -1,7 +1,13 @@
 'use client';
 
 import React from 'react';
-import { X, Check, Palette, Type, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { X, Check, Palette, RotateCcw, SlidersHorizontal } from 'lucide-react';
+import type { ResumeLayoutSettings } from '@/lib/api-client';
+import {
+  DEFAULT_LAYOUT_SETTINGS,
+  LAYOUT_DENSITY_PRESETS,
+  normalizeLayoutSettings,
+} from '@/lib/resume-layout';
 
 export const ACCENT_SWATCHES = [
   { id: 'blue', hex: '#2563eb', label: 'Royal Blue' },
@@ -14,7 +20,11 @@ export const ACCENT_SWATCHES = [
   { id: 'amber', hex: '#b45309', label: 'Amber' },
 ];
 
-export const FONT_OPTIONS = [
+export const FONT_OPTIONS: Array<{
+  id: 'sans' | 'serif' | 'mono';
+  name: string;
+  preview: string;
+}> = [
   { id: 'sans', name: 'Inter (Sans-serif)', preview: 'The quick brown fox' },
   { id: 'serif', name: 'Georgia (Serif)', preview: 'The quick brown fox' },
   { id: 'mono', name: 'Roboto Mono (Tech)', preview: 'The quick brown fox' },
@@ -33,6 +43,8 @@ interface DesignPanelProps {
   onPhotoUrlChange: (url: string) => void;
   showHighlights: boolean;
   onShowHighlightsChange: (show: boolean) => void;
+  layout?: ResumeLayoutSettings;
+  onLayoutChange?: (nextLayout: ResumeLayoutSettings) => void;
 }
 
 export function DesignPanel({
@@ -48,8 +60,19 @@ export function DesignPanel({
   onPhotoUrlChange,
   showHighlights,
   onShowHighlightsChange,
+  layout,
+  onLayoutChange,
 }: DesignPanelProps) {
   if (!isOpen) return null;
+
+  const spacing = normalizeLayoutSettings(layout);
+
+  const updateSpacingField = (patch: Partial<ResumeLayoutSettings>) => {
+    onLayoutChange?.({
+      ...(layout || {}),
+      ...patch,
+    });
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -124,7 +147,7 @@ export function DesignPanel({
                 <button
                   key={f.id}
                   type="button"
-                  onClick={() => onFontFamilyChange(f.id as any)}
+                  onClick={() => onFontFamilyChange(f.id)}
                   className={`w-full p-3 rounded-xl border text-left flex items-center justify-between transition-all ${
                     fontFamily === f.id
                       ? 'border-blue-600 ring-2 ring-blue-600/20 bg-blue-50/20 dark:bg-blue-950/20'
@@ -152,6 +175,164 @@ export function DesignPanel({
                   )}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* 2b. Layout Density & Precision Spacing Controls */}
+          <div className="space-y-3 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <SlidersHorizontal className="w-3.5 h-3.5 text-blue-600" />
+                Layout &amp; Spacing
+              </span>
+              <button
+                type="button"
+                data-testid="reset-spacing-btn"
+                onClick={() =>
+                  updateSpacingField({
+                    fontSizeScale: DEFAULT_LAYOUT_SETTINGS.fontSizeScale,
+                    lineHeight: DEFAULT_LAYOUT_SETTINGS.lineHeight,
+                    sectionSpacing: DEFAULT_LAYOUT_SETTINGS.sectionSpacing,
+                    pageMargin: DEFAULT_LAYOUT_SETTINGS.pageMargin,
+                  })
+                }
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
+              >
+                <RotateCcw className="w-3 h-3" />
+                Reset
+              </button>
+            </div>
+
+            {/* Density Presets */}
+            <div className="grid grid-cols-3 gap-1.5">
+              {Object.entries(LAYOUT_DENSITY_PRESETS).map(([presetKey, p]) => {
+                const isActive =
+                  Math.abs(spacing.fontSizeScale - p.fontSizeScale) < 0.01 &&
+                  spacing.sectionSpacing === p.sectionSpacing;
+                return (
+                  <button
+                    key={presetKey}
+                    type="button"
+                    data-testid={`density-preset-${presetKey}`}
+                    onClick={() =>
+                      updateSpacingField({
+                        fontSizeScale: p.fontSizeScale,
+                        lineHeight: p.lineHeight,
+                        sectionSpacing: p.sectionSpacing,
+                        pageMargin: p.pageMargin,
+                      })
+                    }
+                    className={`p-2 rounded-lg border text-center transition-colors cursor-pointer ${
+                      isActive
+                        ? 'border-blue-600 bg-blue-50/70 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 font-bold'
+                        : 'border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-300 font-medium'
+                    }`}
+                  >
+                    <span className="block text-[11px] leading-tight">
+                      {presetKey === 'compact'
+                        ? 'Compact'
+                        : presetKey === 'balanced'
+                          ? 'Balanced'
+                          : 'Spacious'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Precision Range Sliders */}
+            <div className="space-y-3 pt-1">
+              <div>
+                <div className="flex justify-between text-[11px] mb-1">
+                  <label htmlFor="slider-font-scale" className="font-medium text-zinc-700 dark:text-zinc-300">
+                    Font Size Scale
+                  </label>
+                  <span data-testid="readout-font-scale" className="font-mono font-semibold text-zinc-900 dark:text-zinc-100">
+                    {Math.round(spacing.fontSizeScale * 100)}%
+                  </span>
+                </div>
+                <input
+                  id="slider-font-scale"
+                  type="range"
+                  min={0.85}
+                  max={1.15}
+                  step={0.01}
+                  value={spacing.fontSizeScale}
+                  onChange={(e) =>
+                    updateSpacingField({ fontSizeScale: parseFloat(e.target.value) })
+                  }
+                  className="w-full accent-blue-600 cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between text-[11px] mb-1">
+                  <label htmlFor="slider-line-height" className="font-medium text-zinc-700 dark:text-zinc-300">
+                    Line Height
+                  </label>
+                  <span data-testid="readout-line-height" className="font-mono font-semibold text-zinc-900 dark:text-zinc-100">
+                    {spacing.lineHeight.toFixed(2)}
+                  </span>
+                </div>
+                <input
+                  id="slider-line-height"
+                  type="range"
+                  min={1.2}
+                  max={1.75}
+                  step={0.05}
+                  value={spacing.lineHeight}
+                  onChange={(e) =>
+                    updateSpacingField({ lineHeight: parseFloat(e.target.value) })
+                  }
+                  className="w-full accent-blue-600 cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between text-[11px] mb-1">
+                  <label htmlFor="slider-section-spacing" className="font-medium text-zinc-700 dark:text-zinc-300">
+                    Section Spacing
+                  </label>
+                  <span data-testid="readout-section-spacing" className="font-mono font-semibold text-zinc-900 dark:text-zinc-100">
+                    {spacing.sectionSpacing}px
+                  </span>
+                </div>
+                <input
+                  id="slider-section-spacing"
+                  type="range"
+                  min={8}
+                  max={28}
+                  step={2}
+                  value={spacing.sectionSpacing}
+                  onChange={(e) =>
+                    updateSpacingField({ sectionSpacing: parseInt(e.target.value, 10) })
+                  }
+                  className="w-full accent-blue-600 cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between text-[11px] mb-1">
+                  <label htmlFor="slider-page-margin" className="font-medium text-zinc-700 dark:text-zinc-300">
+                    Page Margins
+                  </label>
+                  <span data-testid="readout-page-margin" className="font-mono font-semibold text-zinc-900 dark:text-zinc-100">
+                    {spacing.pageMargin}px
+                  </span>
+                </div>
+                <input
+                  id="slider-page-margin"
+                  type="range"
+                  min={16}
+                  max={52}
+                  step={2}
+                  value={spacing.pageMargin}
+                  onChange={(e) =>
+                    updateSpacingField({ pageMargin: parseInt(e.target.value, 10) })
+                  }
+                  className="w-full accent-blue-600 cursor-pointer"
+                />
+              </div>
             </div>
           </div>
 

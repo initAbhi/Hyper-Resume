@@ -98,6 +98,12 @@ async function bootstrap() {
       'x-request-id',
       'Idempotency-Key',
       'idempotency-key',
+      'X-ATS-Text-Verified',
+      'X-ATS-Extractable-Chars',
+      'X-ATS-Extractable-Words',
+      'X-PDF-Page-Count',
+      'X-PDF-Size-Bytes',
+      'X-DOCX-Size-Bytes',
     ],
   });
 

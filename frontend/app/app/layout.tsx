@@ -18,7 +18,9 @@ import {
   Search,
   BookOpen,
   ShieldCheck,
+  Mail,
 } from 'lucide-react';
+import { LinkedInIcon } from '@/components/linkedin/LinkedInIcon';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { Logo } from '@/components/ui/Logo';
 import { useAuth } from '@/lib/auth-context';
@@ -177,9 +179,11 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
     { label: 'My Resumes', href: '/app/resumes', icon: FileText },
     { label: 'Sample Library', href: '/app/samples', icon: BookOpen },
     { label: 'Match a Job', href: '/app/match', icon: Sparkles },
+    { label: 'LinkedIn Studio', href: '/app/linkedin', icon: LinkedInIcon, badge: 'New' },
+    { label: 'Cover Letters', href: '/app/cover-letters', icon: Mail, badge: 'New' },
     { label: 'Applications', href: '/app/applications', icon: Briefcase },
     { label: 'AI Interview', href: '/app/interview', icon: Mic, badge: 'New' },
-    { label: 'AI Job Search', href: '/app/job-search', icon: Search, badge: 'Soon' },
+    { label: 'Job Search', href: '/app/job-search', icon: Search, badge: 'Live' },
     ...(user?.role === 'admin'
       ? [{ label: 'Admin Center', href: '/admin', icon: ShieldCheck, badge: 'Admin' }]
       : []),

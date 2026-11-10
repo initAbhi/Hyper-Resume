@@ -1,66 +1,191 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, AlertTriangle, XCircle, Sparkles, ArrowRight } from 'lucide-react';
+import React, { useId, useState } from 'react';
 import Link from 'next/link';
+import {
+  AlertCircle,
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  Sparkles,
+  XCircle,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  apiClient,
+  type JobMatchRequirementAnalysis,
+  type PublicJobMatchResponse,
+} from '@/lib/api-client';
+
+const SAMPLE_RESUME = `Abhinav Sharma
+abhinav@example.com | +91 98765 43210 | linkedin.com/in/abhinav-sharma
+
+Senior Full Stack Engineer
+Distributed systems engineer building production TypeScript, React, Next.js, Node.js, and PostgreSQL applications on AWS.
+
+EXPERIENCE
+CloudScale Payments — Senior Full Stack Engineer (2022-06 – Present)
+• Architected event-driven NestJS and PostgreSQL microservices handling 25,000+ req/s at 99.98% uptime.
+• Engineered Next.js 15 analytics portal using TypeScript and Redis, reducing p95 dashboard load latency by 42%.
+• Automated Docker and GitHub Actions CI/CD deployments across AWS ECS clusters.
+
+SKILLS
+TypeScript, React, Next.js, Node.js, NestJS, PostgreSQL, Redis, Docker, AWS, GitHub Actions`;
+
+const SAMPLE_JOB = `Senior Platform Engineer (Full Stack)
+We are looking for a Senior Engineer to scale our financial ledger APIs and merchant dashboard.
+Required Skills:
+- 4+ years of production TypeScript, React, Next.js, Node.js, and PostgreSQL experience
+- Proven microservices architecture and automated CI/CD pipelines (Docker, AWS)
+Preferred Skills:
+- Experience with Redis caching, Kubernetes orchestration, or GraphQL federation`;
+
+function getScoreStrokeColor(score: number): string {
+  if (score >= 80) return '#059669';
+  if (score >= 55) return '#d97706';
+  return '#dc2626';
+}
 
 export default function JobMatchToolPage() {
+  const uid = useId();
+  const [targetRole, setTargetRole] = useState('');
   const [resumeText, setResumeText] = useState('');
   const [jobText, setJobText] = useState('');
   const [isMatching, setIsMatching] = useState(false);
-  const [matchResult, setMatchResult] = useState<{
-    score: number;
-    supported: string[];
-    needsConfirmation: string[];
-    notEvidenced: string[];
-  } | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [matchResult, setMatchResult] = useState<PublicJobMatchResponse | null>(null);
 
-  const sampleResume = `Experienced Full Stack Engineer with expertise in React, Next.js, TypeScript, Node.js, and PostgreSQL. Built scalable microservices, integrated payment gateways, and managed Docker deployments on AWS.`;
-  const sampleJob = `We are seeking a Senior Full Stack Engineer. Must have strong TypeScript, React, Next.js, and PostgreSQL skills. Experience with Redis, Kubernetes, and GraphQL is highly preferred.`;
-
-  const handleMatch = () => {
+  const handleMatch = async () => {
     if (!resumeText.trim() || !jobText.trim()) return;
     setIsMatching(true);
+    setErrorMessage(null);
 
-    setTimeout(() => {
-      const resLower = resumeText.toLowerCase();
-      const jobLower = jobText.toLowerCase();
-
-      const candidateSkills = [
-        'typescript', 'react', 'next.js', 'node.js', 'postgresql', 'docker', 'aws', 'python', 'java',
-        'redis', 'kubernetes', 'graphql', 'tailwind', 'git', 'microservices', 'rest api', 'sql'
-      ];
-
-      const jobRequirements = candidateSkills.filter((s) => jobLower.includes(s));
-
-      const supported: string[] = [];
-      const needsConfirmation: string[] = [];
-      const notEvidenced: string[] = [];
-
-      jobRequirements.forEach((req) => {
-        if (resLower.includes(req)) {
-          supported.push(req);
-        } else if (req === 'redis' || req === 'kubernetes' || req === 'graphql') {
-          needsConfirmation.push(req);
-        } else {
-          notEvidenced.push(req);
-        }
+    try {
+      const response = await apiClient.analyzePublicJobMatch({
+        resumeText: resumeText.trim(),
+        jobDescriptionText: jobText.trim(),
+        targetRole: targetRole.trim() || undefined,
       });
-
-      const total = jobRequirements.length || 1;
-      const score = Math.round((supported.length / total) * 100);
-
-      setMatchResult({
-        score,
-        supported,
-        needsConfirmation,
-        notEvidenced,
-      });
+      setMatchResult(response);
+    } catch (err: unknown) {
+      setErrorMessage(
+        err instanceof Error
+          ? err.message
+          : 'Unable to run requirement compatibility analysis. Ensure both inputs contain at least 25 characters.',
+      );
+    } finally {
       setIsMatching(false);
-    }, 600);
+    }
+  };
+
+  const supported = (matchResult?.requirementsAnalysis || []).filter(
+    (r) => r.status === 'supported',
+  );
+  const needsConfirmation = (matchResult?.requirementsAnalysis || []).filter(
+    (r) => r.status === 'needs_confirmation',
+  );
+  const notEvidenced = (matchResult?.requirementsAnalysis || []).filter(
+    (r) => r.status === 'not_evidenced',
+  );
+
+  const breakdownRows = matchResult
+    ? [
+        {
+          key: 'required',
+          label: 'Required Skills Alignment',
+          weight: '35%',
+          score: matchResult.scoreComponents.requiredSkillsScore,
+        },
+        {
+          key: 'experience',
+          label: 'Experience Relevance',
+          weight: '25%',
+          score: matchResult.scoreComponents.experienceScore,
+        },
+        {
+          key: 'preferred',
+          label: 'Preferred Stack Bonus',
+          weight: '15%',
+          score: matchResult.scoreComponents.preferredSkillsScore,
+        },
+        {
+          key: 'responsibility',
+          label: 'Domain & Responsibility Fit',
+          weight: '15%',
+          score: matchResult.scoreComponents.responsibilityScore,
+        },
+        {
+          key: 'formatting',
+          label: 'Resume Formatting & Extractability',
+          weight: '10%',
+          score: matchResult.scoreComponents.formattingScore,
+        },
+      ]
+    : [];
+
+  const renderRequirementGroup = (
+    title: string,
+    icon: React.ReactNode,
+    items: JobMatchRequirementAnalysis[],
+    badgeVariant: 'success' | 'warning' | 'destructive',
+    helperNote?: string,
+  ) => {
+    if (items.length === 0) return null;
+    return (
+      <div className="space-y-2.5">
+        <div className="flex items-center gap-2">
+          {icon}
+          <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
+            {title} ({items.length})
+          </span>
+        </div>
+        {helperNote && (
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">{helperNote}</p>
+        )}
+        <section className="hr-accordion space-y-2" aria-label={title}>
+          {items.map((req, idx) => (
+            <details
+              key={req.requirementId || `${title}-${idx}`}
+              className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/60 px-3.5 py-2.5"
+            >
+              <summary className="text-xs sm:text-sm font-medium text-zinc-900 dark:text-zinc-100 select-none justify-between gap-2">
+                <span className="flex-1 text-left">
+                  {req.text || req.explanation || 'Extracted job requirement'}
+                </span>
+                <Badge variant={badgeVariant} className="ml-auto shrink-0 text-[10px]">
+                  {req.importance || 'standard'}
+                </Badge>
+              </summary>
+              <div className="pt-2.5 space-y-2 text-xs text-zinc-600 dark:text-zinc-400">
+                <p>{req.explanation}</p>
+                {Array.isArray(req.keywords) && req.keywords.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {req.keywords.map((kw) => (
+                      <Badge key={kw} variant="neutral" className="text-[10.5px]">
+                        {kw}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                {Array.isArray(req.evidenceQuotes) && req.evidenceQuotes.length > 0 && (
+                  <div className="p-2 rounded-lg bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/50 text-[11px] text-emerald-900 dark:text-emerald-200">
+                    Evidence matched: &ldquo;{req.evidenceQuotes[0]}&rdquo;
+                  </div>
+                )}
+              </div>
+            </details>
+          ))}
+        </section>
+      </div>
+    );
   };
 
   return (
@@ -71,18 +196,35 @@ export default function JobMatchToolPage() {
           Truthful Job-to-Resume Matcher
         </h1>
         <p className="mt-3 text-base sm:text-lg text-zinc-600 dark:text-zinc-400">
-          Compare candidate evidence against target job requirements. See what is verified, what requires confirmation, and what is missing.
+          Powered by live AI requirement parsing and 5-component scoring. Compare candidate evidence against job requirements without hallucinating skills.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div className="mb-5 max-w-md mx-auto">
+        <label
+          htmlFor={`${uid}-target-role`}
+          className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5"
+        >
+          Target Role (Optional)
+        </label>
+        <input
+          id={`${uid}-target-role`}
+          type="text"
+          value={targetRole}
+          onChange={(e) => setTargetRole(e.target.value)}
+          placeholder="e.g. Senior Backend Engineer"
+          className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-600"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <Card>
           <CardHeader className="pb-3 flex flex-row items-center justify-between">
             <CardTitle className="text-base">1. Your Resume</CardTitle>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setResumeText(sampleResume)}
+              onClick={() => setResumeText(SAMPLE_RESUME)}
               className="text-xs"
             >
               Load Sample
@@ -90,9 +232,9 @@ export default function JobMatchToolPage() {
           </CardHeader>
           <CardContent>
             <textarea
-              rows={8}
+              rows={9}
               className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-3 text-xs sm:text-sm font-mono text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-600 resize-y"
-              placeholder="Paste your resume skills & experience..."
+              placeholder="Paste your resume skills & experience (min 25 chars)..."
               value={resumeText}
               onChange={(e) => setResumeText(e.target.value)}
             />
@@ -105,7 +247,7 @@ export default function JobMatchToolPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setJobText(sampleJob)}
+              onClick={() => setJobText(SAMPLE_JOB)}
               className="text-xs"
             >
               Load Sample
@@ -113,9 +255,9 @@ export default function JobMatchToolPage() {
           </CardHeader>
           <CardContent>
             <textarea
-              rows={8}
+              rows={9}
               className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-3 text-xs sm:text-sm font-mono text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-600 resize-y"
-              placeholder="Paste the job description here..."
+              placeholder="Paste the job description here (min 25 chars)..."
               value={jobText}
               onChange={(e) => setJobText(e.target.value)}
             />
@@ -123,13 +265,23 @@ export default function JobMatchToolPage() {
         </Card>
       </div>
 
+      {errorMessage && (
+        <div
+          role="alert"
+          className="max-w-2xl mx-auto mb-6 p-3 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-center gap-2"
+        >
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
+
       <div className="flex justify-center mb-10">
         <Button
           size="lg"
           variant="primary"
           onClick={handleMatch}
           isLoading={isMatching}
-          disabled={!resumeText.trim() || !jobText.trim()}
+          disabled={resumeText.trim().length < 25 || jobText.trim().length < 25}
           className="px-8 shadow-md"
         >
           <Sparkles className="w-5 h-5 mr-2" />
@@ -138,79 +290,129 @@ export default function JobMatchToolPage() {
       </div>
 
       {matchResult && (
-        <Card className="border-blue-200 dark:border-blue-900 shadow-lg">
+        <Card className="border-blue-200 dark:border-blue-900 shadow-lg" data-testid="public-job-match-report">
           <CardHeader className="border-b border-zinc-100 dark:border-zinc-800">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <CardTitle className="text-xl">Evidence Compatibility Analysis</CardTitle>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <CardTitle className="text-xl">Evidence Compatibility Analysis</CardTitle>
+                  <Badge variant="info" className="text-[10.5px]">
+                    {matchResult.parsedRequirementsCount} Extracted Requirements
+                  </Badge>
+                </div>
                 <CardDescription>
-                  Compatibility indicator based on real extracted requirements.
+                  5-component backend match breakdown using truthful evidence verification.
                 </CardDescription>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-3xl font-extrabold text-blue-600">{matchResult.score}%</span>
-                <span className="text-xs text-zinc-500 uppercase font-semibold">Match Score</span>
+
+              <div className="hr-progress-ring-wrapper shrink-0">
+                <progress
+                  value={matchResult.overallScore}
+                  max={100}
+                  aria-label="Job Compatibility Score"
+                  aria-valuetext={`${matchResult.overallScore} percent match`}
+                  className="hr-progress-ring"
+                  style={
+                    {
+                      '--value': matchResult.overallScore,
+                      '--size': '84px',
+                      '--thickness': '8px',
+                      '--fill-color': getScoreStrokeColor(matchResult.overallScore),
+                    } as React.CSSProperties
+                  }
+                />
+                <div className="hr-progress-ring-content" aria-hidden="true">
+                  <span className="text-xl font-black text-zinc-900 dark:text-zinc-50 leading-none">
+                    {matchResult.overallScore}%
+                  </span>
+                  <span className="text-[9.5px] font-semibold text-zinc-500 uppercase tracking-wider mt-0.5">
+                    Match
+                  </span>
+                </div>
               </div>
             </div>
           </CardHeader>
 
           <CardContent className="space-y-6 pt-6">
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
-                  Supported with Candidate Evidence ({matchResult.supported.length})
-                </h4>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {matchResult.supported.map((skill) => (
-                  <Badge key={skill} variant="success" className="capitalize text-xs py-1 px-3">
-                    {skill}
-                  </Badge>
-                ))}
-              </div>
+            {/* 5-Component Match Breakdown */}
+            <div
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/50"
+              data-testid="job-match-components"
+            >
+              {breakdownRows.map((row) => {
+                const barId = `${uid}-${row.key}`;
+                return (
+                  <div key={row.key} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <label htmlFor={barId} className="font-medium text-zinc-700 dark:text-zinc-300">
+                        {row.label} <span className="text-zinc-400">({row.weight})</span>
+                      </label>
+                      <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                        {row.score}%
+                      </span>
+                    </div>
+                    <progress
+                      id={barId}
+                      value={row.score}
+                      max={100}
+                      className="hr-score-progress"
+                      style={
+                        {
+                          '--progress-bar-fill': getScoreStrokeColor(row.score),
+                        } as React.CSSProperties
+                      }
+                    />
+                  </div>
+                );
+              })}
             </div>
 
-            {matchResult.needsConfirmation.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <AlertTriangle className="w-4 h-4 text-amber-600" />
-                  <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
-                    Needs Candidate Confirmation ({matchResult.needsConfirmation.length})
-                  </h4>
-                </div>
-                <p className="text-xs text-zinc-500 mb-2">
-                  Requested in job description, but not explicitly verified in your resume. HypeResume will never invent these for you.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {matchResult.needsConfirmation.map((skill) => (
-                    <Badge key={skill} variant="warning" className="capitalize text-xs py-1 px-3">
-                      {skill}
-                    </Badge>
+            {renderRequirementGroup(
+              'Supported with Candidate Evidence',
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />,
+              supported,
+              'success',
+            )}
+
+            {renderRequirementGroup(
+              'Needs Candidate Confirmation',
+              <AlertTriangle className="w-4 h-4 text-amber-600" />,
+              needsConfirmation,
+              'warning',
+              'Mentioned in the JD without strong bullet proof in your resume. Only add these if genuinely part of your experience.',
+            )}
+
+            {renderRequirementGroup(
+              'Not Evidenced in Profile',
+              <XCircle className="w-4 h-4 text-rose-600" />,
+              notEvidenced,
+              'destructive',
+            )}
+
+            {matchResult.recommendations.length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+                  Actionable Recommendations
+                </h4>
+                <ul className="space-y-1.5 text-xs">
+                  {matchResult.recommendations.map((rec, idx) => (
+                    <li
+                      key={idx}
+                      className="p-3 rounded-lg bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 text-amber-900 dark:text-amber-200 leading-relaxed"
+                    >
+                      {rec}
+                    </li>
                   ))}
-                </div>
+                </ul>
               </div>
             )}
 
-            {matchResult.notEvidenced.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <XCircle className="w-4 h-4 text-rose-600" />
-                  <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
-                    Not Evidenced in Profile ({matchResult.notEvidenced.length})
-                  </h4>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {matchResult.notEvidenced.map((skill) => (
-                    <Badge key={skill} variant="destructive" className="capitalize text-xs py-1 px-3">
-                      {skill}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-end">
+            <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3">
+              <Link href="/app/match">
+                <Button variant="outline" size="sm">
+                  Open Full Match &amp; Tailored Draft Workspace
+                </Button>
+              </Link>
               <Link href="/register">
                 <Button variant="primary" size="md">
                   Tailor My Resume for this Role
