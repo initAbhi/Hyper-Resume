@@ -13,7 +13,7 @@ import { ApplicationPipelineWorkspace } from '@/components/home/ApplicationPipel
 import { CredibilityAndTrustSection } from '@/components/home/CredibilityAndTrustSection';
 import { PricingSection } from '@/components/home/PricingSection';
 import { FaqAndFinalCta } from '@/components/home/FaqAndFinalCta';
-import { TextMorph } from '@/components/reactbits';
+import { TextMorph, NeonReveal } from '@/components/reactbits';
 
 export default function HomePage() {
   return (
@@ -21,31 +21,46 @@ export default function HomePage() {
       
       {/* Ambient Grid Pattern Overlay */}
       <div 
-        className="fixed inset-0 pointer-events-none opacity-[0.03] z-0" 
+        className="fixed inset-0 pointer-events-none opacity-[0.025] z-0" 
         style={{
           backgroundImage: 'radial-gradient(rgba(255,255,255,0.85) 1px, transparent 1px)',
-          backgroundSize: '28px 28px'
+          backgroundSize: '32px 32px'
         }}
       />
 
       {/* =====================================================
-          1. HERO SECTION (Deep Tech Obsidian Grand Editorial & Studio)
+          1. HERO SECTION (Deep Tech Obsidian Grand Editorial & Studio with React Bits Neon Reveal)
       ===================================================== */}
-      <section className="relative w-full pt-16 pb-20 sm:pt-20 sm:pb-28 px-4 sm:px-6 lg:px-8 border-b border-white/[0.08] bg-[#090A10] text-white overflow-hidden z-10">
-        
-        {/* Ambient Volumetric Violet Glow (Smooth, organic lighting without artificial lines) */}
-        <div 
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] pointer-events-none z-0"
-          style={{
-            background: 'radial-gradient(ellipse 70% 50% at 50% -10%, rgba(85, 37, 245, 0.22) 0%, rgba(67, 24, 216, 0.08) 50%, transparent 80%)',
-          }}
-        />
-
+      <NeonReveal
+        colors={['#553aff', '#544fea']}
+        backgroundColor="#0a0a0a"
+        direction="down"
+        expandFrom="center"
+        easing="out"
+        trigger="mount"
+        revealDuration={2500}
+        revealDelay={300}
+        thickness={3.0}
+        glow={1.0}
+        spill={1.0}
+        reach={1.0}
+        intensity={1.0}
+        feather={0.15}
+        inset={24}
+        length={0.9}
+        hum={1.0}
+        flicker={1.0}
+        mirrored={true}
+        interactive={false}
+        intro={false}
+        paused={false}
+        className="w-full -mt-14 pt-24 pb-20 sm:pt-28 sm:pb-32 px-4 sm:px-6 lg:px-8 bg-[#0a0a0a] text-white z-10"
+      >
         <div className="max-w-6xl mx-auto relative z-10 flex flex-col items-center text-center">
           
           {/* Eyebrow Label */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-zinc-300 text-xs font-semibold tracking-widest uppercase font-mono shadow-inner mb-6 backdrop-blur-md">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#5525F5] animate-pulse" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] text-zinc-300 text-xs font-semibold tracking-widest uppercase font-mono shadow-inner mb-6 backdrop-blur-md">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#553aff] animate-pulse" />
             <span>Intelligent Resume Architecture</span>
           </div>
 
@@ -67,17 +82,20 @@ export default function HomePage() {
           </p>
 
           {/* Action CTAs */}
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 w-full sm:w-auto">
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5 w-full sm:w-auto">
             <Link href="/login" className="w-full sm:w-auto">
-              <Button size="lg" className="w-full sm:w-auto rounded-lg bg-[#5525F5] hover:bg-[#4318D8] text-white font-semibold text-sm h-11 px-7 shadow-lg shadow-violet-500/25 gap-2 border border-violet-400/30">
+              <button
+                type="button"
+                className="w-full sm:w-auto inline-flex items-center justify-center rounded-full bg-white hover:bg-zinc-100 text-zinc-950 font-semibold text-sm h-11 px-7 shadow-xl shadow-indigo-500/10 gap-2 cursor-pointer transition-all"
+              >
                 <span>Build My Resume</span>
                 <ArrowRight className="w-4 h-4" />
-              </Button>
+              </button>
             </Link>
             <Link href="/tools/resume-checker" className="w-full sm:w-auto">
               <button 
                 type="button"
-                className="w-full sm:w-auto inline-flex items-center justify-center rounded-lg text-sm font-semibold h-11 px-6 border border-white/15 bg-white/[0.06] hover:bg-white/[0.12] text-white hover:border-violet-400/60 transition-all shadow-sm backdrop-blur-md cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center rounded-full text-sm font-semibold h-11 px-6 bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/[0.08] transition-all shadow-sm backdrop-blur-md cursor-pointer"
               >
                 <span>Explore the Product</span>
               </button>
@@ -108,19 +126,19 @@ export default function HomePage() {
           </div>
 
         </div>
-      </section>
+      </NeonReveal>
 
       {/* =====================================================
           2. COMPANY LOGOS ENDLESS CAROUSEL
       ===================================================== */}
-      <section className="w-full border-b border-white/[0.08] bg-[#090A10] relative z-10">
+      <section className="w-full bg-[#090A10] relative z-10 py-4">
         <CompanyLogoCloud />
       </section>
 
       {/* =====================================================
           3. ATS COMPATIBILITY ENDLESS CAROUSEL
       ===================================================== */}
-      <section className="w-full border-b border-white/[0.08] bg-[#090A10] relative z-10">
+      <section className="w-full bg-[#090A10] relative z-10 py-4">
         <AtsCompatibilityCloud />
       </section>
 
@@ -141,7 +159,7 @@ export default function HomePage() {
       {/* =====================================================
           6. RESUME TEMPLATE GALLERY (Editorial Design Library)
       ===================================================== */}
-      <section className="w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-white/[0.08] bg-[#090A10] relative z-10">
+      <section className="w-full py-20 sm:py-28 px-4 sm:px-6 lg:px-8 bg-[#090A10] relative z-10">
         <div className="max-w-6xl mx-auto">
           <InteractiveTemplateShowcase />
         </div>

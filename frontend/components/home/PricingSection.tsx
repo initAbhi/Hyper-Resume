@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Check, ArrowRight } from 'lucide-react';
+import { Zap, Sparkles, CheckCircle2 } from 'lucide-react';
 import { ShaderCard } from '@/components/reactbits';
 
 export function PricingSection() {
@@ -11,17 +11,25 @@ export function PricingSection() {
       name: 'Free Starter',
       price: '₹0',
       cadence: 'forever',
-      description: 'Ideal for initial master resume creation, ATS formatting, and direct vector PDF export.',
+      description: 'Initial master resume creation, ATS formatting, and direct vector PDF export.',
       badge: null,
       ctaLabel: 'Get Started Free',
       ctaHref: '/login',
       isFeatured: false,
+      flameColor: '#5227FF',
+      highlightColor: '#B48BFA',
+      positionY: -0.09,
+      scale: 4.2,
+      bloom: 0.85,
+      intensity: 1.0,
+      fade: 0.78,
+      buttonStyle: 'bg-white text-zinc-950 hover:bg-zinc-100 shadow-lg',
       features: [
         'Master profile resume editor',
         'Standard single-column ATS templates',
-        'Live ATS document structure audit',
-        'Unlimited unwatermarked PDF exports',
-        'Private encrypted storage',
+        'Live ATS structure audit',
+        'Unlimited vector PDF exports',
+        'Private encrypted cloud storage',
       ],
     },
     {
@@ -33,6 +41,14 @@ export function PricingSection() {
       ctaLabel: 'Get Job Hunt Pack',
       ctaHref: '/login',
       isFeatured: true,
+      flameColor: '#5227FF',
+      highlightColor: '#FF9FFC',
+      positionY: -0.07,
+      scale: 4.0,
+      bloom: 1.1,
+      intensity: 1.15,
+      fade: 0.74,
+      buttonStyle: 'bg-white text-zinc-950 hover:bg-zinc-100 shadow-xl shadow-violet-500/30 ring-2 ring-violet-400/50',
       features: [
         '50 AI optimization credits',
         'Evidence-grounded STAR bullet rewrites',
@@ -45,15 +61,23 @@ export function PricingSection() {
       name: 'Pro Monthly',
       price: '₹699',
       cadence: 'per month',
-      description: 'For ongoing career transitions, executive applications, and continuous interview prep.',
+      description: 'For ongoing career transitions, executive roles, and continuous interview prep.',
       badge: null,
       ctaLabel: 'Subscribe Monthly',
       ctaHref: '/login',
       isFeatured: false,
+      flameColor: '#5227FF',
+      highlightColor: '#C4B5FD',
+      positionY: -0.09,
+      scale: 4.2,
+      bloom: 0.9,
+      intensity: 1.05,
+      fade: 0.78,
+      buttonStyle: 'bg-white text-zinc-950 hover:bg-zinc-100 shadow-lg',
       features: [
         '150 AI credits refreshed monthly',
         'Priority AI model processing',
-        'Advanced interview question simulator',
+        'Interactive interview simulator',
         'Target keyword density analysis',
         'Full version rollback history',
       ],
@@ -61,105 +85,94 @@ export function PricingSection() {
   ];
 
   return (
-    <section className="w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-white/[0.08] bg-[#090A10] text-white relative overflow-hidden">
-      
-      {/* Soft Center Spotlight */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-[#5525F5]/12 blur-3xl pointer-events-none rounded-full" />
+    <section id="pricing" className="w-full py-24 sm:py-32 px-4 sm:px-6 lg:px-8 bg-[#090A10] text-white relative overflow-hidden">
+      {/* Soft Center Background Glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[450px] bg-[#5227FF]/10 blur-3xl pointer-events-none rounded-full" />
 
-      <div className="max-w-6xl mx-auto space-y-12 relative z-10">
+      <div className="max-w-6xl mx-auto space-y-14 relative z-10">
         
         {/* Editorial Section Header */}
-        <div className="max-w-3xl space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white/[0.04] border border-white/[0.08] text-zinc-300 text-xs font-semibold tracking-wider uppercase font-mono shadow-inner">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#5525F5] animate-pulse" />
+        <div className="text-center max-w-2xl mx-auto space-y-4">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] text-zinc-300 text-xs font-semibold tracking-wider uppercase font-mono shadow-inner backdrop-blur-md">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#5227FF] animate-pulse" />
             <span>Transparent Pricing</span>
           </div>
           
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight leading-tight">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white tracking-tight leading-tight">
             Honest pricing with no deceptive paywalls.
           </h2>
           
           <p className="text-sm sm:text-base text-zinc-400 leading-relaxed">
-            Start free. Upgrade only when you want automated AI bullet rewrites and unlimited tailored job versions. We never watermark your exported resumes or hide basic features behind paywalls.
+            Start free. Upgrade only when you want automated AI bullet rewrites and unlimited tailored job versions. We never watermark your exported resumes or hide basic features.
           </p>
         </div>
 
         {/* 3-Tier Grid with React Bits ShaderCard */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
-          {plans.map((p) => {
-            const cardContent = (
-              <div className="p-6 sm:p-7 flex flex-col justify-between h-full relative">
-                {/* Recommended Badge */}
-                {p.badge && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#5525F5] text-white text-[10.5px] font-mono font-bold uppercase tracking-wider px-3.5 py-0.5 rounded-full shadow-lg shadow-violet-500/40 border border-violet-400/40 z-20">
-                    {p.badge}
-                  </div>
-                )}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch">
+          {plans.map((p) => (
+            <ShaderCard
+              key={p.name}
+              color={p.flameColor}
+              highlightColor={p.highlightColor}
+              positionY={p.positionY}
+              scale={p.scale}
+              bloom={p.bloom}
+              intensity={p.intensity}
+              fade={p.fade}
+              borderRadius="24px"
+              className="h-full min-h-[580px] rounded-3xl"
+            >
+              <div className="p-8 sm:p-9 flex flex-col justify-between h-full relative">
+                {/* Top: Header, Price & Features */}
+                <div>
+                  {/* Recommended Badge */}
+                  {p.badge ? (
+                    <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-violet-500/20 text-violet-300 text-xs font-semibold mb-4 border border-violet-500/30 shadow-sm shadow-violet-500/20">
+                      <span>✦</span>
+                      <span>{p.badge}</span>
+                    </div>
+                  ) : (
+                    <div className="h-7 mb-4" />
+                  )}
 
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-base font-bold text-white">
-                      {p.name}
-                    </h3>
-                    <p className="text-xs text-zinc-400 mt-1 leading-snug">
-                      {p.description}
-                    </p>
-                  </div>
+                  <h3 className="text-2xl font-bold text-white tracking-tight">{p.name}</h3>
+                  <p className="text-xs sm:text-sm text-zinc-400 mt-2 leading-relaxed min-h-[38px]">
+                    {p.description}
+                  </p>
 
-                  <div className="pt-2 flex items-baseline gap-1.5 border-t border-white/[0.08]">
-                    <span className="text-3xl sm:text-4xl font-extrabold font-mono text-white">
+                  <div className="flex items-baseline gap-1.5 pt-4 pb-2">
+                    <span className="text-3xl sm:text-4xl font-black text-white font-mono tracking-tight">
                       {p.price}
                     </span>
-                    <span className="text-xs text-zinc-400 font-mono">
+                    <span className="text-xs sm:text-sm text-zinc-400 font-medium">
                       / {p.cadence}
                     </span>
                   </div>
 
-                  <ul className="space-y-2.5 pt-3 border-t border-white/[0.08] text-xs">
+                  <ul className="space-y-3 pt-5 text-xs sm:text-sm">
                     {p.features.map((f) => (
-                      <li key={f} className="flex items-start gap-2">
-                        <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                        <span className="text-zinc-300">{f}</span>
+                      <li key={f} className="flex items-start gap-2.5">
+                        <CheckCircle2 className="w-4 h-4 text-violet-400 shrink-0 mt-0.5" />
+                        <span className="text-zinc-200 font-medium leading-snug drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">{f}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
 
-                <div className="pt-8">
+                {/* Bottom Action Pill Button (Over Rising Luminous Flame) */}
+                <div className="pt-8 mt-auto">
                   <Link href={p.ctaHref} className="block w-full">
                     <button
                       type="button"
-                      className={`w-full inline-flex items-center justify-center rounded-lg text-xs font-semibold h-11 px-4 cursor-pointer transition-all duration-200 ${
-                        p.isFeatured
-                          ? 'bg-[#5525F5] hover:bg-[#4318D8] text-white shadow-lg shadow-violet-500/25 border border-violet-400/30'
-                          : 'border border-white/15 bg-white/[0.06] hover:bg-white/[0.12] text-white hover:border-violet-400/60 shadow-sm backdrop-blur-md'
-                      }`}
+                      className={`w-full py-3.5 px-6 rounded-full font-semibold text-sm cursor-pointer transition-all duration-200 ${p.buttonStyle}`}
                     >
-                      <span>{p.ctaLabel}</span>
-                      <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                      {p.ctaLabel}
                     </button>
                   </Link>
                 </div>
               </div>
-            );
-
-            if (p.isFeatured) {
-              return (
-                <ShaderCard key={p.name} flameColor="#5525F5" className="h-full">
-                  {cardContent}
-                </ShaderCard>
-              );
-            }
-
-            return (
-              <div
-                key={p.name}
-                className="bg-[#121422]/65 backdrop-blur-md border border-white/[0.08] rounded-2xl shadow-lg hover:border-violet-500/40 hover:shadow-[0_0_30px_rgba(85,37,245,0.2)] hover:-translate-y-1 transition-all duration-300"
-              >
-                {cardContent}
-              </div>
-            );
-          })}
+            </ShaderCard>
+          ))}
         </div>
 
       </div>

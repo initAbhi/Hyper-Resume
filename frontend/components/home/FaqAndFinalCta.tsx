@@ -44,14 +44,14 @@ export function FaqAndFinalCta() {
       {/* =====================================================
           FAQS SECTION
       ===================================================== */}
-      <section className="w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-white/[0.08] bg-[#090A10] text-white relative overflow-hidden">
+      <section className="w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8 bg-[#090A10] text-white relative overflow-hidden">
         
         {/* Ambient Glow */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-[#5525F5]/10 blur-3xl pointer-events-none rounded-full" />
 
         <div className="max-w-4xl mx-auto space-y-10 relative z-10">
           <div className="space-y-3 text-center">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-zinc-300 text-xs font-semibold tracking-wider uppercase font-mono shadow-inner backdrop-blur-md">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] text-zinc-300 text-xs font-semibold tracking-wider uppercase font-mono shadow-inner backdrop-blur-md">
               <HelpCircle className="w-3.5 h-3.5 text-[#5525F5]" />
               <span>Frequently Asked Questions</span>
             </div>
@@ -60,7 +60,7 @@ export function FaqAndFinalCta() {
             </h2>
           </div>
 
-          <div className="divide-y divide-white/[0.08] bg-[#0E101B]/80 backdrop-blur-xl rounded-3xl border border-white/[0.08] px-6 sm:px-8 shadow-2xl">
+          <div className="divide-y divide-white/[0.04] bg-[#0E101B]/90 backdrop-blur-xl rounded-3xl px-6 sm:px-8 shadow-2xl">
             {faqs.map((faq, i) => (
               <div key={i} className="py-6 space-y-2">
                 <h3 className="text-sm sm:text-base font-bold text-white">
@@ -89,7 +89,7 @@ export function FaqAndFinalCta() {
         />
 
         <div className="max-w-3xl mx-auto space-y-6 relative z-10">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-zinc-300 text-xs font-semibold tracking-wider uppercase font-mono shadow-inner backdrop-blur-md">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] text-zinc-300 text-xs font-semibold tracking-wider uppercase font-mono shadow-inner backdrop-blur-md">
             <span className="w-1.5 h-1.5 rounded-full bg-[#5525F5] animate-pulse" />
             <span>Get Started</span>
           </div>
@@ -104,7 +104,7 @@ export function FaqAndFinalCta() {
 
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3 w-full sm:w-auto">
             <Link href="/login" className="w-full sm:w-auto">
-              <Button size="lg" className="w-full sm:w-auto rounded-lg bg-[#5525F5] hover:bg-[#4318D8] text-white font-semibold text-sm h-11 px-8 shadow-lg shadow-violet-500/25 gap-2 border border-violet-400/30">
+              <Button size="lg" className="w-full sm:w-auto rounded-xl bg-[#5525F5] hover:bg-[#4318D8] text-white font-semibold text-sm h-11 px-8 shadow-lg shadow-violet-500/25 gap-2 border-0">
                 <span>Build My Resume — Free</span>
                 <ArrowRight className="w-4 h-4" />
               </Button>
@@ -112,7 +112,7 @@ export function FaqAndFinalCta() {
             <Link href="/examples" className="w-full sm:w-auto">
               <button 
                 type="button"
-                className="w-full sm:w-auto inline-flex items-center justify-center rounded-lg text-sm font-semibold h-11 px-6 border border-white/15 bg-white/[0.06] hover:bg-white/[0.12] text-white hover:border-violet-400/60 transition-all shadow-sm backdrop-blur-md cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl text-sm font-semibold h-11 px-6 bg-white/[0.06] hover:bg-white/[0.12] text-white transition-all shadow-sm backdrop-blur-md cursor-pointer"
               >
                 <span>Explore Resume Examples</span>
               </button>

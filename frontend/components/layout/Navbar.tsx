@@ -71,7 +71,7 @@ function NavbarInner() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-[#090A10]/80 backdrop-blur-xl border-b border-white/[0.08] transition-colors">
+    <header className="sticky top-0 z-50 w-full bg-[#0a0a0a]/40 backdrop-blur-md border-b border-white/[0.03] shadow-sm transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
         {/* Brand */}
         <div className="flex items-center gap-8">
@@ -97,7 +97,7 @@ function NavbarInner() {
               </button>
               
               {isProductOpen && (
-                <div className="absolute top-full left-0 mt-2 w-72 bg-[#0E101A]/95 backdrop-blur-2xl rounded-xl shadow-2xl border border-white/[0.1] p-2 animate-slide-up z-50">
+                <div className="absolute top-full left-0 mt-2 w-72 bg-[#0E101A]/95 backdrop-blur-2xl rounded-xl shadow-2xl p-2 animate-slide-up z-50">
                   {productLinks.map((link) => (
                     <Link
                       key={link.href}
@@ -124,7 +124,7 @@ function NavbarInner() {
                   href={link.href}
                   className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
                     isActive
-                      ? 'text-white bg-white/[0.1] font-semibold border border-white/[0.1]'
+                      ? 'text-white bg-white/[0.1] font-semibold'
                       : 'text-zinc-300 hover:text-white hover:bg-white/[0.06]'
                   }`}
                 >
@@ -140,13 +140,13 @@ function NavbarInner() {
           <ThemeToggle id="desktop-theme-toggle" />
           {isAuthenticated ? (
             <>
-              <span className="text-xs font-medium text-zinc-300 bg-white/[0.06] border border-white/[0.08] px-3 py-1.5 rounded-full font-mono">
+              <span className="text-xs font-medium text-zinc-300 bg-white/[0.06] px-3 py-1.5 rounded-full font-mono">
                 {creditBalance} credits
               </span>
               <Link href="/app">
-                <Button variant="primary" size="sm" className="bg-[#5525F5] hover:bg-[#4318D8] text-white text-xs h-8 px-3.5 shadow-sm border border-violet-400/30">
+                <button type="button" className="bg-white hover:bg-zinc-100 text-zinc-950 text-xs font-semibold h-8 px-4 rounded-full shadow-sm cursor-pointer transition-colors">
                   Dashboard
-                </Button>
+                </button>
               </Link>
             </>
           ) : (
@@ -157,10 +157,9 @@ function NavbarInner() {
                 </Button>
               </Link>
               <Link href="/tools/resume-checker">
-                <Button size="sm" className="bg-[#5525F5] hover:bg-[#4318D8] text-white text-xs font-semibold h-8 px-3.5 shadow-md shadow-violet-500/20 border border-violet-400/30 group">
-                  <span>Try for free</span>
-                  <ArrowRight className="w-3.5 h-3.5 ml-1 transition-transform group-hover:translate-x-0.5" />
-                </Button>
+                <button type="button" className="bg-white hover:bg-zinc-100 text-zinc-950 text-xs font-semibold h-8 px-4 rounded-full shadow-sm cursor-pointer transition-colors flex items-center gap-1.5">
+                  <span>Get Started</span>
+                </button>
               </Link>
             </>
           )}
@@ -170,15 +169,15 @@ function NavbarInner() {
         <div className="flex items-center gap-1.5 sm:gap-2 lg:hidden">
           {isAuthenticated ? (
             <Link href="/app">
-              <Button size="sm" className="rounded-full bg-[#5525F5] hover:bg-[#4318D8] text-white font-semibold text-[11px] sm:text-xs px-2.5 sm:px-3.5 py-1 sm:py-1.5 h-8 shadow-xs">
+              <button type="button" className="rounded-full bg-white hover:bg-zinc-100 text-zinc-950 font-semibold text-xs px-3 sm:px-3.5 py-1.5 h-8 shadow-xs cursor-pointer">
                 Dashboard
-              </Button>
+              </button>
             </Link>
           ) : (
             <Link href="/login" className="hidden xs:inline-flex">
-              <Button size="sm" className="rounded-full bg-[#5525F5] hover:bg-[#4318D8] text-white font-semibold text-xs px-3 sm:px-3.5 py-1.5 h-8 shadow-xs">
-                Try for free
-              </Button>
+              <button type="button" className="rounded-full bg-white hover:bg-zinc-100 text-zinc-950 font-semibold text-xs px-3 sm:px-3.5 py-1.5 h-8 shadow-xs cursor-pointer">
+                Get Started
+              </button>
             </Link>
           )}
           <ThemeToggle id="mobile-theme-toggle" />
@@ -213,7 +212,7 @@ function NavbarInner() {
           <div
             id="mobile-menu"
             ref={mobileMenuRef}
-            className="lg:hidden fixed top-14 left-0 right-0 bg-[#090A10]/95 backdrop-blur-2xl border-b border-white/[0.08] shadow-2xl z-50 animate-slide-up max-h-[calc(100vh-4rem)] overflow-y-auto"
+            className="lg:hidden fixed top-14 left-0 right-0 bg-[#090A10]/95 backdrop-blur-2xl shadow-2xl z-50 animate-slide-up max-h-[calc(100vh-4rem)] overflow-y-auto"
           >
             <div className="px-4 py-4 space-y-1">
               <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 px-3 py-2 font-mono">Product</p>
@@ -229,7 +228,7 @@ function NavbarInner() {
                 </Link>
               ))}
 
-              <div className="h-px bg-white/[0.08] my-3" />
+              <div className="h-px bg-white/[0.04] my-3" />
 
               <Link
                 href="/examples"
@@ -246,9 +245,9 @@ function NavbarInner() {
                 Pricing
               </Link>
 
-              <div className="h-px bg-white/[0.08] my-3" />
+              <div className="h-px bg-white/[0.04] my-3" />
 
-              <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] mb-2">
+              <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/[0.04] mb-2">
                 <span className="text-xs font-medium text-zinc-400">Appearance</span>
                 <ThemeToggle id="drawer-theme-toggle" showLabel />
               </div>
@@ -262,7 +261,7 @@ function NavbarInner() {
                 <Link href="/login" className="w-full">
                   <button 
                     type="button"
-                    className="w-full inline-flex items-center justify-center rounded-lg text-sm font-semibold h-10 px-4 border border-white/15 bg-white/[0.06] hover:bg-white/[0.12] text-white transition-all cursor-pointer"
+                    className="w-full inline-flex items-center justify-center rounded-lg text-sm font-semibold h-10 px-4 bg-white/[0.06] hover:bg-white/[0.12] text-white transition-all cursor-pointer"
                   >
                     Log in
                   </button>

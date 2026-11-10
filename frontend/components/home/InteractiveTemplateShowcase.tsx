@@ -174,9 +174,9 @@ export function InteractiveTemplateShowcase() {
     <div className="w-full space-y-10 text-white">
       
       {/* Editorial Section Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-white/[0.08]">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6">
         <div className="space-y-3 max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white/[0.04] border border-white/[0.08] text-zinc-300 text-xs font-semibold tracking-wider uppercase font-mono shadow-inner">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.04] text-zinc-300 text-xs font-semibold tracking-wider uppercase font-mono shadow-inner">
             <span className="w-1.5 h-1.5 rounded-full bg-[#5525F5] animate-pulse" />
             <span>Template Architecture</span>
           </div>
@@ -189,7 +189,7 @@ export function InteractiveTemplateShowcase() {
         </div>
 
         {/* Category Filter Tabs */}
-        <div className="flex items-center gap-1.5 p-1 bg-[#121422]/80 backdrop-blur-md rounded-xl border border-white/[0.08] overflow-x-auto no-scrollbar shrink-0 self-start md:self-end shadow-inner">
+        <div className="flex items-center gap-1.5 p-1 bg-[#0E101B]/90 backdrop-blur-md rounded-xl overflow-x-auto no-scrollbar shrink-0 self-start md:self-end shadow-lg">
           {CATEGORIES.map((cat) => {
             const isSelected = activeCategory === cat.id;
             return (
@@ -199,7 +199,7 @@ export function InteractiveTemplateShowcase() {
                 onClick={() => handleCategoryChange(cat.id)}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   isSelected
-                    ? 'bg-[#5525F5] text-white shadow-lg shadow-violet-500/25 border border-violet-400/30'
+                    ? 'bg-[#5525F5] text-white shadow-lg shadow-violet-500/25'
                     : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
                 }`}
               >
@@ -225,14 +225,14 @@ export function InteractiveTemplateShowcase() {
                 setActiveIndex(idx);
                 scrollToIndex(idx);
               }}
-              className={`snap-start group relative rounded-2xl bg-[#121422]/70 backdrop-blur-md p-4 sm:p-5 border transition-all duration-300 cursor-pointer select-none shrink-0 w-[82vw] xs:w-[75vw] sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] ${
+              className={`snap-start group relative rounded-2xl p-4 sm:p-5 transition-all duration-300 cursor-pointer select-none shrink-0 w-[82vw] xs:w-[75vw] sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] ${
                 isActive 
-                  ? 'border-[#5525F5] shadow-[0_0_35px_rgba(85,37,245,0.25)] ring-1 ring-[#5525F5]/40' 
-                  : 'border-white/[0.08] hover:border-violet-500/40 hover:shadow-[0_0_30px_rgba(85,37,245,0.2)] hover:-translate-y-1'
+                  ? 'bg-[#121526] shadow-[0_0_35px_rgba(85,37,245,0.25)] ring-1 ring-[#5525F5]/40' 
+                  : 'bg-[#0E101B]/90 hover:bg-[#131626] shadow-xl hover:shadow-2xl hover:shadow-violet-950/30 hover:-translate-y-1'
               }`}
             >
               {/* Paper Preview Frame */}
-              <div className="relative w-full rounded-xl bg-white overflow-hidden border border-white/[0.1] shadow-xl aspect-[1/1.3] flex items-center justify-center">
+              <div className="relative w-full rounded-xl bg-white overflow-hidden shadow-xl aspect-[1/1.3] flex items-center justify-center">
                 <img
                   src={tpl.img}
                   alt={`${tpl.name} resume template preview`}
@@ -250,14 +250,14 @@ export function InteractiveTemplateShowcase() {
                 >
                   <Link
                     href={`/login?template=${encodeURIComponent(tpl.name.toLowerCase())}`}
-                    className="px-4 py-2 rounded-lg bg-[#5525F5] hover:bg-[#4318D8] text-white font-semibold text-xs shadow-lg shadow-violet-500/30 transition-all cursor-pointer border border-violet-400/30"
+                    className="px-4 py-2 rounded-lg bg-[#5525F5] hover:bg-[#4318D8] text-white font-semibold text-xs shadow-lg shadow-violet-500/30 transition-all cursor-pointer"
                     onClick={(e) => e.stopPropagation()}
                   >
                     Use Template
                   </Link>
                   <Link
                     href="/examples"
-                    className="px-3.5 py-2 rounded-lg bg-black/80 hover:bg-black text-white font-medium text-xs backdrop-blur-md transition-all border border-white/20"
+                    className="px-3.5 py-2 rounded-lg bg-black/80 hover:bg-black text-white font-medium text-xs backdrop-blur-md transition-all shadow-md"
                     onClick={(e) => e.stopPropagation()}
                   >
                     View Samples
@@ -275,7 +275,7 @@ export function InteractiveTemplateShowcase() {
                     {tpl.desc}
                   </p>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/[0.06] text-zinc-300 border border-white/[0.08] font-semibold shrink-0">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/[0.06] text-zinc-300 font-semibold shrink-0">
                   {tpl.tag}
                 </span>
               </div>
@@ -285,7 +285,7 @@ export function InteractiveTemplateShowcase() {
       </div>
 
       {/* Carousel Footer & Pagination Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-white/[0.08] text-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 text-xs">
         <div className="text-zinc-400 flex items-center gap-2">
           <span className="font-semibold text-white">{activeTemplate.name}</span>
           <span>·</span>
@@ -297,7 +297,7 @@ export function InteractiveTemplateShowcase() {
             type="button"
             onClick={handlePrev}
             title="Previous template"
-            className="w-8 h-8 rounded-lg bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.12] flex items-center justify-center text-zinc-300 hover:text-white transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] flex items-center justify-center text-zinc-300 hover:text-white transition-colors cursor-pointer"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -305,7 +305,7 @@ export function InteractiveTemplateShowcase() {
             type="button"
             onClick={handleNext}
             title="Next template"
-            className="w-8 h-8 rounded-lg bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.12] flex items-center justify-center text-zinc-300 hover:text-white transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] flex items-center justify-center text-zinc-300 hover:text-white transition-colors cursor-pointer"
           >
             <ChevronRight className="w-4 h-4" />
           </button>

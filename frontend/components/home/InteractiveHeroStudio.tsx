@@ -51,16 +51,16 @@ export function InteractiveHeroStudio() {
   return (
     <div className="relative w-full max-w-6xl mx-auto select-none">
       
-      {/* Master Obsidian Cockpit Container (Linear / Stripe level refinement) */}
-      <div className="relative w-full rounded-3xl bg-[#0C0E17]/90 border border-white/[0.08] p-5 sm:p-7 lg:p-9 shadow-2xl backdrop-blur-xl overflow-hidden">
+      {/* Master Obsidian Cockpit Container (Sleek, Borderless Dark Glass) */}
+      <div className="relative w-full rounded-3xl bg-[#0B0D16]/95 p-5 sm:p-7 lg:p-9 shadow-2xl backdrop-blur-2xl overflow-hidden">
         
         {/* Soft Volumetric Underglow */}
-        <div className="absolute -bottom-24 left-1/2 -translate-x-1/2 w-3/4 max-w-[700px] h-64 bg-[#5525F5]/20 blur-3xl pointer-events-none rounded-full" />
+        <div className="absolute -bottom-24 left-1/2 -translate-x-1/2 w-3/4 max-w-[700px] h-64 bg-[#5525F5]/25 blur-3xl pointer-events-none rounded-full" />
         <div className="absolute -top-24 right-10 w-96 h-64 bg-[#4263FF]/15 blur-3xl pointer-events-none rounded-full" />
 
         {/* Tactile Coordinate Grid Texture */}
         <div 
-          className="absolute inset-0 opacity-[0.03] pointer-events-none" 
+          className="absolute inset-0 opacity-[0.025] pointer-events-none" 
           style={{
             backgroundImage: 'radial-gradient(rgba(255,255,255,0.85) 1px, transparent 1px)',
             backgroundSize: '24px 24px'
@@ -70,15 +70,15 @@ export function InteractiveHeroStudio() {
         {/* ========================================================
             TOP CHASSIS BAR: STAGE SWITCHER & LIVE ENGINE STATUS
         ======================================================== */}
-        <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 pb-6 border-b border-white/[0.08]">
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 pb-6">
           
           {/* Stage Switcher Tabs */}
-          <div className="inline-flex items-center p-1 rounded-xl bg-[#121422] border border-white/[0.08] shadow-inner max-w-full overflow-x-auto">
+          <div className="inline-flex items-center p-1 rounded-2xl bg-[#121424] shadow-inner max-w-full overflow-x-auto">
             <button
               onClick={() => setActiveStage('original')}
-              className={`px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 cursor-pointer whitespace-nowrap ${
+              className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer whitespace-nowrap ${
                 activeStage === 'original'
-                  ? 'bg-[#1C2030] text-rose-400 font-semibold shadow-xs ring-1 ring-rose-500/30'
+                  ? 'bg-[#1C2034] text-rose-400 font-semibold shadow-md'
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
@@ -87,9 +87,9 @@ export function InteractiveHeroStudio() {
             
             <button
               onClick={() => setActiveStage('intelligence')}
-              className={`px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 cursor-pointer whitespace-nowrap ${
+              className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer whitespace-nowrap ${
                 activeStage === 'intelligence'
-                  ? 'bg-[#1C2030] text-blue-400 font-semibold shadow-xs ring-1 ring-blue-500/30'
+                  ? 'bg-[#1C2034] text-blue-400 font-semibold shadow-md'
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
@@ -98,9 +98,9 @@ export function InteractiveHeroStudio() {
 
             <button
               onClick={() => setActiveStage('optimized')}
-              className={`px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+              className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                 activeStage === 'optimized'
-                  ? 'bg-[#5525F5] text-white font-semibold shadow-md shadow-violet-500/30 ring-1 ring-violet-400/40'
+                  ? 'bg-[#5525F5] text-white font-semibold shadow-lg shadow-violet-500/35'
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
@@ -112,12 +112,12 @@ export function InteractiveHeroStudio() {
           {/* Live Engine Status Badge */}
           <div className="flex items-center gap-2 text-xs font-mono">
             <span className="text-zinc-400 hidden sm:inline">Engine Status:</span>
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-semibold border ${
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold ${
               activeStage === 'optimized' 
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-xs' 
+                ? 'bg-emerald-500/15 text-emerald-300' 
                 : activeStage === 'intelligence'
-                ? 'bg-blue-500/10 text-blue-400 border-blue-500/30 shadow-xs'
-                : 'bg-rose-500/10 text-rose-400 border-rose-500/30 shadow-xs'
+                ? 'bg-blue-500/15 text-blue-300'
+                : 'bg-rose-500/15 text-rose-300'
             }`}>
               <span className={`w-1.5 h-1.5 rounded-full ${
                 activeStage === 'optimized' 
@@ -132,31 +132,31 @@ export function InteractiveHeroStudio() {
         </div>
 
         {/* ========================================================
-            COCKPIT GRID: BALANCED DOCKED FLANKS (ZERO OVERLAP)
+            COCKPIT GRID: BALANCED DOCKED FLANKS (ZERO OVERLAP, BORDERLESS)
         ======================================================== */}
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start mt-6 text-left">
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start mt-2 text-left">
           
           {/* LEFT FLANK: LIVE METRICS & ATS AUDIT (lg:col-span-5) */}
           <div className="lg:col-span-5 space-y-4">
             
             {/* Card 1: Live ATS Score Audit Gauge */}
-            <div className="rounded-2xl bg-[#11131E]/90 border border-white/[0.08] p-5 text-white shadow-xl backdrop-blur-md">
-              <div className="flex items-center justify-between pb-3 border-b border-white/[0.08] mb-3">
+            <div className="rounded-2xl bg-[#101320]/95 p-6 text-white shadow-xl backdrop-blur-xl space-y-4">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs font-bold text-zinc-200">
                   <TrendingUp className="w-4 h-4 text-[#5525F5]" />
                   <span>Live ATS Score</span>
                 </div>
-                <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                <span className={`text-[10.5px] font-mono font-bold px-2.5 py-0.5 rounded-full ${
                   liveScore >= 80 
-                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
-                    : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                    ? 'bg-emerald-500/15 text-emerald-400' 
+                    : 'bg-rose-500/15 text-rose-400'
                 }`}>
                   {liveScore >= 80 ? 'Passed (98)' : 'Review (58)'}
                 </span>
               </div>
 
               {/* Gauge */}
-              <div className="flex flex-col items-center py-2">
+              <div className="flex flex-col items-center py-1">
                 <ScoreMeter score={liveScore} variant="dark" textColor="text-white" />
                 <p className="text-[11px] text-zinc-400 font-mono mt-1 text-center">
                   Candidate: Alex Morgan · Senior Product Analyst
@@ -164,7 +164,7 @@ export function InteractiveHeroStudio() {
               </div>
 
               {/* Detailed Breakdown Sub-meters */}
-              <div className="space-y-2 mt-3 pt-3 border-t border-white/[0.08] text-xs">
+              <div className="space-y-2.5 pt-2 text-xs">
                 <div className="flex justify-between items-center text-zinc-300">
                   <span className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
@@ -198,46 +198,46 @@ export function InteractiveHeroStudio() {
             </div>
 
             {/* Card 2: Job Requirement Match Panel */}
-            <div className="rounded-2xl bg-[#11131E]/90 border border-white/[0.08] p-5 text-white shadow-xl backdrop-blur-md">
-              <div className="flex items-center justify-between pb-3 border-b border-white/[0.08] mb-3">
+            <div className="rounded-2xl bg-[#101320]/95 p-6 text-white shadow-xl backdrop-blur-xl space-y-4">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs font-bold text-zinc-200">
                   <Target className="w-4 h-4 text-[#5525F5]" />
                   <span>Job Requirement Match</span>
                 </div>
-                <span className="text-[10px] font-mono text-zinc-400 bg-white/[0.04] px-2 py-0.5 rounded border border-white/[0.06]">
+                <span className="text-[10px] font-mono text-zinc-400 bg-white/[0.04] px-2.5 py-1 rounded-full">
                   Target: Stripe
                 </span>
               </div>
 
               <div className="space-y-2 text-xs">
-                <div className="flex items-center justify-between p-2 rounded-lg bg-[#161826] border border-white/[0.05]">
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#161928]">
                   <span className="text-zinc-300 text-[11.5px]">SQL / Analytics Engineering</span>
-                  <span className="text-emerald-400 font-bold font-mono text-[10px] bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                  <span className="text-emerald-400 font-bold font-mono text-[10px] bg-emerald-500/10 px-2 py-0.5 rounded-md">
                     Verified Match
                   </span>
                 </div>
                 
-                <div className="flex items-center justify-between p-2 rounded-lg bg-[#161826] border border-white/[0.05]">
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#161928]">
                   <span className="text-zinc-300 text-[11.5px]">A/B Testing & ARR Impact</span>
-                  <span className={`font-bold font-mono text-[10px] px-2 py-0.5 rounded border ${
+                  <span className={`font-bold font-mono text-[10px] px-2 py-0.5 rounded-md ${
                     activeStage === 'original' 
-                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' 
-                      : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                      ? 'bg-amber-500/10 text-amber-400' 
+                      : 'bg-emerald-500/10 text-emerald-400'
                   }`}>
                     {activeStage === 'original' ? 'Needs STAR Proof' : 'Verified Match'}
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between p-2 rounded-lg bg-[#161826] border border-white/[0.05]">
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#161928]">
                   <span className="text-zinc-300 text-[11.5px]">Single-Column A4 Parsing</span>
-                  <span className="text-blue-400 font-bold font-mono text-[10px] bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+                  <span className="text-blue-400 font-bold font-mono text-[10px] bg-blue-500/10 px-2 py-0.5 rounded-md">
                     Deterministic
                   </span>
                 </div>
               </div>
 
               {/* Application Branching Pill */}
-              <div className="mt-3.5 pt-3 border-t border-white/[0.08] flex items-center justify-between text-[11px] text-zinc-400 font-mono">
+              <div className="pt-2 flex items-center justify-between text-[11px] text-zinc-400 font-mono">
                 <span className="flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-[#5525F5]" />
                   <span>Branch: Tailored v2</span>
@@ -253,7 +253,7 @@ export function InteractiveHeroStudio() {
 
           {/* RIGHT FLANK: THE PRISTINE A4 RESUME DOCUMENT (lg:col-span-7) */}
           <div className="lg:col-span-7 w-full">
-            <div className="relative rounded-2xl bg-white text-zinc-900 shadow-2xl p-6 sm:p-8 border border-zinc-200/90 overflow-hidden transition-all">
+            <div className="relative rounded-2xl bg-white text-zinc-900 shadow-2xl p-6 sm:p-8 overflow-hidden transition-all">
               
               {/* Luminous laser scanning beam (active during ATS Intelligence stage) */}
               {activeStage === 'intelligence' && (
@@ -261,7 +261,7 @@ export function InteractiveHeroStudio() {
               )}
 
               {/* Resume Document Header */}
-              <div className="border-b border-zinc-200 pb-4 mb-4">
+              <div className="pb-4 mb-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <h2 className="text-xl sm:text-2xl font-black text-zinc-900 tracking-tight">
@@ -273,7 +273,7 @@ export function InteractiveHeroStudio() {
                   </div>
                   
                   {/* Document format badge */}
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-zinc-100 text-zinc-600 border border-zinc-200 shrink-0">
+                  <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-zinc-100 text-zinc-600 shrink-0">
                     A4 · UTF-8 · Selectable
                   </span>
                 </div>
@@ -316,10 +316,10 @@ export function InteractiveHeroStudio() {
                     DYNAMIC BULLET: TRANSFORMING (ORIGINAL vs. STAR OPTIMIZED)
                 ======================================================== */}
                 <div 
-                  className={`p-3.5 rounded-xl border transition-all duration-300 relative ${
+                  className={`p-4 rounded-xl transition-all duration-300 relative ${
                     activeStage === 'original'
-                      ? 'bg-rose-50/80 border-rose-200 text-zinc-700'
-                      : 'bg-gradient-to-r from-emerald-50/90 via-blue-50/60 to-purple-50/40 border-emerald-300 shadow-xs'
+                      ? 'bg-rose-50/90 text-zinc-700'
+                      : 'bg-gradient-to-r from-emerald-50/95 via-blue-50/70 to-purple-50/50 shadow-xs'
                   }`}
                 >
                   {/* Bullet Transformation Badge */}
@@ -340,10 +340,10 @@ export function InteractiveHeroStudio() {
                       )}
                     </span>
 
-                    <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
+                    <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
                       activeStage === 'original' 
                         ? 'bg-rose-100 text-rose-700' 
-                        : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        : 'bg-emerald-100 text-emerald-800'
                     }`}>
                       {activeStage === 'original' ? '+0 Pts' : '+40 Pts ATS Lift'}
                     </span>
@@ -374,7 +374,7 @@ export function InteractiveHeroStudio() {
 
                   {/* Grounding Verification Markers */}
                   {activeStage !== 'original' && (
-                    <div className="flex items-center gap-3 mt-2.5 pt-2 border-t border-emerald-200/60 text-[10px] text-zinc-600">
+                    <div className="flex items-center gap-3 mt-2.5 pt-2 text-[10px] text-zinc-600">
                       <span className="inline-flex items-center gap-1 font-medium text-emerald-700">
                         <CheckCheck className="w-3 h-3" />
                         <span>STAR Metric Verified</span>
@@ -397,7 +397,7 @@ export function InteractiveHeroStudio() {
                 </div>
 
                 {/* Skills Tag Cloud */}
-                <div className="pt-2 border-t border-zinc-200">
+                <div className="pt-3">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 font-mono block mb-1.5">
                     Core Competencies & Verified Skills
                   </span>
@@ -405,7 +405,7 @@ export function InteractiveHeroStudio() {
                     {['SQL (PostgreSQL, BigQuery)', 'dbt', 'A/B Testing', 'Amplitude', 'Python', 'Tableau'].map((skill) => (
                       <span
                         key={skill}
-                        className="px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 text-[10px] font-medium border border-zinc-200/80"
+                        className="px-2.5 py-1 rounded-md bg-zinc-100 text-zinc-700 text-[10.5px] font-medium"
                       >
                         {skill}
                       </span>
@@ -422,7 +422,7 @@ export function InteractiveHeroStudio() {
         {/* ========================================================
             BOTTOM INTERACTIVE HINT & CALL TO ACTION
         ======================================================== */}
-        <div className="mt-8 pt-4 border-t border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-400">
+        <div className="mt-8 pt-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-400">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#5525F5] animate-ping" />
             <span>Click tabs above to toggle between Original Draft, ATS Intelligence, and Job-Matched STAR.</span>

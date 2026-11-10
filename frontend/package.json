@@ -11,13 +11,15 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@types/three": "^0.187.0",
     "html-to-image": "^1.11.13",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.56.0",
     "next": "16.4.4",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "three": "^0.187.0"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",

@@ -4,10 +4,12 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Logo } from '../ui/Logo';
+import { DappledLight } from '@/components/reactbits';
 
 export function Footer() {
   const pathname = usePathname();
   if (pathname?.startsWith('/app') || pathname?.startsWith('/admin')) return null;
+
   const productLinks = [
     { label: 'AI Resume Builder', href: '/login' },
     { label: 'Resume Checker', href: '/tools/resume-checker' },
@@ -33,8 +35,17 @@ export function Footer() {
   ];
 
   return (
-    <footer className="w-full border-t border-white/[0.08] bg-[#07080E] text-zinc-400">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+    <footer className="w-full bg-[#07080E] text-zinc-400 relative overflow-hidden">
+      {/* React Bits Pro: Dappled Light swaying leaf sunlight coming from right to left */}
+      <DappledLight 
+        placement="top-right" 
+        lightColor="#7C3AED" 
+        beamOpacity={0.4} 
+        leafColor="#05060A"
+        speed={0.9} 
+      />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24 relative z-10">
         {/* Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-12">
           {/* Brand Column */}
@@ -105,8 +116,8 @@ export function Footer() {
           </div>
         </div>
 
-        {/* Bottom Bar */}
-        <div className="mt-12 pt-8 border-t border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-4">
+        {/* Bottom Bar without harsh divider line */}
+        <div className="mt-16 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-zinc-500 font-mono">
             © 2026 HypeResume. All rights reserved.
           </p>

@@ -85,7 +85,7 @@ export function AtsCompatibilityCloud() {
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 text-center">
-      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white/[0.04] text-zinc-300 text-xs font-semibold mb-3 border border-white/[0.08] font-mono uppercase tracking-wider">
+      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] text-zinc-300 text-xs font-semibold mb-3 font-mono uppercase tracking-wider shadow-inner">
         <span className="w-1.5 h-1.5 rounded-full bg-[#5525F5] animate-pulse" />
         <span>Standard Single-Column Layouts</span>
       </div>
@@ -104,7 +104,7 @@ export function AtsCompatibilityCloud() {
           {[...atsEngines, ...atsEngines].map((engine, idx) => (
             <div
               key={`${engine.name}-${idx}`}
-              className="flex items-center justify-center px-6 py-3.5 rounded-xl bg-[#121422]/70 backdrop-blur-md border border-white/[0.08] shadow-lg hover:border-violet-500/50 hover:shadow-[0_0_30px_rgba(85,37,245,0.25)] hover:-translate-y-1 transition-all duration-300 shrink-0 min-w-[145px] cursor-default"
+              className="flex items-center justify-center px-6 py-3.5 rounded-xl bg-[#0E101B]/90 backdrop-blur-md shadow-lg hover:shadow-2xl hover:shadow-violet-950/30 hover:bg-[#131626] hover:-translate-y-1 transition-all duration-300 shrink-0 min-w-[145px] cursor-default"
             >
               {engine.render()}
             </div>
