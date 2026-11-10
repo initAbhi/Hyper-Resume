@@ -132,6 +132,29 @@ export interface Resume {
   updatedAt: string;
 }
 
+export interface PdfCompressionVerification {
+  validPdf: boolean;
+  pageCountPreserved: boolean;
+  textExtractionPassed: boolean;
+  isScannedPdf?: boolean;
+}
+
+export interface PdfCompressionResponse {
+  success: boolean;
+  status: 'COMPRESSED' | 'SIZE_LIMIT_NOT_REACHED' | 'ALREADY_OPTIMIZED' | 'VERIFICATION_FAILED';
+  originalSize: number;
+  compressedSize: number;
+  reductionPercentage: number;
+  withinUploadLimit: boolean;
+  verification: PdfCompressionVerification;
+  message?: string;
+  parsed?: {
+    fileName: string;
+    extractedTextLength: number;
+    draft: ParsedProfileDraft;
+  };
+}
+
 export interface ResumeVersion {
   id: string;
   resumeId: string;
@@ -1075,6 +1098,29 @@ export class ApiClient {
       extractedTextLength: number;
       draft: ParsedProfileDraft;
     }>('/resume-parsing/upload', {
+      method: 'POST',
+      body: formData,
+    });
+    return res.data;
+  }
+
+  // --- Smart PDF Compression Endpoints ---
+  async compressResumePdf(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await this.request<PdfCompressionResponse>('/resume-parsing/compress', {
+      method: 'POST',
+      body: formData,
+    });
+    return res.data;
+  }
+
+  async compressAndParseResume(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await this.request<PdfCompressionResponse>('/resume-parsing/compress-and-parse', {
       method: 'POST',
       body: formData,
     });

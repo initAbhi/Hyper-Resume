@@ -40,6 +40,7 @@ describe('ResumesService - AI Profile Adaptation (Safeguards 1, 2, 3, 4, 5, 6)',
     summary: 'Engineered planetary scale systems at Google.',
     skills: [{ name: 'Go' }, { name: 'Kubernetes' }, { name: 'Kafka' }],
     experience: [],
+    education: [],
   };
 
   beforeEach(() => {

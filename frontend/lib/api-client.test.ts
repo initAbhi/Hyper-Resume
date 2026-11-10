@@ -180,6 +180,103 @@ describe('ApiClient', () => {
     );
   });
 
+  it('should compress resume pdf via /resume-parsing/compress', async () => {
+    const mockCompressRes = {
+      data: {
+        success: true,
+        status: 'COMPRESSED',
+        originalSize: 15728640,
+        compressedSize: 4500000,
+        reductionPercentage: 71.4,
+        withinUploadLimit: true,
+        verification: {
+          validPdf: true,
+          pageCountPreserved: true,
+          textExtractionPassed: true,
+        },
+      },
+      meta: { requestId: 'req-compress-1', timestamp: new Date().toISOString() },
+    };
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: async () => mockCompressRes,
+    } as unknown as Response) as unknown as typeof fetch;
+
+    const client = new ApiClient('http://localhost:3001/api/v1');
+    const fakeFile = new File(['%PDF-1.4 ... large binary data'], 'heavy_resume.pdf', {
+      type: 'application/pdf',
+    });
+    const result = await client.compressResumePdf(fakeFile);
+
+    expect(result.success).toBe(true);
+    expect(result.status).toBe('COMPRESSED');
+    expect(result.reductionPercentage).toBe(71.4);
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:3001/api/v1/resume-parsing/compress',
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.any(FormData),
+      }),
+    );
+  });
+
+  it('should compress and parse resume pdf via /resume-parsing/compress-and-parse', async () => {
+    const mockCompressAndParseRes = {
+      data: {
+        success: true,
+        status: 'COMPRESSED',
+        originalSize: 15728640,
+        compressedSize: 4194304,
+        reductionPercentage: 73.3,
+        withinUploadLimit: true,
+        verification: {
+          validPdf: true,
+          pageCountPreserved: true,
+          textExtractionPassed: true,
+        },
+        parsed: {
+          fileName: 'heavy_resume.pdf',
+          extractedTextLength: 600,
+          draft: {
+            headline: 'Staff Infrastructure Architect',
+            summary: 'Experienced distributed systems engineer',
+            skills: [{ name: 'Go' }],
+            experience: [],
+            education: [],
+          },
+        },
+      },
+      meta: { requestId: 'req-compress-parse-1', timestamp: new Date().toISOString() },
+    };
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: async () => mockCompressAndParseRes,
+    } as unknown as Response) as unknown as typeof fetch;
+
+    const client = new ApiClient('http://localhost:3001/api/v1');
+    const fakeFile = new File(['%PDF-1.4 ... 15mb binary data'], 'heavy_resume.pdf', {
+      type: 'application/pdf',
+    });
+    const result = await client.compressAndParseResume(fakeFile);
+
+    expect(result.success).toBe(true);
+    expect(result.withinUploadLimit).toBe(true);
+    expect(result.parsed?.draft.headline).toBe('Staff Infrastructure Architect');
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:3001/api/v1/resume-parsing/compress-and-parse',
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.any(FormData),
+      }),
+    );
+  });
+
   it('should silently refresh access token on 401 and retry the original request', async () => {
     const client = new ApiClient('http://localhost:3001/api/v1');
     client.setTokens('expired-access-token', 'valid-refresh-token');

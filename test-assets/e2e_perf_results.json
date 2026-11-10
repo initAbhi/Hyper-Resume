@@ -1,0 +1,58 @@
+{
+  "journeys": {
+    "Scenario_A": {
+      "name": "Below 10 MB Normal Upload",
+      "sizeBytes": 1847919,
+      "overLimit": false,
+      "compressionInvoked": false,
+      "atsEligible": true,
+      "verdict": "PASS"
+    },
+    "Scenario_B": {
+      "name": "Oversized PDF Successfully Compressed",
+      "originalSizeBytes": 13384683,
+      "compressedSizeBytes": 240571,
+      "reductionPercentage": 98.2,
+      "status": "COMPRESSED",
+      "verificationPassed": true,
+      "atsEligible": true,
+      "verdict": "PASS"
+    },
+    "Scenario_C": {
+      "name": "Oversized PDF Unable to Reach Limit",
+      "originalSizeBytes": 12522842,
+      "compressedSizeBytes": 12522799,
+      "status": "SIZE_LIMIT_NOT_REACHED",
+      "blockedFromAts": true,
+      "userMessage": "We optimized your resume, but its size is still above our 10 MB limit. You can try another file or use a more optimized PDF.",
+      "verdict": "PASS"
+    },
+    "Scenario_D": {
+      "name": "Corrupted PDF Rejection",
+      "rejected": true,
+      "errMsg": "Invalid PDF header structure. The file is corrupted or not a valid PDF.",
+      "atsInvoked": false,
+      "verdict": "PASS"
+    },
+    "Scenario_E": {
+      "name": "Duplicate Requests Prevention",
+      "deterministic": true,
+      "frontendGuard": "isCompressing flag locks button",
+      "verdict": "PASS"
+    },
+    "Scenario_F": {
+      "name": "ATS Error Recovery",
+      "caughtSafely": true,
+      "userNotified": true,
+      "verdict": "PASS"
+    }
+  },
+  "perfMetrics": {
+    "totalConcurrentDurationMs": 2496,
+    "averagePerRequestMs": 832,
+    "initialHeapMb": 28.54,
+    "peakHeapMb": 28.94,
+    "heapDeltaMb": 0.4,
+    "concurrencyResult": "PASS"
+  }
+}

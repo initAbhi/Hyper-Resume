@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useState, useEffect } from 'react';
+import React, { Suspense, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -13,11 +13,9 @@ import {
   Menu,
   X,
   User as UserIcon,
-  PanelLeftClose,
-  PanelLeftOpen,
+  Pin,
   Mic,
   Search,
-  ExternalLink,
   BookOpen,
   ShieldCheck,
 } from 'lucide-react';
@@ -30,25 +28,125 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, creditBalance, isAuthenticated, isLoading, logout } = useAuth();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [hasHoverSupport, setHasHoverSupport] = useState(true);
 
-  // Load saved collapse preference
+  const hoverEnterTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hoverLeaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Derived expanded state based on state priority:
+  // isPinned = true -> Always expanded
+  // isPinned = false + isHovered = true -> Expanded
+  // isPinned = false + isHovered = false -> Collapsed
+  const isExpanded = isPinned || isHovered;
+  const isCollapsed = !isExpanded;
+
+  // Detect whether device supports hover + fine pointer (desktop vs mobile/tablet touch)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const mediaQuery = window.matchMedia('(hover: hover) and (pointer: fine)');
+      setHasHoverSupport(mediaQuery.matches);
+      const listener = (e: MediaQueryListEvent) => {
+        setHasHoverSupport(e.matches);
+        if (!e.matches) {
+          setIsHovered(false);
+        }
+      };
+      mediaQuery.addEventListener('change', listener);
+      return () => mediaQuery.removeEventListener('change', listener);
+    }
+  }, []);
+
+  // Load saved pin preference (default: unpinned)
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('hyperresume-sidebar-collapsed');
-      if (saved === 'true') setIsCollapsed(true);
+      const savedPin = localStorage.getItem('hyperresume-sidebar-pinned');
+      if (savedPin === 'true') {
+        setIsPinned(true);
+      }
     } catch {}
   }, []);
 
-  const toggleSidebar = () => {
-    setIsCollapsed((prev) => {
+  // Pin / Unpin toggle handler
+  const togglePin = () => {
+    if (hoverEnterTimeoutRef.current) {
+      clearTimeout(hoverEnterTimeoutRef.current);
+      hoverEnterTimeoutRef.current = null;
+    }
+    if (hoverLeaveTimeoutRef.current) {
+      clearTimeout(hoverLeaveTimeoutRef.current);
+      hoverLeaveTimeoutRef.current = null;
+    }
+
+    setIsPinned((prev) => {
       const next = !prev;
       try {
-        localStorage.setItem('hyperresume-sidebar-collapsed', String(next));
+        localStorage.setItem('hyperresume-sidebar-pinned', String(next));
       } catch {}
+      // If unpinning on desktop while hovering over the pin control, retain hover expansion
+      if (!next && hasHoverSupport) {
+        setIsHovered(true);
+      }
       return next;
     });
   };
+
+  // Hover handlers with debounce delays to prevent accidental triggers and flickering
+  const handleMouseEnter = () => {
+    if (!hasHoverSupport) return;
+
+    if (hoverLeaveTimeoutRef.current) {
+      clearTimeout(hoverLeaveTimeoutRef.current);
+      hoverLeaveTimeoutRef.current = null;
+    }
+
+    if (isPinned) return;
+
+    if (!hoverEnterTimeoutRef.current) {
+      hoverEnterTimeoutRef.current = setTimeout(() => {
+        setIsHovered(true);
+        hoverEnterTimeoutRef.current = null;
+      }, 120);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverEnterTimeoutRef.current) {
+      clearTimeout(hoverEnterTimeoutRef.current);
+      hoverEnterTimeoutRef.current = null;
+    }
+
+    if (isPinned) return;
+
+    if (!hoverLeaveTimeoutRef.current) {
+      hoverLeaveTimeoutRef.current = setTimeout(() => {
+        setIsHovered(false);
+        hoverLeaveTimeoutRef.current = null;
+      }, 150);
+    }
+  };
+
+  // Accessibility focus handlers
+  const handleFocus = () => {
+    if (isPinned || !hasHoverSupport) return;
+    setIsHovered(true);
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLElement>) => {
+    if (isPinned) return;
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsHovered(false);
+    }
+  };
+
+  // Cleanup timeout timers on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverEnterTimeoutRef.current) clearTimeout(hoverEnterTimeoutRef.current);
+      if (hoverLeaveTimeoutRef.current) clearTimeout(hoverLeaveTimeoutRef.current);
+    };
+  }, []);
 
   // Authentication protection
   useEffect(() => {
@@ -93,46 +191,73 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#F7F8FA] dark:bg-[#0D0F12] text-[#1A1D23] dark:text-[#F0F2F5] print:h-auto print:overflow-visible print:bg-white print:block">
-      {/* Sidebar Navigation for Desktop (Fixed height, independent scroll, collapsible) */}
+      {/* Desktop Sidebar Layout Placeholder (Preserves space in flex layout, preventing layout jumps) */}
+      <div
+        className={`print:hidden shrink-0 hidden md:block transition-all duration-200 ease-in-out ${
+          isPinned ? 'w-[288px]' : 'w-[76px]'
+        }`}
+        aria-hidden="true"
+      />
+
+      {/* Sidebar Navigation for Desktop (Fixed height, hybrid hover + pin) */}
       <aside
-        className={`print:hidden ${
-          isCollapsed ? 'w-16' : 'w-60'
-        } h-screen border-r border-[#E2E5E9] dark:border-[#252A33] bg-white dark:bg-[#14171C] flex flex-col justify-between shrink-0 hidden md:flex transition-all duration-200 ease-in-out z-30 select-none`}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        className={`print:hidden fixed top-0 bottom-0 left-0 h-screen ${
+          isExpanded ? 'w-[288px]' : 'w-[76px]'
+        } border-r border-[#E2E5E9] dark:border-[#252A33] bg-white dark:bg-[#14171C] flex flex-col justify-between shrink-0 hidden md:flex transition-all duration-200 ease-in-out z-30 select-none ${
+          !isPinned && isExpanded ? 'shadow-xl dark:shadow-2xl dark:shadow-black/60' : ''
+        }`}
       >
         <div className="flex flex-col flex-1 min-h-0">
           {/* Workspace Brand Header */}
-          <div className={`px-4 border-b border-[#E2E5E9] dark:border-[#252A33] flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} h-14 shrink-0`}>
+          <div
+            className={`px-4 border-b border-[#E2E5E9] dark:border-[#252A33] flex items-center ${
+              isExpanded ? 'justify-between' : 'justify-center'
+            } h-14 shrink-0 transition-colors`}
+          >
             <Link href="/app" className="flex items-center gap-2 min-w-0" title="HypeResume Workspace">
-              {isCollapsed ? (
-                <Logo variant="icon" size="md" priority />
-              ) : (
+              {isExpanded ? (
                 <Logo variant="full" size="md" priority />
+              ) : (
+                <Logo variant="icon" size="md" priority />
               )}
             </Link>
 
-            {!isCollapsed && (
+            {isExpanded && (
               <button
                 type="button"
-                onClick={toggleSidebar}
-                className="p-1 rounded text-[#848D9A] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5] hover:bg-[#F1F3F5] dark:hover:bg-[#1D2128] transition-colors"
-                title="Collapse sidebar"
-                aria-label="Collapse sidebar"
+                onClick={togglePin}
+                className={`p-1.5 rounded-md transition-colors ${
+                  isPinned
+                    ? 'text-[#285FEA] bg-[#285FEA]/10 hover:bg-[#285FEA]/20 dark:bg-[#285FEA]/20 dark:text-[#3B75F2]'
+                    : 'text-[#848D9A] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5] hover:bg-[#F1F3F5] dark:hover:bg-[#1D2128]'
+                }`}
+                title={isPinned ? 'Unpin sidebar (enable hover-to-expand)' : 'Pin sidebar (keep expanded)'}
+                aria-label={isPinned ? 'Unpin sidebar' : 'Pin sidebar'}
+                aria-pressed={isPinned}
               >
-                <PanelLeftClose className="w-4 h-4" />
+                <Pin
+                  className={`w-4 h-4 transition-transform duration-200 ${
+                    isPinned ? 'fill-current rotate-0' : '-rotate-45'
+                  }`}
+                />
               </button>
             )}
           </div>
 
-          {isCollapsed && (
+          {!isExpanded && (
             <div className="p-2 flex justify-center border-b border-[#E2E5E9] dark:border-[#252A33] shrink-0">
               <button
                 type="button"
-                onClick={toggleSidebar}
-                className="p-1 rounded text-[#848D9A] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5] hover:bg-[#F1F3F5] dark:hover:bg-[#1D2128] transition-colors"
-                title="Expand sidebar"
-                aria-label="Expand sidebar"
+                onClick={togglePin}
+                className="p-1.5 rounded-md text-[#848D9A] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5] hover:bg-[#F1F3F5] dark:hover:bg-[#1D2128] transition-colors"
+                title="Pin sidebar (keep expanded)"
+                aria-label="Pin sidebar"
               >
-                <PanelLeftOpen className="w-4 h-4" />
+                <Pin className="w-4 h-4 -rotate-45" />
               </button>
             </div>
           )}
@@ -150,7 +275,9 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                 <div key={item.href} className="relative group">
                   <Link
                     href={item.href}
-                    className={`flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-2.5 px-2.5'} py-2 rounded-md text-xs font-medium transition-colors ${
+                    className={`flex items-center ${
+                      isExpanded ? 'gap-2.5 px-2.5' : 'justify-center px-0'
+                    } py-2 rounded-md text-xs font-medium transition-colors ${
                       isActive
                         ? 'bg-[#F1F3F5] dark:bg-[#1D2128] text-[#1A1D23] dark:text-[#F0F2F5] font-semibold'
                         : 'text-[#5A6270] dark:text-[#9EA7B4] hover:bg-[#F7F8FA] dark:hover:bg-[#1D2128]/60 hover:text-[#1A1D23] dark:hover:text-[#F0F2F5]'
@@ -163,9 +290,9 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                           : 'text-[#848D9A] dark:text-[#6C7584] group-hover:text-[#5A6270] dark:group-hover:text-[#9EA7B4]'
                       }`}
                     />
-                    {!isCollapsed && <span className="truncate">{item.label}</span>}
-                    {!isCollapsed && item.badge && (
-                      <span className="ml-auto text-[10px] font-medium px-1.5 py-0.2 rounded bg-[#F1F3F5] dark:bg-[#1D2128] text-[#848D9A] dark:text-[#6C7584] border border-[#E2E5E9] dark:border-[#252A33]">
+                    {isExpanded && <span className="truncate whitespace-nowrap">{item.label}</span>}
+                    {isExpanded && item.badge && (
+                      <span className="ml-auto text-[10px] font-medium px-1.5 py-0.2 rounded bg-[#F1F3F5] dark:bg-[#1D2128] text-[#848D9A] dark:text-[#6C7584] border border-[#E2E5E9] dark:border-[#252A33] shrink-0">
                         {item.badge}
                       </span>
                     )}
@@ -184,8 +311,12 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* User Workspace Info, Settings & Logout */}
-        <div className={`p-2.5 border-t border-[#E2E5E9] dark:border-[#252A33] shrink-0 ${isCollapsed ? 'space-y-1.5' : 'space-y-1'}`}>
-          {!isCollapsed ? (
+        <div
+          className={`p-2.5 border-t border-[#E2E5E9] dark:border-[#252A33] shrink-0 ${
+            isExpanded ? 'space-y-1' : 'space-y-1.5'
+          }`}
+        >
+          {isExpanded ? (
             <>
               {/* Candidate Profile Snippet */}
               <div className="px-2 py-1.5 rounded-md bg-[#F7F8FA] dark:bg-[#1D2128]/50 border border-[#E2E5E9] dark:border-[#252A33] mb-1">
@@ -220,8 +351,8 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                 }`}
                 title="Workspace Settings"
               >
-                <Settings className="w-3.5 h-3.5 text-[#848D9A]" />
-                <span>Settings</span>
+                <Settings className="w-3.5 h-3.5 text-[#848D9A] shrink-0" />
+                <span className="truncate">Settings</span>
               </Link>
 
               {/* Sign Out Button */}
@@ -229,8 +360,8 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                 onClick={() => logout()}
                 className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-[#5A6270] dark:text-[#9EA7B4] hover:text-[#DC2626] dark:hover:text-[#EF4444] rounded-md hover:bg-[#F7F8FA] dark:hover:bg-[#1D2128] transition-colors cursor-pointer"
               >
-                <LogOut className="w-3.5 h-3.5 text-[#848D9A]" />
-                <span>Sign Out</span>
+                <LogOut className="w-3.5 h-3.5 text-[#848D9A] shrink-0" />
+                <span className="truncate">Sign Out</span>
               </button>
             </>
           ) : (

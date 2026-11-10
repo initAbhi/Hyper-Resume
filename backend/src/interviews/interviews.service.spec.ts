@@ -161,7 +161,7 @@ describe('InterviewsService', () => {
 
     it('should throw ForbiddenException if free user already completed trial', async () => {
       mockPaymentRepo.exists.mockResolvedValue(false);
-      mockSessionRepo.findOne.mockImplementation(async ({ where }) => {
+      mockSessionRepo.findOne.mockImplementation(async ({ where }: any) => {
         if (where.isFreeTrial) return { id: 'past-sess-1', isFreeTrial: true, status: 'completed' };
         return null;
       });
@@ -298,12 +298,12 @@ describe('InterviewsService', () => {
 
       expect(report.isPaidUser).toBe(false);
       // Question 1 model answer preserved
-      expect(report.turns[0].evaluation.idealAnswerDraft).toBe('Model Answer 1');
+      expect(report.turns[0]?.evaluation?.idealAnswerDraft).toBe('Model Answer 1');
       // Questions 2 & 3 redacted
-      expect(report.turns[1].evaluation.idealAnswerDraft).toBeUndefined();
-      expect((report.turns[1].evaluation as any).isLockedForPro).toBe(true);
-      expect(report.turns[2].evaluation.idealAnswerDraft).toBeUndefined();
-      expect((report.turns[2].evaluation as any).isLockedForPro).toBe(true);
+      expect(report.turns[1]?.evaluation?.idealAnswerDraft).toBeUndefined();
+      expect((report.turns[1]?.evaluation as any).isLockedForPro).toBe(true);
+      expect(report.turns[2]?.evaluation?.idealAnswerDraft).toBeUndefined();
+      expect((report.turns[2]?.evaluation as any).isLockedForPro).toBe(true);
     });
 
     it('should preserve all model answers for paid credit-pack customers', async () => {
@@ -328,9 +328,9 @@ describe('InterviewsService', () => {
       const report = await service.getReport(mockUser.id, 'sess-123');
 
       expect(report.isPaidUser).toBe(true);
-      expect(report.turns[0].evaluation.idealAnswerDraft).toBe('Model Answer 1');
-      expect(report.turns[1].evaluation.idealAnswerDraft).toBe('Model Answer 2');
-      expect(report.turns[2].evaluation.idealAnswerDraft).toBe('Model Answer 3');
+      expect(report.turns[0]?.evaluation?.idealAnswerDraft).toBe('Model Answer 1');
+      expect(report.turns[1]?.evaluation?.idealAnswerDraft).toBe('Model Answer 2');
+      expect(report.turns[2]?.evaluation?.idealAnswerDraft).toBe('Model Answer 3');
     });
   });
 });
