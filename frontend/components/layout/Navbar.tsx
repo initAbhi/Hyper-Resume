@@ -84,8 +84,8 @@ function NavbarInner() {
     <header
       className={`fixed top-0 left-0 right-0 z-50 w-full transition-all duration-300 ${
         isScrolled
-          ? 'bg-[#0a0a0a]/80 backdrop-blur-md border-b border-white/[0.04] shadow-sm'
-          : 'bg-transparent border-b border-transparent shadow-none'
+          ? 'bg-[#0a0a0a]/85 backdrop-blur-md border-b border-white/[0.04] shadow-sm'
+          : 'bg-transparent border-none shadow-none'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between relative">
@@ -100,24 +100,24 @@ function NavbarInner() {
           </Link>
         </div>
 
-        {/* Center: Desktop Navigation Links (Centered, clean, elegant) */}
+        {/* Center: Desktop Navigation Links (Centered vertically & horizontally, crystal clear contrast) */}
         <nav
-          className="hidden md:flex items-center gap-1 sm:gap-2 absolute left-1/2 -translate-x-1/2"
+          className="hidden md:flex items-center gap-1 sm:gap-1.5 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-3 py-1 rounded-full bg-black/30 backdrop-blur-md border border-white/[0.07] shadow-sm"
           aria-label="Main Navigation"
         >
           {/* Product Dropdown */}
           <div className="relative" ref={dropdownRef}>
             <button
-              className="flex items-center gap-1 px-3.5 py-1.5 rounded-lg text-sm text-zinc-300 hover:text-white hover:bg-white/[0.06] transition-colors font-medium cursor-pointer"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold text-white/90 hover:text-white hover:bg-white/[0.1] transition-colors cursor-pointer drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
               onClick={() => setIsProductOpen(!isProductOpen)}
               aria-expanded={isProductOpen}
             >
-              Product
+              <span>Product</span>
               <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isProductOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {isProductOpen && (
-              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-72 bg-[#0E101A]/95 backdrop-blur-2xl rounded-2xl shadow-2xl p-2 border border-white/[0.08] animate-slide-up z-50">
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-72 bg-[#0E101A]/95 backdrop-blur-2xl rounded-2xl shadow-2xl p-2 border border-white/[0.08] animate-slide-up z-50">
                 {productLinks.map((link) => (
                   <Link
                     key={link.href}
@@ -135,10 +135,10 @@ function NavbarInner() {
 
           <Link
             href="/examples"
-            className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-colors drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] ${
               pathname.startsWith('/examples')
-                ? 'text-white font-semibold'
-                : 'text-zinc-300 hover:text-white hover:bg-white/[0.06]'
+                ? 'text-white bg-white/[0.14]'
+                : 'text-white/90 hover:text-white hover:bg-white/[0.1]'
             }`}
           >
             Sample Library
@@ -146,17 +146,17 @@ function NavbarInner() {
 
           <Link
             href="/pricing"
-            className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-colors drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] ${
               pathname.startsWith('/pricing')
-                ? 'text-white font-semibold'
-                : 'text-zinc-300 hover:text-white hover:bg-white/[0.06]'
+                ? 'text-white bg-white/[0.14]'
+                : 'text-white/90 hover:text-white hover:bg-white/[0.1]'
             }`}
           >
             Pricing
           </Link>
         </nav>
 
-        {/* Right: Desktop Actions (No dark mode toggle! Clean pill button) */}
+        {/* Right: Desktop Actions (Vertically aligned, crisp contrast) */}
         <div className="hidden md:flex items-center gap-3">
           {isAuthenticated ? (
             <>
@@ -166,7 +166,7 @@ function NavbarInner() {
               <Link href="/app">
                 <button
                   type="button"
-                  className="bg-white hover:bg-zinc-100 text-zinc-950 text-xs font-semibold h-9 px-4.5 rounded-lg shadow-sm cursor-pointer transition-colors"
+                  className="bg-white hover:bg-zinc-100 text-zinc-950 text-xs font-semibold h-9 px-4.5 rounded-lg shadow-md cursor-pointer transition-colors"
                 >
                   Dashboard
                 </button>
@@ -176,14 +176,14 @@ function NavbarInner() {
             <>
               <Link
                 href="/login"
-                className="text-xs font-medium text-zinc-300 hover:text-white transition-colors px-2.5 py-1.5"
+                className="text-xs font-semibold text-white/90 hover:text-white transition-colors px-2.5 py-1.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
               >
                 Log in
               </Link>
               <Link href="/login">
                 <button
                   type="button"
-                  className="bg-white hover:bg-zinc-100 text-zinc-950 text-xs font-semibold h-9 px-4.5 rounded-lg shadow-sm cursor-pointer transition-colors flex items-center gap-1.5"
+                  className="bg-white hover:bg-zinc-100 text-zinc-950 text-xs font-semibold h-9 px-4.5 rounded-lg shadow-md cursor-pointer transition-colors flex items-center gap-1.5"
                 >
                   <span>Get Started</span>
                 </button>

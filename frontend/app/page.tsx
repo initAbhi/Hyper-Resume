@@ -40,21 +40,21 @@ export default function HomePage() {
         trigger="mount"
         revealDuration={2500}
         revealDelay={300}
-        thickness={3.0}
-        glow={1.0}
-        spill={1.0}
+        thickness={2.5}
+        glow={0.85}
+        spill={0.85}
         reach={1.0}
-        intensity={1.0}
-        feather={0.15}
-        inset={24}
+        intensity={0.9}
+        feather={0.2}
+        inset={0}
         length={0.9}
-        hum={1.0}
-        flicker={1.0}
-        mirrored={true}
+        hum={0.5}
+        flicker={0.5}
+        mirrored={false}
         interactive={false}
         intro={false}
         paused={false}
-        className="w-full pt-20 pb-20 sm:pt-24 sm:pb-32 px-4 sm:px-6 lg:px-8 bg-[#0a0a0a] text-white z-10"
+        className="w-full pt-24 pb-20 sm:pt-28 sm:pb-32 px-4 sm:px-6 lg:px-8 bg-[#0a0a0a] text-white z-10"
       >
         <div className="max-w-6xl mx-auto relative z-10 flex flex-col items-center text-center">
           
