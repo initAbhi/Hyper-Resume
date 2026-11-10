@@ -107,7 +107,7 @@ fbq('track', 'PageView');`,
         <MetaPixel />
         <ThemeProvider>
           <AuthProvider>
-            <Suspense fallback={<header className="sticky top-0 z-50 w-full h-16 border-b border-zinc-100 dark:border-zinc-900 bg-white/80 dark:bg-zinc-950/80" />}>
+            <Suspense fallback={<header className="fixed top-0 z-50 w-full h-16 bg-transparent" />}>
               <Navbar />
             </Suspense>
             <main className="flex-1 flex flex-col">{children}</main>

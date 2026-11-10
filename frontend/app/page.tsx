@@ -54,7 +54,7 @@ export default function HomePage() {
         interactive={false}
         intro={false}
         paused={false}
-        className="w-full -mt-14 pt-24 pb-20 sm:pt-28 sm:pb-32 px-4 sm:px-6 lg:px-8 bg-[#0a0a0a] text-white z-10"
+        className="w-full pt-20 pb-20 sm:pt-24 sm:pb-32 px-4 sm:px-6 lg:px-8 bg-[#0a0a0a] text-white z-10"
       >
         <div className="max-w-6xl mx-auto relative z-10 flex flex-col items-center text-center">
           
