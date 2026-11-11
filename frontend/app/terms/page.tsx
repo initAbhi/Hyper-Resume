@@ -3,7 +3,7 @@ import { constructMetadata } from '@/lib/seo';
 
 export const metadata = constructMetadata({
   title: 'Terms of Service',
-  description: 'Terms of service for HypeResume. Clear rules on usage, fair subscriptions, and truthful resume creation.',
+  description: 'Terms of service for HypeResume. Clear rules on usage, one-time Pro passes, and truthful resume creation.',
   path: '/terms',
 });
 
@@ -13,7 +13,7 @@ export default function TermsPage() {
       <h1 className="text-3xl font-extrabold tracking-tight mb-2 text-zinc-900 dark:text-zinc-50">
         Terms of Service
       </h1>
-      <p className="text-xs text-zinc-500 mb-8 font-mono">Last updated: October 2026</p>
+      <p className="text-xs text-zinc-500 mb-8 font-mono">Last updated: November 2026</p>
 
       <div className="space-y-8 text-sm leading-relaxed">
         <section>
@@ -36,10 +36,10 @@ export default function TermsPage() {
 
         <section>
           <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-2">
-            3. Subscriptions & One-Time Packs
+            3. One-Time Pro Passes & Founding Lifetime Access
           </h2>
           <p className="text-zinc-600 dark:text-zinc-400">
-            One-time packs (such as the Job Hunt Pack) do not automatically renew. Monthly subscriptions renew automatically each billing cycle and can be canceled at any time prior to renewal via your account dashboard.
+            All HypeResume Pro passes (1-Week Pass, Monthly Pass, 6-Month Pass, and the limited Founding Lifetime Offer) are processed as transparent one-time purchases via Dodo Payments. They do not auto-renew or trigger surprise recurring rebills. Once a timed pass expires, your resumes and clean PDF export capabilities remain accessible on the Free Starter tier.
           </p>
         </section>
 

@@ -26,7 +26,7 @@ export function CredibilityAndTrustSection() {
     {
       icon: FileText,
       title: 'Standard Parsing Conventions',
-      desc: 'Resumes are typeset in single-column layouts with recognized headings, standard date formatting, and selectable UTF-8 vector text layers. No tables or floating boxes that break ATS text extraction.',
+      desc: 'Templates prioritize clean single-column ATS defaults alongside selectable-text modern layouts—with recognized headings, standard dates, and selectable UTF-8 vector layers without broken tables or floating text boxes.',
       attribute: 'Deterministic Flow',
     },
     {

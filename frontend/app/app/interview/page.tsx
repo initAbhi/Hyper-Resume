@@ -451,7 +451,7 @@ export default function AiInterviewStudioPage() {
               <span>Free Starter Entitlement</span>
             </div>
             <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              New accounts receive 1 complimentary Quick Practice trial (2 welcome credits). Upgrade to Job Hunt Pack (₹399) or Pro (₹899) to unlock full mock interviews and all model answers.
+              New accounts receive 5 welcome credits for quick practice trials. Upgrade to HypeResume Pro (starting at ₹149 / $3 for 1 week, ₹399/mo, ₹1,200/6 mo, or ₹999/$19 Founding Lifetime) for unlimited mock interviews and all model answers.
             </p>
           </div>
         </div>

@@ -362,10 +362,11 @@ export function DoubleColumnTemplate({
         </div>
 
         {/* Page 1 Footer */}
-        <div className="pt-3 mt-auto border-t border-zinc-100 flex items-center justify-between text-[10px] text-zinc-400 font-inter select-none">
-          <span>hype-resume.com</span>
-          <span>{needsSecondPage ? 'Page 1 of 2' : 'Powered by HypeResume'}</span>
-        </div>
+        {needsSecondPage && (
+          <div className="pt-3 mt-auto border-t border-zinc-100 flex items-center justify-end text-[10px] text-zinc-400 font-inter select-none">
+            <span>Page 1 of 2</span>
+          </div>
+        )}
       </div>
 
       {/* ================= PAGE BREAK DIVIDER (Screen Only) ================= */}

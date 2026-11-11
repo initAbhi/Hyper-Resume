@@ -29,6 +29,7 @@ import { InterviewsModule } from './interviews/interviews.module.js';
 import { CoverLettersModule } from './cover-letters/cover-letters.module.js';
 import { LinkedInModule } from './linkedin/linkedin.module.js';
 import { JobDiscoveryModule } from './job-discovery/job-discovery.module.js';
+import { AnalyticsModule } from './analytics/analytics.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 
@@ -63,6 +64,7 @@ import { AppService } from './app.service.js';
     CoverLettersModule,
     LinkedInModule,
     JobDiscoveryModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [

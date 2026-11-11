@@ -83,7 +83,7 @@ export default function HomePage() {
 
           {/* Action CTAs */}
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5 w-full sm:w-auto">
-            <Link href="/login" className="w-full sm:w-auto">
+            <Link href="/register" className="w-full sm:w-auto">
               <button
                 type="button"
                 className="w-full sm:w-auto inline-flex items-center justify-center rounded-full bg-white hover:bg-zinc-100 text-zinc-950 font-semibold text-sm h-11 px-7 shadow-xl shadow-indigo-500/10 gap-2 cursor-pointer transition-all"
@@ -97,7 +97,7 @@ export default function HomePage() {
                 type="button"
                 className="w-full sm:w-auto inline-flex items-center justify-center rounded-full text-sm font-semibold h-11 px-6 bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/[0.08] transition-all shadow-sm backdrop-blur-md cursor-pointer"
               >
-                <span>Explore the Product</span>
+                <span>Check Resume ATS Free</span>
               </button>
             </Link>
           </div>
@@ -106,17 +106,17 @@ export default function HomePage() {
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-zinc-400 font-medium">
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Standard single-column formats</span>
+              <span>5 free AI credits &bull; No card required</span>
             </div>
-            <span className="text-zinc-600 hidden sm:inline">•</span>
+            <span className="text-zinc-600 hidden sm:inline">&bull;</span>
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Evidence-based optimization</span>
+              <span>Zero fake metrics &amp; evidence-cited match</span>
             </div>
-            <span className="text-zinc-600 hidden sm:inline">•</span>
+            <span className="text-zinc-600 hidden sm:inline">&bull;</span>
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Free vector PDF export</span>
+              <span>Free unwatermarked PDF &amp; DOCX export</span>
             </div>
           </div>
 

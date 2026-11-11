@@ -9,11 +9,17 @@ describe('AdminService', () => {
   let mockResumeRepo: any;
   let mockDodoProvider: any;
 
+  let settingsStore: Map<string, any>;
+
   beforeEach(() => {
+    settingsStore = new Map();
     mockSettingRepo = {
-      findOne: vi.fn(),
+      findOne: vi.fn(({ where }: any) => Promise.resolve(settingsStore.get(where?.key) || null)),
       create: vi.fn((data) => ({ ...data })),
-      save: vi.fn((data) => Promise.resolve(data)),
+      save: vi.fn((data) => {
+        if (data?.key) settingsStore.set(data.key, data);
+        return Promise.resolve(data);
+      }),
     };
 
     mockUserRepo = {
@@ -107,5 +113,25 @@ describe('AdminService', () => {
     expect(stats.totalPayments).toBe(5);
     expect(stats.totalRevenueMinor).toBe(129800);
     expect(stats.totalRevenueFormatted).toBe('₹1,298');
+  });
+
+  it('should return real zero-based analytics overview instead of hardcoded synthetic traffic', async () => {
+    const analytics = await service.getAnalyticsOverview();
+    expect(analytics.overview.uniqueVisitors).toBe(0);
+    expect(analytics.overview.pageViews).toBe(0);
+    expect(analytics.topReferrers).toEqual([]);
+    expect(analytics.chartData).toHaveLength(6);
+  });
+
+  it('should update Founding Lifetime promo cap and banner copy cleanly', async () => {
+    settingsStore.clear();
+    const updated = await service.updatePromoSettings({
+      enabled: true,
+      totalCap: 25,
+      bannerText: 'Founding Launch: First 25 Lifetime seats at ₹999',
+    });
+    expect(updated.totalCap).toBe(25);
+    expect(updated.remainingSeats).toBe(25);
+    expect(mockSettingRepo.save).toHaveBeenCalled();
   });
 });

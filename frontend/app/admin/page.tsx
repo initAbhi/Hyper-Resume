@@ -174,14 +174,10 @@ export default function AdminOverviewPage() {
           <div className="text-xs font-medium text-slate-500">Unique Visitors</div>
           <div className="mt-2 flex items-baseline gap-2.5">
             <span className="text-2xl font-extrabold text-slate-900 tracking-tight">
-              {analytics?.overview.uniqueVisitors.toLocaleString() || '23,876'}
-            </span>
-            <span className="inline-flex items-center gap-0.5 rounded-md bg-emerald-50 px-1.5 py-0.5 text-xs font-bold text-emerald-600">
-              <TrendingUp className="h-3 w-3" />
-              24.5%
+              {(analytics?.overview.uniqueVisitors ?? 0).toLocaleString()}
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-slate-400">Compare to last week</p>
+          <p className="mt-1 text-[11px] text-slate-400">First-party tracked sessions</p>
         </div>
 
         {/* Card 2: Page Views */}
@@ -189,14 +185,10 @@ export default function AdminOverviewPage() {
           <div className="text-xs font-medium text-slate-500">Page Views</div>
           <div className="mt-2 flex items-baseline gap-2.5">
             <span className="text-2xl font-extrabold text-slate-900 tracking-tight">
-              {analytics?.overview.pageViews.toLocaleString() || '30,450'}
-            </span>
-            <span className="inline-flex items-center gap-0.5 rounded-md bg-emerald-50 px-1.5 py-0.5 text-xs font-bold text-emerald-600">
-              <TrendingUp className="h-3 w-3" />
-              20.5%
+              {(analytics?.overview.pageViews ?? 0).toLocaleString()}
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-slate-400">Compare to last week</p>
+          <p className="mt-1 text-[11px] text-slate-400">Verified client route hits</p>
         </div>
 
         {/* Card 3: Paid Orders */}
@@ -204,13 +196,13 @@ export default function AdminOverviewPage() {
           <div className="text-xs font-medium text-slate-500">Paid Conversions</div>
           <div className="mt-2 flex items-baseline gap-2.5">
             <span className="text-2xl font-extrabold text-slate-900 tracking-tight">
-              {stats?.successfulPayments ?? 3}
+              {stats?.successfulPayments ?? 0}
             </span>
             <span className="inline-flex items-center gap-0.5 rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-bold text-[#285FEA]">
-              CR: {stats?.conversionRate || '28.5'}%
+              CR: {stats?.conversionRate ?? '0.0'}%
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-slate-400">From {stats?.totalPayments || 4} total checkouts</p>
+          <p className="mt-1 text-[11px] text-slate-400">From {stats?.totalPayments ?? 0} total checkouts</p>
         </div>
 
         {/* Card 4: Captured Revenue */}
@@ -218,14 +210,10 @@ export default function AdminOverviewPage() {
           <div className="text-xs font-medium text-slate-500">Captured Revenue</div>
           <div className="mt-2 flex items-baseline gap-2.5">
             <span className="text-2xl font-extrabold text-slate-900 tracking-tight">
-              {stats?.totalRevenueFormatted || '₹1,697'}
-            </span>
-            <span className="inline-flex items-center gap-0.5 rounded-md bg-emerald-50 px-1.5 py-0.5 text-xs font-bold text-emerald-600">
-              <TrendingUp className="h-3 w-3" />
-              32.4%
+              {stats?.totalRevenueFormatted || '₹0'}
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-slate-400">Direct INR settlement</p>
+          <p className="mt-1 text-[11px] text-slate-400">Net settled gateway total</p>
         </div>
       </div>
 

@@ -687,14 +687,14 @@ export class PdfCompressionService {
 
     // 2. Text Integrity Verification using pdf-parse-fork
     let textExtractionPassed = false;
-    try {
-      const compParsed = await pdfParse(compressedBuffer);
-      const compText = compParsed.text || '';
+    if (isScannedPdf) {
+      // Scanned or un-parseable baseline PDFs bypass raw text-diff while structural & page checks already ran
+      textExtractionPassed = true;
+    } else {
+      try {
+        const compParsed = await pdfParse(compressedBuffer);
+        const compText = compParsed.text || '';
 
-      if (isScannedPdf) {
-        // Scanned PDF had insufficient or no text originally
-        textExtractionPassed = true;
-      } else {
         const origNorm = this.normalizeTextForComparison(originalText);
         const compNorm = this.normalizeTextForComparison(compText);
 
@@ -707,9 +707,9 @@ export class PdfCompressionService {
         const tokensOk = this.verifyKeyResumeTokens(originalText, compText);
 
         textExtractionPassed = lengthOk && tokensOk;
+      } catch {
+        textExtractionPassed = false;
       }
-    } catch {
-      textExtractionPassed = false;
     }
 
     return {

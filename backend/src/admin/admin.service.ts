@@ -1,13 +1,23 @@
-import { BadRequestException, Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleInit,
+  Optional,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Like, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { SystemSetting } from './entities/system-setting.entity.js';
 import { DodoPaymentProvider } from '../payments/providers/dodo-payment.provider.js';
 import { User, UserRole } from '../users/entities/user.entity.js';
 import { Payment } from '../payments/entities/payment.entity.js';
 import { Resume } from '../resumes/entities/resume.entity.js';
 import { CreditLedger } from '../credits/entities/credit-ledger.entity.js';
+import { AnalyticsEvent } from '../analytics/analytics-event.entity.js';
 import { CreditsService } from '../credits/credits.service.js';
+import { PaymentsService } from '../payments/payments.service.js';
+import { formatMinorAmount, normalizeCurrency } from '../payments/pricing-plans.js';
 
 @Injectable()
 export class AdminService implements OnModuleInit {
@@ -26,6 +36,11 @@ export class AdminService implements OnModuleInit {
     private readonly creditRepo: Repository<CreditLedger>,
     private readonly creditsService: CreditsService,
     private readonly dodoProvider: DodoPaymentProvider,
+    @Optional()
+    @InjectRepository(AnalyticsEvent)
+    private readonly analyticsRepo?: Repository<AnalyticsEvent>,
+    @Optional()
+    private readonly paymentsService?: PaymentsService,
   ) {}
 
   async onModuleInit() {
@@ -83,6 +98,61 @@ export class AdminService implements OnModuleInit {
     return this.getPaymentSettings();
   }
 
+  private async upsertSetting(key: string, value: string): Promise<void> {
+    let setting = await this.settingRepo.findOne({ where: { key } });
+    if (!setting) {
+      setting = this.settingRepo.create({ key, value });
+    } else {
+      setting.value = value;
+    }
+    await this.settingRepo.save(setting);
+  }
+
+  async getPromoSettings() {
+    if (this.paymentsService) {
+      return this.paymentsService.getPromoStatus();
+    }
+
+    const enabledSetting = await this.settingRepo.findOne({ where: { key: 'lifetime_promo_enabled' } });
+    const capSetting = await this.settingRepo.findOne({ where: { key: 'lifetime_promo_cap' } });
+    const textSetting = await this.settingRepo.findOne({ where: { key: 'lifetime_promo_banner_text' } });
+    const totalCap = Math.max(1, parseInt(capSetting?.value || '10', 10) || 10);
+
+    return {
+      enabled: enabledSetting ? enabledSetting.value !== 'false' : true,
+      planId: 'pro_lifetime' as const,
+      priceInr: 999,
+      priceUsd: 19,
+      claimedSeats: 0,
+      totalCap,
+      remainingSeats: totalCap,
+      isSoldOut: false,
+      bannerText: textSetting?.value || undefined,
+    };
+  }
+
+  async updatePromoSettings(input: {
+    enabled?: boolean;
+    totalCap?: number;
+    bannerText?: string;
+  }) {
+    if (input.enabled !== undefined) {
+      await this.upsertSetting('lifetime_promo_enabled', String(Boolean(input.enabled)));
+    }
+    if (input.totalCap !== undefined) {
+      const cap = Math.floor(Number(input.totalCap));
+      if (!Number.isFinite(cap) || cap < 1 || cap > 10000) {
+        throw new BadRequestException('Founding promo cap must be between 1 and 10,000 seats.');
+      }
+      await this.upsertSetting('lifetime_promo_cap', String(cap));
+    }
+    if (input.bannerText !== undefined) {
+      await this.upsertSetting('lifetime_promo_banner_text', input.bannerText.trim().slice(0, 220));
+    }
+
+    return this.getPromoSettings();
+  }
+
   // --- Admin Dashboard Analytics & Overview ---
   async getStats() {
     const [totalUsers, totalPayments, successfulPayments, totalResumes] = await Promise.all([
@@ -94,59 +164,137 @@ export class AdminService implements OnModuleInit {
 
     const successfulList = await this.paymentRepo.find({
       where: { status: 'succeeded' },
-      select: { amountMinor: true, currency: true },
+      select: { amountMinor: true, currency: true, createdAt: true },
     });
 
-    const totalRevenueMinor = successfulList.reduce((acc, curr) => acc + (curr.amountMinor || 0), 0);
+    const totalRevenueInrMinor = successfulList
+      .filter((p) => (p.currency || 'INR').toUpperCase() === 'INR')
+      .reduce((acc, curr) => acc + (curr.amountMinor || 0), 0);
+    const totalRevenueUsdMinor = successfulList
+      .filter((p) => (p.currency || '').toUpperCase() === 'USD')
+      .reduce((acc, curr) => acc + (curr.amountMinor || 0), 0);
+
+    const inrPart = `₹${(totalRevenueInrMinor / 100).toLocaleString('en-IN')}`;
+    const totalRevenueFormatted =
+      totalRevenueUsdMinor > 0
+        ? `${totalRevenueInrMinor > 0 ? `${inrPart} + ` : ''}$${(totalRevenueUsdMinor / 100).toLocaleString('en-US')}`
+        : inrPart;
 
     return {
       totalUsers,
       totalPayments,
       successfulPayments,
       conversionRate: totalUsers > 0 ? ((successfulPayments / totalUsers) * 100).toFixed(1) : '0.0',
-      totalRevenueMinor,
-      totalRevenueFormatted: `₹${(totalRevenueMinor / 100).toLocaleString('en-IN')}`,
+      totalRevenueMinor: totalRevenueInrMinor,
+      totalRevenueInrMinor,
+      totalRevenueUsdMinor,
+      totalRevenueFormatted,
       totalResumes,
       activePaymentMode: this.dodoProvider.getMode(),
     };
   }
 
   async getAnalyticsOverview() {
-    // Generate monthly data points based on actual revenue & activity
     const stats = await this.getStats();
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    
-    // Baseline realistic data model for charts
-    const monthlyData = months.map((m, idx) => {
-      const isRecent = idx >= 9; // Oct, Nov
-      const baseVisits = 450 + idx * 80 + (isRecent ? 350 : 0);
-      const baseOrders = isRecent ? Math.max(1, stats.successfulPayments) : Math.floor(baseVisits * 0.04);
-      const baseRevenue = isRecent ? Math.max(stats.totalRevenueMinor / 100, 1697) : baseOrders * 399;
 
-      return {
-        month: m,
-        visitors: baseVisits,
-        pageViews: Math.round(baseVisits * 2.8),
-        orders: baseOrders,
-        revenue: Math.round(baseRevenue),
-      };
+    let uniqueVisitors = 0;
+    let pageViews = 0;
+    let topReferrers: Array<{ source: string; share: string; visits: number }> = [];
+    const monthlyTraffic = new Map<string, { visitors: Set<string>; pageViews: number }>();
+
+    if (this.analyticsRepo && typeof this.analyticsRepo.find === 'function') {
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+      sixMonthsAgo.setDate(1);
+      sixMonthsAgo.setHours(0, 0, 0, 0);
+
+      const events = await this.analyticsRepo.find({
+        order: { createdAt: 'DESC' },
+        take: 10000,
+      });
+
+      const visitorSet = new Set<string>();
+      const sourceCounts = new Map<string, number>();
+
+      for (const ev of events) {
+        const visitorId = ev.sessionHash || ev.id;
+        visitorSet.add(visitorId);
+        if (ev.eventType === 'page_view') {
+          pageViews += 1;
+        }
+
+        const sourceLabel =
+          ev.utmSource?.trim() ||
+          (ev.referrer?.trim() ? ev.referrer.trim().replace(/^https?:\/\/(www\.)?/, '').split('/')[0] : '') ||
+          'Direct';
+        sourceCounts.set(sourceLabel, (sourceCounts.get(sourceLabel) || 0) + 1);
+
+        const created = new Date(ev.createdAt);
+        const ym = `${created.getFullYear()}-${String(created.getMonth() + 1).padStart(2, '0')}`;
+        const bucket = monthlyTraffic.get(ym) || { visitors: new Set<string>(), pageViews: 0 };
+        bucket.visitors.add(visitorId);
+        if (ev.eventType === 'page_view') {
+          bucket.pageViews += 1;
+        }
+        monthlyTraffic.set(ym, bucket);
+      }
+
+      uniqueVisitors = visitorSet.size;
+      const totalEvents = events.length || 1;
+      topReferrers = Array.from(sourceCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([source, visits]) => ({
+          source,
+          visits,
+          share: `${((visits / totalEvents) * 100).toFixed(1)}%`,
+        }));
+    }
+
+    const recentPayments = await this.paymentRepo.find({
+      where: { status: 'succeeded' },
+      select: { amountMinor: true, currency: true, createdAt: true },
     });
+
+    const monthlyOrders = new Map<string, { orders: number; revenueInr: number }>();
+    for (const pay of recentPayments) {
+      const created = pay.createdAt ? new Date(pay.createdAt) : new Date();
+      const ym = `${created.getFullYear()}-${String(created.getMonth() + 1).padStart(2, '0')}`;
+      const existing = monthlyOrders.get(ym) || { orders: 0, revenueInr: 0 };
+      existing.orders += 1;
+      if ((pay.currency || 'INR').toUpperCase() === 'INR') {
+        existing.revenueInr += Math.round((pay.amountMinor || 0) / 100);
+      }
+      monthlyOrders.set(ym, existing);
+    }
+
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const now = new Date();
+    const chartData = [];
+    for (let offset = 5; offset >= 0; offset -= 1) {
+      const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+      const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const traffic = monthlyTraffic.get(ym);
+      const rev = monthlyOrders.get(ym);
+      chartData.push({
+        month: `${monthNames[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`,
+        visitors: traffic ? traffic.visitors.size : 0,
+        pageViews: traffic ? traffic.pageViews : 0,
+        orders: rev ? rev.orders : 0,
+        revenue: rev ? rev.revenueInr : 0,
+      });
+    }
 
     return {
       overview: {
-        uniqueVisitors: 45687,
-        pageViews: 128450,
+        uniqueVisitors,
+        pageViews,
         totalOrders: stats.totalPayments,
         totalRevenue: stats.totalRevenueFormatted,
         conversionRate: `${stats.conversionRate}%`,
       },
-      chartData: monthlyData,
-      topReferrers: [
-        { source: 'Direct / Ads (Meta)', share: '54.2%', visits: 24762 },
-        { source: 'LinkedIn Job Seekers', share: '26.8%', visits: 12244 },
-        { source: 'Google Search / ATS keywords', share: '14.1%', visits: 6441 },
-        { source: 'Referral / Campus', share: '4.9%', visits: 2240 },
-      ],
+      chartData,
+      topReferrers,
     };
   }
 
@@ -261,6 +409,7 @@ export class AdminService implements OnModuleInit {
     const mapped = payments.map((p) => {
       const u = userMap.get(p.userId);
       const envMode = (p.metadata as any)?.environmentMode || 'test_mode';
+      const cur = normalizeCurrency(p.currency);
 
       return {
         id: p.id,
@@ -268,13 +417,13 @@ export class AdminService implements OnModuleInit {
         provider: p.provider,
         providerTransactionId: p.providerTransactionId,
         amountMinor: p.amountMinor,
-        amountFormatted: `₹${(p.amountMinor / 100).toFixed(0)}`,
-        currency: p.currency,
+        amountFormatted: formatMinorAmount(p.amountMinor, cur),
+        currency: cur,
         status: p.status,
         userId: p.userId,
         userEmail: u?.email || (p.metadata as any)?.email || 'Unknown',
         userName: u?.fullName || (p.metadata as any)?.fullName || 'Customer',
-        planName: (p.metadata as any)?.planName || 'Credit Pack',
+        planName: (p.metadata as any)?.planName || 'HypeResume Pro',
         planId: (p.metadata as any)?.planId,
         checkoutUrl: (p.metadata as any)?.checkoutUrl || (p.metadata as any)?.dodoCheckoutUrl,
         environmentMode: envMode,

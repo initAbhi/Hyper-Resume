@@ -75,5 +75,9 @@ export class UpdateApplicationDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  @IsUUID()
+  jobDescriptionId?: string;
 }
 

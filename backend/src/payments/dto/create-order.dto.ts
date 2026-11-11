@@ -7,7 +7,11 @@ export class CreateOrderDto {
 
   @IsString()
   @IsOptional()
-  @IsIn(['razorpay', 'stripe', 'mock', 'sandbox'])
-  provider?: 'razorpay' | 'stripe' | 'mock' | 'sandbox' = 'sandbox';
-}
+  @IsIn(['INR', 'USD'])
+  currency?: 'INR' | 'USD' = 'INR';
 
+  @IsString()
+  @IsOptional()
+  @IsIn(['dodo', 'razorpay', 'stripe', 'mock', 'sandbox'])
+  provider?: 'dodo' | 'razorpay' | 'stripe' | 'mock' | 'sandbox';
+}

@@ -3,13 +3,16 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import crypto from 'node:crypto';
 import { CoverLetter } from './entities/cover-letter.entity.js';
 import { Resume } from '../resumes/entities/resume.entity.js';
 import { JobMatch } from '../job-matching/entities/job-match.entity.js';
 import { AiService } from '../ai/ai.service.js';
+import { CREDIT_COSTS, CreditsService } from '../credits/credits.service.js';
 import type {
   GenerateCoverLetterDto,
   RegenerateCoverLetterDto,
@@ -28,6 +31,8 @@ export class CoverLettersService {
     @InjectRepository(JobMatch)
     private readonly jobMatchRepo: Repository<JobMatch>,
     private readonly aiService: AiService,
+    @Optional()
+    private readonly creditsService?: CreditsService,
   ) {}
 
   async list(userId: string, resumeId?: string): Promise<CoverLetter[]> {
@@ -73,16 +78,43 @@ export class CoverLettersService {
     }
 
     const tone = dto.tone || 'Executive';
-    const generated = await this.aiService.generateCoverLetter({
-      resumeContent: resume.content,
-      targetRole: dto.targetRole.trim(),
-      companyName: dto.companyName.trim(),
-      hiringManager: dto.hiringManager?.trim() || undefined,
-      jobDescription: resolvedJd || undefined,
-      tone,
-      customFocus: dto.customFocus?.trim() || undefined,
-      sectionFocus: 'all',
-    });
+    const chargeKey = `cover-letter:${userId}:${crypto.randomUUID()}`;
+    let chargedCredits = false;
+    if (this.creditsService) {
+      const access = await this.creditsService.consumeFeatureAccess(
+        userId,
+        CREDIT_COSTS.COVER_LETTER,
+        'cover_letter',
+        chargeKey,
+        `Cover letter generation (${dto.companyName.trim()} — ${dto.targetRole.trim()})`,
+        { resumeId: resume.id },
+      );
+      chargedCredits = access.accessGrantedVia === 'credits';
+    }
+
+    let generated;
+    try {
+      generated = await this.aiService.generateCoverLetter({
+        resumeContent: resume.content,
+        targetRole: dto.targetRole.trim(),
+        companyName: dto.companyName.trim(),
+        hiringManager: dto.hiringManager?.trim() || undefined,
+        jobDescription: resolvedJd || undefined,
+        tone,
+        customFocus: dto.customFocus?.trim() || undefined,
+        sectionFocus: 'all',
+      });
+    } catch (err) {
+      if (chargedCredits && this.creditsService) {
+        await this.creditsService.refundCredits(
+          userId,
+          CREDIT_COSTS.COVER_LETTER,
+          chargeKey,
+          'Cover letter AI generation failed',
+        );
+      }
+      throw err;
+    }
 
     const contact = resume.content?.contact;
     const recipientLine = dto.hiringManager?.trim()
@@ -159,21 +191,48 @@ export class CoverLettersService {
         ? dto.jobDescription.trim()
         : existing.jobDescription || '';
 
-    const result = await this.aiService.generateCoverLetter({
-      resumeContent: resume.content,
-      targetRole: existing.targetRole,
-      companyName: existing.companyName,
-      hiringManager: nextManager || undefined,
-      jobDescription: nextJd || undefined,
-      tone: nextTone,
-      customFocus: dto.customFocus?.trim() || undefined,
-      sectionFocus,
-      existingDraft: {
-        openingParagraph: existing.openingParagraph,
-        bodyParagraphs: existing.bodyParagraphs,
-        closingParagraph: existing.closingParagraph,
-      },
-    });
+    const regenKey = `cover-letter-regen:${existing.id}:${crypto.randomUUID()}`;
+    let chargedRegen = false;
+    if (this.creditsService) {
+      const access = await this.creditsService.consumeFeatureAccess(
+        userId,
+        1,
+        'cover_letter',
+        regenKey,
+        `Cover letter section rewrite (${sectionFocus})`,
+        { coverLetterId: existing.id },
+      );
+      chargedRegen = access.accessGrantedVia === 'credits';
+    }
+
+    let result;
+    try {
+      result = await this.aiService.generateCoverLetter({
+        resumeContent: resume.content,
+        targetRole: existing.targetRole,
+        companyName: existing.companyName,
+        hiringManager: nextManager || undefined,
+        jobDescription: nextJd || undefined,
+        tone: nextTone,
+        customFocus: dto.customFocus?.trim() || undefined,
+        sectionFocus,
+        existingDraft: {
+          openingParagraph: existing.openingParagraph,
+          bodyParagraphs: existing.bodyParagraphs,
+          closingParagraph: existing.closingParagraph,
+        },
+      });
+    } catch (err) {
+      if (chargedRegen && this.creditsService) {
+        await this.creditsService.refundCredits(
+          userId,
+          1,
+          regenKey,
+          'Cover letter regeneration failed',
+        );
+      }
+      throw err;
+    }
 
     existing.tone = nextTone;
     if (dto.hiringManager !== undefined) {

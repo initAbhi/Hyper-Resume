@@ -30,4 +30,13 @@ export class User extends BaseEntity {
 
   @Column({ type: 'boolean', default: false, name: 'is_email_verified' })
   isEmailVerified!: boolean;
+
+  @Column({ type: 'varchar', length: 50, nullable: true, name: 'pro_plan_id' })
+  proPlanId?: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true, name: 'pro_expires_at' })
+  proExpiresAt?: Date | null;
+
+  @Column({ type: 'boolean', default: false, name: 'is_lifetime_pro' })
+  isLifetimePro!: boolean;
 }

@@ -1,28 +1,55 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Alert } from '@/components/ui/alert';
 import { Logo } from '@/components/ui/Logo';
 import { useAuth } from '@/lib/auth-context';
+import { analytics } from '@/lib/analytics';
 
-export default function LoginPage() {
+function buildPostLoginTarget(searchParams: ReturnType<typeof useSearchParams>): string {
+  const redirect = searchParams?.get('redirect');
+  const plan = searchParams?.get('plan');
+  const currency = searchParams?.get('currency');
+  const template = searchParams?.get('template');
+
+  if (redirect && redirect.startsWith('/') && !redirect.startsWith('//')) {
+    const params = new URLSearchParams();
+    if (plan) params.set('plan', plan);
+    if (currency) params.set('currency', currency);
+    if (template) params.set('template', template);
+    const qs = params.toString();
+    if (!qs) return redirect;
+    return redirect.includes('?') ? `${redirect}&${qs}` : `${redirect}?${qs}`;
+  }
+
+  if (template) {
+    return `/app/resumes?create=1&template=${encodeURIComponent(template)}`;
+  }
+
+  return '/app';
+}
+
+function LoginFormContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isGoogleReady, setIsGoogleReady] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
   const { login, googleLogin } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const postLoginTarget = buildPostLoginTarget(searchParams);
+  const querySuffix = searchParams?.toString() ? `?${searchParams.toString()}` : '';
 
   // Load Google Identity Services script if client ID is configured
   useEffect(() => {
-    const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
     if (!googleClientId) return;
 
     const script = document.createElement('script');
@@ -37,9 +64,11 @@ export default function LoginPage() {
             if (response.credential) {
               setIsGoogleLoading(true);
               try {
-                await googleLogin({ credential: response.credential });
-                const redirectTarget = typeof window !== 'undefined' ? (new URLSearchParams(window.location.search).get('redirect') || '/app') : '/app';
-                router.push(redirectTarget);
+                const res = await googleLogin({ credential: response.credential });
+                if (res?.isNewUser) {
+                  analytics.track('signup_completed', { source: 'google_oauth' });
+                }
+                router.push(buildPostLoginTarget(searchParams));
               } catch (err: unknown) {
                 setErrorMessage(err instanceof Error ? err.message : 'Google sign in failed');
               } finally {
@@ -74,7 +103,7 @@ export default function LoginPage() {
         document.body.removeChild(script);
       }
     };
-  }, [googleLogin, router]);
+  }, [googleClientId, googleLogin, router, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,8 +115,7 @@ export default function LoginPage() {
         throw new Error('Please enter both email and password.');
       }
       await login({ email: email.trim(), password });
-      const redirectTarget = typeof window !== 'undefined' ? (new URLSearchParams(window.location.search).get('redirect') || '/app') : '/app';
-                router.push(redirectTarget);
+      router.push(postLoginTarget);
     } catch (err: unknown) {
       setErrorMessage(
         err instanceof Error
@@ -132,24 +160,28 @@ export default function LoginPage() {
           )}
 
           {/* Official Google Button Container */}
-          <div id="google-btn-rendered" className="w-full flex justify-center min-h-[44px]" />
-          {!isGoogleReady && (
-            <div className="w-full h-11 rounded-xl bg-slate-100 dark:bg-zinc-800 animate-pulse flex items-center justify-center text-xs text-slate-400">
-              Loading Google Sign-In...
-            </div>
-          )}
+          {googleClientId ? (
+            <>
+              <div id="google-btn-rendered" className="w-full flex justify-center min-h-[44px]" />
+              {!isGoogleReady && (
+                <div className="w-full h-11 rounded-xl bg-slate-100 dark:bg-zinc-800 animate-pulse flex items-center justify-center text-xs text-slate-400">
+                  Loading Google Sign-In...
+                </div>
+              )}
 
-          {/* Divider */}
-          <div className="relative my-5">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-200 dark:border-zinc-800" />
-            </div>
-            <div className="relative flex justify-center text-[11px] uppercase">
-              <span className="bg-white dark:bg-zinc-900 px-3 text-slate-400 font-semibold tracking-wider">
-                Or sign in with email
-              </span>
-            </div>
-          </div>
+              {/* Divider */}
+              <div className="relative my-5">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-200 dark:border-zinc-800" />
+                </div>
+                <div className="relative flex justify-center text-[11px] uppercase">
+                  <span className="bg-white dark:bg-zinc-900 px-3 text-slate-400 font-semibold tracking-wider">
+                    Or sign in with email
+                  </span>
+                </div>
+              </div>
+            </>
+          ) : null}
         </div>
 
         <form onSubmit={handleSubmit} autoComplete="off">
@@ -204,7 +236,7 @@ export default function LoginPage() {
             </Button>
             <p className="text-xs text-center text-slate-500">
               Don&apos;t have an account?{' '}
-              <Link href="/register" className="text-[#285FEA] hover:underline font-semibold">
+              <Link href={`/register${querySuffix}`} className="text-[#285FEA] hover:underline font-semibold">
                 Create account
               </Link>
             </p>
@@ -212,6 +244,14 @@ export default function LoginPage() {
         </form>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-xs text-slate-500">Loading sign in...</div>}>
+      <LoginFormContent />
+    </Suspense>
   );
 }
 

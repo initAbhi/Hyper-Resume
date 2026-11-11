@@ -58,6 +58,13 @@ export class InterviewsService {
     private readonly aiProvider: GeminiInterviewProvider,
   ) {}
 
+  private async hasProAccess(userId: string): Promise<boolean> {
+    if (typeof this.creditsService.hasActivePro === 'function') {
+      return this.creditsService.hasActivePro(userId);
+    }
+    return false;
+  }
+
   /**
    * Starts an interview session using the safe non-blocking 7-step pattern.
    */
@@ -108,14 +115,17 @@ export class InterviewsService {
     }
 
     // 2. Server-Side Entitlement Check
-    const isPaidUser = await this.paymentRepository.exists({
-      where: { userId, status: 'succeeded' },
-    });
+    const hasProPass = await this.hasProAccess(userId);
+    const isPaidUser =
+      hasProPass ||
+      (await this.paymentRepository.exists({
+        where: { userId, status: 'succeeded' },
+      }));
 
     if (!isPaidUser) {
       if (dto.sessionMode !== 'quick_practice') {
         throw new ForbiddenException(
-          'Full Mock and Weak Area interviews require a paid credit pack. Please upgrade to unlock.',
+          'Full Mock and Weak Area interviews require a paid Pro Pass or credit pack. Please upgrade to unlock.',
         );
       }
       const existingTrial = await this.sessionRepository.findOne({
@@ -127,40 +137,42 @@ export class InterviewsService {
       });
       if (existingTrial) {
         throw new ForbiddenException(
-          'You have already completed your free Quick Practice trial. Please purchase a credit pack to continue.',
+          'You have already completed your free Quick Practice trial. Please activate a Pro Pass to continue.',
         );
       }
     }
 
-    const requiredCredits = INTERVIEW_CREDIT_COSTS[dto.sessionMode];
-    const questionCount = dto.sessionMode === 'quick_practice' ? 3 : 5;
+    const requiredCredits = hasProPass ? 0 : INTERVIEW_CREDIT_COSTS[dto.sessionMode];
+    const questionCount = dto.sessionMode === 'full_mock' ? 5 : 3;
 
     // STEP 1-3: Fast DB Transaction (<10ms)
     const session = await this.dataSource.transaction(async (manager: EntityManager) => {
-      // Check credit balance with manager
-      const balance = await this.creditsService.getBalance(userId, manager);
-      if (balance < requiredCredits) {
-        throw new ForbiddenException(
-          `Insufficient credit balance (${balance} available, ${requiredCredits} required). Please recharge.`,
+      if (requiredCredits > 0) {
+        // Check credit balance with manager
+        const balance = await this.creditsService.getBalance(userId, manager);
+        if (balance < requiredCredits) {
+          throw new ForbiddenException(
+            `Insufficient credit balance (${balance} available, ${requiredCredits} required). Please recharge or upgrade to Pro.`,
+          );
+        }
+
+        // Deduct credits with manager
+        const ledgerKey = `interview-start-${idempotencyKey}`;
+        await this.creditsService.deductCredits(
+          userId,
+          requiredCredits,
+          'mock_interview',
+          ledgerKey,
+          `Interview session initialization (${dto.sessionMode}: ${dto.targetRole})`,
+          {
+            sessionMode: dto.sessionMode,
+            targetRole: dto.targetRole,
+            isFreeTrial: !isPaidUser,
+            costBasis: isPaidUser ? 10.7647 : 0.0,
+          },
+          manager,
         );
       }
-
-      // Deduct credits with manager
-      const ledgerKey = `interview-start-${idempotencyKey}`;
-      await this.creditsService.deductCredits(
-        userId,
-        requiredCredits,
-        'mock_interview',
-        ledgerKey,
-        `Interview session initialization (${dto.sessionMode}: ${dto.targetRole})`,
-        {
-          sessionMode: dto.sessionMode,
-          targetRole: dto.targetRole,
-          isFreeTrial: !isPaidUser,
-          costBasis: isPaidUser ? 10.7647 : 0.0,
-        },
-        manager,
-      );
 
       // Create session in 'initializing' state with explicit is_free_trial flag
       const newSession = manager.create(InterviewSession, {
@@ -191,7 +203,28 @@ export class InterviewsService {
         resume.content,
         jobDescription || undefined,
       );
-      const dossierText = ContextDossierBuilder.formatDossierText(dossier);
+      let dossierText = ContextDossierBuilder.formatDossierText(dossier);
+
+      if (dto.sessionMode === 'weak_area' && typeof this.turnRepository.createQueryBuilder === 'function') {
+        const weakTurns = await this.turnRepository
+          .createQueryBuilder('turn')
+          .innerJoin('turn.session', 'sess')
+          .innerJoinAndSelect('turn.question', 'q')
+          .where('sess.user_id = :userId', { userId })
+          .andWhere('turn.turn_score IS NOT NULL')
+          .andWhere('turn.turn_score < :threshold', { threshold: 75 })
+          .orderBy('turn.turn_score', 'ASC')
+          .take(5)
+          .getMany();
+
+        if (weakTurns.length > 0) {
+          const weakLines = weakTurns.map(
+            (t) =>
+              `- Previous weak score (${t.turnScore}/100) in ${t.question?.category || 'general'}: ${t.evaluation?.improvementTip || t.question?.questionText || ''}`,
+          );
+          dossierText += `\n\n[PRIOR WEAK AREAS TO RE-TEST]\n${weakLines.join('\n')}`;
+        }
+      }
 
       const result = await this.aiProvider.generateQuestions(
         dossierText,
@@ -346,7 +379,7 @@ export class InterviewsService {
         question.questionText,
         question.contextHint,
         dto.candidateAnswer,
-        false, // hasAlreadyFollowedUp
+        session.sessionMode === 'quick_practice', // Skip adaptive follow-ups in Quick Practice mode
       );
 
       turn.status = 'evaluated';
@@ -517,9 +550,12 @@ export class InterviewsService {
       order: { orderIndex: 'ASC' },
     });
 
-    const isPaidUser = await this.paymentRepository.exists({
-      where: { userId, status: 'succeeded' },
-    });
+    const hasProPass = await this.hasProAccess(userId);
+    const isPaidUser =
+      hasProPass ||
+      (await this.paymentRepository.exists({
+        where: { userId, status: 'succeeded' },
+      }));
 
     // Server-Side Entitlement Redaction: Free trial users see sample model answer on Q1 only
     const sanitizedTurns = turns.map((turn, idx) => {
@@ -567,13 +603,15 @@ export class InterviewsService {
   private async atomicRefundAndFail(session: InterviewSession): Promise<void> {
     const refundKey = `refund-session-${session.id}`;
     await this.dataSource.transaction(async (manager: EntityManager) => {
-      await this.creditsService.refundCredits(
-        session.userId,
-        session.creditsCharged,
-        refundKey,
-        'Compensating refund: AI question generation failed',
-        manager,
-      );
+      if (session.creditsCharged > 0) {
+        await this.creditsService.refundCredits(
+          session.userId,
+          session.creditsCharged,
+          refundKey,
+          'Compensating refund: AI question generation failed',
+          manager,
+        );
+      }
       session.status = 'failed';
       session.isFreeTrial = false;
       await manager.save(InterviewSession, session);

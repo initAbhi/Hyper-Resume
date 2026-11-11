@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiClient, ResumeAdaptation, BulletDiff } from '@/lib/api-client';
+import { apiClient, ResumeAdaptation, BulletDiff, ResumeContent } from '@/lib/api-client';
 import {
   X,
   Check,
@@ -35,11 +35,21 @@ export function AdaptationComparisonModal({
   const [summaryDecision, setSummaryDecision] = useState<'accept' | 'reject'>('accept');
   const [bulletDecisions, setBulletDecisions] = useState<Record<string, Record<string, 'accept' | 'reject'>>>({});
   const [editedBullets, setEditedBullets] = useState<Record<string, Record<string, string>>>({});
+  const [editingBulletKey, setEditingBulletKey] = useState<string | null>(null);
   const [acceptedSkills, setAcceptedSkills] = useState<string[]>(
     adaptation?.recommendedBenchmarkSkills || []
   );
   const [isApplying, setIsApplying] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setAcceptedSkills(adaptation?.recommendedBenchmarkSkills || []);
+    setEditedBullets({});
+    setEditingBulletKey(null);
+    setSummaryDecision('accept');
+    setBulletDecisions({});
+    setApplyError(null);
+  }, [adaptation?.id, adaptation?.recommendedBenchmarkSkills]);
 
   if (!isOpen || !adaptation || !adaptation.sectionChanges) return null;
 
@@ -92,15 +102,75 @@ export function AdaptationComparisonModal({
     );
   };
 
+  const handleEditBullet = (companyIdx: number, bulletIdx: number, value: string) => {
+    const cKey = String(companyIdx);
+    const bKey = String(bulletIdx);
+    setEditedBullets((prev) => ({
+      ...prev,
+      [cKey]: {
+        ...(prev[cKey] || {}),
+        [bKey]: value,
+      },
+    }));
+  };
+
   const handleApplyAdaptation = async () => {
     setIsApplying(true);
     setApplyError(null);
 
     try {
+      const hasBulletEdits = Object.values(editedBullets).some((group) =>
+        Object.values(group || {}).some((val) => typeof val === 'string'),
+      );
+
+      let customFinalContent: ResumeContent | undefined;
+      const baseProposed = (adaptation as ResumeAdaptation & { proposedContent?: ResumeContent }).proposedContent;
+
+      if (hasBulletEdits && baseProposed) {
+        const mergedSkills = [
+          ...(baseProposed.skills || []),
+          ...acceptedSkills
+            .filter(
+              (s) =>
+                !(baseProposed.skills || []).some(
+                  (existing) => existing.name.toLowerCase() === s.toLowerCase(),
+                ),
+            )
+            .map((name) => ({ name, category: 'Benchmark Skills' })),
+        ];
+
+        customFinalContent = {
+          ...baseProposed,
+          summary:
+            summaryDecision === 'accept'
+              ? sectionChanges.summary?.adapted || baseProposed.summary
+              : sectionChanges.summary?.original || baseProposed.summary,
+          skills: mergedSkills,
+          experience: (baseProposed.experience || []).map((exp, cIdx) => {
+            const diffExp = experiences[cIdx];
+            if (!diffExp) return exp;
+            const cKey = String(cIdx);
+            return {
+              ...exp,
+              bullets: diffExp.bullets.map((b, bIdx) => {
+                const bKey = String(bIdx);
+                const edited = editedBullets[cKey]?.[bKey];
+                if (typeof edited === 'string' && edited.trim().length > 0) {
+                  return edited.trim();
+                }
+                const accepted = (bulletDecisions[cKey]?.[bKey] ?? 'accept') === 'accept';
+                return accepted ? b.adapted : b.original;
+              }),
+            };
+          }),
+        };
+      }
+
       const newResume = await apiClient.applyAdaptation(adaptation.id, {
         summaryDecision,
         bulletDecisions,
         acceptedBenchmarkSkills: acceptedSkills,
+        ...(customFinalContent ? { customFinalContent } : {}),
       });
 
       onClose();
@@ -258,8 +328,11 @@ export function AdaptationComparisonModal({
                   {exp.bullets.map((bullet: BulletDiff, bIdx: number) => {
                     const cKey = String(cIdx);
                     const bKey = String(bIdx);
+                    const editKey = `${cKey}:${bKey}`;
+                    const isEditing = editingBulletKey === editKey;
                     const isAccepted = (bulletDecisions[cKey]?.[bKey] ?? 'accept') === 'accept';
-                    const hasPlaceholder = bullet.adapted.includes('[Confirm measurable impact');
+                    const displayedAdapted = editedBullets[cKey]?.[bKey] ?? bullet.adapted;
+                    const hasPlaceholder = displayedAdapted.includes('[Confirm measurable impact');
 
                     return (
                       <div
@@ -276,13 +349,31 @@ export function AdaptationComparisonModal({
                               {bullet.original}
                             </div>
 
-                            {/* Adapted bullet */}
-                            <div className={`text-zinc-900 dark:text-zinc-100 font-medium leading-relaxed ${
-                              !isAccepted ? 'opacity-50' : ''
-                            }`}>
-                              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mr-1.5">Adapted:</span>
-                              {bullet.adapted}
-                            </div>
+                            {/* Adapted bullet / inline editor */}
+                            {isEditing ? (
+                              <div className="space-y-1.5">
+                                <textarea
+                                  rows={2}
+                                  value={displayedAdapted}
+                                  onChange={(e) => handleEditBullet(cIdx, bIdx, e.target.value)}
+                                  className="w-full p-2 rounded-lg border border-blue-400 dark:border-blue-600 bg-white dark:bg-zinc-900 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingBulletKey(null)}
+                                  className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                                >
+                                  Done editing
+                                </button>
+                              </div>
+                            ) : (
+                              <div className={`text-zinc-900 dark:text-zinc-100 font-medium leading-relaxed ${
+                                !isAccepted ? 'opacity-50' : ''
+                              }`}>
+                                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mr-1.5">Adapted:</span>
+                                {displayedAdapted}
+                              </div>
+                            )}
 
                             {/* Placeholder warning badge if unverified metric quarantined */}
                             {hasPlaceholder && isAccepted && (
@@ -293,19 +384,33 @@ export function AdaptationComparisonModal({
                             )}
                           </div>
 
-                          {/* Toggle decision button */}
-                          <button
-                            type="button"
-                            onClick={() => handleToggleBullet(cIdx, bIdx)}
-                            className={`p-2 rounded-xl transition-all cursor-pointer shrink-0 ${
-                              isAccepted
-                                ? 'bg-emerald-500 text-white shadow-xs hover:bg-emerald-600'
-                                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
-                            }`}
-                            title={isAccepted ? 'Accepted. Click to keep original bullet.' : 'Rejected. Click to accept adapted bullet.'}
-                          >
-                            {isAccepted ? <Check className="w-4 h-4" /> : <RotateCcw className="w-4 h-4" />}
-                          </button>
+                          {/* Edit + Toggle decision buttons */}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setEditingBulletKey(isEditing ? null : editKey)}
+                              className={`p-2 rounded-xl transition-all cursor-pointer ${
+                                isEditing
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
+                              }`}
+                              title="Edit adapted bullet text"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleBullet(cIdx, bIdx)}
+                              className={`p-2 rounded-xl transition-all cursor-pointer ${
+                                isAccepted
+                                  ? 'bg-emerald-500 text-white shadow-xs hover:bg-emerald-600'
+                                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
+                              }`}
+                              title={isAccepted ? 'Accepted. Click to keep original bullet.' : 'Rejected. Click to accept adapted bullet.'}
+                            >
+                              {isAccepted ? <Check className="w-4 h-4" /> : <RotateCcw className="w-4 h-4" />}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );

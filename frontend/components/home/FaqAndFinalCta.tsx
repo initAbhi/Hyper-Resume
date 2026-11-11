@@ -103,7 +103,7 @@ export function FaqAndFinalCta() {
           </p>
 
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3 w-full sm:w-auto">
-            <Link href="/login" className="w-full sm:w-auto">
+            <Link href="/register" className="w-full sm:w-auto">
               <Button size="lg" className="w-full sm:w-auto rounded-xl bg-[#5525F5] hover:bg-[#4318D8] text-white font-semibold text-sm h-11 px-8 shadow-lg shadow-violet-500/25 gap-2 border-0">
                 <span>Build My Resume — Free</span>
                 <ArrowRight className="w-4 h-4" />

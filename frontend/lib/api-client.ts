@@ -44,6 +44,10 @@ export interface User {
   role: 'user' | 'admin';
   isActive: boolean;
   isEmailVerified: boolean;
+  proPlanId?: string | null;
+  proExpiresAt?: string | null;
+  isLifetimePro?: boolean;
+  hasActivePro?: boolean;
   createdAt: string;
 }
 
@@ -1690,6 +1694,22 @@ export class ApiClient {
     return res.data;
   }
 
+  async changePassword(dto: { currentPassword: string; newPassword: string }) {
+    const res = await this.request<{ message: string }>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+    return res.data;
+  }
+
+  async deleteAccount() {
+    const res = await this.request<{ deleted: boolean; message: string }>('/auth/me', {
+      method: 'DELETE',
+    });
+    this.setTokens(null, null);
+    return res.data;
+  }
+
   // --- Resumes Endpoints ---
   async listResumes(pagination?: { page?: number; limit?: number }) {
     const query = new URLSearchParams();
@@ -2666,8 +2686,13 @@ export class ApiClient {
 
   // --- Credits Endpoints ---
   async getCreditBalance() {
-    const res = await this.request<{ balance: number }>('/credits/balance');
+    const res = await this.request<CreditEntitlementStatus>('/credits/balance');
     return res.data.balance;
+  }
+
+  async getCreditEntitlement() {
+    const res = await this.request<CreditEntitlementStatus>('/credits/balance');
+    return res.data;
   }
 
   async getCreditHistory(pagination?: { page?: number; limit?: number }) {
@@ -2699,7 +2724,12 @@ export class ApiClient {
     return res.data;
   }
 
-  async createPaymentOrder(dto: { planId: string; provider?: string }) {
+  async getPromoStatus() {
+    const res = await this.request<PromoStatus>('/payments/promo-status');
+    return res.data;
+  }
+
+  async createPaymentOrder(dto: { planId: string; currency?: SupportedCurrency; provider?: string }) {
     const res = await this.request<PaymentOrderResponse>('/payments/create-order', {
       method: 'POST',
       body: JSON.stringify(dto),
@@ -2708,7 +2738,7 @@ export class ApiClient {
   }
 
   async verifyPayment(dto: { orderId: string; providerPaymentId?: string }) {
-    const res = await this.request<{ verified: boolean; paymentId: string; balance: number }>('/payments/verify', {
+    const res = await this.request<VerifyPaymentResponse>('/payments/verify', {
       method: 'POST',
       body: JSON.stringify(dto),
     });
@@ -2718,6 +2748,21 @@ export class ApiClient {
   async getPaymentHistory() {
     const res = await this.request<PaymentRecord[]>('/payments/history');
     return res.data;
+  }
+
+  // --- First-party Analytics ---
+  async trackAnalyticsEvent(dto: AnalyticsEventInput) {
+    try {
+      await fetch(`${env.apiUrl}/analytics/event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        keepalive: true,
+        body: JSON.stringify(dto),
+      });
+    } catch {
+      // Telemetry failures must never disrupt UX
+    }
   }
 
   // --- Health Endpoints ---
@@ -2747,6 +2792,23 @@ export class ApiClient {
     return res.data;
   }
 
+  async getAdminPromoSettings() {
+    const res = await this.request<AdminPromoSettings>('/admin/settings/promo');
+    return res.data;
+  }
+
+  async updateAdminPromoSettings(dto: {
+    enabled?: boolean;
+    totalCap?: number;
+    bannerText?: string;
+  }) {
+    const res = await this.request<AdminPromoSettings>('/admin/settings/promo', {
+      method: 'PATCH',
+      body: JSON.stringify(dto),
+    });
+    return res.data;
+  }
+
   async getAdminStats() {
     const res = await this.request<AdminStats>('/admin/stats');
     return res.data;
@@ -2757,15 +2819,17 @@ export class ApiClient {
     return res.data;
   }
 
-  async testAdminCheckout(planId = 'job_hunt_pack') {
+  async testAdminCheckout(planId = 'pro_weekly', currency: SupportedCurrency = 'INR') {
     const res = await this.request<{
       orderId: string;
       mode: 'test_mode' | 'live_mode';
       checkoutUrl: string;
       providerOrderId: string;
+      currency?: SupportedCurrency;
+      amountMinor?: number;
     }>('/admin/test-checkout', {
       method: 'POST',
-      body: JSON.stringify({ planId }),
+      body: JSON.stringify({ planId, currency }),
     });
     return res.data;
   }
@@ -3083,17 +3147,59 @@ export interface AdminPaymentOrder {
   createdAt: string;
 }
 
+export type SupportedCurrency = 'INR' | 'USD';
+
+export interface CreditEntitlementStatus {
+  balance: number;
+  hasActivePro: boolean;
+  proPlanId: string | null;
+  proExpiresAt: string | null;
+  isLifetimePro: boolean;
+}
+
+export interface PlanPriceEntry {
+  amountMinor: number;
+  displayPrice: string;
+}
+
 export interface PricingPlan {
   id: string;
   name: string;
   tagline: string;
   amountMinor: number;
-  currency: string;
+  currency: SupportedCurrency;
   displayPrice: string;
+  prices?: Record<SupportedCurrency, PlanPriceEntry>;
   credits: number;
+  durationDays?: number | null;
+  isLifetime?: boolean;
+  isPro?: boolean;
+  isPromoOffer?: boolean;
+  cadenceLabel?: string;
   billingType: 'one_time' | 'recurring_monthly';
   badge?: string;
   features: string[];
+}
+
+export interface PromoStatus {
+  enabled: boolean;
+  planId: string;
+  priceInr: number;
+  priceUsd: number;
+  claimedSeats: number;
+  totalCap: number;
+  remainingSeats: number;
+  isSoldOut: boolean;
+  bannerText?: string;
+}
+
+export interface AdminPromoSettings {
+  enabled: boolean;
+  totalCap: number;
+  claimedSeats: number;
+  remainingSeats: number;
+  bannerText: string;
+  updatedAt?: string;
 }
 
 export interface PaymentOrderResponse {
@@ -3104,6 +3210,33 @@ export interface PaymentOrderResponse {
   provider: string;
   checkoutUrl?: string;
   plan: PricingPlan;
+}
+
+export interface VerifyPaymentResponse {
+  verified: boolean;
+  status?: 'pending' | 'succeeded' | 'failed' | 'refunded';
+  paymentId: string;
+  orderId?: string;
+  planId?: string;
+  planName?: string;
+  amountMinor?: number;
+  currency?: SupportedCurrency;
+  durationDays?: number | null;
+  isLifetime?: boolean;
+  creditsAwarded?: number;
+  proExpiresAt?: string | null;
+  balance: number;
+}
+
+export interface AnalyticsEventInput {
+  eventType: string;
+  path?: string;
+  referrer?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  sessionId?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface PaymentRecord {

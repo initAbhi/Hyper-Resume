@@ -361,13 +361,19 @@ export class ResumesService {
       }
     }
 
-    // 3. Balance verification (3 credits)
+    // 3. Balance or Pro Pass verification (3 credits)
     const requiredCredits = CREDIT_COSTS.ADAPT_RESUME;
-    const currentBalance = await this.creditsService.getBalance(userId);
-    if (currentBalance < requiredCredits) {
-      throw new ForbiddenException(
-        `Insufficient credits (${currentBalance} available, ${requiredCredits} required). Please recharge credits to adapt your resume.`,
-      );
+    const hasProPass =
+      typeof this.creditsService.hasActivePro === 'function'
+        ? await this.creditsService.hasActivePro(userId)
+        : false;
+    if (!hasProPass) {
+      const currentBalance = await this.creditsService.getBalance(userId);
+      if (currentBalance < requiredCredits) {
+        throw new ForbiddenException(
+          `Insufficient credits (${currentBalance} available, ${requiredCredits} required). Please recharge credits or activate Pro to adapt your resume.`,
+        );
+      }
     }
 
     // 4. Safeguard 3: Persist PENDING request before calling AI
@@ -426,23 +432,25 @@ export class ResumesService {
 
     // 8. Atomic transaction for credit deduction and SUCCEEDED proposal persistence
     await this.dataSource.transaction(async (manager) => {
-      const creditIdempotencyKey = `adapt:${adaptation.id}`;
-      await this.creditsService.deductCredits(
-        userId,
-        requiredCredits,
-        'ai_adapt',
-        creditIdempotencyKey,
-        `AI Profile Adaptation for sample: ${dto.sampleId}`,
-        {
-          adaptationId: adaptation.id,
-          sampleId: dto.sampleId,
-          targetRole: dto.targetRole,
-        },
-        manager,
-      );
+      if (!hasProPass) {
+        const creditIdempotencyKey = `adapt:${adaptation.id}`;
+        await this.creditsService.deductCredits(
+          userId,
+          requiredCredits,
+          'ai_adapt',
+          creditIdempotencyKey,
+          `AI Profile Adaptation for sample: ${dto.sampleId}`,
+          {
+            adaptationId: adaptation.id,
+            sampleId: dto.sampleId,
+            targetRole: dto.targetRole,
+          },
+          manager,
+        );
+      }
 
       adaptation.status = 'SUCCEEDED';
-      adaptation.creditsCharged = requiredCredits;
+      adaptation.creditsCharged = hasProPass ? 0 : requiredCredits;
       adaptation.proposedContent = validation.validatedContent;
       adaptation.sectionChanges = validation.sectionChanges;
       adaptation.unsupportedWarnings = validation.unsupportedWarnings;
@@ -475,13 +483,19 @@ export class ResumesService {
       }
     }
 
-    // 1-credit balance check
+    // 1-credit balance or Pro Pass check
     const requiredCredits = CREDIT_COSTS.ADAPT_SECTION;
-    const currentBalance = await this.creditsService.getBalance(userId);
-    if (currentBalance < requiredCredits) {
-      throw new ForbiddenException(
-        `Insufficient credits (${currentBalance} available, ${requiredCredits} required). Please recharge credits to adapt this section.`,
-      );
+    const hasProPass =
+      typeof this.creditsService.hasActivePro === 'function'
+        ? await this.creditsService.hasActivePro(userId)
+        : false;
+    if (!hasProPass) {
+      const currentBalance = await this.creditsService.getBalance(userId);
+      if (currentBalance < requiredCredits) {
+        throw new ForbiddenException(
+          `Insufficient credits (${currentBalance} available, ${requiredCredits} required). Please recharge credits or activate Pro to adapt this section.`,
+        );
+      }
     }
 
     // Persist PENDING state
@@ -524,25 +538,31 @@ export class ResumesService {
       throw aiErr;
     }
 
-    // Short atomic transaction for 1-credit deduction and update
+    // Short atomic transaction for 1-credit deduction (skipped on active Pro) and update
     await this.dataSource.transaction(async (manager) => {
-      const creditIdempotencyKey = `adapt-section:${adaptation.id}`;
-      await this.creditsService.deductCredits(
-        userId,
-        requiredCredits,
-        'ai_adapt',
-        creditIdempotencyKey,
-        `AI Section Adaptation (${dto.sectionKey}) for sample: ${dto.sampleId}`,
-        {
-          adaptationId: adaptation.id,
-          sectionKey: dto.sectionKey,
-          sampleId: dto.sampleId,
-        },
-        manager,
-      );
+      if (!hasProPass) {
+        const creditIdempotencyKey = `adapt-section:${adaptation.id}`;
+        await this.creditsService.deductCredits(
+          userId,
+          requiredCredits,
+          'ai_adapt',
+          creditIdempotencyKey,
+          `AI Section Adaptation (${dto.sectionKey}) for sample: ${dto.sampleId}`,
+          {
+            adaptationId: adaptation.id,
+            sectionKey: dto.sectionKey,
+            sampleId: dto.sampleId,
+          },
+          manager,
+        );
+      }
 
       adaptation.status = 'SUCCEEDED';
-      adaptation.creditsCharged = requiredCredits;
+      adaptation.creditsCharged = hasProPass ? 0 : requiredCredits;
+      adaptation.proposedContent = {
+        ...sourceResume.content,
+        [dto.sectionKey]: aiResult.adaptedContent,
+      } as ResumeContent;
       adaptation.sectionChanges = {
         [dto.sectionKey]: aiResult.adaptedContent,
       } as any;

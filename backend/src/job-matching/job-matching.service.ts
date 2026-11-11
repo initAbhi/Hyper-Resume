@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -6,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import crypto from 'node:crypto';
 import { JobMatch, type RequirementMatchAnalysis, type ScoreComponents } from './entities/job-match.entity.js';
 import { Resume } from '../resumes/entities/resume.entity.js';
 import type { ResumeContent } from '../resumes/entities/resume.types.js';
@@ -13,6 +15,7 @@ import { JobDescription, type ParsedJobRequirement } from '../jobs/entities/job-
 import { CreditLedger } from '../credits/entities/credit-ledger.entity.js';
 import { AiService } from '../ai/ai.service.js';
 import { ResumesService } from '../resumes/resumes.service.js';
+import { CREDIT_COSTS, CreditsService } from '../credits/credits.service.js';
 import { CreateJobMatchDto } from './dto/create-job-match.dto.js';
 import { CreateTailoredResumeDto } from './dto/create-tailored-resume.dto.js';
 import type { PublicJobMatchDto } from './dto/public-job-match.dto.js';
@@ -34,6 +37,7 @@ export class JobMatchingService {
     private readonly creditLedgerRepository: Repository<CreditLedger>,
     private readonly aiService: AiService,
     @Optional() private readonly resumesService?: ResumesService,
+    @Optional() private readonly creditsService?: CreditsService,
   ) {}
 
   async createJobMatch(userId: string, dto: CreateJobMatchDto): Promise<JobMatch> {
@@ -55,18 +59,55 @@ export class JobMatchingService {
       throw new NotFoundException('Job description not found or access denied');
     }
 
-    // 3-5. Evaluate requirements, 5-component scores, and recommendations via shared pipeline
-    const {
-      overallScore,
-      scoreComponents,
-      requirementsAnalysis,
-      recommendations,
-    } = await this.evaluateRequirementsAgainstContent(
-      resume.content,
-      job.parsedRequirements,
-    );
+    // 3. Enforce Pro Pass or 1-credit entitlement BEFORE calling AI
+    const chargeKey = `match:${userId}:${crypto.randomUUID()}`;
+    let chargedViaCredits = false;
+    if (this.creditsService) {
+      const access = await this.creditsService.consumeFeatureAccess(
+        userId,
+        CREDIT_COSTS.JOB_MATCH,
+        'resume_analysis',
+        chargeKey,
+        `Job match analysis: ${job.title}`,
+        { resumeId: resume.id, jobDescriptionId: job.id },
+      );
+      chargedViaCredits = access.accessGrantedVia === 'credits';
+    } else {
+      const { sum } = await this.creditLedgerRepository
+        .createQueryBuilder('ledger')
+        .select('COALESCE(SUM(ledger.amount), 0)', 'sum')
+        .where('ledger.user_id = :userId', { userId })
+        .getRawOne();
 
-    // 6. Persist Job Match
+      if (Number(sum) < 1) {
+        throw new ForbiddenException(
+          'Insufficient credits (0 available, 1 required). Please upgrade to Pro or recharge credits.',
+        );
+      }
+    }
+
+    // 4. Evaluate requirements, 5-component scores, and recommendations via shared pipeline
+    let evaluated;
+    try {
+      evaluated = await this.evaluateRequirementsAgainstContent(
+        resume.content,
+        job.parsedRequirements,
+      );
+    } catch (err) {
+      if (chargedViaCredits && this.creditsService) {
+        await this.creditsService.refundCredits(
+          userId,
+          CREDIT_COSTS.JOB_MATCH,
+          chargeKey,
+          'Job match evaluation failed',
+        );
+      }
+      throw err;
+    }
+
+    const { overallScore, scoreComponents, requirementsAnalysis, recommendations } = evaluated;
+
+    // 5. Persist Job Match
     const jobMatch = this.jobMatchRepository.create({
       userId,
       resumeId: resume.id,
@@ -79,14 +120,8 @@ export class JobMatchingService {
     const savedMatch = await this.jobMatchRepository.save(jobMatch);
     savedMatch.jobDescription = job;
 
-    // 7. Deduct 1 credit for completed match analysis (if available)
-    const { sum } = await this.creditLedgerRepository
-      .createQueryBuilder('ledger')
-      .select('COALESCE(SUM(ledger.amount), 0)', 'sum')
-      .where('ledger.user_id = :userId', { userId })
-      .getRawOne();
-
-    if (Number(sum) > 0) {
+    // Legacy direct ledger fallback when CreditsService is omitted in isolated unit tests
+    if (!this.creditsService) {
       const deduction = this.creditLedgerRepository.create({
         userId,
         amount: -1,
@@ -233,12 +268,39 @@ export class JobMatchingService {
 
   async generateTailoringSuggestions(userId: string, matchId: string) {
     const match = await this.getJobMatch(userId, matchId);
-    const suggestions = await this.aiService.tailorForJob(
-      match.resume.content,
-      match.jobDescription.title,
-      match.jobDescription.companyName,
-      match.jobDescription.parsedRequirements || [],
-    );
+    const chargeKey = `ai-tailor:${match.id}:${crypto.randomUUID()}`;
+    let chargedViaCredits = false;
+    if (this.creditsService) {
+      const access = await this.creditsService.consumeFeatureAccess(
+        userId,
+        CREDIT_COSTS.AI_TAILOR,
+        'ai_tailor',
+        chargeKey,
+        `AI resume tailoring suggestions (${match.jobDescription.title})`,
+        { matchId: match.id },
+      );
+      chargedViaCredits = access.accessGrantedVia === 'credits';
+    }
+
+    let suggestions;
+    try {
+      suggestions = await this.aiService.tailorForJob(
+        match.resume.content,
+        match.jobDescription.title,
+        match.jobDescription.companyName,
+        match.jobDescription.parsedRequirements || [],
+      );
+    } catch (err) {
+      if (chargedViaCredits && this.creditsService) {
+        await this.creditsService.refundCredits(
+          userId,
+          CREDIT_COSTS.AI_TAILOR,
+          chargeKey,
+          'AI tailoring suggestions failed',
+        );
+      }
+      throw err;
+    }
 
     return {
       matchId: match.id,

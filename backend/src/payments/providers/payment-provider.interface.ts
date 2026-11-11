@@ -7,6 +7,15 @@ export interface PaymentOrderOutput {
   metadata?: Record<string, unknown>;
 }
 
+export interface PaymentVerificationResult {
+  verified: boolean;
+  status: string;
+  providerPaymentId?: string;
+  amountMinor?: number;
+  currency?: string;
+  metadata?: Record<string, unknown>;
+}
+
 export type PaymentProviderType = 'dodo' | 'razorpay' | 'stripe' | 'mock' | 'sandbox';
 
 export interface PaymentProvider {
@@ -25,4 +34,10 @@ export interface PaymentProvider {
     secret: string,
     headers?: Record<string, string | string[] | undefined>,
   ): boolean;
+
+  verifyOrderStatus?(
+    providerOrderId: string,
+    providerPaymentId?: string,
+    environmentMode?: string,
+  ): Promise<PaymentVerificationResult>;
 }

@@ -341,10 +341,11 @@ export function SidebarTemplate({
         </div>
 
         {/* Page 1 Footer */}
-        <div className="px-6 sm:px-7 py-3 border-t border-zinc-100 flex items-center justify-between text-[10px] text-zinc-400 font-inter select-none bg-white">
-          <span>hype-resume.com</span>
-          <span>{needsSecondPage ? 'Page 1 of 2' : 'Powered by HypeResume'}</span>
-        </div>
+        {needsSecondPage && (
+          <div className="px-6 sm:px-7 py-3 border-t border-zinc-100 flex items-center justify-end text-[10px] text-zinc-400 font-inter select-none bg-white">
+            <span>Page 1 of 2</span>
+          </div>
+        )}
       </div>
 
       {/* ================= PAGE BREAK DIVIDER (Screen Only) ================= */}

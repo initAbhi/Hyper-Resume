@@ -6,9 +6,10 @@ import { GeminiInterviewProvider } from './providers/gemini-interview.provider.j
 import { AiService } from './ai.service.js';
 import { AiController } from './ai.controller.js';
 import { AuthModule } from '../auth/auth.module.js';
+import { CreditsModule } from '../credits/credits.module.js';
 
 @Module({
-  imports: [ConfigModule, AuthModule],
+  imports: [ConfigModule, AuthModule, CreditsModule],
   controllers: [AiController],
   providers: [MockAiProvider, GeminiAiProvider, GeminiInterviewProvider, AiService],
   exports: [AiService, GeminiInterviewProvider],

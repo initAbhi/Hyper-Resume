@@ -8,6 +8,7 @@ import { CoverLettersController } from './cover-letters.controller.js';
 import { AiModule } from '../ai/ai.module.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { ResumesModule } from '../resumes/resumes.module.js';
+import { CreditsModule } from '../credits/credits.module.js';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ResumesModule } from '../resumes/resumes.module.js';
     AiModule,
     AuthModule,
     ResumesModule,
+    CreditsModule,
   ],
   controllers: [CoverLettersController],
   providers: [CoverLettersService],

@@ -1,12 +1,14 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
   Post,
   Req,
   Res,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
@@ -86,7 +88,7 @@ export class AuthController {
   ) {
     const refreshToken = dto.refreshToken || req.cookies?.hr_refresh_token;
     if (!refreshToken) {
-      throw new Error('Refresh token is required');
+      throw new UnauthorizedException('Refresh token is required');
     }
 
     const userAgent = req.headers['user-agent'];
@@ -130,6 +132,32 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   async getCurrentUser(@CurrentUser() user: User) {
     return this.authService.getCurrentUser(user.id);
+  }
+
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async changePassword(
+    @CurrentUser() user: User,
+    @Body() body: { currentPassword?: string; newPassword: string },
+  ) {
+    return this.authService.changePassword(
+      user.id,
+      body.currentPassword || '',
+      body.newPassword,
+    );
+  }
+
+  @Delete('me')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async deleteAccount(
+    @CurrentUser() user: User,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.deleteAccount(user.id);
+    this.clearAuthCookies(res);
+    return result;
   }
 
   private setAuthCookies(res: Response, accessToken: string, refreshToken: string): void {

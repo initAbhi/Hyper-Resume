@@ -23,12 +23,12 @@ export function AtsCompatibilitySection() {
   const principles = [
     {
       id: 'flow',
-      tabLabel: '01 / Single-Column Flow',
-      title: 'Deterministic Single-Column Flow',
-      subtitle: 'Linear Document Stream',
-      desc: 'Applicant Tracking Systems parse documents linearly. Multi-column floating boxes and nested tables often cause text streams to interleave, scrambling candidate experience and confusing job titles with company names.',
-      solution: 'HypeResume compiles your resume into a single, predictable coordinate stream so dates, titles, and bullet points are parsed in their exact intended chronological sequence.',
-      metric: 'Linear DOM Stream',
+      tabLabel: '01 / Linear Reading Flow',
+      title: 'Deterministic Reading Order',
+      subtitle: 'ATS-Conscious Document Stream',
+      desc: 'Applicant Tracking Systems parse documents linearly. Arbitrary floating textboxes and complex nested tables often cause text streams to interleave, scrambling candidate experience and confusing job titles with company names.',
+      solution: 'HypeResume offers dedicated single-column ATS presets (like Classic ATS and Jake\'s Resume) alongside structured 2-column layouts so dates, titles, and bullet points parse in clear sequence.',
+      metric: 'Ordered DOM Stream',
       highlight: 'Zero scrambled role dates & titles',
     },
     {
@@ -133,7 +133,7 @@ export function AtsCompatibilitySection() {
                 
                 <div className="flex items-center gap-2 text-xs text-zinc-300">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>Strict single-column reading order (no columns)</span>
+                  <span>Deterministic reading order & single-column ATS templates</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-zinc-300">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -262,7 +262,7 @@ export function AtsCompatibilitySection() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 text-[11px] text-zinc-400">
                   <div className="flex items-center gap-1.5">
                     <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span>Single-Column</span>
+                    <span>Clean Reading Flow</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />

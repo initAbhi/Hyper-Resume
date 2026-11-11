@@ -67,6 +67,9 @@ export class AdminGuard implements CanActivate {
         return token;
       }
     }
+    if (request?.cookies?.hr_access_token && typeof request.cookies.hr_access_token === 'string') {
+      return request.cookies.hr_access_token;
+    }
     return null;
   }
 }

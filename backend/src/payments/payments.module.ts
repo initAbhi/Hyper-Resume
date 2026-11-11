@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Payment } from './entities/payment.entity.js';
 import { User } from '../users/entities/user.entity.js';
+import { SystemSetting } from '../admin/entities/system-setting.entity.js';
 import { PaymentsService } from './payments.service.js';
 import { PaymentsController } from './payments.controller.js';
 import { CreditsModule } from '../credits/credits.module.js';
@@ -12,7 +13,7 @@ import { DodoPaymentProvider } from './providers/dodo-payment.provider.js';
 import { MetaConversionsService } from './meta-conversions.service.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Payment, User]), CreditsModule, AuthModule],
+  imports: [TypeOrmModule.forFeature([Payment, User, SystemSetting]), CreditsModule, AuthModule],
   controllers: [PaymentsController],
   providers: [
     PaymentsService,

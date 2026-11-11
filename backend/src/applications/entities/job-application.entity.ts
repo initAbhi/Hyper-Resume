@@ -40,6 +40,9 @@ export class JobApplication extends BaseEntity {
   @JoinColumn({ name: 'resume_version_id' })
   resumeVersion?: ResumeVersion;
 
+  @Column({ type: 'uuid', nullable: true, name: 'job_description_id' })
+  jobDescriptionId?: string;
+
   @Column({ type: 'varchar', length: 150 })
   company!: string;
 

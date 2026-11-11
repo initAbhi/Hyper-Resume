@@ -10,6 +10,7 @@ import { AiModule } from '../ai/ai.module.js';
 import { ProfilesModule } from '../profiles/profiles.module.js';
 import { ResumesModule } from '../resumes/resumes.module.js';
 import { ResumeParsingModule } from '../resume-parsing/resume-parsing.module.js';
+import { CreditsModule } from '../credits/credits.module.js';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ResumeParsingModule } from '../resume-parsing/resume-parsing.module.js'
     ProfilesModule,
     ResumesModule,
     ResumeParsingModule,
+    CreditsModule,
   ],
   controllers: [LinkedInController],
   providers: [LinkedInService],

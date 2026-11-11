@@ -1,17 +1,30 @@
-import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { CreditLedger, type CreditTransactionType } from './entities/credit-ledger.entity.js';
+import { User } from '../users/entities/user.entity.js';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 
 export const CREDIT_COSTS = {
   RESUME_ANALYSIS: 1,
-  JOB_MATCH: 2,
+  JOB_MATCH: 1,
   BULLET_REWRITE: 1,
   EXPORT_PDF: 0,
   ADAPT_RESUME: 3,
   ADAPT_SECTION: 1,
+  AI_TAILOR: 2,
+  COVER_LETTER: 2,
+  LINKEDIN_OPTIMIZE: 2,
+  MOCK_INTERVIEW: 2,
 } as const;
+
+export interface EntitlementStatus {
+  balance: number;
+  hasActivePro: boolean;
+  proPlanId: string | null;
+  proExpiresAt: Date | null;
+  isLifetimePro: boolean;
+}
 
 @Injectable()
 export class CreditsService {
@@ -20,10 +33,68 @@ export class CreditsService {
   constructor(
     @InjectRepository(CreditLedger)
     private readonly ledgerRepository: Repository<CreditLedger>,
+    @Optional()
+    @InjectRepository(User)
+    private readonly userRepository?: Repository<User>,
   ) {}
 
   private getRepo(manager?: EntityManager): Repository<CreditLedger> {
     return manager ? manager.getRepository(CreditLedger) : this.ledgerRepository;
+  }
+
+  private getUserRepo(manager?: EntityManager): Repository<User> | undefined {
+    return manager ? manager.getRepository(User) : this.userRepository;
+  }
+
+  async hasActivePro(userId: string, manager?: EntityManager): Promise<boolean> {
+    const repo = this.getUserRepo(manager);
+    if (!repo) {
+      return false;
+    }
+
+    const user = await repo.findOne({
+      where: { id: userId },
+      select: { id: true, isLifetimePro: true, proExpiresAt: true, proPlanId: true },
+    });
+    if (!user) {
+      return false;
+    }
+
+    if (user.isLifetimePro) {
+      return true;
+    }
+    return Boolean(user.proExpiresAt && new Date(user.proExpiresAt).getTime() > Date.now());
+  }
+
+  async getEntitlementStatus(userId: string, manager?: EntityManager): Promise<EntitlementStatus> {
+    const balance = await this.getBalance(userId, manager);
+    const repo = this.getUserRepo(manager);
+    if (!repo) {
+      return {
+        balance,
+        hasActivePro: false,
+        proPlanId: null,
+        proExpiresAt: null,
+        isLifetimePro: false,
+      };
+    }
+
+    const user = await repo.findOne({
+      where: { id: userId },
+      select: { id: true, isLifetimePro: true, proExpiresAt: true, proPlanId: true },
+    });
+    const hasActivePro = Boolean(
+      user?.isLifetimePro ||
+        (user?.proExpiresAt && new Date(user.proExpiresAt).getTime() > Date.now()),
+    );
+
+    return {
+      balance,
+      hasActivePro,
+      proPlanId: user?.proPlanId || null,
+      proExpiresAt: user?.proExpiresAt || null,
+      isLifetimePro: Boolean(user?.isLifetimePro),
+    };
   }
 
   async getBalance(userId: string, manager?: EntityManager): Promise<number> {
@@ -145,6 +216,36 @@ export class CreditsService {
     return saved;
   }
 
+  async consumeFeatureAccess(
+    userId: string,
+    cost: number,
+    transactionType: CreditTransactionType,
+    idempotencyKey: string,
+    description: string,
+    metadata?: Record<string, unknown>,
+    manager?: EntityManager,
+  ): Promise<{ accessGrantedVia: 'pro_pass' | 'credits'; ledgerEntry?: CreditLedger }> {
+    const requiredCost = Math.abs(cost);
+    if (requiredCost <= 0) {
+      return { accessGrantedVia: 'credits' };
+    }
+
+    if (await this.hasActivePro(userId, manager)) {
+      return { accessGrantedVia: 'pro_pass' };
+    }
+
+    const ledgerEntry = await this.deductCredits(
+      userId,
+      requiredCost,
+      transactionType,
+      idempotencyKey,
+      description,
+      metadata,
+      manager,
+    );
+    return { accessGrantedVia: 'credits', ledgerEntry };
+  }
+
   async refundCredits(
     userId: string,
     amount: number,
@@ -167,11 +268,11 @@ export class CreditsService {
   async initializeUserCredits(userId: string, manager?: EntityManager): Promise<CreditLedger> {
     return this.addTransaction(
       userId,
-      10,
+      5,
       'signup_bonus',
-      `signup_bonus:${userId}`,
-      'Welcome bonus: 10 free credits',
-      undefined,
+      `signup-bonus-${userId}`,
+      'Welcome bonus: 5 free AI optimizations & analyses',
+      { initial: true },
       manager,
     );
   }

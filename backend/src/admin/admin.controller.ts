@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -9,10 +10,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import { AdminGuard } from './guards/admin.guard.js';
 import { AdminService } from './admin.service.js';
 import { DodoPaymentProvider } from '../payments/providers/dodo-payment.provider.js';
+import { resolvePlanPricing } from '../payments/pricing-plans.js';
 
 export class UpdatePaymentModeDto {
   @IsIn(['test_mode', 'live_mode'])
@@ -20,10 +22,30 @@ export class UpdatePaymentModeDto {
   mode!: 'test_mode' | 'live_mode';
 }
 
+export class UpdatePromoSettingsDto {
+  @IsOptional()
+  @IsBoolean()
+  enabled?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  totalCap?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(220)
+  bannerText?: string;
+}
+
 export class TestCheckoutDto {
   @IsOptional()
   @IsString()
   planId?: string;
+
+  @IsOptional()
+  @IsIn(['INR', 'USD'])
+  currency?: 'INR' | 'USD';
 }
 
 export class GrantCreditsDto {
@@ -68,6 +90,18 @@ export class AdminController {
   @ApiOperation({ summary: 'Toggle payment gateway mode between test_mode and live_mode' })
   async updatePaymentMode(@Body() dto: UpdatePaymentModeDto) {
     return this.adminService.updatePaymentMode(dto.mode);
+  }
+
+  @Get('settings/promo')
+  @ApiOperation({ summary: 'Get Founding Lifetime Offer banner & seat cap configuration' })
+  async getPromoSettings() {
+    return this.adminService.getPromoSettings();
+  }
+
+  @Patch('settings/promo')
+  @ApiOperation({ summary: 'Update Founding Lifetime Offer visibility, seat cap, and banner copy' })
+  async updatePromoSettings(@Body() dto: UpdatePromoSettingsDto) {
+    return this.adminService.updatePromoSettings(dto);
   }
 
   @Get('users')
@@ -118,19 +152,26 @@ export class AdminController {
   @Post('test-checkout')
   @ApiOperation({ summary: 'Generate a test checkout link using current mode for verification' })
   async testCheckout(@Body() body: TestCheckoutDto) {
-    const planId = body?.planId || 'job_hunt_pack';
-    const amountMinor = planId === 'job_hunt_pro' ? 89900 : 39900;
+    const planId = body?.planId || 'pro_weekly';
+    const resolved = resolvePlanPricing(planId, body?.currency);
+    if (!resolved) {
+      throw new BadRequestException(`Unknown pricing plan: ${planId}`);
+    }
+    const { plan, amountMinor, currency } = resolved;
     const testOrderId = `ord_admin_verify_${Date.now()}`;
 
-    const order = await this.dodoProvider.createOrder(testOrderId, amountMinor, 'INR', {
-      planId,
-      email: 'admin@hyperresume.ai',
+    const order = await this.dodoProvider.createOrder(testOrderId, amountMinor, currency, {
+      planId: plan.id,
+      email: 'admin@hype-resume.com',
       fullName: 'System Administrator (Test)',
       userId: 'admin-verification',
     });
 
     return {
       orderId: testOrderId,
+      planId: plan.id,
+      amountMinor,
+      currency,
       mode: this.dodoProvider.getMode(),
       checkoutUrl: order.checkoutUrl,
       providerOrderId: order.providerOrderId,

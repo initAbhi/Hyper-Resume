@@ -122,7 +122,7 @@ export function ProductWorkflowStorytelling() {
               </div>
             </div>
             <div className="pt-3">
-              <Link href="/login">
+              <Link href="/register">
                 <Button size="sm" className="rounded-lg bg-[#5525F5] hover:bg-[#4318D8] text-white text-xs font-semibold px-4 h-9 gap-1.5 shadow-md shadow-violet-500/20">
                   <span>Open Master Editor</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -680,7 +680,7 @@ export function ProductWorkflowStorytelling() {
               </div>
             </div>
             <div className="pt-3">
-              <Link href="/login">
+              <Link href="/register?redirect=/app/match">
                 <Button size="sm" className="rounded-lg bg-[#5525F5] hover:bg-[#4318D8] text-white text-xs font-semibold px-4 h-9 gap-1.5 shadow-md shadow-violet-500/20">
                   <span>Start Tailoring Free</span>
                   <ArrowRight className="w-3.5 h-3.5" />

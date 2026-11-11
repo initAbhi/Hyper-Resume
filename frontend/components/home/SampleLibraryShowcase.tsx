@@ -20,7 +20,7 @@ export function SampleLibraryShowcase() {
       title: 'Software Engineering',
       slug: 'software-engineer',
       icon: Code,
-      badge: '18 Verified Samples',
+      badge: '15 Verified Samples',
       roles: ['Backend Engineer', 'Full Stack Developer', 'DevOps / SRE', 'Cloud Architect'],
       metrics: 'STAR impact bullets with scale & throughput numbers',
     },
@@ -28,31 +28,31 @@ export function SampleLibraryShowcase() {
       title: 'Marketing & Growth',
       slug: 'marketing',
       icon: TrendingUp,
-      badge: '14 Verified Samples',
+      badge: '7 Verified Samples',
       roles: ['Product Marketing Manager', 'Growth Lead', 'SEO Specialist', 'Lifecycle Marketer'],
       metrics: 'CAC reduction, funnel conversion lift & ARR growth',
     },
     {
-      title: 'Business & Operations',
+      title: 'Business & Product',
       slug: 'business',
       icon: Briefcase,
-      badge: '16 Verified Samples',
-      roles: ['Operations Manager', 'Business Analyst', 'Strategy Consultant', 'Chief of Staff'],
+      badge: '8 Verified Samples',
+      roles: ['Product Manager', 'Business Analyst', 'Strategy Consultant', 'Operations Lead'],
       metrics: 'OpEx efficiency, cross-functional velocity & OKRs',
     },
     {
       title: 'Finance & Banking',
       slug: 'finance',
       icon: DollarSign,
-      badge: '12 Verified Samples',
+      badge: '7 Verified Samples',
       roles: ['Investment Banking Analyst', 'Financial Modeling', 'Corporate FP&A', 'Risk Associate'],
       metrics: 'AUM volume, DCF valuation accuracy & portfolio metrics',
     },
     {
-      title: 'Design & Product',
+      title: 'Design & UX',
       slug: 'design',
       icon: Palette,
-      badge: '12 Verified Samples',
+      badge: '6 Verified Samples',
       roles: ['Product Designer', 'UX Researcher', 'Design Systems Lead', 'UI Architect'],
       metrics: 'Task completion rates, usability lift & design tokens',
     },
@@ -60,7 +60,7 @@ export function SampleLibraryShowcase() {
       title: 'Legal & Compliance',
       slug: 'legal',
       icon: Scale,
-      badge: '10 Verified Samples',
+      badge: '4 Verified Samples',
       roles: ['Corporate Counsel', 'Paralegal', 'Contract Specialist', 'Regulatory Analyst'],
       metrics: 'Regulatory audits, risk mitigation & transaction scale',
     },
@@ -68,7 +68,7 @@ export function SampleLibraryShowcase() {
       title: 'Healthcare & Medical',
       slug: 'medical',
       icon: Stethoscope,
-      badge: '10 Verified Samples',
+      badge: '6 Verified Samples',
       roles: ['Clinical Nurse', 'Medical Researcher', 'Health Informatics', 'BioTech Lead'],
       metrics: 'Patient throughput, compliance audits & clinical trials',
     },
@@ -76,7 +76,7 @@ export function SampleLibraryShowcase() {
       title: 'Students & Early Career',
       slug: 'fresher',
       icon: GraduationCap,
-      badge: '14 Verified Samples',
+      badge: '5 Verified Samples',
       roles: ['Computer Science Graduate', 'Finance Intern', 'Research Assistant', 'Tech Fresher'],
       metrics: 'Academic coursework, capstone projects & GPA benchmarks',
     },
@@ -98,10 +98,10 @@ export function SampleLibraryShowcase() {
               <span>Career Disciplines</span>
             </div>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white tracking-tight leading-tight">
-              Sample Library. Real-world resume examples across disciplines.
+              Sample Library. 82 real-world examples across 12 disciplines.
             </h2>
             <p className="text-sm sm:text-base text-zinc-400 leading-relaxed">
-              Explore ATS-conscious resume architectures organized by career discipline. Each example demonstrates evidence-grounded STAR bullet structures and standard layout conventions.
+              Explore ATS-conscious resume architectures organized across Engineering, Data & AI, Product, Finance, Design, Marketing, Legal, Healthcare, and Early Career roles.
             </p>
           </div>
 
@@ -110,7 +110,7 @@ export function SampleLibraryShowcase() {
               type="button"
               className="inline-flex items-center justify-center rounded-xl text-xs font-semibold px-4 h-10 gap-2 bg-white/[0.06] hover:bg-white/[0.12] text-white transition-all shadow-sm backdrop-blur-md cursor-pointer hover:shadow-lg hover:shadow-violet-950/30"
             >
-              <span>Browse All 150+ Samples</span>
+              <span>Browse All 82 Samples</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </Link>

@@ -116,7 +116,7 @@ export function ApplicationPipelineWorkspace() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Link href="/login">
+              <Link href="/register?redirect=/app/applications">
                 <button 
                   type="button"
                   className="inline-flex items-center justify-center rounded-lg text-xs font-semibold px-3 h-8 gap-1.5 bg-white/[0.06] hover:bg-white/[0.12] text-white transition-all shadow-sm backdrop-blur-md cursor-pointer"
@@ -190,7 +190,7 @@ export function ApplicationPipelineWorkspace() {
           {/* Bottom Workspace Action */}
           <div className="mt-5 pt-4 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-zinc-400 gap-3">
             <span>Associate exact resume versions, interview dates, and recruiter contact notes in one private system.</span>
-            <Link href="/login" className="font-semibold text-[#A5B4FC] hover:text-white inline-flex items-center gap-1 transition-colors">
+            <Link href="/register?redirect=/app/applications" className="font-semibold text-[#A5B4FC] hover:text-white inline-flex items-center gap-1 transition-colors">
               <span>Open Application Workspace</span>
               <ArrowRight className="w-3 h-3" />
             </Link>

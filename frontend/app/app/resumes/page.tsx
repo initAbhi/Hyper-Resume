@@ -55,7 +55,21 @@ export default function ResumesListPage() {
   const [newResumeName, setNewResumeName] = useState('');
   const [newResumeRole, setNewResumeRole] = useState('');
   const [newResumeCompany, setNewResumeCompany] = useState('');
+  const [selectedTemplateKey, setSelectedTemplateKey] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Auto-open Create modal when navigated with ?create=1&template=...
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const tpl = params.get('template');
+    if (tpl) {
+      setSelectedTemplateKey(tpl);
+    }
+    if (params.get('create') === '1' || tpl) {
+      setIsCreateModalOpen(true);
+    }
+  }, []);
 
   // Upload Modal State
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -161,6 +175,7 @@ export default function ResumesListPage() {
         name: newResumeName.trim(),
         targetRole: newResumeRole.trim() || undefined,
         targetCompany: newResumeCompany.trim() || undefined,
+        templateKey: selectedTemplateKey || undefined,
         content: defaultContent,
       });
 

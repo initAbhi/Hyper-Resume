@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import crypto from 'node:crypto';
-import type { PaymentOrderOutput, PaymentProvider } from './payment-provider.interface.js';
+import type {
+  PaymentOrderOutput,
+  PaymentProvider,
+  PaymentVerificationResult,
+} from './payment-provider.interface.js';
 
 @Injectable()
 export class SandboxPaymentProvider implements PaymentProvider {
@@ -25,6 +29,24 @@ export class SandboxPaymentProvider implements PaymentProvider {
     };
   }
 
+  async verifyOrderStatus(
+    providerOrderId: string,
+    providerPaymentId?: string,
+  ): Promise<PaymentVerificationResult> {
+    if (process.env.NODE_ENV === 'test') {
+      return {
+        verified: true,
+        status: 'succeeded',
+        providerPaymentId: providerPaymentId || providerOrderId,
+      };
+    }
+
+    return {
+      verified: false,
+      status: 'pending_webhook',
+    };
+  }
+
   verifyWebhookSignature(
     rawPayload: string | Buffer,
     signature: string,
@@ -32,13 +54,16 @@ export class SandboxPaymentProvider implements PaymentProvider {
   ): boolean {
     if (!signature) return false;
 
-    // Sandbox signature verification: validates HMAC-SHA256 with sandbox secret, or accepts valid test token
-    if (signature === 'sandbox_valid_test_signature') {
+    // Test suite convenience token is strictly restricted to NODE_ENV === 'test'
+    if (process.env.NODE_ENV === 'test' && signature === 'sandbox_valid_test_signature') {
       return true;
     }
 
+    if (!secret) return false;
+
     const payloadString = Buffer.isBuffer(rawPayload) ? rawPayload.toString('utf-8') : rawPayload;
     const expected = crypto.createHmac('sha256', secret).update(payloadString).digest('hex');
-    return expected === signature;
+    if (signature.length !== expected.length) return false;
+    return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
   }
 }

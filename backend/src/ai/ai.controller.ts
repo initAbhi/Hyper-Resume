@@ -4,11 +4,13 @@ import {
   HttpCode,
   HttpException,
   HttpStatus,
+  Optional,
   Post,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import type { Request } from 'express';
+import crypto from 'node:crypto';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -29,6 +31,10 @@ import type {
   SectionRewriteTone,
 } from './interfaces/ai-provider.interface.js';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
+import { CurrentUser } from '../common/decorators/current-user.decorator.js';
+import type { User } from '../users/entities/user.entity.js';
+import { CREDIT_COSTS, CreditsService } from '../credits/credits.service.js';
+import type { CreditTransactionType } from '../credits/entities/credit-ledger.entity.js';
 import { analyzePlainResumeTextAts } from './utils/ats-audit-engine.js';
 import { createPublicRateLimiter } from '../common/utils/public-rate-limit.util.js';
 
@@ -328,16 +334,52 @@ export class PlainTextAtsAuditDto {
 export class AiController {
   private readonly enforcePublicRateLimit = createPublicRateLimiter(15, 10 * 60 * 1000);
 
-  constructor(private readonly aiService: AiService) {}
+  constructor(
+    private readonly aiService: AiService,
+    @Optional()
+    private readonly creditsService?: CreditsService,
+  ) {}
+
+  private async runWithFeatureCredit<T>(
+    userId: string | undefined,
+    cost: number,
+    txType: CreditTransactionType,
+    description: string,
+    work: () => Promise<T>,
+  ): Promise<T> {
+    if (!this.creditsService || !userId || cost <= 0) {
+      return work();
+    }
+
+    const opKey = `ai:${txType}:${userId}:${crypto.randomUUID()}`;
+    const access = await this.creditsService.consumeFeatureAccess(
+      userId,
+      cost,
+      txType,
+      opKey,
+      description,
+    );
+
+    try {
+      return await work();
+    } catch (err) {
+      if (access.accessGrantedVia === 'credits') {
+        await this.creditsService.refundCredits(userId, cost, opKey, `${description} failed`);
+      }
+      throw err;
+    }
+  }
 
   @Post('bullet-improve')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async improveBullet(@Body() dto: BulletImproveDto) {
-    const result = await this.aiService.rewriteBullet(
-      dto.bulletText,
-      dto.targetRole,
-      dto.metricHint,
+  async improveBullet(@CurrentUser() user: User, @Body() dto: BulletImproveDto) {
+    const result = await this.runWithFeatureCredit(
+      user?.id,
+      CREDIT_COSTS.BULLET_REWRITE,
+      'ai_tailor',
+      'AI bullet rewrite',
+      () => this.aiService.rewriteBullet(dto.bulletText, dto.targetRole, dto.metricHint),
     );
     return this.formatImproveResponse(result);
   }
@@ -345,14 +387,21 @@ export class AiController {
   @Post('bullet-generate')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async generateBullets(@Body() dto: BulletGenerateDto) {
-    return this.aiService.generateBullets({
-      roleTitle: dto.roleTitle,
-      companyName: dto.companyName,
-      focusArea: dto.focusArea,
-      existingBullets: dto.existingBullets,
-      targetRole: dto.targetRole,
-    });
+  async generateBullets(@CurrentUser() user: User, @Body() dto: BulletGenerateDto) {
+    return this.runWithFeatureCredit(
+      user?.id,
+      CREDIT_COSTS.BULLET_REWRITE,
+      'ai_tailor',
+      'AI bullet generation',
+      () =>
+        this.aiService.generateBullets({
+          roleTitle: dto.roleTitle,
+          companyName: dto.companyName,
+          focusArea: dto.focusArea,
+          existingBullets: dto.existingBullets,
+          targetRole: dto.targetRole,
+        }),
+    );
   }
 
   @Post('public/bullet-improve')
@@ -389,7 +438,10 @@ export class AiController {
   @Post('summary-generate')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async generateSummaryAndHeadlines(@Body() dto: SummaryGenerateDto) {
+  async generateSummaryAndHeadlines(
+    @CurrentUser() user: User,
+    @Body() dto: SummaryGenerateDto,
+  ) {
     const hasSignal =
       Boolean(dto.targetRole?.trim()) ||
       Boolean(dto.currentHeadline?.trim()) ||
@@ -404,23 +456,30 @@ export class AiController {
       );
     }
 
-    return this.aiService.generateSummaryAndHeadlines({
-      currentHeadline: dto.currentHeadline,
-      currentSummary: dto.currentSummary,
-      targetRole: dto.targetRole,
-      skills: (dto.skills || []).map((s) => s.trim()).filter(Boolean),
-      experience: (dto.experience || []).map((exp) => ({
-        title: exp.title?.trim() || '',
-        company: exp.company?.trim() || '',
-        bullets: (exp.bullets || []).map((b) => b.trim()).filter(Boolean),
-      })),
-      projects: (dto.projects || [])
-        .map((proj) => ({
-          name: proj.name?.trim() || '',
-          description: proj.description?.trim() || '',
-        }))
-        .filter((p) => p.name || p.description),
-    });
+    return this.runWithFeatureCredit(
+      user?.id,
+      CREDIT_COSTS.BULLET_REWRITE,
+      'ai_tailor',
+      'AI summary generation',
+      () =>
+        this.aiService.generateSummaryAndHeadlines({
+          currentHeadline: dto.currentHeadline,
+          currentSummary: dto.currentSummary,
+          targetRole: dto.targetRole,
+          skills: (dto.skills || []).map((s) => s.trim()).filter(Boolean),
+          experience: (dto.experience || []).map((exp) => ({
+            title: exp.title?.trim() || '',
+            company: exp.company?.trim() || '',
+            bullets: (exp.bullets || []).map((b) => b.trim()).filter(Boolean),
+          })),
+          projects: (dto.projects || [])
+            .map((proj) => ({
+              name: proj.name?.trim() || '',
+              description: proj.description?.trim() || '',
+            }))
+            .filter((p) => p.name || p.description),
+        }),
+    );
   }
 
   @Post('writing-check')
@@ -433,7 +492,7 @@ export class AiController {
   @Post('section-rewrite')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async rewriteSection(@Body() dto: SectionRewriteDto) {
+  async rewriteSection(@CurrentUser() user: User, @Body() dto: SectionRewriteDto) {
     if (dto.sectionType === 'summary' && !dto.summaryText?.trim()) {
       throw new HttpException(
         'Provide a summary draft before rewriting this section.',
@@ -470,30 +529,37 @@ export class AiController {
       );
     }
 
-    return this.aiService.rewriteSection({
-      sectionType: dto.sectionType,
-      sectionTitle: dto.sectionTitle,
-      tone: dto.tone,
-      targetRole: dto.targetRole,
-      instruction: dto.instruction,
-      candidateSkills: (dto.candidateSkills || []).map((s) => s.trim()).filter(Boolean),
-      summaryText: dto.summaryText,
-      experienceEntries: (dto.experienceEntries || []).map((e) => ({
-        title: e.title.trim(),
-        company: (e.company || '').trim(),
-        bullets: (e.bullets || []).map((b) => b.trim()).filter(Boolean),
-      })),
-      projectEntries: (dto.projectEntries || []).map((p) => ({
-        name: p.name.trim(),
-        description: (p.description || '').trim(),
-        highlights: (p.highlights || []).map((h) => h.trim()).filter(Boolean),
-      })),
-      customEntries: (dto.customEntries || []).map((c) => ({
-        heading: c.heading.trim(),
-        subtitle: c.subtitle?.trim() || undefined,
-        bullets: (c.bullets || []).map((b) => b.trim()).filter(Boolean),
-      })),
-    });
+    return this.runWithFeatureCredit(
+      user?.id,
+      CREDIT_COSTS.ADAPT_SECTION,
+      'ai_adapt',
+      `AI section rewrite (${dto.sectionType})`,
+      () =>
+        this.aiService.rewriteSection({
+          sectionType: dto.sectionType,
+          sectionTitle: dto.sectionTitle,
+          tone: dto.tone,
+          targetRole: dto.targetRole,
+          instruction: dto.instruction,
+          candidateSkills: (dto.candidateSkills || []).map((s) => s.trim()).filter(Boolean),
+          summaryText: dto.summaryText,
+          experienceEntries: (dto.experienceEntries || []).map((e) => ({
+            title: e.title.trim(),
+            company: (e.company || '').trim(),
+            bullets: (e.bullets || []).map((b) => b.trim()).filter(Boolean),
+          })),
+          projectEntries: (dto.projectEntries || []).map((p) => ({
+            name: p.name.trim(),
+            description: (p.description || '').trim(),
+            highlights: (p.highlights || []).map((h) => h.trim()).filter(Boolean),
+          })),
+          customEntries: (dto.customEntries || []).map((c) => ({
+            heading: c.heading.trim(),
+            subtitle: c.subtitle?.trim() || undefined,
+            bullets: (c.bullets || []).map((b) => b.trim()).filter(Boolean),
+          })),
+        }),
+    );
   }
 
   @Post('public/writing-check')

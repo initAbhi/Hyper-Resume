@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Sparkles, Target, Briefcase, CheckCircle2, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,7 +29,30 @@ const TARGET_GOALS = [
   { id: 'compensation', label: 'Level up to Senior / Lead salary' },
 ];
 
-export default function RegisterPage() {
+function buildPostAuthTarget(searchParams: ReturnType<typeof useSearchParams>): string {
+  const redirect = searchParams?.get('redirect');
+  const plan = searchParams?.get('plan');
+  const currency = searchParams?.get('currency');
+  const template = searchParams?.get('template');
+
+  if (redirect && redirect.startsWith('/') && !redirect.startsWith('//')) {
+    const params = new URLSearchParams();
+    if (plan) params.set('plan', plan);
+    if (currency) params.set('currency', currency);
+    if (template) params.set('template', template);
+    const qs = params.toString();
+    if (!qs) return redirect;
+    return redirect.includes('?') ? `${redirect}&${qs}` : `${redirect}?${qs}`;
+  }
+
+  if (template) {
+    return `/app/resumes?create=1&template=${encodeURIComponent(template)}`;
+  }
+
+  return '/app';
+}
+
+function RegisterFormContent() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -40,13 +63,17 @@ export default function RegisterPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isGoogleReady, setIsGoogleReady] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
 
   const { signup, googleLogin } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const postAuthTarget = buildPostAuthTarget(searchParams);
+  const querySuffix = searchParams?.toString() ? `?${searchParams.toString()}` : '';
 
   // Load Google Identity Services script if client ID is configured
   useEffect(() => {
-    const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
     if (!googleClientId) return;
 
     const script = document.createElement('script');
@@ -67,7 +94,7 @@ export default function RegisterPage() {
                   targetGoal,
                 });
                 analytics.track('signup_completed', { source: 'google_oauth' });
-                router.push('/app');
+                router.push(buildPostAuthTarget(searchParams));
               } catch (err: unknown) {
                 setErrorMessage(err instanceof Error ? err.message : 'Google sign in failed');
               } finally {
@@ -102,7 +129,7 @@ export default function RegisterPage() {
         document.body.removeChild(script);
       }
     };
-  }, [googleLogin, router, targetRole, targetGoal]);
+  }, [googleClientId, googleLogin, router, searchParams, targetRole, targetGoal]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,7 +168,7 @@ export default function RegisterPage() {
         targetRole: targetRole.trim(),
       });
 
-      router.push('/app');
+      router.push(postAuthTarget);
     } catch (err: unknown) {
       setErrorMessage(
         err instanceof Error
@@ -191,12 +218,16 @@ export default function RegisterPage() {
           )}
 
           {/* Official Google Button Container */}
-          <div id="google-btn-rendered-register" className="w-full flex justify-center min-h-[44px]" />
-          {!isGoogleReady && (
-            <div className="w-full h-11 rounded-xl bg-slate-100 dark:bg-zinc-800 animate-pulse flex items-center justify-center text-xs text-slate-400">
-              Loading Google Sign-Up...
-            </div>
-          )}
+          {googleClientId ? (
+            <>
+              <div id="google-btn-rendered-register" className="w-full flex justify-center min-h-[44px]" />
+              {!isGoogleReady && (
+                <div className="w-full h-11 rounded-xl bg-slate-100 dark:bg-zinc-800 animate-pulse flex items-center justify-center text-xs text-slate-400">
+                  Loading Google Sign-Up...
+                </div>
+              )}
+            </>
+          ) : null}
 
           {/* Divider */}
           <div className="relative my-5">
@@ -348,7 +379,7 @@ export default function RegisterPage() {
             </Button>
             <p className="text-xs text-center text-slate-500">
               Already have an account?{' '}
-              <Link href="/login" className="text-[#285FEA] hover:underline font-semibold">
+              <Link href={`/login${querySuffix}`} className="text-[#285FEA] hover:underline font-semibold">
                 Sign in
               </Link>
             </p>
@@ -356,5 +387,13 @@ export default function RegisterPage() {
         </form>
       </Card>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-xs text-slate-500">Loading registration...</div>}>
+      <RegisterFormContent />
+    </Suspense>
   );
 }

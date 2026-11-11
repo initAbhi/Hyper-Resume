@@ -5,6 +5,7 @@
  * candidate names, resume bodies, bullet content, or job description text.
  */
 
+import { env } from './env';
 import { logger } from './logger';
 
 const analyticsLogger = logger.child('Analytics');
@@ -105,26 +106,52 @@ class AnalyticsService {
             break;
           case 'checkout_started': {
             const eventOptions = sanitizedProps.orderId ? { eventID: String(sanitizedProps.orderId) } : undefined;
+            const amountMinor =
+              typeof sanitizedProps.amountMinor === 'number'
+                ? sanitizedProps.amountMinor
+                : typeof sanitizedProps.amount === 'number'
+                  ? sanitizedProps.amount
+                  : 39900;
+            const currency =
+              typeof sanitizedProps.currency === 'string' && sanitizedProps.currency.trim()
+                ? sanitizedProps.currency.toUpperCase()
+                : 'INR';
             fbq('track', 'InitiateCheckout', {
-              content_name: sanitizedProps.planId || 'Credit Pack',
-              value: typeof sanitizedProps.amountMinor === 'number' ? sanitizedProps.amountMinor / 100 : 399,
-              currency: 'INR',
+              content_name: sanitizedProps.planName || sanitizedProps.planId || 'HypeResume Pro',
+              value: amountMinor / 100,
+              currency,
               num_items: 1,
             }, eventOptions);
             break;
           }
           case 'purchase_completed': {
             const eventOptions = sanitizedProps.orderId ? { eventID: String(sanitizedProps.orderId) } : undefined;
+            const amountMinor =
+              typeof sanitizedProps.amountMinor === 'number'
+                ? sanitizedProps.amountMinor
+                : typeof sanitizedProps.amount === 'number'
+                  ? sanitizedProps.amount
+                  : 39900;
+            const currency =
+              typeof sanitizedProps.currency === 'string' && sanitizedProps.currency.trim()
+                ? sanitizedProps.currency.toUpperCase()
+                : 'INR';
             fbq('track', 'Purchase', {
-              content_name: sanitizedProps.planId || 'Credit Pack',
-              value: typeof sanitizedProps.amount === 'number' ? sanitizedProps.amount / 100 : 399,
-              currency: 'INR',
+              content_name: sanitizedProps.planName || sanitizedProps.planId || 'HypeResume Pro',
+              value: amountMinor / 100,
+              currency,
               content_type: 'product',
             }, eventOptions);
             break;
           }
-          case 'resume_upload_completed':
           case 'analysis_completed':
+            fbq('track', 'Lead', {
+              content_name: String(sanitizedProps.source || 'Resume Audit Tool'),
+              content_category: 'Free Tool',
+            });
+            fbq('trackCustom', event, sanitizedProps);
+            break;
+          case 'resume_upload_completed':
           case 'job_match_completed':
           case 'suggestion_accepted':
           case 'export_completed':
@@ -138,14 +165,61 @@ class AnalyticsService {
       }
     }
 
+    // Forward sanitized funnel telemetry to first-party backend in browsers
+    if (
+      typeof window !== 'undefined' &&
+      typeof fetch === 'function' &&
+      (typeof process === 'undefined' || process.env?.NODE_ENV !== 'test')
+    ) {
+      try {
+        const sid = this.getOrCreateSessionId();
+        const urlParams = new URLSearchParams(window.location.search);
+        void fetch(`${env.apiUrl}/analytics/event`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          keepalive: true,
+          body: JSON.stringify({
+            eventType: event,
+            path: window.location.pathname,
+            referrer: document.referrer || undefined,
+            utmSource: urlParams.get('utm_source') || undefined,
+            utmMedium: urlParams.get('utm_medium') || undefined,
+            utmCampaign: urlParams.get('utm_campaign') || undefined,
+            sessionId: sid,
+            metadata: sanitizedProps,
+          }),
+        }).catch(() => {
+          // Non-blocking telemetry
+        });
+      } catch {
+        // Non-blocking telemetry
+      }
+    }
+
     // Custom event dispatch for optional client listeners
     if (typeof window !== 'undefined') {
       window.dispatchEvent(
         new CustomEvent('hyperresume:analytics', { detail: record }),
       );
-      window.dispatchEvent(
-        new CustomEvent('hバイpe:analytics', { detail: record }),
-      );
+    }
+  }
+
+  private getOrCreateSessionId(): string | undefined {
+    if (typeof window === 'undefined') return undefined;
+    try {
+      const storageKey = 'hr_analytics_sid';
+      let existing = window.sessionStorage?.getItem(storageKey);
+      if (!existing) {
+        existing =
+          typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+            ? crypto.randomUUID()
+            : `sid_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+        window.sessionStorage?.setItem(storageKey, existing);
+      }
+      return existing;
+    } catch {
+      return undefined;
     }
   }
 

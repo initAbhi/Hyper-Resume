@@ -28,11 +28,12 @@ export class ApplicationsService {
     if (!candidateId) return undefined;
 
     try {
-      // 1. Direct match with ResumeVersion
+      // 1. Direct match with ResumeVersion owned by caller
       const directVersion = await this.versionRepository.findOne({
         where: { id: candidateId },
+        relations: { resume: true },
       });
-      if (directVersion) {
+      if (directVersion && directVersion.resume?.userId === userId) {
         return directVersion.id;
       }
 
@@ -84,6 +85,7 @@ export class ApplicationsService {
       company,
       role,
       resumeVersionId,
+      jobDescriptionId: dto.jobDescriptionId,
       jobUrl: (dto.jobUrl || dto.applicationUrl)?.trim(),
       status: dto.status || 'draft',
       appliedDate: dto.appliedDate ? new Date(dto.appliedDate) : undefined,
@@ -146,6 +148,9 @@ export class ApplicationsService {
         userId,
         dto.resumeVersionId || dto.resumeId,
       );
+    }
+    if (dto.jobDescriptionId !== undefined) {
+      app.jobDescriptionId = dto.jobDescriptionId;
     }
     if (dto.jobUrl !== undefined || dto.applicationUrl !== undefined) {
       app.jobUrl = (dto.jobUrl || dto.applicationUrl)?.trim();

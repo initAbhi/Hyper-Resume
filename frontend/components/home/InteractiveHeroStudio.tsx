@@ -429,7 +429,7 @@ export function InteractiveHeroStudio() {
           </div>
 
           <Link 
-            href="/login" 
+            href="/register" 
             className="inline-flex items-center gap-1 text-white hover:text-[#A5B4FC] font-medium transition-colors cursor-pointer"
           >
             <span>Start Building with Your Profile</span>

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const SITE_NAME = 'HypeResume';
 export const SITE_URL =
-  process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  process.env.NEXT_PUBLIC_APP_URL || 'https://hype-resume.com';
 export const DEFAULT_DESCRIPTION =
   'Turn your real experience into a stronger, truthful, job-specific application. Evidence-backed resume builder, truthful ATS checks, and explainable job matching.';
 

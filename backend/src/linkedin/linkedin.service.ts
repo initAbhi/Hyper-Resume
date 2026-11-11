@@ -3,9 +3,11 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import crypto from 'node:crypto';
 import { LinkedInAudit } from './entities/linkedin-audit.entity.js';
 import { Resume } from '../resumes/entities/resume.entity.js';
 import { ResumeShare } from '../resumes/entities/resume-share.entity.js';
@@ -14,6 +16,7 @@ import { AiService } from '../ai/ai.service.js';
 import { ProfilesService } from '../profiles/profiles.service.js';
 import { ResumesService } from '../resumes/resumes.service.js';
 import { ResumeParserService } from '../resume-parsing/resume-parser.service.js';
+import { CREDIT_COSTS, CreditsService } from '../credits/credits.service.js';
 import type {
   ApplyLinkedInAuditDto,
   OptimizeLinkedInDto,
@@ -37,6 +40,8 @@ export class LinkedInService {
     private readonly profilesService: ProfilesService,
     private readonly resumesService: ResumesService,
     private readonly parserService: ResumeParserService,
+    @Optional()
+    private readonly creditsService?: CreditsService,
   ) {}
 
   async listAudits(userId: string): Promise<LinkedInAudit[]> {
@@ -100,14 +105,40 @@ export class LinkedInService {
       hasPublicShareUrl: Boolean(publicShareUrl),
     });
 
-    const optimizations = await this.aiService.optimizeLinkedInProfile({
-      profile: profileContent,
-      targetRole: dto.targetRole.trim(),
-      industry: dto.industry?.trim() || undefined,
-      tone: dto.tone || 'Executive',
-      targetJobDescription: dto.targetJobDescription?.trim() || undefined,
-      publicShareUrl,
-    });
+    const chargeKey = `linkedin-opt:${user.id}:${crypto.randomUUID()}`;
+    let chargedCredits = false;
+    if (this.creditsService) {
+      const access = await this.creditsService.consumeFeatureAccess(
+        user.id,
+        CREDIT_COSTS.LINKEDIN_OPTIMIZE,
+        'linkedin_optimize',
+        chargeKey,
+        `LinkedIn Profile Optimization (${dto.targetRole.trim()})`,
+      );
+      chargedCredits = access.accessGrantedVia === 'credits';
+    }
+
+    let optimizations;
+    try {
+      optimizations = await this.aiService.optimizeLinkedInProfile({
+        profile: profileContent,
+        targetRole: dto.targetRole.trim(),
+        industry: dto.industry?.trim() || undefined,
+        tone: dto.tone || 'Executive',
+        targetJobDescription: dto.targetJobDescription?.trim() || undefined,
+        publicShareUrl,
+      });
+    } catch (err) {
+      if (chargedCredits && this.creditsService) {
+        await this.creditsService.refundCredits(
+          user.id,
+          CREDIT_COSTS.LINKEDIN_OPTIMIZE,
+          chargeKey,
+          'LinkedIn optimization AI failed',
+        );
+      }
+      throw err;
+    }
 
     const entity = this.auditRepository.create({
       userId: user.id,
@@ -207,12 +238,38 @@ export class LinkedInService {
       targetRole: inferredRole,
     });
 
-    const optimizations = await this.aiService.optimizeLinkedInProfile({
-      profile: convertedContent,
-      targetRole: inferredRole,
-      industry: options.industry?.trim() || undefined,
-      tone: 'Impact & Metrics',
-    });
+    const chargeKey = `linkedin-pdf:${user.id}:${crypto.randomUUID()}`;
+    let chargedCredits = false;
+    if (this.creditsService) {
+      const access = await this.creditsService.consumeFeatureAccess(
+        user.id,
+        CREDIT_COSTS.LINKEDIN_OPTIMIZE,
+        'linkedin_optimize',
+        chargeKey,
+        `LinkedIn PDF Import & Audit (${inferredRole})`,
+      );
+      chargedCredits = access.accessGrantedVia === 'credits';
+    }
+
+    let optimizations;
+    try {
+      optimizations = await this.aiService.optimizeLinkedInProfile({
+        profile: convertedContent,
+        targetRole: inferredRole,
+        industry: options.industry?.trim() || undefined,
+        tone: 'Impact & Metrics',
+      });
+    } catch (err) {
+      if (chargedCredits && this.creditsService) {
+        await this.creditsService.refundCredits(
+          user.id,
+          CREDIT_COSTS.LINKEDIN_OPTIMIZE,
+          chargeKey,
+          'LinkedIn PDF optimization AI failed',
+        );
+      }
+      throw err;
+    }
 
     const audit = await this.auditRepository.save(
       this.auditRepository.create({

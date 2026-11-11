@@ -373,10 +373,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Profile Avatar Chip */}
             <div className="flex items-center gap-2 pl-2">
               <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-indigo-600 to-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-xs">
-                A
+                {(user?.fullName?.trim()?.charAt(0) || 'A').toUpperCase()}
               </div>
               <div className="hidden xl:block text-left">
-                <div className="text-xs font-bold text-slate-800 leading-tight">Abhi Singh</div>
+                <div className="text-xs font-bold text-slate-800 leading-tight">{user?.fullName || 'Admin User'}</div>
                 <div className="text-[10px] text-slate-400">Super Admin</div>
               </div>
             </div>

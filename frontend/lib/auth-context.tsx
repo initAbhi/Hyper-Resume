@@ -10,6 +10,7 @@ const authLogger = logger.child('Auth');
 interface AuthContextType {
   user: User | null;
   creditBalance: number;
+  hasActivePro: boolean;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (credentials: { email: string; password: string }) => Promise<void>;
@@ -143,11 +144,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const hasActivePro = Boolean(
+    user?.hasActivePro ||
+      user?.isLifetimePro ||
+      (user?.proExpiresAt && new Date(user.proExpiresAt).getTime() > Date.now()),
+  );
+
   return (
     <AuthContext.Provider
       value={{
         user,
         creditBalance,
+        hasActivePro,
         isAuthenticated: !!user,
         isLoading,
         login,

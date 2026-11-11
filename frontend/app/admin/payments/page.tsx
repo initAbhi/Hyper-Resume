@@ -22,6 +22,7 @@ import {
   apiClient,
   AdminPaymentSettings,
   AdminPaymentOrder,
+  SupportedCurrency,
 } from '@/lib/api-client';
 
 export default function AdminPaymentsPage() {
@@ -33,6 +34,8 @@ export default function AdminPaymentsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [modeFilter, setModeFilter] = useState('all');
   const [generatingLink, setGeneratingLink] = useState(false);
+  const [testPlanId, setTestPlanId] = useState('pro_weekly');
+  const [testCurrency, setTestCurrency] = useState<SupportedCurrency>('INR');
   const [testCheckoutUrl, setTestCheckoutUrl] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -82,11 +85,11 @@ export default function AdminPaymentsPage() {
     }
   };
 
-  const handleTestCheckout = async (planId = 'job_hunt_pack') => {
+  const handleTestCheckout = async (planId = testPlanId, currency: SupportedCurrency = testCurrency) => {
     setGeneratingLink(true);
     setTestCheckoutUrl(null);
     try {
-      const res = await apiClient.testAdminCheckout(planId);
+      const res = await apiClient.testAdminCheckout(planId, currency);
       setTestCheckoutUrl(res.checkoutUrl);
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Failed to generate checkout link');
@@ -216,43 +219,60 @@ export default function AdminPaymentsPage() {
           <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-3.5 space-y-1">
             <div className="flex items-center gap-1.5 text-xs text-slate-500">
               <Layers className="h-3.5 w-3.5 text-emerald-600" />
-              <span>Job Hunt Pack (₹399)</span>
+              <span>1-Week / Monthly Pro</span>
             </div>
-            <div className="font-mono text-xs font-semibold text-slate-800 truncate">
-              {isLive ? settings?.liveProducts?.job_hunt_pack : settings?.testProducts?.job_hunt_pack}
+            <div className="font-mono text-[11px] font-semibold text-slate-800 truncate">
+              {isLive ? settings?.liveProducts?.pro_weekly : settings?.testProducts?.pro_weekly}
+            </div>
+            <div className="font-mono text-[11px] font-semibold text-slate-600 truncate">
+              {isLive ? settings?.liveProducts?.pro_monthly : settings?.testProducts?.pro_monthly}
             </div>
           </div>
 
           <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-3.5 space-y-1">
             <div className="flex items-center gap-1.5 text-xs text-slate-500">
               <Layers className="h-3.5 w-3.5 text-amber-600" />
-              <span>Job Hunt Pro (₹899)</span>
+              <span>6-Month / Lifetime Pro</span>
             </div>
-            <div className="font-mono text-xs font-semibold text-slate-800 truncate">
-              {isLive ? settings?.liveProducts?.job_hunt_pro : settings?.testProducts?.job_hunt_pro}
+            <div className="font-mono text-[11px] font-semibold text-slate-800 truncate">
+              {isLive ? settings?.liveProducts?.pro_6month : settings?.testProducts?.pro_6month}
+            </div>
+            <div className="font-mono text-[11px] font-semibold text-slate-600 truncate">
+              {isLive ? settings?.liveProducts?.pro_lifetime : settings?.testProducts?.pro_lifetime}
             </div>
           </div>
         </div>
 
-        {/* Verification Check Button */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+        {/* Verification Check Controls */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-2">
           <div className="text-xs text-slate-500">
-            Generate an instant checkout session to verify Dodo responds with 200 OK.
+            Generate a real checkout session in the active mode to verify Dodo responds cleanly.
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleTestCheckout('job_hunt_pack')}
-              disabled={generatingLink}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-2xs"
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={testPlanId}
+              onChange={(e) => setTestPlanId(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
             >
-              Verify Pack (₹399)
-            </button>
-            <button
-              onClick={() => handleTestCheckout('job_hunt_pro')}
-              disabled={generatingLink}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-2xs"
+              <option value="pro_weekly">1-Week Pass (₹149 / $3)</option>
+              <option value="pro_monthly">Monthly Pro (₹399 / $9)</option>
+              <option value="pro_6month">6-Month Pro (₹1,200 / $29)</option>
+              <option value="pro_lifetime">Founding Lifetime (₹999 / $19)</option>
+            </select>
+            <select
+              value={testCurrency}
+              onChange={(e) => setTestCurrency(e.target.value as SupportedCurrency)}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
             >
-              Verify Pro (₹899)
+              <option value="INR">INR (₹)</option>
+              <option value="USD">USD ($)</option>
+            </select>
+            <button
+              onClick={() => handleTestCheckout(testPlanId, testCurrency)}
+              disabled={generatingLink}
+              className="rounded-xl border border-slate-200 bg-[#285FEA] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-blue-600 transition shadow-2xs disabled:opacity-50"
+            >
+              {generatingLink ? 'Creating...' : 'Create Test Checkout'}
             </button>
           </div>
         </div>

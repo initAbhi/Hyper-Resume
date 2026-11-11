@@ -15,6 +15,8 @@ export type CreditTransactionType =
   | 'resume_analysis'
   | 'ai_tailor'
   | 'ai_adapt'
+  | 'cover_letter'
+  | 'linkedin_optimize'
   | 'export_pdf'
   | 'mock_interview'
   | 'refund';

@@ -34,6 +34,7 @@ const KANBAN_COLUMNS: {
   { key: 'applying', label: 'Applying', dotColor: 'bg-amber-400' },
   { key: 'applied', label: 'Applied', dotColor: 'bg-blue-500' },
   { key: 'interviewing', label: 'Interviewing', dotColor: 'bg-purple-500' },
+  { key: 'offer', label: 'Offer Received', dotColor: 'bg-teal-500' },
   { key: 'negotiating', label: 'Negotiating', dotColor: 'bg-indigo-500' },
   { key: 'accepted', label: 'Accepted', dotColor: 'bg-emerald-500' },
 ];
@@ -60,7 +61,7 @@ export function ApplicationKanbanView({
 
   return (
     <div className="w-full overflow-x-auto pb-4 no-scrollbar">
-      <div className="flex gap-4 min-w-[1100px] items-start">
+      <div className="flex gap-4 min-w-[1260px] items-start">
         {KANBAN_COLUMNS.map((col, colIdx) => {
           const colApps = applications.filter((a) => a.status === col.key);
 

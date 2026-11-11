@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
+import { useEffect, useRef, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { logger } from '@/lib/logger';
+import { analytics } from '@/lib/analytics';
 
 const pixelLogger = logger.child('MetaPixel');
 
-export const META_PIXEL_ID = process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID || '1117348281146781';
+export const META_PIXEL_ID = process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID || '';
 
 declare global {
   interface Window {
@@ -18,10 +19,23 @@ declare global {
 function PixelRouteTracker() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && typeof window.fbq === 'function') {
-      // Fire PageView on every Next.js client-side route change
+    const queryStr = searchParams?.toString();
+    const fullRoute = queryStr ? `${pathname}?${queryStr}` : pathname;
+
+    // Record genuine route transitions into first-party funnel analytics (landing_view / PageView)
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      analytics.trackFunnelStep('landing_view', { path: fullRoute });
+      return;
+    }
+
+    analytics.track('landing_view', { path: fullRoute });
+
+    if (META_PIXEL_ID && typeof window !== 'undefined' && typeof window.fbq === 'function') {
+      // Fire PageView on client-side route transitions (initial load already tracked by inline Pixel script)
       window.fbq('track', 'PageView');
       pixelLogger.debug('Dispatched PageView on route change', { pathname });
     }
@@ -65,10 +79,15 @@ export function trackMetaEvent(
     | 'SubmitApplication'
     | 'Subscribe',
   options: Record<string, any> = {},
+  eventData?: { eventID?: string },
 ) {
   if (typeof window !== 'undefined' && typeof window.fbq === 'function') {
     try {
-      window.fbq('track', eventName, options);
+      if (eventData?.eventID) {
+        window.fbq('track', eventName, options, eventData);
+      } else {
+        window.fbq('track', eventName, options);
+      }
       pixelLogger.debug(`Tracked event: ${eventName}`, options);
     } catch (e) {
       pixelLogger.warn(`Failed to track event: ${eventName}`, e);

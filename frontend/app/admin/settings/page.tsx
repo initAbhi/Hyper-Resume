@@ -19,10 +19,20 @@ import {
   ExternalLink,
   RefreshCw,
 } from 'lucide-react';
-import { apiClient, AdminPaymentSettings } from '@/lib/api-client';
+import {
+  apiClient,
+  AdminPaymentSettings,
+  AdminPromoSettings,
+} from '@/lib/api-client';
 
 export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<AdminPaymentSettings | null>(null);
+  const [promoSettings, setPromoSettings] = useState<AdminPromoSettings | null>(null);
+  const [promoEnabled, setPromoEnabled] = useState(true);
+  const [promoCap, setPromoCap] = useState(10);
+  const [promoBannerText, setPromoBannerText] = useState('');
+  const [savingPromo, setSavingPromo] = useState(false);
+  const [promoSaveMsg, setPromoSaveMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [updatingMode, setUpdatingMode] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -30,8 +40,17 @@ export default function AdminSettingsPage() {
   const loadSettings = async () => {
     setLoading(true);
     try {
-      const data = await apiClient.getAdminPaymentSettings();
+      const [data, promo] = await Promise.all([
+        apiClient.getAdminPaymentSettings(),
+        apiClient.getAdminPromoSettings().catch(() => null),
+      ]);
       setSettings(data);
+      if (promo) {
+        setPromoSettings(promo);
+        setPromoEnabled(promo.enabled);
+        setPromoCap(promo.totalCap);
+        setPromoBannerText(promo.bannerText || '');
+      }
     } catch (err) {
       logger.error('Failed to load settings', err);
     } finally {
@@ -42,6 +61,25 @@ export default function AdminSettingsPage() {
   useEffect(() => {
     loadSettings();
   }, []);
+
+  const handleSavePromo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingPromo(true);
+    setPromoSaveMsg(null);
+    try {
+      const updated = await apiClient.updateAdminPromoSettings({
+        enabled: promoEnabled,
+        totalCap: promoCap,
+        bannerText: promoBannerText.trim() || undefined,
+      });
+      setPromoSettings(updated);
+      setPromoSaveMsg('Founding Lifetime Promo settings saved to database.');
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to update promo settings');
+    } finally {
+      setSavingPromo(false);
+    }
+  };
 
   const handleToggleMode = async (targetMode: 'test_mode' | 'live_mode') => {
     if (!settings || settings.mode === targetMode || updatingMode) return;
@@ -166,12 +204,14 @@ export default function AdminSettingsPage() {
                 <span className="font-mono text-slate-800 font-semibold">{settings?.testWebhookKeyMasked}</span>
               </div>
               <div>
-                <span className="text-slate-400 block text-[11px]">Job Hunt Pack Product:</span>
-                <span className="font-mono text-slate-800">{settings?.testProducts?.job_hunt_pack}</span>
+                <span className="text-slate-400 block text-[11px]">Pro 1-Week / Monthly:</span>
+                <span className="font-mono text-slate-800 block truncate">{settings?.testProducts?.pro_weekly}</span>
+                <span className="font-mono text-slate-600 block truncate">{settings?.testProducts?.pro_monthly}</span>
               </div>
               <div>
-                <span className="text-slate-400 block text-[11px]">Job Hunt Pro Product:</span>
-                <span className="font-mono text-slate-800">{settings?.testProducts?.job_hunt_pro}</span>
+                <span className="text-slate-400 block text-[11px]">Pro 6-Month / Lifetime:</span>
+                <span className="font-mono text-slate-800 block truncate">{settings?.testProducts?.pro_6month}</span>
+                <span className="font-mono text-slate-600 block truncate">{settings?.testProducts?.pro_lifetime}</span>
               </div>
             </div>
           </div>
@@ -203,12 +243,14 @@ export default function AdminSettingsPage() {
                 <span className="font-mono text-slate-800 font-semibold">{settings?.liveWebhookKeyMasked}</span>
               </div>
               <div>
-                <span className="text-slate-400 block text-[11px]">Job Hunt Pack Product:</span>
-                <span className="font-mono text-slate-800">{settings?.liveProducts?.job_hunt_pack}</span>
+                <span className="text-slate-400 block text-[11px]">Pro 1-Week / Monthly:</span>
+                <span className="font-mono text-slate-800 block truncate">{settings?.liveProducts?.pro_weekly}</span>
+                <span className="font-mono text-slate-600 block truncate">{settings?.liveProducts?.pro_monthly}</span>
               </div>
               <div>
-                <span className="text-slate-400 block text-[11px]">Job Hunt Pro Product:</span>
-                <span className="font-mono text-slate-800">{settings?.liveProducts?.job_hunt_pro}</span>
+                <span className="text-slate-400 block text-[11px]">Pro 6-Month / Lifetime:</span>
+                <span className="font-mono text-slate-800 block truncate">{settings?.liveProducts?.pro_6month}</span>
+                <span className="font-mono text-slate-600 block truncate">{settings?.liveProducts?.pro_lifetime}</span>
               </div>
             </div>
           </div>
@@ -230,7 +272,84 @@ export default function AdminSettingsPage() {
         </div>
       </div>
 
-      {/* 2. META PIXEL & CONVERSIONS API */}
+      {/* 2. FOUNDING LIFETIME PROMO CONTROLS */}
+      <form
+        onSubmit={handleSavePromo}
+        className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-xs space-y-4"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+          <div>
+            <h3 className="text-base font-bold text-slate-900">
+              Founding Lifetime Launch Promo (₹999 / $19)
+            </h3>
+            <p className="text-xs text-slate-500">
+              Live database seat cap enforcement. Claimed seats reflect real succeeded Dodo orders.
+            </p>
+          </div>
+          {promoSettings && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-mono font-bold text-emerald-700">
+              {promoSettings.claimedSeats} / {promoSettings.totalCap} Claimed · {promoSettings.remainingSeats} Left
+            </span>
+          )}
+        </div>
+
+        {promoSaveMsg && (
+          <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-700 font-medium">
+            {promoSaveMsg}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/50 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={promoEnabled}
+              onChange={(e) => setPromoEnabled(e.target.checked)}
+              className="rounded border-slate-300"
+            />
+            <span className="font-semibold text-slate-800">Enable Founding Lifetime Banner & Offer</span>
+          </label>
+
+          <div>
+            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+              Total Founding Seat Cap
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={10000}
+              value={promoCap}
+              onChange={(e) => setPromoCap(Math.max(1, Number(e.target.value) || 10))}
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-mono text-slate-900"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+              Banner Copy Override
+            </label>
+            <input
+              type="text"
+              placeholder="Founding Launch: First 10 Lifetime Pro seats..."
+              value={promoBannerText}
+              onChange={(e) => setPromoBannerText(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-900"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={savingPromo}
+            className="rounded-xl bg-[#285FEA] hover:bg-blue-600 px-4 py-2 text-xs font-bold text-white transition shadow-xs disabled:opacity-50"
+          >
+            {savingPromo ? 'Saving...' : 'Save Promo Settings'}
+          </button>
+        </div>
+      </form>
+
+      {/* 3. META PIXEL & CONVERSIONS API */}
       <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-xs space-y-4">
         <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
           <div className="h-10 w-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-sm">
@@ -245,9 +364,11 @@ export default function AdminSettingsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="rounded-xl border border-slate-200 p-4 space-y-1">
             <div className="text-xs text-slate-400 font-medium">Dataset / Pixel ID</div>
-            <div className="font-mono font-bold text-slate-800 text-sm">1117348281146781</div>
+            <div className="font-mono font-bold text-slate-800 text-sm">
+              {process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID || 'Configured in env'}
+            </div>
             <div className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
-              <CheckCircle2 className="h-3 w-3" /> HyperResume Web Active
+              <CheckCircle2 className="h-3 w-3" /> HypeResume Web Active
             </div>
           </div>
 

@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,6 +11,9 @@ import { Alert } from '@/components/ui/alert';
 import {
   Shield,
   Download,
+  Sparkles,
+  KeyRound,
+  Trash2,
 } from 'lucide-react';
 import {
   apiClient,
@@ -18,13 +23,21 @@ import {
 import { useAuth } from '@/lib/auth-context';
 
 export default function SettingsPage() {
-  const { user, creditBalance, refreshUser } = useAuth();
+  const router = useRouter();
+  const { user, creditBalance, hasActivePro, refreshUser } = useAuth();
   const [profile, setProfile] = useState<Partial<CandidateProfile>>({});
   const [creditsHistory, setCreditsHistory] = useState<CreditLedgerItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -114,6 +127,43 @@ export default function SettingsPage() {
     }
   };
 
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSuccessMessage(null);
+    setErrorMessage(null);
+    if (newPassword.length < 8) {
+      setErrorMessage('New password must be at least 8 characters long.');
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      await apiClient.changePassword({ currentPassword, newPassword });
+      setCurrentPassword('');
+      setNewPassword('');
+      setSuccessMessage('Password updated cleanly.');
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : 'Unable to update password.');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText.trim().toUpperCase() !== 'DELETE') {
+      setErrorMessage('Type DELETE in the confirmation box to permanently remove your account.');
+      return;
+    }
+    setErrorMessage(null);
+    setIsDeletingAccount(true);
+    try {
+      await apiClient.deleteAccount();
+      router.push('/');
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : 'Account deletion failed.');
+      setIsDeletingAccount(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="p-12 text-center text-sm text-zinc-500 animate-pulse">
@@ -140,6 +190,41 @@ export default function SettingsPage() {
       {errorMessage && (
         <Alert variant="destructive">{errorMessage}</Alert>
       )}
+
+      {/* Membership & Access Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-emerald-500" />
+                HypeResume Membership
+              </CardTitle>
+              <CardDescription>
+                {hasActivePro
+                  ? user?.isLifetimePro
+                    ? 'Founding Lifetime Pro — Unlimited AI features unlocked permanently.'
+                    : `HypeResume Pro Active until ${
+                        user?.proExpiresAt ? new Date(user.proExpiresAt).toLocaleDateString() : 'Active'
+                      }`
+                  : 'Free Starter tier — upgrade anytime for unlimited AI tailoring, cover letters & mock interviews.'}
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant={hasActivePro ? 'success' : 'neutral'}>
+                {hasActivePro ? (user?.isLifetimePro ? 'Lifetime Pro' : 'Pro Active') : 'Free Starter'}
+              </Badge>
+              {!user?.isLifetimePro && (
+                <Link href="/pricing">
+                  <Button variant="primary" size="sm" className="text-xs">
+                    {hasActivePro ? 'Extend Pass' : 'Upgrade to Pro'}
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
 
       {/* Profile Section */}
       <Card>
@@ -311,6 +396,79 @@ export default function SettingsPage() {
             <Download className="w-4 h-4" />
             <span>Export All Data (JSON)</span>
           </Button>
+        </CardContent>
+      </Card>
+
+      {/* Change Password */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <KeyRound className="w-4 h-4 text-zinc-500" />
+            Change Password
+          </CardTitle>
+          <CardDescription>
+            Update your account password. (If you signed in exclusively with Google, set one via Forgot Password.)
+          </CardDescription>
+        </CardHeader>
+        <form onSubmit={handleChangePassword}>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                id="current-password"
+                type="password"
+                label="Current Password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+              />
+              <Input
+                id="new-password"
+                type="password"
+                label="New Password (min 8 chars)"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+              />
+            </div>
+          </CardContent>
+          <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-end">
+            <Button type="submit" variant="outline" size="sm" isLoading={isChangingPassword}>
+              Update Password
+            </Button>
+          </div>
+        </form>
+      </Card>
+
+      {/* Danger Zone: GDPR Self-Serve Delete Account */}
+      <Card className="border-rose-200 dark:border-rose-900/60">
+        <CardHeader>
+          <CardTitle className="text-base text-rose-600 dark:text-rose-400 flex items-center gap-2">
+            <Trash2 className="w-4 h-4" />
+            Delete Account & Data
+          </CardTitle>
+          <CardDescription>
+            Permanently delete your account, resumes, AI audit history, and uploaded files. This action cannot be undone.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+            <input
+              type="text"
+              placeholder="Type DELETE to confirm"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              className="flex-1 text-xs px-3 py-2 rounded-lg border border-rose-200 dark:border-rose-900 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDeleteAccount}
+              isLoading={isDeletingAccount}
+              className="border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950/40"
+            >
+              Permanently Delete Account
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

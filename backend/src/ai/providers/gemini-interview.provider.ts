@@ -147,8 +147,12 @@ ${count > 3 ? '- Question 3: Probing an unevidenced skill from target JD\n- Ques
         telemetry: result.telemetry,
       };
     } catch (err: any) {
+      if (this.isConfigured && process.env.NODE_ENV !== 'test') {
+        this.logger.error(`Gemini question generation failed: ${err?.message || err}`);
+        throw err;
+      }
       this.logger.warn(
-        `Gemini question generation error, falling back to grounded mock questions: ${err?.message || err}`,
+        `Gemini question generation error in test/offline mode, falling back to mock questions: ${err?.message || err}`,
       );
       return this.getMockQuestions(sessionMode, count);
     }
@@ -224,8 +228,12 @@ ${PromptSanitizer.wrapUntrusted('candidate_response', cleanAnswer)}`;
         telemetry: result.telemetry,
       };
     } catch (err: any) {
+      if (this.isConfigured && process.env.NODE_ENV !== 'test') {
+        this.logger.error(`Gemini answer evaluation failed: ${err?.message || err}`);
+        throw err;
+      }
       this.logger.warn(
-        `Gemini answer evaluation error, falling back to mock evaluation: ${err?.message || err}`,
+        `Gemini answer evaluation error in test/offline mode, falling back to mock evaluation: ${err?.message || err}`,
       );
       return this.getMockEvaluation(category, cleanAnswer, hasAlreadyFollowedUp);
     }

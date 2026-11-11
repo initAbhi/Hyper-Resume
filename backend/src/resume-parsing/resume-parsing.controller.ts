@@ -5,11 +5,13 @@ import {
   HttpStatus,
   Post,
   Req,
+  Res,
+  StreamableFile,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ResumeParserService } from './resume-parser.service.js';
 import { PdfCompressionService } from './pdf-compression.service.js';
@@ -111,6 +113,44 @@ export class ResumeParsingController {
       verification: result.verification,
       message: result.message,
     };
+  }
+
+  @Post('compress/download')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file', COMPRESSION_FILE_INTERCEPTOR_OPTIONS))
+  async compressPdfDownload(
+    @Res({ passthrough: true }) res: Response,
+    @UploadedFile() file?: UploadedFilePayload,
+  ): Promise<StreamableFile> {
+    if (!file) {
+      throw new BadRequestException('A PDF file must be provided for compression');
+    }
+
+    const result = await this.compressionService.compressPdf(
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+    );
+
+    if (!result.compressedBuffer) {
+      throw new BadRequestException(
+        result.message || 'Could not produce a verified compressed PDF file.',
+      );
+    }
+
+    const safeName = (file.originalname || 'resume.pdf')
+      .replace(/[^a-zA-Z0-9._-]/g, '_')
+      .replace(/\.pdf$/i, '');
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${safeName}-compressed.pdf"`,
+      'X-Original-Size': String(result.originalSize),
+      'X-Compressed-Size': String(result.compressedSize),
+      'X-Reduction-Percentage': String(result.reductionPercentage),
+    });
+
+    return new StreamableFile(result.compressedBuffer);
   }
 
   @Post('compress-and-parse')

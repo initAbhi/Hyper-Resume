@@ -30,6 +30,10 @@ export interface SanitizedUser {
   role: UserRole;
   isActive: boolean;
   isEmailVerified: boolean;
+  proPlanId: string | null;
+  proExpiresAt: Date | null;
+  isLifetimePro: boolean;
+  hasActivePro: boolean;
   createdAt: Date;
 }
 
@@ -410,11 +414,23 @@ export class AuthService {
       this.logger.warn(`Google verifyIdToken failed, attempting direct tokeninfo fallback: ${err instanceof Error ? err.message : String(err)}`);
       // Fallback: verify via Google's tokeninfo API
       try {
+        const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
         const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(dto.credential)}`);
         if (!res.ok) {
           throw new Error('Google tokeninfo endpoint returned an error');
         }
-        const data = (await res.json()) as { email?: string; name?: string };
+        const data = (await res.json()) as {
+          email?: string;
+          name?: string;
+          aud?: string;
+          email_verified?: boolean | string;
+        };
+        if (clientId && data.aud !== clientId) {
+          throw new UnauthorizedException('Google token audience mismatch');
+        }
+        if (data.email_verified !== true && data.email_verified !== 'true') {
+          throw new UnauthorizedException('Google account email is not verified');
+        }
         if (data.email) {
           email = data.email.toLowerCase().trim();
           name = data.name;
@@ -441,7 +457,7 @@ export class AuthService {
 
       user = this.userRepository.create({
         email,
-        fullName: name || dto.targetRole ? `${name || 'Professional'}` : 'Professional',
+        fullName: (name && name.trim()) || 'Professional',
         passwordHash,
         role: UserRole.USER,
         isActive: true,
@@ -500,11 +516,59 @@ export class AuthService {
     };
   }
 
+  public async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
+    if (!newPassword || newPassword.length < 8) {
+      throw new BadRequestException('New password must be at least 8 characters long');
+    }
+
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isCurrentValid = await bcrypt.compare(currentPassword || '', user.passwordHash);
+    if (!isCurrentValid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.passwordHash = await bcrypt.hash(newPassword, salt);
+    await this.userRepository.save(user);
+
+    return { message: 'Password updated successfully' };
+  }
+
+  public async deleteAccount(userId: string): Promise<{ deleted: true; message: string }> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    await this.passwordResetTokenRepo.delete({ userId });
+    await this.sessionRepository.delete({ userId });
+    await this.userRepository.delete({ id: userId });
+
+    this.logger.log(`Account permanently deleted for userId=${userId}`);
+    return {
+      deleted: true,
+      message: 'Your account and associated personal data have been permanently deleted.',
+    };
+  }
+
   private hashToken(token: string): string {
     return crypto.createHash('sha256').update(token).digest('hex');
   }
 
   public sanitizeUser(user: User): SanitizedUser {
+    const isLifetimePro = Boolean(user.isLifetimePro);
+    const hasActivePro =
+      isLifetimePro ||
+      Boolean(user.proExpiresAt && new Date(user.proExpiresAt).getTime() > Date.now());
+
     return {
       id: user.id,
       email: user.email,
@@ -512,6 +576,10 @@ export class AuthService {
       role: user.role,
       isActive: user.isActive,
       isEmailVerified: user.isEmailVerified,
+      proPlanId: user.proPlanId || null,
+      proExpiresAt: user.proExpiresAt || null,
+      isLifetimePro,
+      hasActivePro,
       createdAt: user.createdAt,
     };
   }

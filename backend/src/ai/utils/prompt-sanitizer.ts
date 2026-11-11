@@ -8,15 +8,18 @@ export class PromptSanitizer {
   private static readonly MAX_CONTEXT_CHARS = 4000;
 
   /**
-   * Sanitizes and bounds candidate answers submitted during an interview.
+   * Sanitizes and bounds candidate answers submitted during an interview or prompt context.
    */
-  public static sanitizeCandidateAnswer(input: string): string {
+  public static sanitizeCandidateAnswer(
+    input: string,
+    maxChars: number = this.MAX_ANSWER_CHARS,
+  ): string {
     if (!input || typeof input !== 'string') {
       return '';
     }
 
     // 1. Enforce length boundary
-    const trimmed = input.trim().slice(0, this.MAX_ANSWER_CHARS);
+    const trimmed = input.trim().slice(0, maxChars);
 
     // 2. Neutralize boundary escape sequences without stripping code
     return trimmed
@@ -28,9 +31,13 @@ export class PromptSanitizer {
   /**
    * Encapsulates untrusted input inside guarded XML-style data delimiters.
    */
-  public static wrapUntrusted(tag: string, content: string): string {
+  public static wrapUntrusted(
+    tag: string,
+    content: string,
+    maxChars: number = this.MAX_CONTEXT_CHARS,
+  ): string {
     const cleanTag = tag.replace(/[^a-z0-9_]/gi, '');
-    const cleanContent = this.sanitizeCandidateAnswer(content);
+    const cleanContent = this.sanitizeCandidateAnswer(content, maxChars);
     return `<${cleanTag}>\n${cleanContent}\n</${cleanTag}>`;
   }
 }

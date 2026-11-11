@@ -4,8 +4,10 @@ import crypto from 'node:crypto';
 
 export interface MetaUserData {
   email?: string;
+  userId?: string;
   clientIp?: string;
   clientUserAgent?: string;
+  sourceUrl?: string;
 }
 
 export interface MetaPurchaseEventParams {
@@ -31,19 +33,26 @@ export class MetaConversionsService {
   private readonly accessToken: string;
   private readonly pixelId: string;
   private readonly testEventCode?: string;
+  private readonly defaultSourceUrl: string;
 
   constructor(private readonly configService: ConfigService) {
     this.accessToken =
-      this.configService.get<string>('META_CONVERSIONS_API_TOKEN', '')?.trim();
+      this.configService.get<string>('META_CONVERSIONS_API_TOKEN', '')?.trim() || '';
     this.pixelId =
-      this.configService.get<string>('META_PIXEL_ID', '1117348281146781')?.trim();
+      this.configService.get<string>('META_PIXEL_ID', '')?.trim() || '';
     this.testEventCode =
       this.configService.get<string>('META_TEST_EVENT_CODE', '')?.trim() || undefined;
+    const frontendUrl = (
+      this.configService.get<string>('FRONTEND_URL') || 'https://hype-resume.com'
+    ).replace(/\/+$/, '');
+    this.defaultSourceUrl = `${frontendUrl}/pricing`;
 
-    if (this.accessToken) {
+    if (this.accessToken && this.pixelId) {
       this.logger.log(`Meta Conversions API initialized for Dataset/Pixel ${this.pixelId}`);
     } else {
-      this.logger.warn('META_CONVERSIONS_API_TOKEN not configured. Conversions API disabled.');
+      this.logger.warn(
+        'META_CONVERSIONS_API_TOKEN or META_PIXEL_ID not configured. Conversions API disabled.',
+      );
     }
   }
 
@@ -66,6 +75,9 @@ export class MetaConversionsService {
       if (userData?.email) {
         formattedUserData.em = [this.sha256(userData.email)];
       }
+      if (userData?.userId) {
+        formattedUserData.external_id = [this.sha256(userData.userId)];
+      }
       if (userData?.clientIp) {
         formattedUserData.client_ip_address = userData.clientIp;
       }
@@ -78,7 +90,7 @@ export class MetaConversionsService {
         event_time: Math.floor(Date.now() / 1000),
         event_id: eventId,
         action_source: 'website',
-        event_source_url: 'https://hype-resume.com/pricing',
+        event_source_url: userData?.sourceUrl || this.defaultSourceUrl,
         user_data: formattedUserData,
         custom_data: eventData,
       };
@@ -104,12 +116,14 @@ export class MetaConversionsService {
       const result = (await response.json()) as any;
 
       if (!response.ok) {
-        this.logger.warn(`Meta CAPI event ${eventName} error: ${JSON.stringify(result?.error || result)}`);
+        this.logger.warn(
+          `Meta CAPI event ${eventName} error: ${JSON.stringify(result?.error || result)}`,
+        );
         return false;
       }
 
       this.logger.log(
-        `Meta CAPI event ${eventName} sent successfully (events_received: ${result?.events_received || 1}, event_id: ${eventId || 'none'})`,
+        `Meta CAPI event ${eventName} sent (events_received: ${result?.events_received || 1}, event_id: ${eventId || 'none'})`,
       );
       return true;
     } catch (err: unknown) {
@@ -121,7 +135,7 @@ export class MetaConversionsService {
   }
 
   async sendPurchase(params: MetaPurchaseEventParams): Promise<void> {
-    const value = params.amountMinor / 100;
+    const value = Number((params.amountMinor / 100).toFixed(2));
     await this.sendEvent(
       'Purchase',
       {
@@ -137,17 +151,18 @@ export class MetaConversionsService {
   }
 
   async sendInitiateCheckout(params: MetaInitiateCheckoutParams): Promise<void> {
-    const value = params.amountMinor / 100;
+    const value = Number((params.amountMinor / 100).toFixed(2));
     await this.sendEvent(
       'InitiateCheckout',
       {
         value,
         currency: params.currency || 'INR',
         content_name: params.planName,
+        content_ids: [params.planId],
         num_items: 1,
       },
       params.userData,
-      params.orderId,
+      params.orderId ? `ic_${params.orderId}` : undefined,
     );
   }
 }

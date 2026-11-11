@@ -68,7 +68,7 @@ import { AtsAuditBreakdown } from '@/components/resumes/AtsAuditBreakdown';
 import { FixMistakesDrawer } from '@/components/resumes/FixMistakesDrawer';
 import { ShareAnalyticsDrawer } from '@/components/resumes/ShareAnalyticsDrawer';
 import { ScoreMeter } from '@/components/resumes/ScoreMeter';
-import { getTemplateComponent } from '@/components/resumes/templates';
+import { AVAILABLE_TEMPLATES, getTemplateComponent } from '@/components/resumes/templates';
 import { TemplatePicker } from '@/components/resumes/TemplatePicker';
 import { DesignPanel } from '@/components/resumes/DesignPanel';
 import { PhotoUploadModal } from '@/components/resumes/PhotoUploadModal';
@@ -744,6 +744,9 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
       downloadExportBlob(result.blob, result.fileName, '.docx');
     } catch (err) {
       console.error('DOCX export error:', err);
+      setErrorMessage(
+        err instanceof Error ? err.message : 'Unable to export DOCX file. Please try again.',
+      );
     } finally {
       setIsExportingDocx(false);
     }
@@ -866,13 +869,11 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
               }}
               className="text-xs py-1.5 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 font-medium focus:ring-2 focus:ring-blue-600"
             >
-              <option value="double-column">Double column (Signature)</option>
-              <option value="ivy-league">Ivy League (Harvard Serif)</option>
-              <option value="elegant">Elegant (Navy Sidebar)</option>
-              <option value="crest">Crest (NEW Banner)</option>
-              <option value="clean-modern">Clean Modern Tech</option>
-              <option value="classic-ats">Classic ATS (1-Column)</option>
-              <option value="technical-ats">Technical Monospace</option>
+              {AVAILABLE_TEMPLATES.map((tpl) => (
+                <option key={tpl.key} value={tpl.key}>
+                  {tpl.name} ({tpl.category})
+                </option>
+              ))}
             </select>
           </div>
 
@@ -1195,6 +1196,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                 { id: 'skills', label: 'Skills' },
                 { id: 'education', label: 'Education' },
                 { id: 'projects', label: 'Projects' },
+                { id: 'certifications', label: 'Certs' },
                 {
                   id: 'custom',
                   label:
@@ -1870,7 +1872,114 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
               </div>
             )}
 
-            {/* 7. Custom Sections */}
+            {/* 7. Certifications */}
+            {activeSection === 'certifications' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                    Certifications &amp; Licenses
+                  </h3>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      updateContent((prev) => ({
+                        ...prev,
+                        certifications: [
+                          ...(prev.certifications || []),
+                          { name: '', issuer: '', issueDate: '' },
+                        ],
+                      }))
+                    }
+                    className="gap-1.5 text-xs"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Certification</span>
+                  </Button>
+                </div>
+
+                {(content.certifications || []).length === 0 ? (
+                  <p className="text-xs text-zinc-500 py-4 text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-lg">
+                    No certifications added yet. Click &quot;Add Certification&quot; to include AWS, GCP, PMP, or other credentials.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {(content.certifications || []).map((cert, idx) => (
+                      <div
+                        key={cert.id || idx}
+                        className="p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/40 space-y-2.5 text-xs"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-semibold text-zinc-600 dark:text-zinc-400">
+                            Certification #{idx + 1}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateContent((prev) => ({
+                                ...prev,
+                                certifications: (prev.certifications || []).filter((_, i) => i !== idx),
+                              }))
+                            }
+                            className="text-zinc-400 hover:text-rose-600 p-1 rounded"
+                            aria-label="Remove certification"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Certification Name (e.g. AWS Solutions Architect)"
+                          value={cert.name || ''}
+                          onChange={(e) =>
+                            updateContent((prev) => ({
+                              ...prev,
+                              certifications: (prev.certifications || []).map((c, i) =>
+                                i === idx ? { ...c, name: e.target.value } : c,
+                              ),
+                            }))
+                          }
+                          className="w-full p-2 rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                        />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            placeholder="Issuing Organization (e.g. Amazon Web Services)"
+                            value={cert.issuer || ''}
+                            onChange={(e) =>
+                              updateContent((prev) => ({
+                                ...prev,
+                                certifications: (prev.certifications || []).map((c, i) =>
+                                  i === idx ? { ...c, issuer: e.target.value } : c,
+                                ),
+                              }))
+                            }
+                            className="w-full p-2 rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Issue Date (e.g. 2025)"
+                            value={cert.issueDate || ''}
+                            onChange={(e) =>
+                              updateContent((prev) => ({
+                                ...prev,
+                                certifications: (prev.certifications || []).map((c, i) =>
+                                  i === idx ? { ...c, issueDate: e.target.value } : c,
+                                ),
+                              }))
+                            }
+                            className="w-full p-2 rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 8. Custom Sections */}
             {activeSection === 'custom' && (
               <CustomSectionsPanel
                 content={content}

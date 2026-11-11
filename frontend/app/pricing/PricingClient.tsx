@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert } from '@/components/ui/alert';
-
 import {
   Check,
   ArrowRight,
@@ -19,101 +18,180 @@ import {
   X,
   Sparkles,
   Lock,
+  Flame,
+  Clock,
+  Crown,
 } from 'lucide-react';
-
-import { apiClient, PricingPlan, PaymentOrderResponse } from '@/lib/api-client';
+import {
+  apiClient,
+  PricingPlan,
+  PaymentOrderResponse,
+  PromoStatus,
+  SupportedCurrency,
+} from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { analytics } from '@/lib/analytics';
 
-const FALLBACK_PLANS: PricingPlan[] = [
+const FALLBACK_PRO_PLANS: PricingPlan[] = [
   {
-    id: 'free_tier',
-    name: 'Free Starter',
-    tagline: 'Explore truthful AI career optimization without upfront cost',
-    amountMinor: 0,
+    id: 'pro_weekly',
+    name: 'HypeResume Pro — 1 Week Pass',
+    tagline: 'Try full Pro capabilities for 7 days. Ideal for upcoming interview deadlines.',
+    amountMinor: 14900,
     currency: 'INR',
-    displayPrice: '₹0',
-    credits: 5,
+    displayPrice: '₹149',
+    prices: {
+      INR: { amountMinor: 14900, displayPrice: '₹149' },
+      USD: { amountMinor: 300, displayPrice: '$3' },
+    },
+    credits: 0,
+    durationDays: 7,
+    isLifetime: false,
+    isPro: true,
+    cadenceLabel: '1 week',
     billingType: 'one_time',
+    badge: 'Try 1 Week',
     features: [
-      '5 Welcome AI Optimization Credits',
-      'Full ATS single-column document editor',
-      'Grounded job description matcher',
-      'Clean PDF Export with zero watermarks',
-      'Zero model training privacy protection',
+      '7 days unlimited HypeResume Pro access',
+      'Unlimited STAR bullet rewrites & tailored versions',
+      'Evidence-quoted Job Description matching',
+      'AI Cover Letters & LinkedIn profile audits',
+      'Mock Interview Simulator + weak-area practice',
+      'One-time payment — zero automatic renewal',
     ],
   },
   {
-    id: 'job_hunt_pack',
-    name: 'Job Hunt Pack',
-    tagline: 'Ideal for targeted applications to specific dream companies',
+    id: 'pro_monthly',
+    name: 'HypeResume Pro — Monthly',
+    tagline: 'Full platform access for an active 30-day job search sprint.',
     amountMinor: 39900,
     currency: 'INR',
     displayPrice: '₹399',
-    credits: 30,
+    prices: {
+      INR: { amountMinor: 39900, displayPrice: '₹399' },
+      USD: { amountMinor: 900, displayPrice: '$9' },
+    },
+    credits: 0,
+    durationDays: 30,
+    isLifetime: false,
+    isPro: true,
+    cadenceLabel: '1 month',
     billingType: 'one_time',
     badge: 'Most Popular',
     features: [
-      '30 AI Optimization Credits (~15 full job matches)',
-      'Grounded STAR / XYZ bullet rewrites',
-      'Evidence quote citations & missing keyword radar',
-      'Create separate tailored resume variants',
-      'Never expires · One-time purchase',
+      '30 days unlimited HypeResume Pro access',
+      'Unlimited tailored resume variants & exports',
+      'Evidence-quoted JD matching & gap analysis',
+      'AI Cover Letters & LinkedIn profile optimizer',
+      'Full AI Mock Interview Simulator access',
+      'Pay once for 30 days — zero surprise rebills',
     ],
   },
   {
-    id: 'job_hunt_pro',
-    name: 'Job Hunt Pro',
-    tagline: 'Maximum power for competitive career transitions and senior roles',
-    amountMinor: 89900,
+    id: 'pro_6month',
+    name: 'HypeResume Pro — 6 Months',
+    tagline: 'Extended half-year job switch protection at ₹200/month effective rate.',
+    amountMinor: 120000,
     currency: 'INR',
-    displayPrice: '₹899',
-    credits: 100,
+    displayPrice: '₹1,200',
+    prices: {
+      INR: { amountMinor: 120000, displayPrice: '₹1,200' },
+      USD: { amountMinor: 2900, displayPrice: '$29' },
+    },
+    credits: 0,
+    durationDays: 180,
+    isLifetime: false,
+    isPro: true,
+    cadenceLabel: '6 months',
     billingType: 'one_time',
-    badge: 'Best Value',
+    badge: 'Best Value · Save 50%',
     features: [
-      '100 AI Optimization Credits (~50 full job matches)',
-      'Deep structural ATS compliance audits',
-      'Unlimited tailored variants & snapshot versions',
-      'Full application pipeline tracking',
-      'Complete career data portability (JSON export)',
-      'Priority email support',
+      '180 days unlimited HypeResume Pro access',
+      'Unlimited AI tailoring across every application',
+      'Unlimited Cover Letters & LinkedIn audits',
+      'Mock Interview simulator for every round',
+      'Complete application tracker & career snapshots',
+      'One-time 6-month pass — zero recurring fee',
+    ],
+  },
+  {
+    id: 'pro_lifetime',
+    name: 'HypeResume Pro — Founding Lifetime',
+    tagline: 'Early validation offer for our first cohort: unlock Pro permanently in one payment.',
+    amountMinor: 99900,
+    currency: 'INR',
+    displayPrice: '₹999',
+    prices: {
+      INR: { amountMinor: 99900, displayPrice: '₹999' },
+      USD: { amountMinor: 1900, displayPrice: '$19' },
+    },
+    credits: 0,
+    durationDays: null,
+    isLifetime: true,
+    isPro: true,
+    isPromoOffer: true,
+    cadenceLabel: 'lifetime',
+    billingType: 'one_time',
+    badge: 'Founding Launch Offer',
+    features: [
+      'Permanent Lifetime HypeResume Pro access',
+      'All future templates & AI upgrades included',
+      'Unlimited bullet rewrites, JD matches & cover letters',
+      'Unlimited LinkedIn optimizer & interview practice',
+      'Clean PDF & DOCX export with zero watermarks',
+      'Never expires · Strictly limited founding seats',
     ],
   },
 ];
 
 const FAQS = [
   {
-    q: 'How do credits work and what does each action cost?',
-    a: 'Credits provide access to compute-intensive AI operations. A single bullet rewrite costs 1 credit. A complete job description gap analysis with evidence citation costs 2 credits. Standard operations like editing, autosaving, reordering sections, and exporting clean PDFs are completely free and never consume credits.',
+    q: 'What is included in HypeResume Pro across all options?',
+    a: 'All four paid options belong to the same unified plan: HypeResume Pro. You get unlimited AI bullet rewrites, job description match analyses, AI cover letters, LinkedIn profile optimizations, mock interview simulator sessions, and clean PDF/DOCX exports. You only choose the pass duration: 1 week, 1 month, 6 months, or Founding Lifetime.',
   },
   {
     q: 'Are there hidden recurring subscriptions or automatic renewals?',
-    a: 'Absolutely not. We believe forced subscriptions during a vulnerable job hunt are predatory. Our Job Hunt Pack and Job Hunt Pro plans are one-time payments. You pay once, receive your credits, and use them whenever you need. There are no recurring fees or automatic rebilling.',
+    a: 'No. Every Pro Pass (1 Week, 1 Month, 6 Months, and Founding Lifetime) is processed as a transparent one-time pass. When your pass expires, you keep all your resumes, data, and free PDF export access without unexpected card charges.',
   },
   {
-    q: 'What happens if an AI rewrite or job match request fails?',
-    a: 'Our server-side entitlement ledger is strictly transactional and idempotent. If an AI service experiences a timeout, rate limit, or network disconnection, our system automatically rolls back the transaction and refunds the reserved credits immediately.',
+    q: 'What does Free Starter include?',
+    a: 'Every new account receives 5 Free Welcome AI credits, full access to all 10 ATS resume templates, unlimited manual editing and cloud saving, and unlimited clean PDF downloads with zero watermarks.',
   },
   {
-    q: 'Can I export my resume without paying?',
-    a: 'Yes! Unlike platforms that hide PDF downloads behind paywalls after you spend time typing, HypeResume allows unlimited, clean, watermark-free PDF exports on every tier, including Free Starter.',
+    q: 'How does the ₹999 ($19) Founding Lifetime Launch Offer work?',
+    a: 'During our early validation phase, we opened a strictly limited Founding Member Lifetime seat cap tracked directly in our database. While seats remain, paying ₹999 ($19) once grants permanent Pro access with zero renewal fees ever.',
   },
   {
-    q: 'Do purchased credits expire if I get hired quickly?',
-    a: 'No. Purchased credits never expire. If you land an offer soon, any remaining credits remain securely tied to your account ready for your next promotion or career move years down the line.',
+    q: 'What happens on Free Starter if an AI request fails?',
+    a: 'Our credit ledger is atomic and idempotent. If an AI operation fails on a free account, any reserved credits are automatically refunded. Pro Pass holders enjoy unlimited retries at 0 credit cost.',
   },
   {
-    q: 'Are my resumes or personal information used to train AI models?',
-    a: 'Never. We enforce a strict zero-training privacy policy. Your resume contents, career history, and job descriptions are processed ephemerally with enterprise zero-retention agreements and are never used to train public or proprietary foundation models.',
+    q: 'Are my resumes or personal data used to train AI models?',
+    a: 'Never. We enforce strict zero-retention privacy policies with AI providers and never use candidate resumes, achievements, or job descriptions to train AI models.',
   },
 ];
+
+function getPlanPrice(plan: PricingPlan, currency: SupportedCurrency) {
+  if (plan.prices && plan.prices[currency]) {
+    return plan.prices[currency];
+  }
+  return {
+    amountMinor: plan.amountMinor,
+    displayPrice: plan.displayPrice,
+  };
+}
 
 export function PricingClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, creditBalance, isAuthenticated, refreshUser } = useAuth();
-  const [plans, setPlans] = useState<PricingPlan[]>(FALLBACK_PLANS);
+  const { user, creditBalance, hasActivePro, isAuthenticated, refreshUser } = useAuth();
+
+  const initialCurrencyParam = searchParams?.get('currency')?.toUpperCase();
+  const [currency, setCurrency] = useState<SupportedCurrency>(
+    initialCurrencyParam === 'USD' ? 'USD' : 'INR',
+  );
+  const [plans, setPlans] = useState<PricingPlan[]>(FALLBACK_PRO_PLANS);
+  const [promo, setPromo] = useState<PromoStatus | null>(null);
   const [activePlan, setActivePlan] = useState<PricingPlan | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState<'review' | 'processing' | 'success' | 'error'>('review');
@@ -122,9 +200,13 @@ export function PricingClient() {
   const [successReceipt, setSuccessReceipt] = useState<{
     orderId: string;
     paymentId: string;
-    creditsAwarded: number;
+    planName: string;
+    isLifetime: boolean;
+    proExpiresAt: string | null;
     newBalance: number;
   } | null>(null);
+
+  const autoOpenedPlanRef = useRef(false);
 
   useEffect(() => {
     analytics.track('pricing_viewed', { source: 'pricing_page' });
@@ -137,14 +219,23 @@ export function PricingClient() {
         }
       })
       .catch(() => {
-        // Fall back to predefined catalog
+        // Use predefined fallback plans
       });
 
-    // Handle return from Dodo Payments checkout
+    apiClient
+      .getPromoStatus()
+      .then((data) => setPromo(data))
+      .catch(() => {
+        // Keep silent if backend offline
+      });
+  }, []);
+
+  // Verify returning payment from Dodo Checkout (using REAL verified fields!)
+  useEffect(() => {
     const statusParam = searchParams?.get('status');
     const orderIdParam = searchParams?.get('orderId');
 
-    if (statusParam === 'success' && orderIdParam) {
+    if (orderIdParam && statusParam !== 'cancelled') {
       setIsCheckoutOpen(true);
       setCheckoutStep('processing');
       apiClient
@@ -152,42 +243,89 @@ export function PricingClient() {
         .then(async (result) => {
           if (result.verified) {
             await refreshUser();
+            const returnedCurrency = (result.currency || 'INR') as SupportedCurrency;
+            const returnedAmountMinor = result.amountMinor ?? 39900;
+
             analytics.track('purchase_completed', {
-              orderId: orderIdParam,
+              orderId: result.orderId || orderIdParam,
               paymentId: result.paymentId,
-              amount: 39900,
+              planId: result.planId || 'pro_monthly',
+              planName: result.planName || 'HypeResume Pro',
+              amountMinor: returnedAmountMinor,
+              currency: returnedCurrency,
             });
+
             setSuccessReceipt({
-              orderId: orderIdParam,
+              orderId: result.orderId || orderIdParam,
               paymentId: result.paymentId,
-              creditsAwarded: 30,
+              planName: result.planName || 'HypeResume Pro',
+              isLifetime: Boolean(result.isLifetime),
+              proExpiresAt: result.proExpiresAt || null,
               newBalance: result.balance,
             });
             setCheckoutStep('success');
             if (typeof window !== 'undefined') {
               window.history.replaceState({}, '', '/pricing');
             }
+          } else {
+            setCheckoutStep('error');
+            setErrorMessage(
+              'Payment has not cleared with Dodo Payments yet. Complete checkout or wait a few seconds and retry verification.',
+            );
           }
         })
         .catch((err) => {
           setCheckoutStep('error');
-          setErrorMessage(err instanceof Error ? err.message : 'Payment verification pending.');
+          setErrorMessage(err instanceof Error ? err.message : 'Payment verification could not be completed.');
         });
+    } else if (statusParam === 'cancelled') {
+      setIsCheckoutOpen(true);
+      setCheckoutStep('error');
+      setErrorMessage('Checkout was cancelled before payment completed. No charges were made.');
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', '/pricing');
+      }
     }
   }, [searchParams, refreshUser]);
 
-  const handleSelectPlan = (plan: PricingPlan) => {
-    if (plan.amountMinor === 0) {
-      if (isAuthenticated) {
-        router.push('/app');
-      } else {
-        router.push('/register');
+  // Auto-open requested ?plan= checkout when returning from /register or /login
+  useEffect(() => {
+    const planParam = searchParams?.get('plan');
+    if (
+      !autoOpenedPlanRef.current &&
+      isAuthenticated &&
+      planParam &&
+      plans.length > 0 &&
+      !searchParams?.get('orderId')
+    ) {
+      const target = plans.find((p) => p.id === planParam);
+      if (target) {
+        autoOpenedPlanRef.current = true;
+        setActivePlan(target);
+        setCheckoutStep('review');
+        setErrorMessage('');
+        setOrderData(null);
+        setIsCheckoutOpen(true);
       }
+    }
+  }, [isAuthenticated, searchParams, plans]);
+
+  const visiblePlans = plans.filter((p) => {
+    if (p.id === 'pro_lifetime' && promo && (!promo.enabled || promo.isSoldOut)) {
+      return false;
+    }
+    return true;
+  });
+
+  const handleSelectPlan = (plan: PricingPlan) => {
+    const price = getPlanPrice(plan, currency);
+    if (price.amountMinor === 0) {
+      router.push(isAuthenticated ? '/app' : '/register');
       return;
     }
 
     if (!isAuthenticated) {
-      router.push(`/register?redirect=/pricing&plan=${plan.id}`);
+      router.push(`/register?redirect=/pricing&plan=${encodeURIComponent(plan.id)}&currency=${currency}`);
       return;
     }
 
@@ -198,8 +336,9 @@ export function PricingClient() {
     setIsCheckoutOpen(true);
     analytics.track('checkout_started', {
       planId: plan.id,
-      amount: plan.amountMinor,
-      credits: plan.credits,
+      planName: plan.name,
+      amountMinor: price.amountMinor,
+      currency,
     });
   };
 
@@ -211,146 +350,213 @@ export function PricingClient() {
     try {
       const order = await apiClient.createPaymentOrder({
         planId: activePlan.id,
+        currency,
       });
       setOrderData(order);
 
-      // If provider returned a hosted checkout link (e.g. Dodo Payments), redirect immediately!
       if (order.checkoutUrl) {
         analytics.track('checkout_started', {
           planId: activePlan.id,
-          amountMinor: activePlan.amountMinor,
+          planName: activePlan.name,
+          amountMinor: order.amountMinor,
+          currency: order.currency,
           orderId: order.orderId,
           provider: order.provider,
         });
         window.location.href = order.checkoutUrl;
         return;
       }
+
+      setCheckoutStep('error');
+      setErrorMessage('Payment gateway did not return a hosted checkout URL. Please contact support.');
     } catch (err: unknown) {
       setCheckoutStep('error');
       setErrorMessage(err instanceof Error ? err.message : 'Unable to create checkout order. Please try again.');
     }
   };
 
-  const handleSimulatePayment = async () => {
-    if (!orderData || !activePlan) return;
-    setCheckoutStep('processing');
-    setErrorMessage('');
-
+  const formatExpiry = (iso: string | null | undefined) => {
+    if (!iso) return null;
     try {
-      const providerPaymentId = `pay_sandbox_${Date.now()}`;
-      const result = await apiClient.verifyPayment({
-        orderId: orderData.orderId,
-        providerPaymentId,
+      return new Date(iso).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
       });
-
-      if (result.verified) {
-        await refreshUser();
-        analytics.track('purchase_completed', {
-          planId: activePlan.id,
-          amount: activePlan.amountMinor,
-          credits: activePlan.credits,
-          paymentId: result.paymentId,
-        });
-
-        setSuccessReceipt({
-          orderId: orderData.orderId,
-          paymentId: result.paymentId,
-          creditsAwarded: activePlan.credits,
-          newBalance: result.balance,
-        });
-        setCheckoutStep('success');
-      } else {
-        setCheckoutStep('error');
-        setErrorMessage('Payment verification failed. Please contact support.');
-      }
-    } catch (err: unknown) {
-      setCheckoutStep('error');
-      setErrorMessage(err instanceof Error ? err.message : 'Payment verification failed.');
+    } catch {
+      return iso;
     }
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-16">
       {/* Header */}
-      <div className="text-center max-w-3xl mx-auto mb-16">
+      <div className="text-center max-w-3xl mx-auto mb-10">
         <Badge variant="info" className="mb-3 px-3 py-1 font-semibold text-xs">
-          Transparent SaaS Pricing
+          One Unified Plan · HypeResume Pro
         </Badge>
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Pay Only For Real Results. <br className="hidden sm:inline" />
-          No Deceptive Paywalls.
+          Simple One-Plan Access. <br className="hidden sm:inline" />
+          Zero Subscription Traps.
         </h1>
         <p className="mt-4 text-base sm:text-lg text-zinc-600 dark:text-zinc-400">
-          Zero surprise rebills. No locked downloads. Start with free welcome credits and upgrade only when you need intensive application tailoring.
+          Start free with 5 welcome AI credits and unlimited PDF downloads, or unlock full HypeResume Pro for 1 week, 1 month, 6 months, or lifetime.
         </p>
 
+        {/* Currency Selector */}
+        <div className="mt-6 flex justify-center">
+          <div className="inline-flex items-center rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-1">
+            <button
+              type="button"
+              onClick={() => setCurrency('INR')}
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                currency === 'INR'
+                  ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-sm'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
+              }`}
+            >
+              INR (₹) · India
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrency('USD')}
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                currency === 'USD'
+                  ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-sm'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
+              }`}
+            >
+              USD ($) · Global
+            </button>
+          </div>
+        </div>
+
+        {/* Authenticated Entitlement Pill */}
         {isAuthenticated && (
-          <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 text-xs sm:text-sm text-blue-700 dark:text-blue-300 font-medium">
-            <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          <div className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 text-xs sm:text-sm text-blue-700 dark:text-blue-300 font-medium">
+            <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
             <span>
-              Signed in as <strong>{user?.email}</strong> · Current Balance: <strong>{creditBalance} Credits</strong>
+              Signed in as <strong>{user?.email}</strong> ·{' '}
+              {hasActivePro ? (
+                <strong className="text-emerald-700 dark:text-emerald-400">
+                  {user?.isLifetimePro
+                    ? 'HypeResume Pro Lifetime Active'
+                    : `HypeResume Pro Active (until ${formatExpiry(user?.proExpiresAt)})`}
+                </strong>
+              ) : (
+                <>
+                  Balance: <strong>{creditBalance} Free Credits</strong>
+                </>
+              )}
             </span>
           </div>
         )}
       </div>
 
-      {/* Pricing Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch mb-20">
-        {plans.map((plan) => {
-          const isHighlighted = plan.id === 'job_hunt_pack';
-          const isFree = plan.amountMinor === 0;
+      {/* Founding Lifetime Offer Banner (Live PostgreSQL Seat Counter) */}
+      {promo && promo.enabled && !promo.isSoldOut && (
+        <div className="mb-12 rounded-2xl border-2 border-emerald-500/60 bg-gradient-to-r from-emerald-950 via-zinc-900 to-violet-950 text-white p-6 sm:p-7 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 shadow-xl">
+          <div className="space-y-2 max-w-2xl">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-bold uppercase tracking-wider">
+                <Flame className="w-3.5 h-3.5 text-amber-400" />
+                Founding Lifetime Offer
+              </span>
+              <span className="px-3 py-1 rounded-full bg-white/10 text-xs font-mono font-semibold text-zinc-100">
+                {promo.claimedSeats} / {promo.totalCap} seats claimed · {promo.remainingSeats} remaining
+              </span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-extrabold">
+              Pay {currency === 'INR' ? '₹999' : '$19'} once. Get Lifetime HypeResume Pro forever.
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+              {promo.bannerText ||
+                'To validate HypeResume with our earliest job seekers, our first 10 founding members unlock permanent Lifetime Pro access at ₹999 ($19). Live seat count verified directly from our database.'}
+            </p>
+          </div>
+          <Button
+            variant="primary"
+            size="lg"
+            className="shrink-0 bg-emerald-400 hover:bg-emerald-300 text-zinc-950 font-bold shadow-lg"
+            onClick={() => {
+              const lifetimePlan = plans.find((p) => p.id === 'pro_lifetime') || FALLBACK_PRO_PLANS[3];
+              handleSelectPlan(lifetimePlan);
+            }}
+          >
+            <Crown className="w-4 h-4 mr-2" />
+            Claim Lifetime ({currency === 'INR' ? '₹999' : '$19'})
+          </Button>
+        </div>
+      )}
+
+      {/* Pro Option Cards */}
+      <div className={`grid grid-cols-1 md:grid-cols-2 ${visiblePlans.length >= 4 ? 'xl:grid-cols-4' : 'lg:grid-cols-3'} gap-6 items-stretch mb-12`}>
+        {visiblePlans.map((plan) => {
+          const price = getPlanPrice(plan, currency);
+          const isHighlighted = plan.id === 'pro_monthly' || plan.id === 'pro_lifetime';
 
           return (
             <Card
               key={plan.id}
               className={`flex flex-col justify-between transition-all duration-200 ${
-                isHighlighted
-                  ? 'border-2 border-blue-600 dark:border-blue-500 shadow-xl relative md:scale-102 bg-white dark:bg-zinc-900 ring-4 ring-blue-600/10'
-                  : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60'
+                plan.id === 'pro_lifetime'
+                  ? 'border-2 border-emerald-600 dark:border-emerald-500 shadow-xl bg-white dark:bg-zinc-900 ring-4 ring-emerald-500/10'
+                  : plan.id === 'pro_monthly'
+                    ? 'border-2 border-blue-600 dark:border-blue-500 shadow-xl bg-white dark:bg-zinc-900 ring-4 ring-blue-600/10'
+                    : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60'
               }`}
             >
               <div>
                 <CardHeader className="pb-4">
-                  {plan.badge && (
-                    <Badge variant="info" className="w-fit mb-2 text-xs font-semibold">
-                      {plan.badge}
-                    </Badge>
-                  )}
-                  <CardTitle className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
-                    {plan.name}
+                  <div className="flex items-center justify-between gap-2 min-h-[26px]">
+                    {plan.badge ? (
+                      <Badge
+                        variant={plan.id === 'pro_lifetime' ? 'success' : 'info'}
+                        className="w-fit text-xs font-semibold"
+                      >
+                        {plan.badge}
+                      </Badge>
+                    ) : (
+                      <span />
+                    )}
+                    {plan.id === 'pro_lifetime' && promo ? (
+                      <span className="text-[11px] font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                        {promo.remainingSeats} left
+                      </span>
+                    ) : null}
+                  </div>
+                  <CardTitle className="text-lg font-bold text-zinc-900 dark:text-zinc-50 mt-1">
+                    {plan.name.replace('HypeResume Pro — ', '')}
                   </CardTitle>
-                  <div className="mt-3 flex items-baseline gap-1">
-                    <span className="text-4xl font-extrabold text-zinc-900 dark:text-zinc-50">
-                      {plan.displayPrice}
+                  <div className="mt-3 flex items-baseline gap-1.5">
+                    <span className="text-4xl font-extrabold text-zinc-900 dark:text-zinc-50 font-mono">
+                      {price.displayPrice}
                     </span>
-                    <span className="text-xs text-zinc-500 font-medium ml-1">
-                      {isFree ? '/forever free' : '/one-time purchase'}
+                    <span className="text-xs text-zinc-500 font-medium">
+                      / {plan.cadenceLabel || (plan.isLifetime ? 'lifetime' : 'pass')}
                     </span>
                   </div>
-                  <CardDescription className="text-xs mt-2 leading-relaxed min-h-[38px]">
+                  <CardDescription className="text-xs mt-2 leading-relaxed min-h-[40px]">
                     {plan.tagline}
                   </CardDescription>
                 </CardHeader>
 
                 <CardContent className="pt-2">
-                  <div className="p-3 mb-4 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-between">
+                  <div className="p-2.5 mb-4 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Zap className="w-4 h-4 text-amber-500 shrink-0" />
+                      <Zap className="w-4 h-4 text-emerald-500 shrink-0" />
                       <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                        Included Credits
+                        AI Operations
                       </span>
                     </div>
-                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
-                      {plan.credits} Credits
+                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      Unlimited Pro
                     </span>
                   </div>
 
-                  <div className="space-y-3">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-                      Entitlements
-                    </span>
+                  <div className="space-y-2.5">
                     {plan.features.map((feature) => (
-                      <div key={feature} className="flex items-start gap-2.5 text-xs text-zinc-700 dark:text-zinc-300">
+                      <div key={feature} className="flex items-start gap-2 text-xs text-zinc-700 dark:text-zinc-300">
                         <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-500 shrink-0 mt-0.5" />
                         <span>{feature}</span>
                       </div>
@@ -366,14 +572,8 @@ export function PricingClient() {
                   onClick={() => handleSelectPlan(plan)}
                   className="w-full justify-center font-medium shadow-sm"
                 >
-                  {isFree ? (
-                    isAuthenticated ? 'Go to Resumes' : 'Start for Free'
-                  ) : (
-                    <>
-                      <span>Get {plan.name}</span>
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </>
-                  )}
+                  <span>Choose {plan.name.replace('HypeResume Pro — ', '')}</span>
+                  <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </CardFooter>
             </Card>
@@ -381,14 +581,37 @@ export function PricingClient() {
         })}
       </div>
 
+      {/* Free Starter Callout */}
+      <div className="mb-16 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/70 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
+              Free Starter ({currency === 'INR' ? '₹0' : '$0'} forever)
+            </h3>
+            <Badge variant="neutral" className="text-xs">5 Welcome AI Credits</Badge>
+          </div>
+          <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+            Build unlimited resumes manually, test our ATS audits & job matcher with 5 free AI credits, and export unlimited clean watermark-free PDFs.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="md"
+          onClick={() => router.push(isAuthenticated ? '/app' : '/register')}
+          className="shrink-0"
+        >
+          {isAuthenticated ? 'Go to Dashboard' : 'Start Free Account'}
+        </Button>
+      </div>
+
       {/* Feature Comparison Table */}
       <div className="mb-20">
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-            Compare Feature Entitlements
+            Free Starter vs. HypeResume Pro
           </h2>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-            Exact capabilities unlocked on each tier without ambiguity.
+            Every paid option (1 Week, 1 Month, 6 Months, Lifetime) unlocks the exact same full Pro suite.
           </p>
         </div>
 
@@ -397,82 +620,55 @@ export function PricingClient() {
             <thead className="bg-zinc-50 dark:bg-zinc-800/80 border-b border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300">
               <tr>
                 <th className="py-3.5 px-4 font-semibold">Capability</th>
-                <th className="py-3.5 px-4 font-semibold text-center">Free Starter</th>
+                <th className="py-3.5 px-4 font-semibold text-center">Free Starter ({currency === 'INR' ? '₹0' : '$0'})</th>
                 <th className="py-3.5 px-4 font-semibold text-center text-blue-600 dark:text-blue-400">
-                  Job Hunt Pack (₹399)
+                  HypeResume Pro (1 Week / Monthly / 6M / Lifetime)
                 </th>
-                <th className="py-3.5 px-4 font-semibold text-center">Job Hunt Pro (₹899)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800 text-zinc-600 dark:text-zinc-300">
               <tr>
                 <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
-                  AI Optimization Credits
+                  AI Bullet Rewrites & STAR Improvements
                 </td>
-                <td className="py-3 px-4 text-center">5 Credits</td>
-                <td className="py-3 px-4 text-center font-semibold text-blue-600 dark:text-blue-400">
-                  30 Credits
-                </td>
-                <td className="py-3 px-4 text-center font-semibold">100 Credits</td>
+                <td className="py-3 px-4 text-center">Up to 5 welcome credits</td>
+                <td className="py-3 px-4 text-center font-semibold text-emerald-600">Unlimited during active pass</td>
               </tr>
               <tr>
                 <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
-                  ATS Single-Column Editor
+                  Evidence-Quoted JD Matching & Tailoring
                 </td>
+                <td className="py-3 px-4 text-center">Uses welcome credits (1–2/run)</td>
+                <td className="py-3 px-4 text-center font-semibold text-emerald-600">Unlimited during active pass</td>
+              </tr>
+              <tr>
+                <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
+                  AI Cover Letters & LinkedIn Optimizer
+                </td>
+                <td className="py-3 px-4 text-center">2 credits per generation</td>
+                <td className="py-3 px-4 text-center font-semibold text-emerald-600">Unlimited during active pass</td>
+              </tr>
+              <tr>
+                <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
+                  Mock Interview Simulator & Weak-Area Drill
+                </td>
+                <td className="py-3 px-4 text-center">2 credits per session</td>
+                <td className="py-3 px-4 text-center font-semibold text-emerald-600">Unlimited during active pass</td>
+              </tr>
+              <tr>
+                <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
+                  10 ATS Templates & Unwatermarked PDF/DOCX Export
+                </td>
+                <td className="py-3 px-4 text-center text-emerald-600 font-medium">Included Free</td>
                 <td className="py-3 px-4 text-center text-emerald-600 font-medium">Included</td>
-                <td className="py-3 px-4 text-center text-emerald-600 font-medium">Included</td>
-                <td className="py-3 px-4 text-center text-emerald-600 font-medium">Included</td>
               </tr>
               <tr>
                 <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
-                  Grounded STAR Bullet Rewrites
-                </td>
-                <td className="py-3 px-4 text-center">5 rewrites</td>
-                <td className="py-3 px-4 text-center text-blue-600 font-medium">30 rewrites</td>
-                <td className="py-3 px-4 text-center font-medium">100 rewrites</td>
-              </tr>
-              <tr>
-                <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
-                  Job Description Gap Analysis
-                </td>
-                <td className="py-3 px-4 text-center">Basic match (1)</td>
-                <td className="py-3 px-4 text-center text-blue-600 font-medium">
-                  Detailed gap analysis (~15)
-                </td>
-                <td className="py-3 px-4 text-center font-medium">Deep structural audits (~50)</td>
-              </tr>
-              <tr>
-                <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
-                  Tailored Resume Variants
-                </td>
-                <td className="py-3 px-4 text-center">1 Master</td>
-                <td className="py-3 px-4 text-center text-blue-600 font-medium">5 Variants</td>
-                <td className="py-3 px-4 text-center font-medium">Unlimited Variants</td>
-              </tr>
-              <tr>
-                <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
-                  Clean PDF Downloads
-                </td>
-                <td className="py-3 px-4 text-center text-emerald-600 font-medium">
-                  100% Free & No Watermark
-                </td>
-                <td className="py-3 px-4 text-center text-emerald-600 font-medium">
-                  100% Free & No Watermark
-                </td>
-                <td className="py-3 px-4 text-center text-emerald-600 font-medium">
-                  100% Free & No Watermark
-                </td>
-              </tr>
-              <tr>
-                <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
-                  Recurring Auto-Billing
+                  Forced Auto-Renewals
                 </td>
                 <td className="py-3 px-4 text-center text-zinc-400">None</td>
                 <td className="py-3 px-4 text-center text-emerald-600 font-semibold">
-                  None (Pay Once)
-                </td>
-                <td className="py-3 px-4 text-center text-emerald-600 font-semibold">
-                  None (Pay Once)
+                  None (Transparent One-Time Passes)
                 </td>
               </tr>
             </tbody>
@@ -484,10 +680,10 @@ export function PricingClient() {
       <div className="p-8 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 text-center max-w-3xl mx-auto flex flex-col items-center gap-3 mb-20 shadow-sm">
         <ShieldCheck className="w-9 h-9 text-emerald-600 dark:text-emerald-500" />
         <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-          Our Fair Pricing & Privacy Guarantee
+          Our Fair Pricing & Truthfulness Guarantee
         </h3>
         <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed max-w-2xl">
-          We strictly reject fake discount countdowns, phantom scarcity tickers, and hidden subscriptions. If an AI job fails, your credits are refunded to your ledger immediately. Your resume documents and master profile remain yours forever.
+          Every Pro pass is billed once with zero surprise auto-renewals. Seat counters on our Founding Lifetime Offer reflect real completed purchases verified on our server. Export clean, unwatermarked resumes anytime.
         </p>
       </div>
 
@@ -521,22 +717,23 @@ export function PricingClient() {
       </div>
 
       {/* Checkout Modal Dialog */}
-      {isCheckoutOpen && activePlan && (
+      {isCheckoutOpen && (
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
         >
           <div className="relative w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl p-6 overflow-hidden">
             <button
               onClick={() => setIsCheckoutOpen(false)}
-              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 rounded-md"
+              aria-label="Close checkout dialog"
+              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 rounded-md cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
 
-            {/* Step: Review & Initiate */}
-            {checkoutStep === 'review' && !orderData && (
+            {/* Step: Review & Redirect to Dodo Checkout */}
+            {checkoutStep === 'review' && activePlan && (
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <CreditCard className="w-5 h-5 text-blue-600" />
@@ -548,23 +745,27 @@ export function PricingClient() {
                 <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-zinc-700/80 mb-5 space-y-2">
                   <div className="flex justify-between items-center text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                     <span>{activePlan.name}</span>
-                    <span className="text-base text-blue-600 dark:text-blue-400">
-                      {activePlan.displayPrice}
+                    <span className="text-base text-blue-600 dark:text-blue-400 font-mono">
+                      {getPlanPrice(activePlan, currency).displayPrice}
                     </span>
                   </div>
                   <div className="flex justify-between items-center text-xs text-zinc-500">
-                    <span>Included AI Credits:</span>
-                    <span className="font-semibold text-emerald-600">+{activePlan.credits} Credits</span>
+                    <span>Access Unlocked:</span>
+                    <span className="font-semibold text-emerald-600">
+                      {activePlan.isLifetime
+                        ? 'Permanent Lifetime Pro'
+                        : `${activePlan.durationDays || 30} Days Full Pro`}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center text-xs text-zinc-500">
-                    <span>Billing Type:</span>
-                    <span>One-time (Never rebills)</span>
+                    <span>Currency / Billing:</span>
+                    <span>{currency} · One-time (No auto-renewal)</span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 text-[11px] text-zinc-500 mb-6">
-                  <Lock className="w-3.5 h-3.5 text-zinc-400" />
-                  <span>256-bit encrypted secure checkout. Safe payment guarantee.</span>
+                  <Lock className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                  <span>256-bit encrypted checkout via Dodo Payments (UPI, Cards, International).</span>
                 </div>
 
                 <Button
@@ -573,50 +774,7 @@ export function PricingClient() {
                   className="w-full justify-center"
                   onClick={handleInitiateOrder}
                 >
-                  Proceed to Secure Checkout
-                </Button>
-              </div>
-            )}
-
-            {/* Step: Order Created (Sandbox or Provider Action) */}
-            {checkoutStep === 'review' && orderData && (
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                  <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
-                    Complete Test Purchase
-                  </h3>
-                </div>
-
-                <div className="p-4 rounded-xl bg-blue-50/60 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-900/60 mb-5 space-y-2">
-                  <div className="flex justify-between items-center text-xs text-zinc-600 dark:text-zinc-300">
-                    <span>Environment:</span>
-                    <Badge variant="info" className="text-[10px] font-mono">
-                      {orderData.provider.toUpperCase()} MODE
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between items-center text-xs text-zinc-600 dark:text-zinc-300">
-                    <span>Order Reference:</span>
-                    <span className="font-mono text-[11px] font-semibold">{orderData.orderId.slice(0, 12)}...</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm font-bold text-zinc-900 dark:text-zinc-100 pt-1 border-t border-blue-200/40">
-                    <span>Total Payable:</span>
-                    <span>{activePlan.displayPrice}</span>
-                  </div>
-                </div>
-
-                <p className="text-xs text-zinc-500 mb-5 leading-relaxed">
-                  Development mode is active. Click below to verify the server-side order and award{' '}
-                  <strong>{activePlan.credits} credits</strong> to your balance immediately.
-                </p>
-
-                <Button
-                  variant="primary"
-                  size="md"
-                  className="w-full justify-center"
-                  onClick={handleSimulatePayment}
-                >
-                  Confirm Test Payment (Instant)
+                  Continue to Dodo Checkout
                 </Button>
               </div>
             )}
@@ -626,10 +784,10 @@ export function PricingClient() {
               <div className="py-8 text-center flex flex-col items-center justify-center">
                 <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
                 <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">
-                  Verifying with Payment Provider...
+                  {orderData ? 'Redirecting to Dodo Payments...' : 'Verifying Payment with Dodo Gateway...'}
                 </h4>
                 <p className="text-xs text-zinc-500 mt-1">
-                  Connecting to server-side credit ledger. Do not close this window.
+                  Confirming cryptographic settlement directly with Dodo Payments. Do not close this window.
                 </p>
               </div>
             )}
@@ -641,27 +799,32 @@ export function PricingClient() {
                   <CheckCircle2 className="w-6 h-6" />
                 </div>
                 <h3 className="text-center text-lg font-bold text-zinc-900 dark:text-zinc-50 mb-1">
-                  Payment Confirmed!
+                  HypeResume Pro Activated!
                 </h3>
                 <p className="text-center text-xs text-zinc-500 mb-6">
-                  {successReceipt.creditsAwarded} credits have been deposited to your account.
+                  {successReceipt.planName} is now active on your account.
                 </p>
 
                 <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 text-xs space-y-2 mb-6">
                   <div className="flex justify-between">
-                    <span className="text-zinc-500">Transaction ID:</span>
+                    <span className="text-zinc-500">Order Reference:</span>
                     <span className="font-mono font-medium text-zinc-800 dark:text-zinc-200">
-                      {successReceipt.paymentId}
+                      {successReceipt.orderId}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-zinc-500">Credits Credited:</span>
-                    <span className="font-bold text-emerald-600">+{successReceipt.creditsAwarded}</span>
+                    <span className="text-zinc-500">Pro Status:</span>
+                    <span className="font-bold text-emerald-600 flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5" />
+                      {successReceipt.isLifetime
+                        ? 'Lifetime Active'
+                        : `Active until ${formatExpiry(successReceipt.proExpiresAt)}`}
+                    </span>
                   </div>
                   <div className="flex justify-between pt-1 border-t border-zinc-200 dark:border-zinc-700">
-                    <span className="text-zinc-500">New Total Balance:</span>
+                    <span className="text-zinc-500">Credit Balance:</span>
                     <span className="font-bold text-blue-600 dark:text-blue-400">
-                      {successReceipt.newBalance} Credits
+                      {successReceipt.newBalance} credits
                     </span>
                   </div>
                 </div>
@@ -677,7 +840,7 @@ export function PricingClient() {
                   </Button>
                   <Link href="/app/resumes" className="flex-1">
                     <Button variant="primary" size="md" className="w-full justify-center">
-                      Optimize Resume
+                      Go to Resumes
                     </Button>
                   </Link>
                 </div>
@@ -692,26 +855,27 @@ export function PricingClient() {
                 </Alert>
 
                 <div className="flex gap-3">
-
                   <Button
                     variant="outline"
                     size="md"
                     className="flex-1 justify-center"
                     onClick={() => setIsCheckoutOpen(false)}
                   >
-                    Cancel
+                    Close
                   </Button>
-                  <Button
-                    variant="primary"
-                    size="md"
-                    className="flex-1 justify-center"
-                    onClick={() => {
-                      setCheckoutStep('review');
-                      setOrderData(null);
-                    }}
-                  >
-                    Try Again
-                  </Button>
+                  {activePlan && (
+                    <Button
+                      variant="primary"
+                      size="md"
+                      className="flex-1 justify-center"
+                      onClick={() => {
+                        setCheckoutStep('review');
+                        setOrderData(null);
+                      }}
+                    >
+                      Try Again
+                    </Button>
+                  )}
                 </div>
               </div>
             )}

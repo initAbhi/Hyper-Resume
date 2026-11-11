@@ -23,6 +23,7 @@ import type {
 } from './interfaces/ai-provider.interface.js';
 import { MockAiProvider } from './providers/mock-ai.provider.js';
 import { GeminiAiProvider } from './providers/gemini-ai.provider.js';
+import { validateAndSanitizeMetrics } from './utils/factual-integrity-validator.js';
 import type { ParsedJobRequirement } from '../jobs/entities/job-description.entity.js';
 import type { ResumeContent } from '../resumes/entities/resume.types.js';
 
@@ -89,13 +90,38 @@ export class AiService implements AiProvider {
     targetRole?: string,
     metricHint?: string,
   ): Promise<BulletRewriteResult> {
+    let res: BulletRewriteResult;
     try {
-      const res = await this.activeProvider.rewriteBullet(bullet, targetRole, metricHint);
-      return { ...res, provider: res.provider || this.activeProvider.name };
+      res = await this.activeProvider.rewriteBullet(bullet, targetRole, metricHint);
+      res = { ...res, provider: res.provider || this.activeProvider.name };
     } catch (err) {
       this.logger.warn(`AI Provider error during bullet rewrite, falling back to Mock provider: ${err}`);
-      return this.mockProvider.rewriteBullet(bullet, targetRole, metricHint);
+      res = await this.mockProvider.rewriteBullet(bullet, targetRole, metricHint);
     }
+
+    const groundingSource = [bullet, metricHint].filter(Boolean).join(' ');
+    const warnings: string[] = [];
+    const mainCheck = validateAndSanitizeMetrics(groundingSource, res.rewrittenBullet, 'Rewritten Bullet');
+    warnings.push(...mainCheck.warnings);
+
+    const sanitizedVariants = res.variants?.map((variant) => {
+      const variantCheck = validateAndSanitizeMetrics(groundingSource, variant.bullet, `${variant.style} variant`);
+      warnings.push(...variantCheck.warnings);
+      return {
+        ...variant,
+        bullet: variantCheck.sanitizedText,
+      };
+    });
+
+    return {
+      ...res,
+      rewrittenBullet: mainCheck.sanitizedText,
+      variants: sanitizedVariants,
+      factualVerificationNotes:
+        warnings.length > 0
+          ? `${res.factualVerificationNotes ? `${res.factualVerificationNotes} ` : ''}Guardrail scrubbed unverified metrics (${warnings.length}).`
+          : res.factualVerificationNotes,
+    };
   }
 
   async generateBullets(input: BulletGenerateRequest): Promise<BulletGenerateResult> {

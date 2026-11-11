@@ -248,7 +248,10 @@ export function SourceResumeSelectorModal({
                     </p>
                     <button
                       type="button"
-                      onClick={() => router.push('/app/resumes/new')}
+                      onClick={() => {
+                        onClose();
+                        router.push('/app/resumes?create=1');
+                      }}
                       className="px-3 py-1.5 text-xs font-bold rounded-lg bg-[#285FEA] text-white hover:bg-[#1E4BC8]"
                     >
                       Create Source Resume

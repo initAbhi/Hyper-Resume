@@ -20,6 +20,10 @@ export default function robots(): MetadataRoute.Robots {
         disallow: [
           '/app/',
           '/app/*',
+          '/admin',
+          '/admin/*',
+          '/r/',
+          '/r/*',
           '/api/',
           '/api/*',
           '/login',

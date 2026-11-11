@@ -20,6 +20,7 @@ import { CoverLetter } from '../cover-letters/entities/cover-letter.entity.js';
 import { ResumeShare } from '../resumes/entities/resume-share.entity.js';
 import { ResumeShareEvent } from '../resumes/entities/resume-share-event.entity.js';
 import { LinkedInAudit } from '../linkedin/entities/linkedin-audit.entity.js';
+import { AnalyticsEvent } from '../analytics/analytics-event.entity.js';
 
 export const ALL_ENTITIES = [
   User,
@@ -44,4 +45,5 @@ export const ALL_ENTITIES = [
   ResumeShare,
   ResumeShareEvent,
   LinkedInAudit,
+  AnalyticsEvent,
 ];

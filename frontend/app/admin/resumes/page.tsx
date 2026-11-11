@@ -81,8 +81,10 @@ export default function AdminResumesPage() {
         </div>
 
         <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs">
-          <div className="text-xs text-slate-400 font-medium">Active Templates</div>
-          <div className="mt-1 text-2xl font-extrabold text-emerald-600">3 Types</div>
+          <div className="text-xs text-slate-400 font-medium">Templates in Use</div>
+          <div className="mt-1 text-2xl font-extrabold text-emerald-600">
+            {new Set(resumes.map((r) => r.templateKey || 'double-column')).size} Active
+          </div>
         </div>
       </div>
 

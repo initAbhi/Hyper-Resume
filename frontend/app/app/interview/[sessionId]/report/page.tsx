@@ -79,7 +79,7 @@ export default function InterviewScorecardReportPage({ params }: PageProps) {
   }
 
   const { session, questions, turns, isPaidUser } = reportData;
-  const overall = session.overallScore || 75;
+  const overall = typeof session.overallScore === 'number' ? session.overallScore : 0;
 
   function getRatingTier(score: number) {
     if (score >= 85) return { label: 'Interview Ready', variant: 'success' as const, color: 'text-emerald-500' };
@@ -306,7 +306,7 @@ export default function InterviewScorecardReportPage({ params }: PageProps) {
                     <div className="text-foreground">{turn.followUpQuestion}</div>
                     {turn.followUpAnswer && (
                       <div className="pt-1 text-muted-foreground italic">
-                        Your answer: &ldquo;{turn.followUpAnswer}&rdquo; (Score: {turn.followUpScore || 80}/100)
+                        Your answer: &ldquo;{turn.followUpAnswer}&rdquo; (Score: {typeof turn.followUpScore === 'number' ? turn.followUpScore : 0}/100)
                       </div>
                     )}
                   </div>
@@ -323,13 +323,13 @@ export default function InterviewScorecardReportPage({ params }: PageProps) {
                           <span>Personalized Model Answer Locked for Pro</span>
                         </div>
                         <p className="text-[11px] text-muted-foreground">
-                          Upgrade to Job Hunt Pack (₹399) or Pro (₹899) to unlock staff-level model answers for all questions and full mock simulations.
+                          Upgrade to HypeResume Pro (starting at ₹149/$3 weekly pass) to unlock staff-level model answers for all questions and unlimited mock interviews.
                         </p>
                       </div>
 
                       <Link href="/pricing" className="shrink-0">
                         <Button variant="primary" size="sm" className="gap-1.5">
-                          <span>Upgrade Pack</span>
+                          <span>Unlock Pro</span>
                           <Sparkles className="w-3 h-3" />
                         </Button>
                       </Link>

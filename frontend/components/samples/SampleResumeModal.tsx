@@ -69,12 +69,10 @@ export function SampleResumeModal({
 
     const resumeContent: ResumeContent = {
       contact: {
-        fullName: user?.fullName || resume.candidate.name,
-        email: user?.email || resume.candidate.email,
-        phone: resume.candidate.phone,
-        location: resume.candidate.location,
-        linkedinUrl: resume.candidate.linkedin ? `https://${resume.candidate.linkedin}` : undefined,
-        githubUrl: resume.candidate.github ? `https://${resume.candidate.github}` : undefined,
+        fullName: user?.fullName || 'Your Full Name',
+        email: user?.email || '',
+        phone: '',
+        location: '',
       },
       headline: resume.role,
       summary: resume.summary,
@@ -671,7 +669,7 @@ export function SampleResumeModal({
 
             {/* Document Bottom Stamp */}
             <div className="mt-8 pt-3 border-t border-zinc-200 flex items-center justify-between text-[10px] text-zinc-400 print:hidden select-none">
-              <span className="font-medium">HyperResume 100% ATS Verified Single-Column Architecture</span>
+              <span className="font-medium">HypeResume 100% ATS Verified Architecture</span>
               <span>Unicode UTF-8 Standard &bull; Tableless Flow</span>
             </div>
           </div>
