@@ -17,7 +17,8 @@ import {
   Award,
   ChevronRight,
   ShieldCheck,
-  Check
+  Check,
+  Keyboard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -131,9 +132,19 @@ export default function ActiveInterviewStudioPage({ params }: PageProps) {
       recognition.interimResults = true;
       recognition.lang = 'en-US';
 
-      recognition.onstart = () => setIsRecording(true);
+      recognition.onstart = () => {
+        setErrorMsg(null);
+        setIsRecording(true);
+      };
       recognition.onend = () => setIsRecording(false);
-      recognition.onerror = () => setIsRecording(false);
+      recognition.onerror = (event: any) => {
+        setIsRecording(false);
+        if (event?.error === 'not-allowed') {
+          setErrorMsg('Microphone access was denied. You can continue typing in Typewriter Mode.');
+        } else if (event?.error !== 'no-speech') {
+          setErrorMsg('Speech recognition paused or unavailable. Typewriter Mode active.');
+        }
+      };
 
       recognition.onresult = (event: any) => {
         let transcript = '';
@@ -146,6 +157,7 @@ export default function ActiveInterviewStudioPage({ params }: PageProps) {
       recognition.start();
     } catch {
       setIsRecording(false);
+      setErrorMsg('Unable to initialize speech recognition. Typewriter Mode is ready.');
     }
   }
 
@@ -336,31 +348,59 @@ export default function ActiveInterviewStudioPage({ params }: PageProps) {
       {!activeTurn ? (
         /* Unanswered: Response Editor */
         <Card className="p-5 border-border bg-card space-y-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-medium text-foreground">
-              Your Response (STAR or Technical Architecture)
-            </label>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-foreground">
+                Your Response (STAR or Technical Architecture)
+              </label>
+              {!speechSupported && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground border border-border">
+                  <Keyboard className="w-3 h-3" />
+                  Typewriter Mode
+                </span>
+              )}
+            </div>
 
-            {speechSupported && (
+            <div className="flex items-center gap-2">
               <Button
-                variant={isRecording ? 'destructive' : 'outline'}
+                type="button"
+                variant="ghost"
                 size="sm"
-                onClick={toggleSpeechRecording}
-                className="gap-1.5"
+                onClick={() => {
+                  if (!candidateAnswer.trim()) {
+                    setCandidateAnswer('Situation: \nTask: \nAction: \nResult: ');
+                  } else {
+                    setCandidateAnswer((prev) => `${prev}\n\nSituation: \nTask: \nAction: \nResult: `.slice(0, 1500));
+                  }
+                }}
+                className="text-[11px] text-blue-600 dark:text-blue-400 gap-1 h-7 px-2 hover:bg-blue-50 dark:hover:bg-blue-950/30"
               >
-                {isRecording ? (
-                  <>
-                    <MicOff className="w-3 h-3 animate-pulse" />
-                    <span>Listening... (Click to stop)</span>
-                  </>
-                ) : (
-                  <>
-                    <Mic className="w-3 h-3" />
-                    <span>Speak Response (Web Speech)</span>
-                  </>
-                )}
+                <Sparkles className="w-3 h-3" />
+                <span>Insert STAR Template</span>
               </Button>
-            )}
+
+              {speechSupported && (
+                <Button
+                  type="button"
+                  variant={isRecording ? 'destructive' : 'outline'}
+                  size="sm"
+                  onClick={toggleSpeechRecording}
+                  className="gap-1.5 h-7 text-xs"
+                >
+                  {isRecording ? (
+                    <>
+                      <MicOff className="w-3 h-3 animate-pulse" />
+                      <span>Listening...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="w-3 h-3" />
+                      <span>Speak Response</span>
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
 
           <textarea

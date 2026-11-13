@@ -56,6 +56,18 @@ export const AI_MODEL_PRICING_REGISTRY: Record<string, ModelPricing> = {
     inputPerMillionUsd: 1.25,
     outputPerMillionUsd: 5.00,
   },
+  'gemini-1.5-flash': {
+    modelId: 'gemini-1.5-flash',
+    version: '2026-Q1',
+    inputPerMillionUsd: 0.075,
+    outputPerMillionUsd: 0.30,
+  },
+  'gemini-1.5-flash-latest': {
+    modelId: 'gemini-1.5-flash-latest',
+    version: '2026-Q1',
+    inputPerMillionUsd: 0.075,
+    outputPerMillionUsd: 0.30,
+  },
   'mock': {
     modelId: 'mock',
     version: '2026-Q1',

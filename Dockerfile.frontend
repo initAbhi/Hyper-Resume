@@ -1,0 +1,40 @@
+# ==============================================================================
+# Hyper-Resume — Frontend Production Dockerfile (Next.js 16 Standalone / Bun)
+# ==============================================================================
+
+# --- Stage 1: Build Stage ---
+FROM oven/bun:1.3.2-slim AS builder
+WORKDIR /app
+
+# Copy dependency manifests
+COPY frontend/package.json ./
+
+# Install dependencies
+RUN bun install --frozen-lockfile || bun install
+
+# Copy frontend source
+COPY frontend/ ./
+
+# Build Next.js application in standalone mode
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN bun run build
+
+# --- Stage 2: Production Runtime Stage ---
+FROM node:20-bookworm-slim AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Copy standalone build output and static assets
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+
+EXPOSE 3000
+
+USER node
+
+CMD ["node", "server.js"]
+

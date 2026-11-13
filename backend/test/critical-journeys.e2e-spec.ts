@@ -258,18 +258,18 @@ Requirements:
 
       baselineBalance = baselineRes.body.data.balance;
 
-      // 1. Create Order for Job Hunt Pack (30 credits)
+      // 1. Create Order for Pro Monthly (300 credits)
       const orderRes = await request(app.getHttpServer())
         .post('/api/v1/payments/create-order')
         .set('Authorization', `Bearer ${userToken}`)
         .send({
-          planId: 'job_hunt_pack',
+          planId: 'pro_monthly',
           provider: 'sandbox',
         })
         .expect(201);
 
       expect(orderRes.body.data.amountMinor).toBe(39900); // Server calculated ₹399
-      expect(orderRes.body.data.plan.credits).toBe(30);
+      expect(orderRes.body.data.plan.credits).toBe(300);
       orderId = orderRes.body.data.orderId;
 
       // 2. Verify Payment
@@ -284,13 +284,13 @@ Requirements:
 
       expect(verifyRes.body.data.verified).toBe(true);
 
-      // 3. Confirm balance incremented by exactly 30
+      // 3. Confirm balance incremented by exactly 300
       const balanceAfterRes = await request(app.getHttpServer())
         .get('/api/v1/credits/balance')
         .set('Authorization', `Bearer ${userToken}`)
         .expect(200);
 
-      expect(balanceAfterRes.body.data.balance).toBe(baselineBalance + 30);
+      expect(balanceAfterRes.body.data.balance).toBe(baselineBalance + 300);
     });
 
     it('should process webhook idempotently and reject invalid signatures', async () => {
@@ -322,7 +322,7 @@ Requirements:
         .set('Authorization', `Bearer ${userToken}`)
         .expect(200);
 
-      expect(balanceCheck.body.data.balance).toBe(baselineBalance + 30);
+      expect(balanceCheck.body.data.balance).toBe(baselineBalance + 300);
     });
 
     it('should safely process refund webhook and revert credits', async () => {
@@ -335,7 +335,7 @@ Requirements:
         })
         .expect(200);
 
-      expect(refundRes.body.data.message).toContain('Refund processed and credits reverted');
+      expect(refundRes.body.data.message).toContain('Refund processed and entitlements reverted');
 
       // Verify balance reverted to baseline
       const balanceCheck = await request(app.getHttpServer())

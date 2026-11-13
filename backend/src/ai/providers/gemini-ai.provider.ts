@@ -46,15 +46,20 @@ export class GeminiAiProvider implements AiProvider {
   constructor(private readonly configService: ConfigService) {
     this.apiKey = this.configService.get<string>('AI_API_KEY') || this.configService.get<string>('GEMINI_API_KEY');
     const rawModel = this.configService.get<string>('AI_MODEL', 'gemini-3.1-flash-lite');
-    this.model = (!rawModel || rawModel.includes('1.5') || rawModel.includes('2.0') || rawModel.includes('2.5'))
-      ? 'gemini-3.1-flash-lite'
-      : rawModel;
+    let selectedModel = rawModel || 'gemini-3.1-flash-lite';
+    try {
+      getModelPricing(selectedModel);
+    } catch {
+      selectedModel = 'gemini-3.1-flash-lite';
+    }
+    this.model = selectedModel;
 
     // Safeguard 1: Verify model pricing exists on initialization
     getModelPricing(this.model);
   }
 
   async parseResumeText(text: string): Promise<ParsedProfileDraft> {
+    const safeText = PromptSanitizer.sanitizeResumeText(text);
     const prompt = `You are an expert ATS resume parsing engine. Extract the candidate's complete profile into JSON.
 CRITICAL INVARIANTS:
 1. DO NOT invent or fabricate any details, employers, dates, metrics, or credentials. Only extract what is explicitly written in the resume text.
@@ -84,13 +89,14 @@ Return JSON in this shape:
 }
 
 Resume text:
-${text}`;
+${safeText}`;
 
     const { data } = await this.callGeminiWithUsage<ParsedProfileDraft>(prompt);
     return data;
   }
 
   async parseJobDescription(text: string): Promise<ParsedJobRequirement[]> {
+    const safeText = PromptSanitizer.sanitizeJobDescription(text);
     const prompt = `Extract all job requirements from this job description.
 Return JSON array of requirements:
 [
@@ -104,7 +110,7 @@ Return JSON array of requirements:
 ]
 
 Job Description:
-${text}`;
+${safeText}`;
 
     const { data } = await this.callGeminiWithUsage<ParsedJobRequirement[]>(prompt);
     return data;

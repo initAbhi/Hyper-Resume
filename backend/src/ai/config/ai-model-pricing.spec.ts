@@ -16,6 +16,17 @@ describe('AI Model Pricing Registry (Safeguard 1)', () => {
     expect(pricing.outputPerMillionUsd).toBe(0.40);
   });
 
+  it('should return configured pricing for gemini-1.5-flash and alias', () => {
+    const pricing = getModelPricing('gemini-1.5-flash');
+    expect(pricing).toBeDefined();
+    expect(pricing.inputPerMillionUsd).toBe(0.075);
+    expect(pricing.outputPerMillionUsd).toBe(0.30);
+
+    const aliasPricing = getModelPricing('gemini-1.5-flash-latest');
+    expect(aliasPricing).toBeDefined();
+    expect(aliasPricing.inputPerMillionUsd).toBe(0.075);
+  });
+
   it('should return configured pricing for mock model', () => {
     const pricing = getModelPricing('mock');
     expect(pricing.inputPerMillionUsd).toBe(0.00);

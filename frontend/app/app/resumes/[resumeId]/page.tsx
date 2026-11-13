@@ -74,6 +74,7 @@ import { DesignPanel } from '@/components/resumes/DesignPanel';
 import { PhotoUploadModal } from '@/components/resumes/PhotoUploadModal';
 import { CheckAndTailorDrawer } from '@/components/resumes/CheckAndTailorDrawer';
 import { ExportPdfModal } from '@/components/resumes/ExportPdfModal';
+import { PageBudgetIndicator } from '@/components/resumes/PageBudgetIndicator';
 
 interface ResumeEditorPageProps {
   params: Promise<{ resumeId: string }>;
@@ -2068,9 +2069,12 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                 </button>
               </div>
 
-              {/* Live Semi-Circle Meter */}
-              <div className="pt-3 pb-1">
+              {/* Live Semi-Circle Meter & Page Budget */}
+              <div className="pt-3 pb-1 space-y-2.5">
                 <ScoreMeter score={analysis?.score ?? liveScore} />
+                <div className="flex justify-center">
+                  <PageBudgetIndicator content={resume?.content} />
+                </div>
               </div>
 
               <p className="text-[11px] text-zinc-500 text-center mt-1">

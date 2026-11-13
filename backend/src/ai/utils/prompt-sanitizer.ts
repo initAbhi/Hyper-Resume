@@ -4,8 +4,10 @@
  * destructively stripping valid code or technical symbols (<T>, &&, ||, =>).
  */
 export class PromptSanitizer {
-  private static readonly MAX_ANSWER_CHARS = 1500;
-  private static readonly MAX_CONTEXT_CHARS = 4000;
+  public static readonly MAX_ANSWER_CHARS = 1500;
+  public static readonly MAX_JOB_DESCRIPTION_CHARS = 4000;
+  public static readonly MAX_RESUME_CHARS = 6000;
+  public static readonly MAX_CONTEXT_CHARS = 4000;
 
   /**
    * Sanitizes and bounds candidate answers submitted during an interview or prompt context.
@@ -29,6 +31,46 @@ export class PromptSanitizer {
   }
 
   /**
+   * Sanitizes and bounds job description text before LLM prompt interpolation.
+   * Enforces 4,000 character maximum budget to prevent token overconsumption.
+   */
+  public static sanitizeJobDescription(
+    input: string,
+    maxChars: number = this.MAX_JOB_DESCRIPTION_CHARS,
+  ): string {
+    if (!input || typeof input !== 'string') {
+      return '';
+    }
+
+    const trimmed = input.trim().slice(0, maxChars);
+
+    return trimmed
+      .replace(/<\/?(system|instruction|prompt|context|untrusted)[^>]*>/gi, '')
+      .replace(/^(system|assistant|human|user):\s*/gim, '')
+      .replace(/ignore\s+all\s+(previous|prior)\s+instructions/gi, '[neutralized_directive]');
+  }
+
+  /**
+   * Sanitizes and bounds candidate resume plain-text before LLM analysis.
+   * Enforces 6,000 character ceiling to protect context window limits.
+   */
+  public static sanitizeResumeText(
+    input: string,
+    maxChars: number = this.MAX_RESUME_CHARS,
+  ): string {
+    if (!input || typeof input !== 'string') {
+      return '';
+    }
+
+    const trimmed = input.trim().slice(0, maxChars);
+
+    return trimmed
+      .replace(/<\/?(system|instruction|prompt|context|untrusted)[^>]*>/gi, '')
+      .replace(/^(system|assistant|human|user):\s*/gim, '')
+      .replace(/ignore\s+all\s+(previous|prior)\s+instructions/gi, '[neutralized_directive]');
+  }
+
+  /**
    * Encapsulates untrusted input inside guarded XML-style data delimiters.
    */
   public static wrapUntrusted(
@@ -41,4 +83,3 @@ export class PromptSanitizer {
     return `<${cleanTag}>\n${cleanContent}\n</${cleanTag}>`;
   }
 }
-

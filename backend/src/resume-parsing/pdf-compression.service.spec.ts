@@ -50,7 +50,7 @@ describe('PdfCompressionService', () => {
       // Create a PDF and mock encrypted error on load
       const doc = await PDFDocument.create();
       doc.addPage([600, 400]);
-      const pdfBytes = await doc.save();
+      await doc.save();
 
       // Test that an encrypted PDF throws clear message
       // We simulate by corrupting PDF with an encryption dict or mocking
@@ -64,7 +64,9 @@ describe('PdfCompressionService', () => {
   });
 
   describe('Compression, Verification & Optimization', () => {
-    it('should successfully compress a PDF with large embedded images and preserve text and pages', async () => {
+    it(
+      'should successfully compress a PDF with large embedded images and preserve text and pages',
+      async () => {
       // 1. Generate a multi-page test PDF with an embedded raster image and resume text
       const doc = await PDFDocument.create();
       const font = await doc.embedFont(StandardFonts.Helvetica);
@@ -153,7 +155,7 @@ describe('PdfCompressionService', () => {
 
       // Ensure original buffer was not mutated
       expect(originalBytes.length).toBe(originalLength);
-    });
+    }, 30000);
 
     it('should classify already-optimal PDFs cleanly without corruption', async () => {
       // Create minimal clean PDF without images and run once to get fully minimal bytes

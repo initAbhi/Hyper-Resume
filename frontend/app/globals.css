@@ -1078,11 +1078,6 @@ progress.hr-progress-ring::-moz-progress-bar {
   background: none;
 }
 
-progress.hr-progress-ring::slider-fill {
-  display: none;
-  background: none;
-}
-
 .hr-progress-ring-content {
   position: absolute;
   display: flex;

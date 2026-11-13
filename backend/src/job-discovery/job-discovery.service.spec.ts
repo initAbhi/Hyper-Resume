@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { JobDiscoveryService } from './job-discovery.service.js';
 import {
+  CACHE_TTL_MS,
   clearJobDiscoveryCache,
   computeResumeJobFit,
   sanitizeBoardToken,
@@ -216,6 +217,40 @@ describe('JobDiscoveryService & Providers', () => {
     expect(res.feedMode).toBe('offline_fallback');
     expect(res.liveCount).toBe(0);
     expect(res.jobs.length).toBeGreaterThan(0);
+  });
+
+  it('enforces 15-minute TTL cache on job discovery feeds and avoids redundant network requests', async () => {
+    expect(CACHE_TTL_MS).toBe(15 * 60 * 1000);
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        jobs: [
+          {
+            id: 991,
+            title: 'Senior Distributed Systems Architect',
+            company_name: 'Stripe',
+            candidate_required_location: 'Remote',
+            job_type: 'full_time',
+            url: 'https://remotive.com/jobs/991',
+            publication_date: '2026-11-13T12:00:00Z',
+            tags: ['Go', 'PostgreSQL'],
+            description: '<p>Build payment scale infrastructure in Go and PostgreSQL.</p>',
+          },
+        ],
+      }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    // First fetch: network request triggered
+    const res1 = await service.searchJobs('user-a', { source: 'remotive' });
+    expect(res1.sourcesStatus[0].cached).toBe(false);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    // Second fetch without refresh flag: cached hit, zero extra network requests
+    const res2 = await service.searchJobs('user-a', { source: 'remotive' });
+    expect(res2.sourcesStatus[0].cached).toBe(true);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
   it('saves discovered jobs cleanly without duplicate tracking and enforces resume ownership on match', async () => {

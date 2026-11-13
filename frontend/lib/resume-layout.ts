@@ -139,8 +139,8 @@ export function normalizeLayoutSettings(
 ): NormalizedLayoutSettings {
   const knownCustomKeys = Array.isArray(customSections)
     ? customSections
-        .filter((s) => Boolean(s?.id))
-        .map((s) => `${CUSTOM_SECTION_PREFIX}${s.id}` as ResumeSectionKey)
+      .filter((s) => Boolean(s?.id))
+      .map((s) => `${CUSTOM_SECTION_PREFIX}${s.id}` as ResumeSectionKey)
     : null;
   const knownCustomSet = knownCustomKeys ? new Set(knownCustomKeys) : null;
 

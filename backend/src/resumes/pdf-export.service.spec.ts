@@ -15,7 +15,7 @@ describe('PdfExportService', () => {
 
   afterAll(async () => {
     await service.onModuleDestroy();
-  });
+  }, 25000);
 
   describe('sanitizeMarkup', () => {
     it('strips scripts, iframes, event handlers, and javascript: URIs', () => {

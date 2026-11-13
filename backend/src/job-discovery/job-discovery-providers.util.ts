@@ -85,7 +85,7 @@ const TECH_TAG_CATALOG: Array<{ pattern: RegExp; tag: string }> = [
   { pattern: /\bdistributed systems\b/i, tag: 'Distributed Systems' },
 ];
 
-const CACHE_TTL_MS = 10 * 60 * 1000;
+export const CACHE_TTL_MS = 15 * 60 * 1000; // 15-minute TTL cache
 const FETCH_TIMEOUT_MS = 15000;
 const sourceCache = new Map<string, { items: DiscoveredJobItem[]; fetchedAt: number }>();
 

@@ -24,9 +24,12 @@ out/
 build/
 */build/
 
-# Uploads and temporary assets
+# Uploads, backups and temporary assets
 uploads/
 */uploads/
+backups/
+*/backups/
+*.dump
 .tmp/
 .temp/
 

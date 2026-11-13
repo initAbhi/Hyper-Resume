@@ -23,18 +23,25 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('light');
 
   useEffect(() => {
+    let saved: Theme = 'light';
     try {
-      const savedTheme = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
-      if (savedTheme === 'dark') {
-        setThemeState('dark');
-        document.documentElement.classList.add('dark');
-      } else {
-        setThemeState('light');
-        document.documentElement.classList.remove('dark');
-      }
+      const stored = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
+      if (stored === 'dark') saved = 'dark';
     } catch {
+      // ignore
+    }
+
+    if (saved === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
       document.documentElement.classList.remove('dark');
     }
+
+    const timer = setTimeout(() => {
+      setThemeState(saved);
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const setTheme = (newTheme: Theme) => {

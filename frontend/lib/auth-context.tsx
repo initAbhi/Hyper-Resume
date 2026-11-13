@@ -144,11 +144,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const hasActivePro = Boolean(
-    user?.hasActivePro ||
-      user?.isLifetimePro ||
-      (user?.proExpiresAt && new Date(user.proExpiresAt).getTime() > Date.now()),
-  );
+  const [isProValid, setIsProValid] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!user) {
+      setIsProValid(false);
+      return;
+    }
+    const isValid = Boolean(
+      user.hasActivePro ||
+        user.isLifetimePro ||
+        (user.proExpiresAt && new Date(user.proExpiresAt).getTime() > Date.now()),
+    );
+    setIsProValid(isValid);
+  }, [user]);
+
+  const hasActivePro = Boolean(user?.hasActivePro || user?.isLifetimePro || isProValid);
 
   return (
     <AuthContext.Provider

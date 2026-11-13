@@ -39,32 +39,32 @@ const TONE_OPTIONS: Array<{
   label: string;
   hint: string;
 }> = [
-  {
-    value: 'executive',
-    label: 'Executive',
-    hint: 'Strategic leadership & ownership framing',
-  },
-  {
-    value: 'impact',
-    label: 'Impact & XYZ',
-    hint: 'Outcome-first action verbs without invented metrics',
-  },
-  {
-    value: 'concise',
-    label: 'Concise',
-    hint: 'Tight ATS scannability with filler stripped',
-  },
-  {
-    value: 'technical',
-    label: 'Technical',
-    hint: 'Emphasizes verified stack & system craft',
-  },
-  {
-    value: 'expand',
-    label: 'Expand',
-    hint: 'Adds factual execution clarity from verified context',
-  },
-];
+    {
+      value: 'executive',
+      label: 'Executive',
+      hint: 'Strategic leadership & ownership framing',
+    },
+    {
+      value: 'impact',
+      label: 'Impact & XYZ',
+      hint: 'Outcome-first action verbs without invented metrics',
+    },
+    {
+      value: 'concise',
+      label: 'Concise',
+      hint: 'Tight ATS scannability with filler stripped',
+    },
+    {
+      value: 'technical',
+      label: 'Technical',
+      hint: 'Emphasizes verified stack & system craft',
+    },
+    {
+      value: 'expand',
+      label: 'Expand',
+      hint: 'Adds factual execution clarity from verified context',
+    },
+  ];
 
 export function SectionRewriterDialog({
   target,
@@ -170,7 +170,7 @@ export function SectionRewriterDialog({
       } else if (target.sectionType === 'experience') {
         const sourceEntries =
           typeof target.experienceIndex === 'number' &&
-          content.experience?.[target.experienceIndex]
+            content.experience?.[target.experienceIndex]
             ? [content.experience[target.experienceIndex]]
             : content.experience || [];
 
@@ -304,9 +304,9 @@ export function SectionRewriterDialog({
             const rw = result.customRewrites?.find((r) => r.index === idx);
             return rw
               ? {
-                  ...entry,
-                  bullets: rw.rewrittenBullets,
-                }
+                ...entry,
+                bullets: rw.rewrittenBullets,
+              }
               : entry;
           });
           return {
@@ -332,7 +332,7 @@ export function SectionRewriterDialog({
       aria-labelledby={titleId}
       onClose={handleDialogClose}
       {...({ closedby: 'any' } as Record<string, string>)}
-      className="hr-native-dialog w-full max-w-2xl rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-2xl p-0 max-h-[86vh] overflow-hidden"
+      className="hr-native-dialog w-full max-w-2xl rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-2xl p-0 max-h-[88vh] overflow-hidden"
     >
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
@@ -363,7 +363,7 @@ export function SectionRewriterDialog({
       </div>
 
       {/* Scrollable Body */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-5 text-xs">
+      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5 text-xs">
         {/* Tone Selector */}
         <div className="space-y-2">
           <span className="font-bold uppercase tracking-wider text-[10.5px] text-zinc-500 dark:text-zinc-400">
@@ -379,11 +379,10 @@ export function SectionRewriterDialog({
                   autoFocus={idx === 0}
                   data-testid={`rewrite-tone-${opt.value}`}
                   onClick={() => setTone(opt.value)}
-                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                    selected
-                      ? 'border-blue-600 bg-blue-50/80 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 ring-1 ring-blue-600'
-                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-700 dark:text-zinc-300'
-                  }`}
+                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${selected
+                    ? 'border-blue-600 bg-blue-50/80 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 ring-1 ring-blue-600'
+                    : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-700 dark:text-zinc-300'
+                    }`}
                 >
                   <div className="font-bold text-[11px]">{opt.label}</div>
                   <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-snug">

@@ -7,6 +7,7 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module.js';
 import { AppLoggerService } from './common/logger/app-logger.service.js';
+import { isAllowedCorsOrigin, parseAdditionalCorsOrigins } from './common/utils/cors.util.js';
 
 async function bootstrap() {
   const logger = new AppLoggerService();
@@ -41,28 +42,13 @@ async function bootstrap() {
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // CORS configuration
-  const allowedOrigins = [
-    frontendUrl,
-    'https://hype-resume.com',
-    'http://hype-resume.com',
-    'https://api.hype-resume.com',
-    'http://api.hype-resume.com',
-    'https://resume.fourth-coffee.shop',
-    'http://resume.fourth-coffee.shop',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-  ].filter(Boolean);
+  const additionalOrigins = parseAdditionalCorsOrigins(
+    configService.get<string>('ADDITIONAL_CORS_ORIGINS'),
+  );
 
   app.enableCors({
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-      if (!origin) return callback(null, true);
-      const isAllowed =
-        allowedOrigins.includes(origin) ||
-        /^https?:\/\/([a-z0-9-]+\.)*hype-resume\.com(:\d+)?$/.test(origin) ||
-        /^https?:\/\/([a-z0-9-]+\.)*fourth-coffee\.shop(:\d+)?$/.test(origin) ||
-        /^https?:\/\/localhost(:\d+)?$/.test(origin) ||
-        /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin);
-      if (isAllowed) {
+      if (isAllowedCorsOrigin(origin, frontendUrl, additionalOrigins, isDev)) {
         callback(null, true);
       } else {
         logger.warn(`Blocked CORS request from origin: ${origin}`, 'CORS');
