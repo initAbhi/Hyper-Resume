@@ -333,24 +333,24 @@ export function ShareAnalyticsDrawer({
     >
       <div className="flex flex-col h-full w-full">
         {/* Drawer Header */}
-        <header className="flex items-start justify-between gap-3 p-4 sm:p-5 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
+        <header className="flex items-start justify-between gap-3 p-3.5 sm:p-5 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
           <div className="space-y-1 min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Share2 className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
               <h2
                 id={titleId}
-                className="text-sm font-bold text-zinc-900 dark:text-zinc-100"
+                className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate"
               >
-                Recruiter Share Link &amp; Analytics
+                Share Link &amp; Analytics
               </h2>
               <span
-                className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${
                   isActive
                     ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                     : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700'
                 }`}
               >
-                {isActive ? 'Live Public Link' : 'Paused'}
+                {isActive ? 'Live' : 'Paused'}
               </span>
             </div>
             <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
@@ -362,7 +362,7 @@ export function ShareAnalyticsDrawer({
             type="button"
             onClick={onClose}
             aria-label="Close Recruiter Share & Analytics"
-            className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shrink-0"
+            className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shrink-0 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>

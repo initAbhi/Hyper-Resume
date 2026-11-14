@@ -343,16 +343,16 @@ export function SampleResumeModal({
           </div>
 
           {/* Right: Actions Cluster */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {/* Copy Full Text */}
             <button
               type="button"
               onClick={handleCopyText}
-              className="h-8 sm:h-8.5 px-2.5 sm:px-3 rounded-lg text-xs font-semibold border border-[#E2E5E9] dark:border-[#252A33] bg-[#F7F8FA] dark:bg-[#1D2128] hover:bg-[#EAEFF5] dark:hover:bg-[#252A33] text-[#1A1D23] dark:text-[#F0F2F5] transition-all flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
+              className="h-8 sm:h-8.5 px-2 sm:px-3 rounded-lg text-xs font-semibold border border-[#E2E5E9] dark:border-[#252A33] bg-[#F7F8FA] dark:bg-[#1D2128] hover:bg-[#EAEFF5] dark:hover:bg-[#252A33] text-[#1A1D23] dark:text-[#F0F2F5] transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95 min-w-[32px] sm:min-w-0"
               title="Copy formatted resume text"
             >
               <Copy className="w-3.5 h-3.5 text-[#5A6270] dark:text-[#9EA7B4]" />
-              <span className="hidden sm:inline">Copy Text</span>
+              <span className="hidden md:inline">Copy Text</span>
             </button>
 
             {/* Print / PDF */}
@@ -371,7 +371,7 @@ export function SampleResumeModal({
               type="button"
               onClick={handleUseStarterTemplate}
               disabled={isCloning}
-              className="h-8 sm:h-8.5 px-2.5 sm:px-3 rounded-lg text-xs font-bold border border-[#285FEA]/40 text-[#285FEA] dark:text-[#60A5FA] bg-[#285FEA]/5 hover:bg-[#285FEA]/10 transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-60 cursor-pointer"
+              className="h-8 sm:h-8.5 px-2 sm:px-3 rounded-lg text-xs font-bold border border-[#285FEA]/40 text-[#285FEA] dark:text-[#60A5FA] bg-[#285FEA]/5 hover:bg-[#285FEA]/10 transition-all flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-60 cursor-pointer min-w-[32px] sm:min-w-0"
               title="Create a clean resume using this structure without fictional achievements"
             >
               {isCloning && cloningMode === 'starter' ? (
@@ -380,7 +380,7 @@ export function SampleResumeModal({
                 <Layers className="w-3.5 h-3.5" />
               )}
               <span className="hidden md:inline">Use Starter Template</span>
-              <span className="md:hidden">Starter</span>
+              <span className="hidden sm:inline md:hidden">Starter</span>
             </button>
 
             {/* Mode 3: Adapt With My Profile (AI Intelligence) */}
@@ -391,12 +391,12 @@ export function SampleResumeModal({
                   onAdaptWithProfile(resume);
                 }
               }}
-              className="h-8 sm:h-8.5 px-2.5 sm:px-3 rounded-lg text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white transition-all shadow-sm flex items-center gap-1.5 active:scale-95 cursor-pointer"
+              className="h-8 sm:h-8.5 px-2 sm:px-3 rounded-lg text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white transition-all shadow-sm flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer min-w-[32px] sm:min-w-0"
               title="Adapt your existing profile facts to match this sample structure and phrasing (3 Credits)"
             >
               <Wand2 className="w-3.5 h-3.5" />
               <span className="hidden lg:inline">Adapt With My Profile</span>
-              <span className="lg:hidden">Adapt</span>
+              <span className="hidden sm:inline lg:hidden">Adapt</span>
             </button>
 
             {/* Mode 2: Full Template Action */}
@@ -404,7 +404,7 @@ export function SampleResumeModal({
               type="button"
               onClick={handleUseFullTemplate}
               disabled={isCloning}
-              className="h-8 sm:h-8.5 px-3 sm:px-3.5 rounded-lg text-xs font-bold bg-[#285FEA] hover:bg-[#1E4BC8] text-white transition-all shadow-sm flex items-center gap-1.5 active:scale-95 disabled:opacity-60 cursor-pointer"
+              className="h-8 sm:h-8.5 px-2.5 sm:px-3.5 rounded-lg text-xs font-bold bg-[#285FEA] hover:bg-[#1E4BC8] text-white transition-all shadow-sm flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-60 cursor-pointer"
               title="Clone complete sample resume into your workspace"
             >
               {isCloning && cloningMode === 'full' ? (
@@ -413,14 +413,15 @@ export function SampleResumeModal({
                 <Sparkles className="w-3.5 h-3.5" />
               )}
               <span className="hidden md:inline">Use Full Template</span>
-              <span className="md:hidden">Full</span>
+              <span className="hidden sm:inline md:hidden">Full</span>
+              <span className="sm:hidden">Use</span>
             </button>
 
             {/* Close Button */}
             <button
               type="button"
               onClick={onClose}
-              className="h-8 sm:h-8.5 w-8 sm:w-8.5 rounded-lg flex items-center justify-center text-[#848D9A] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5] hover:bg-[#F1F3F5] dark:hover:bg-[#1D2128] transition-colors cursor-pointer"
+              className="h-8 sm:h-8.5 w-8 sm:w-8.5 rounded-lg flex items-center justify-center text-[#848D9A] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5] hover:bg-[#F1F3F5] dark:hover:bg-[#1D2128] transition-colors cursor-pointer min-w-[36px] min-h-[36px]"
               aria-label="Close"
             >
               <X className="w-4 h-4 sm:w-5 sm:h-5" />

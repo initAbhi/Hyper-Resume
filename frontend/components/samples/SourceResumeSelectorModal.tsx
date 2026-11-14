@@ -148,20 +148,20 @@ export function SourceResumeSelectorModal({
       className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5"
     >
       <div
-        className="relative w-full max-w-xl bg-white dark:bg-[#14171C] border border-[#E2E5E9] dark:border-[#252A33] rounded-2xl shadow-2xl overflow-hidden"
+        className="relative w-full max-w-xl max-h-[92vh] flex flex-col bg-white dark:bg-[#14171C] border border-[#E2E5E9] dark:border-[#252A33] rounded-2xl shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="px-5 py-4 border-b border-[#E2E5E9] dark:border-[#252A33] flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#285FEA]/10 text-[#285FEA] dark:text-[#60A5FA] flex items-center justify-center font-bold">
+        <div className="px-4 sm:px-5 py-3.5 sm:py-4 border-b border-[#E2E5E9] dark:border-[#252A33] flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-[#285FEA]/10 text-[#285FEA] dark:text-[#60A5FA] flex items-center justify-center font-bold shrink-0">
               <Wand2 className="w-5 h-5" />
             </div>
-            <div>
-              <h3 className="text-base font-bold text-[#1A1D23] dark:text-[#F0F2F5]">
+            <div className="min-w-0">
+              <h3 className="text-base font-bold text-[#1A1D23] dark:text-[#F0F2F5] truncate">
                 Adapt With My Profile
               </h3>
-              <p className="text-xs text-[#5A6270] dark:text-[#9EA7B4]">
+              <p className="text-xs text-[#5A6270] dark:text-[#9EA7B4] truncate">
                 Benchmark Target: <span className="font-semibold text-zinc-900 dark:text-zinc-100">{sampleResume.role}</span> ({sampleResume.company})
               </p>
             </div>
@@ -170,14 +170,15 @@ export function SourceResumeSelectorModal({
             type="button"
             onClick={onClose}
             disabled={isAdapting}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+            className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors shrink-0"
+            aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 space-y-5">
+        <div className="p-4 sm:p-5 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
           {!isAuthenticated ? (
             <div className="p-4 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 text-amber-900 dark:text-amber-200 space-y-3">
               <div className="flex items-center gap-2 font-semibold text-sm">
@@ -336,7 +337,7 @@ export function SourceResumeSelectorModal({
 
         {/* Modal Footer */}
         {isAuthenticated && (
-          <div className="px-5 py-3.5 bg-zinc-50/80 dark:bg-zinc-900/60 border-t border-[#E2E5E9] dark:border-[#252A33] flex items-center justify-between">
+          <div className="px-4 sm:px-5 py-3 sm:py-3.5 bg-zinc-50/80 dark:bg-zinc-900/60 border-t border-[#E2E5E9] dark:border-[#252A33] flex items-center justify-between shrink-0">
             <button
               type="button"
               onClick={onClose}

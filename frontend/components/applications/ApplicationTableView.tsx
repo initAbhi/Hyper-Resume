@@ -139,8 +139,8 @@ export function ApplicationTableView({
 
   return (
     <div className="w-full overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs border-collapse">
+      <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Job applications table">
+        <table className="w-full text-left text-xs border-collapse min-w-[700px]">
           <thead>
             <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/80 text-zinc-500 dark:text-zinc-400 font-semibold tracking-wider uppercase text-[11px]">
               <th className="py-3 px-3 w-10 text-center">

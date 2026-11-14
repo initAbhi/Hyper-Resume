@@ -372,8 +372,8 @@ export default function AdminPaymentsPage() {
 
       {/* DATA TABLE */}
       <div className="rounded-2xl border border-slate-200/90 bg-white overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Payments and transactions table">
+          <table className="w-full text-left text-xs min-w-[700px]">
             <thead className="bg-slate-50/80 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200/80">
               <tr>
                 <th className="px-5 py-3.5">Order ID</th>

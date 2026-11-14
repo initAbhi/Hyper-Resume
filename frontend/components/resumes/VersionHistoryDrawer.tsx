@@ -162,22 +162,22 @@ export default function VersionHistoryDrawer({
     >
       <div className="w-full max-w-5xl bg-white dark:bg-zinc-900 h-full flex flex-col shadow-2xl border-l border-zinc-200 dark:border-zinc-800">
         {/* Top Bar */}
-        <div className="px-6 py-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center shrink-0">
               <History className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
+                <h3 className="font-bold text-sm sm:text-base text-zinc-900 dark:text-zinc-100 truncate">
                   Version History &amp; Rollback
                 </h3>
-                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
+                <span className="text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 shrink-0">
                   {versions.length} snapshot{versions.length === 1 ? '' : 's'}
                 </span>
               </div>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Inspect changes, preview any snapshot visually, or roll back safely without losing edits.
+              <p className="text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 truncate">
+                Inspect changes, preview snapshots, or roll back safely.
               </p>
             </div>
           </div>
@@ -185,7 +185,7 @@ export default function VersionHistoryDrawer({
             type="button"
             aria-label="Close Version History"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 dark:hover:text-zinc-200 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 dark:hover:text-zinc-200 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" />
           </button>

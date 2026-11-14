@@ -95,11 +95,11 @@ export function AddApplicationModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
       <Card className="w-full max-w-xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-        <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
-          <div>
-            <CardTitle className="text-lg font-bold">Track New Job</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0 gap-2">
+          <div className="min-w-0">
+            <CardTitle className="text-base sm:text-lg font-bold truncate">Track New Job</CardTitle>
             <CardDescription className="text-xs">
               Record position details, compensation target, and link your tailored resume variant.
             </CardDescription>
@@ -107,7 +107,8 @@ export function AddApplicationModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-md text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+            className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-md text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 shrink-0 cursor-pointer"
+            aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>

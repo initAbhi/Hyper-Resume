@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Button } from '../ui/button';
 import { Logo } from '../ui/Logo';
 import { Menu, X, ChevronDown, Sparkles } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
@@ -246,7 +245,7 @@ function NavbarInner() {
             <Link href="/app">
               <button
                 type="button"
-                className={`rounded-lg font-semibold text-xs px-3.5 py-1.5 h-8 shadow-xs cursor-pointer ${
+                className={`rounded-lg font-semibold text-xs px-3.5 py-1.5 h-9 min-h-[36px] shadow-xs cursor-pointer ${
                   isLightSurface
                     ? 'bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950'
                     : 'bg-white hover:bg-zinc-100 text-zinc-950'
@@ -259,7 +258,7 @@ function NavbarInner() {
             <Link href="/register">
               <button
                 type="button"
-                className={`rounded-lg font-semibold text-xs px-3.5 py-1.5 h-8 shadow-xs cursor-pointer ${
+                className={`rounded-lg font-semibold text-xs px-3.5 py-1.5 h-9 min-h-[36px] shadow-xs cursor-pointer ${
                   isLightSurface
                     ? 'bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950'
                     : 'bg-white hover:bg-zinc-100 text-zinc-950'
@@ -273,7 +272,7 @@ function NavbarInner() {
           <button
             ref={menuButtonRef}
             type="button"
-            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+            className={`p-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg transition-colors cursor-pointer ${
               isLightSurface
                 ? 'text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white'
                 : 'text-zinc-300 hover:text-white'

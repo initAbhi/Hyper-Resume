@@ -64,16 +64,16 @@ const ROLE_EXAMPLES = [
 
 export default function ExamplesIndexPage() {
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
+    <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-10 sm:py-12 space-y-12 sm:space-y-16 min-w-0 overflow-x-hidden">
       {/* Page Header */}
-      <div className="text-center max-w-3xl mx-auto">
+      <div className="text-center max-w-3xl mx-auto min-w-0">
         <Badge variant="info" className="mb-3">
           Top Company Benchmarks
         </Badge>
-        <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
+        <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50 break-words">
           ATS Resume Sample Library
         </h1>
-        <p className="mt-4 text-base sm:text-lg text-zinc-600 dark:text-zinc-400">
+        <p className="mt-4 text-sm sm:text-lg text-zinc-600 dark:text-zinc-400">
           Explore benchmark resumes engineered for 100% ATS pass rates at top tech, finance, and engineering organizations.
         </p>
       </div>

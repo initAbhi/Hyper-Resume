@@ -189,11 +189,11 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
   };
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full max-w-full min-w-0 space-y-6">
       {/* Top Controls: Filter Pills & Multi-Dimensional Selectors */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 w-full max-w-full min-w-0">
         {/* Category / Industry Filter Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none select-none">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none select-none w-full max-w-full min-w-0">
           {SAMPLE_CATEGORIES.map((cat) => {
             const isActive = selectedCategory === cat.id;
             const isProPill = cat.id === 'PRO';
@@ -203,7 +203,7 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
                 key={cat.id}
                 type="button"
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`px-3.5 py-1.5 rounded-md text-xs font-bold tracking-wider transition-all uppercase whitespace-nowrap shrink-0 cursor-pointer ${
+                className={`px-3.5 py-2 sm:py-1.5 rounded-md text-xs font-bold tracking-wider transition-all uppercase whitespace-nowrap shrink-0 cursor-pointer min-h-[36px] sm:min-h-0 flex items-center justify-center ${
                   isActive
                     ? isProPill
                       ? 'bg-[#285FEA] text-white shadow-xs'
@@ -220,7 +220,7 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
         </div>
 
         {/* Secondary Filter Bar: Search + Seniority, Country, Style Dropdowns */}
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 w-full max-w-full min-w-0">
           {/* Search Input */}
           <div className="relative flex-1 max-w-lg">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#848D9A] pointer-events-none" />

@@ -173,7 +173,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* LEFT SIDEBAR (Clean white SaaS style matching screenshot) */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col justify-between border-r border-slate-200 bg-white transition-transform duration-200 lg:static lg:translate-x-0 ${
-          isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-100'
+          isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex flex-col flex-1 min-h-0">
@@ -196,7 +196,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
             <button
               onClick={() => setIsMobileSidebarOpen(false)}
-              className="rounded-lg p-1 text-slate-400 hover:text-slate-600 lg:hidden"
+              className="rounded-lg p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-slate-600 lg:hidden cursor-pointer"
+              aria-label="Close sidebar"
             >
               <X className="h-5 w-5" />
             </button>
@@ -312,11 +313,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* MAIN VIEWPORT CONTAINER */}
       <div className="flex flex-1 flex-col overflow-hidden min-w-0">
         {/* Top Navbar Header (Clean white with search, breadcrumb, live mode indicator) */}
-        <header className="h-16 border-b border-slate-200 bg-white px-4 sm:px-6 lg:px-8 flex items-center justify-between shrink-0 z-20">
-          <div className="flex items-center gap-4 min-w-0">
+        <header className="h-16 border-b border-slate-200 bg-white px-3 sm:px-6 lg:px-8 flex items-center justify-between shrink-0 z-20">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <button
               onClick={() => setIsMobileSidebarOpen(true)}
-              className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 lg:hidden"
+              className="rounded-lg p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-500 hover:bg-slate-100 lg:hidden cursor-pointer"
+              aria-label="Open sidebar"
             >
               <Menu className="h-5 w-5" />
             </button>
@@ -334,7 +336,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
 
           {/* Right Header Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Quick Search */}
             <div className="relative hidden md:block w-64">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
@@ -351,18 +353,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <button
               onClick={handleQuickToggleMode}
               title="Click to toggle gateway mode"
-              className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition border shadow-xs ${
+              className={`flex items-center gap-1.5 rounded-full px-2.5 sm:px-3 py-1 text-xs font-bold transition border shadow-xs min-h-[36px] sm:min-h-0 ${
                 isLive
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
                   : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
               }`}
             >
               <span
-                className={`h-2 w-2 rounded-full ${
+                className={`h-2 w-2 rounded-full shrink-0 ${
                   isLive ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
                 }`}
               />
-              <span>{isLive ? 'LIVE PRODUCTION' : 'TEST MODE'}</span>
+              <span className="hidden sm:inline">{isLive ? 'LIVE PRODUCTION' : 'TEST MODE'}</span>
+              <span className="sm:hidden">{isLive ? 'LIVE' : 'TEST'}</span>
             </button>
 
             {/* Notifications Icon */}

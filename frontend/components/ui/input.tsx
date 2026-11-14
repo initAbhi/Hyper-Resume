@@ -15,7 +15,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="text-xs font-semibold text-zinc-800 dark:text-zinc-200"
+            className="text-xs font-semibold text-[#1A1D23] dark:text-[#F0F2F5]"
           >
             {label}
           </label>
@@ -25,20 +25,20 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           aria-invalid={!!error}
           aria-describedby={error ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined}
-          className={`flex h-10 w-full rounded-xl border bg-zinc-50/50 dark:bg-zinc-800/50 px-3.5 py-2 text-xs text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 transition-all ${
+          className={`flex h-9 w-full rounded-lg border bg-white dark:bg-[#1D2128] px-3.5 py-1.5 text-sm text-[#1A1D23] dark:text-[#F0F2F5] placeholder:text-[#848D9A] dark:placeholder:text-[#6C7584] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 transition-colors ${
             error
-              ? 'border-red-500 focus-visible:ring-red-500/20'
-              : 'border-zinc-200 dark:border-zinc-700 focus-visible:ring-blue-500/20 focus-visible:border-blue-500'
+              ? 'border-[#DC2626] focus-visible:ring-[#DC2626]/20'
+              : 'border-[#E2E5E9] dark:border-[#252A33] focus-visible:ring-[#285FEA]/20 focus-visible:border-[#285FEA]'
           } ${className}`}
           {...props}
         />
         {error && (
-          <p id={`${inputId}-error`} role="alert" className="text-xs text-red-500 font-medium">
+          <p id={`${inputId}-error`} role="alert" className="text-xs text-[#DC2626] font-medium">
             {error}
           </p>
         )}
         {!error && helperText && (
-          <p id={`${inputId}-helper`} className="text-[11px] text-zinc-500 dark:text-zinc-400">
+          <p id={`${inputId}-helper`} className="text-[11px] text-[#5A6270] dark:text-[#9EA7B4]">
             {helperText}
           </p>
         )}

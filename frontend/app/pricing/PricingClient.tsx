@@ -389,53 +389,55 @@ export function PricingClient() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-16">
+    <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-10 sm:py-16 min-w-0 overflow-x-hidden">
       {/* Header */}
-      <div className="text-center max-w-3xl mx-auto mb-10">
+      <div className="text-center max-w-3xl mx-auto mb-10 min-w-0">
         <Badge variant="info" className="mb-3 px-3 py-1 font-semibold text-xs">
           One Unified Plan · HypeResume Pro
         </Badge>
-        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
+        <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50 break-words">
           Simple One-Plan Access. <br className="hidden sm:inline" />
           Zero Subscription Traps.
         </h1>
-        <p className="mt-4 text-base sm:text-lg text-zinc-600 dark:text-zinc-400">
+        <p className="mt-4 text-sm sm:text-lg text-zinc-600 dark:text-zinc-400">
           Start free with 5 welcome AI credits and unlimited PDF downloads, or unlock full HypeResume Pro for 1 week, 1 month, 6 months, or lifetime.
         </p>
 
         {/* Currency Selector */}
         <div className="mt-6 flex justify-center">
-          <div className="inline-flex items-center rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-1">
+          <div className="inline-flex items-center rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-1 max-w-full">
             <button
               type="button"
               onClick={() => setCurrency('INR')}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+              className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                 currency === 'INR'
                   ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-sm'
                   : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
               }`}
             >
-              INR (₹) · India
+              <span className="sm:hidden">INR (₹)</span>
+              <span className="hidden sm:inline">INR (₹) · India</span>
             </button>
             <button
               type="button"
               onClick={() => setCurrency('USD')}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+              className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                 currency === 'USD'
                   ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-sm'
                   : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
               }`}
             >
-              USD ($) · Global
+              <span className="sm:hidden">USD ($)</span>
+              <span className="hidden sm:inline">USD ($) · Global</span>
             </button>
           </div>
         </div>
 
         {/* Authenticated Entitlement Pill */}
         {isAuthenticated && (
-          <div className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 text-xs sm:text-sm text-blue-700 dark:text-blue-300 font-medium">
+          <div className="mt-5 inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-2xl sm:rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 text-xs sm:text-sm text-blue-700 dark:text-blue-300 font-medium max-w-full flex-wrap justify-center">
             <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-            <span>
+            <span className="break-all sm:break-normal text-center">
               Signed in as <strong>{user?.email}</strong> ·{' '}
               {hasActivePro ? (
                 <strong className="text-emerald-700 dark:text-emerald-400">
@@ -721,16 +723,17 @@ export function PricingClient() {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs"
         >
-          <div className="relative w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl p-6 overflow-hidden">
+          <div className="relative w-full max-w-md max-h-[92vh] flex flex-col rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl p-5 sm:p-6 overflow-hidden">
             <button
               onClick={() => setIsCheckoutOpen(false)}
               aria-label="Close checkout dialog"
-              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 rounded-md cursor-pointer"
+              className="absolute top-3 right-3 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-md cursor-pointer z-10"
             >
               <X className="w-5 h-5" />
             </button>
+            <div className="flex-1 overflow-y-auto">
 
             {/* Step: Review & Redirect to Dodo Checkout */}
             {checkoutStep === 'review' && activePlan && (
@@ -879,6 +882,7 @@ export function PricingClient() {
                 </div>
               </div>
             )}
+            </div>
           </div>
         </div>
       )}

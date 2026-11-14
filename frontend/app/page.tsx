@@ -3,9 +3,11 @@ import Link from 'next/link';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { InteractiveHeroStudio } from '@/components/home/InteractiveHeroStudio';
-import { CompanyLogoCloud } from '@/components/home/CompanyLogoCloud';
+import { VerifiedStatsAndTrustCloud } from '@/components/home/VerifiedStatsAndTrustCloud';
+import { ProblemSolutionSection } from '@/components/home/ProblemSolutionSection';
 import { AtsCompatibilityCloud } from '@/components/home/AtsCompatibilityCloud';
 import { AtsCompatibilitySection } from '@/components/home/AtsCompatibilitySection';
+import { ProductFeatureScreenshots } from '@/components/home/ProductFeatureScreenshots';
 import { ProductWorkflowStorytelling } from '@/components/home/ProductWorkflowStorytelling';
 import { InteractiveTemplateShowcase } from '@/components/home/InteractiveTemplateShowcase';
 import { SampleLibraryShowcase } from '@/components/home/SampleLibraryShowcase';
@@ -17,7 +19,7 @@ import { TextMorph, NeonReveal } from '@/components/reactbits';
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col items-center overflow-x-hidden bg-[#090A10] text-white selection:bg-[#5525F5]/30 selection:text-white min-h-screen relative w-full">
+    <div className="flex flex-col items-center overflow-x-hidden bg-[#090A10] text-white selection:bg-[#285FEA]/30 selection:text-white min-h-screen relative w-full">
       
       {/* Ambient Grid Pattern Overlay */}
       <div 
@@ -29,10 +31,10 @@ export default function HomePage() {
       />
 
       {/* =====================================================
-          1. HERO SECTION (Deep Tech Obsidian Grand Editorial & Studio with React Bits Neon Reveal)
+          1. HERO SECTION (Deep Tech Grand Editorial & Studio with Neon Reveal)
       ===================================================== */}
       <NeonReveal
-        colors={['#553aff', '#544fea']}
+        colors={['#285FEA', '#3B75F2']}
         backgroundColor="#0a0a0a"
         direction="down"
         expandFrom="center"
@@ -60,7 +62,7 @@ export default function HomePage() {
           
           {/* Eyebrow Label */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] text-zinc-300 text-xs font-semibold tracking-widest uppercase font-mono shadow-inner mb-6 backdrop-blur-md">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#553aff] animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[#285FEA] animate-pulse" />
             <span>Intelligent Resume Architecture</span>
           </div>
 
@@ -71,7 +73,7 @@ export default function HomePage() {
               better{' '}
               <TextMorph 
                 words={['career story.', 'ATS score.', 'interview invite.', 'presentation.']} 
-                className="text-transparent bg-clip-text bg-gradient-to-r from-white via-[#C4B5FD] to-[#818CF8]"
+                className="text-transparent bg-clip-text bg-gradient-to-r from-white via-[#93C5FD] to-[#3B75F2]"
               />
             </span>
           </h1>
@@ -86,9 +88,9 @@ export default function HomePage() {
             <Link href="/register" className="w-full sm:w-auto">
               <button
                 type="button"
-                className="w-full sm:w-auto inline-flex items-center justify-center rounded-full bg-white hover:bg-zinc-100 text-zinc-950 font-semibold text-sm h-11 px-7 shadow-xl shadow-indigo-500/10 gap-2 cursor-pointer transition-all"
+                className="w-full sm:w-auto inline-flex items-center justify-center rounded-full bg-white hover:bg-zinc-100 text-zinc-950 font-semibold text-sm h-11 px-7 shadow-xl shadow-blue-500/10 gap-2 cursor-pointer transition-all"
               >
-                <span>Build My Resume</span>
+                <span>Build My Resume Free</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </Link>
@@ -129,35 +131,47 @@ export default function HomePage() {
       </NeonReveal>
 
       {/* =====================================================
-          2. COMPANY LOGOS ENDLESS CAROUSEL
+          2. VERIFIED PRODUCT METRICS & CANDIDATE FEEDBACK
+             (Replaces unverified corporate logos with authentic proof)
       ===================================================== */}
-      <section className="w-full bg-[#090A10] relative z-10 py-4">
-        <CompanyLogoCloud />
+      <section className="w-full bg-[#090A10] relative z-10">
+        <VerifiedStatsAndTrustCloud />
       </section>
 
       {/* =====================================================
-          3. ATS COMPATIBILITY ENDLESS CAROUSEL
+          3. PROBLEM VS. SOLUTION (Why 75% Resumes Fail & How HypeResume Fixes It)
+      ===================================================== */}
+      <div className="w-full relative z-10">
+        <ProblemSolutionSection />
+      </div>
+
+      {/* =====================================================
+          4. REAL PRODUCT FEATURE SHOWCASE (Screenshots of Actual UI)
+      ===================================================== */}
+      <div className="w-full relative z-10">
+        <ProductFeatureScreenshots />
+      </div>
+
+      {/* =====================================================
+          5. ATS COMPATIBILITY LOGOS & PARSER ARCHITECTURE
       ===================================================== */}
       <section className="w-full bg-[#090A10] relative z-10 py-4">
         <AtsCompatibilityCloud />
       </section>
 
-      {/* =====================================================
-          4. ATS COMPATIBILITY & PARSER ARCHITECTURE
-      ===================================================== */}
       <div className="w-full relative z-10">
         <AtsCompatibilitySection />
       </div>
 
       {/* =====================================================
-          5. PRODUCT STORYTELLING (01 BUILD → 02 ANALYZE → 03 OPTIMIZE → 04 TAILOR)
+          6. PRODUCT STORYTELLING (01 BUILD → 02 ANALYZE → 03 OPTIMIZE → 04 TAILOR)
       ===================================================== */}
       <div className="w-full relative z-10">
         <ProductWorkflowStorytelling />
       </div>
 
       {/* =====================================================
-          6. RESUME TEMPLATE GALLERY (Editorial Design Library)
+          7. RESUME TEMPLATE GALLERY (Editorial Design Library)
       ===================================================== */}
       <section className="w-full py-20 sm:py-28 px-4 sm:px-6 lg:px-8 bg-[#090A10] relative z-10">
         <div className="max-w-6xl mx-auto">
@@ -166,35 +180,35 @@ export default function HomePage() {
       </section>
 
       {/* =====================================================
-          7. SAMPLE LIBRARY (Show the Range of Use Cases)
+          8. SAMPLE LIBRARY (Show the Range of Use Cases)
       ===================================================== */}
       <div className="w-full relative z-10">
         <SampleLibraryShowcase />
       </div>
 
       {/* =====================================================
-          8. PRODUCT WORKSPACE (Application Pipeline)
+          9. PRODUCT WORKSPACE (Application Pipeline)
       ===================================================== */}
       <div className="w-full relative z-10">
         <ApplicationPipelineWorkspace />
       </div>
 
       {/* =====================================================
-          9. TRUST, CREDIBILITY AND TRANSPARENCY
+          10. TRUST, CREDIBILITY AND TRANSPARENCY
       ===================================================== */}
       <div className="w-full relative z-10">
         <CredibilityAndTrustSection />
       </div>
 
       {/* =====================================================
-          10. TRANSPARENT PRICING
+          11. TRANSPARENT PRICING
       ===================================================== */}
       <div className="w-full relative z-10">
         <PricingSection />
       </div>
 
       {/* =====================================================
-          11. FREQUENTLY ASKED QUESTIONS & FINAL CALL TO ACTION
+          12. FREQUENTLY ASKED QUESTIONS & FINAL CALL TO ACTION
       ===================================================== */}
       <div className="w-full relative z-10">
         <FaqAndFinalCta />

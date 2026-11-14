@@ -335,7 +335,7 @@ export function SectionRewriterDialog({
       className="hr-native-dialog w-full max-w-2xl rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-2xl p-0 max-h-[86vh] overflow-hidden"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
+      <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center shrink-0">
             <Wand2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -343,12 +343,12 @@ export function SectionRewriterDialog({
           <div className="min-w-0">
             <h2
               id={titleId}
-              className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate"
+              className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate"
             >
               AI Section Rewriter — {target?.sectionLabel || 'Section'}
             </h2>
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-              Switch tone or sharpen phrasing across entries while locking verified facts and metrics.
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+              Switch tone or sharpen phrasing while locking verified facts and metrics.
             </p>
           </div>
         </div>
@@ -356,14 +356,14 @@ export function SectionRewriterDialog({
           type="button"
           aria-label="Close AI Section Rewriter"
           onClick={() => dialogRef.current?.close()}
-          className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer shrink-0"
+          className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer shrink-0"
         >
           <X className="w-4 h-4" />
         </button>
       </div>
 
       {/* Scrollable Body */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-5 text-xs">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4 sm:space-y-5 text-xs">
         {/* Tone Selector */}
         <div className="space-y-2">
           <span className="font-bold uppercase tracking-wider text-[10.5px] text-zinc-500 dark:text-zinc-400">

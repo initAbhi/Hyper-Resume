@@ -159,22 +159,22 @@ export function SectionRearrangeDrawer({
 
       <div className="relative w-full max-w-[400px] bg-white dark:bg-zinc-900 h-full shadow-2xl border-l border-zinc-200 dark:border-zinc-800 flex flex-col z-10">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
-          <div className="flex items-center gap-2 font-bold text-sm text-zinc-900 dark:text-zinc-100">
-            <ArrowUpDown className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <span>Rearrange &amp; Toggle Sections</span>
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
+          <div className="flex items-center gap-2 font-bold text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 min-w-0">
+            <ArrowUpDown className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+            <span className="truncate">Rearrange Sections</span>
           </div>
           <button
             type="button"
             aria-label="Close Rearrange Drawer"
             onClick={onClose}
-            className="p-1 rounded-md text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-md text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shrink-0 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-5 text-xs">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 sm:space-y-5 text-xs">
           {/* Quick Order Presets */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">

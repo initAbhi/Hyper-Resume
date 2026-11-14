@@ -163,18 +163,19 @@ function ExportPdfModalDialog({
   return (
     <div
       id="export-pdf-modal"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm print:hidden animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-sm print:hidden animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-[480px] bg-white rounded-2xl shadow-xl border border-zinc-200 p-6 space-y-5 animate-in zoom-in-95 duration-200 text-zinc-900"
+        className="relative w-full max-w-[480px] max-h-[92vh] flex flex-col overflow-y-auto bg-white rounded-2xl shadow-xl border border-zinc-200 p-5 sm:p-6 space-y-4 sm:space-y-5 animate-in zoom-in-95 duration-200 text-zinc-900"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-full text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors"
+          className="absolute top-3 right-3 p-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-full text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors cursor-pointer"
           title="Close dialog"
+          aria-label="Close dialog"
         >
           <X className="w-4 h-4" />
         </button>

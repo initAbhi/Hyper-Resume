@@ -941,8 +941,8 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
       </div>
 
       {/* Competitor-Style Secondary Action Toolbar (Screenshot 1 & 3) */}
-      <div className="print:hidden flex items-center justify-between py-2 px-3 sm:px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs shadow-xs overflow-x-auto gap-2">
-        <div className="flex items-center gap-1 sm:gap-3 flex-wrap">
+      <div className="print:hidden flex items-center justify-between py-2 px-2.5 sm:px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs shadow-xs overflow-x-auto no-scrollbar gap-2 max-w-full">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {/* Fix Mistakes Button (Live Grammar, Spelling & Buzzword Checker) */}
           <button
             id="fix-mistakes-btn"

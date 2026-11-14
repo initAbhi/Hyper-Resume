@@ -222,7 +222,17 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
               isExpanded ? 'justify-between' : 'justify-center'
             } h-14 shrink-0 transition-colors`}
           >
-            <Link href="/app" className="flex items-center gap-2 min-w-0" title="HypeResume Workspace">
+            <Link
+              href="/app"
+              className="flex items-center gap-2 min-w-0"
+              title="HypeResume Workspace"
+              onClick={(e) => {
+                if (!hasHoverSupport && !isExpanded) {
+                  e.preventDefault();
+                  togglePin();
+                }
+              }}
+            >
               {isExpanded ? (
                 <Logo variant="full" size="md" priority />
               ) : (
@@ -251,20 +261,6 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
               </button>
             )}
           </div>
-
-          {!isExpanded && (
-            <div className="p-2 flex justify-center border-b border-[#E2E5E9] dark:border-[#252A33] shrink-0">
-              <button
-                type="button"
-                onClick={togglePin}
-                className="p-1.5 rounded-md text-[#848D9A] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5] hover:bg-[#F1F3F5] dark:hover:bg-[#1D2128] transition-colors"
-                title="Pin sidebar (keep expanded)"
-                aria-label="Pin sidebar"
-              >
-                <Pin className="w-4 h-4 -rotate-45" />
-              </button>
-            </div>
-          )}
 
           {/* Navigation Links */}
           <nav className="p-2 space-y-0.5 overflow-y-auto flex-1" aria-label="Workspace Sidebar">

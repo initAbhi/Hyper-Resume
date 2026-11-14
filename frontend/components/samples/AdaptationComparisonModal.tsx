@@ -191,49 +191,52 @@ export function AdaptationComparisonModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header */}
-        <div className="py-3 px-5 border-b border-[#E2E5E9] dark:border-[#252A33] bg-white/95 dark:bg-[#14171C]/95 backdrop-blur-md flex items-center justify-between gap-4 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
-              <Sparkles className="w-5 h-5" />
+        <div className="py-2.5 sm:py-3 px-3 sm:px-5 border-b border-[#E2E5E9] dark:border-[#252A33] bg-white/95 dark:bg-[#14171C]/95 backdrop-blur-md flex items-center justify-between gap-2.5 sm:gap-4 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-8 sm:w-9 h-8 sm:h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shrink-0">
+              <Sparkles className="w-4 sm:w-5 h-4 sm:h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-[#1A1D23] dark:text-[#F0F2F5]">
-                  AI Profile Adaptation Proposal
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <h3 className="text-xs sm:text-base font-bold text-[#1A1D23] dark:text-[#F0F2F5] truncate">
+                  AI Adaptation Proposal
                 </h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300">
-                  3 Credits Applied
+                <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 shrink-0">
+                  3 Credits
                 </span>
               </div>
-              <p className="text-xs text-[#5A6270] dark:text-[#9EA7B4]">
-                Target Role: <span className="font-semibold">{adaptation.targetRole || 'Benchmark Standard'}</span> &bull; Source resume preserved
+              <p className="text-[11px] sm:text-xs text-[#5A6270] dark:text-[#9EA7B4] truncate">
+                Role: <span className="font-semibold">{adaptation.targetRole || 'Benchmark'}</span> &bull; Source preserved
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               type="button"
               onClick={handleAcceptAll}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-all flex items-center gap-1.5"
+              className="px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-all flex items-center gap-1"
             >
               <Check className="w-3.5 h-3.5" />
-              <span>Accept All</span>
+              <span className="hidden sm:inline">Accept All</span>
+              <span className="sm:hidden">Accept</span>
             </button>
             <button
               type="button"
               onClick={handleRejectAll}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all flex items-center gap-1.5"
+              className="px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all flex items-center gap-1"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Keep All Original</span>
+              <span className="hidden sm:inline">Keep Original</span>
+              <span className="sm:hidden">Keep</span>
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+              className="p-1.5 sm:p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+              aria-label="Close"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
         </div>
