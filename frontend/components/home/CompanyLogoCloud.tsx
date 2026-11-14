@@ -107,9 +107,9 @@ export function CompanyLogoCloud() {
   ];
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 text-center">
-      <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-7 font-mono">
-        Helping ambitious professionals land interviews at top companies such as
+    <div className="mx-auto w-full max-w-7xl px-4 py-8 text-center sm:px-6 sm:py-10 lg:px-8">
+      <p className="mb-6 text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+        Built for candidates targeting companies like
       </p>
 
       {/* Endless Moving Logos Marquee (Smooth reverse direction for balanced motion) */}

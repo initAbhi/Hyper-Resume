@@ -315,7 +315,7 @@ export function DappledLight({
     <div className={`absolute inset-0 pointer-events-none overflow-hidden ${className}`}>
       <canvas
         ref={canvasRef}
-        className="w-full h-full block filter blur-[10px] sm:blur-[14px]"
+        className="w-full h-full block filter blur-[6px] sm:blur-[8px]"
         style={{ mixBlendMode: 'screen' }}
       />
     </div>

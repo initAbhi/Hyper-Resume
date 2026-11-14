@@ -159,22 +159,22 @@ export function InteractiveTemplateShowcase() {
   }, [activeCategory, currentTemplates.length, activeIndex]);
 
   return (
-    <div className="w-full space-y-10 text-white">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6">
-        <div className="space-y-3 max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.04] text-zinc-300 text-xs font-semibold tracking-wider uppercase font-mono shadow-inner">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#5525F5] animate-pulse" />
-            <span>10 Built-In Templates</span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight leading-tight">
-            Professional formats. Zero watermarks.
+    <div className="w-full space-y-8 text-white sm:space-y-10">
+      <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+        <div className="max-w-2xl space-y-3">
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+            10 ATS-verified templates
+          </p>
+          <h2 className="font-rubik text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+            Pick a format recruiters and parsers both respect.
           </h2>
-          <p className="text-sm sm:text-base text-zinc-400 leading-relaxed">
-            Switch seamlessly across all 10 production templates — from Classic single-column ATS layouts to modern LaTeX-inspired and two-column styles — and export crisp, unwatermarked PDFs.
+          <p className="text-sm leading-relaxed text-zinc-400 sm:text-base">
+            Dense, filled previews of Jake&apos;s, Awesome CV, Deedy, Classic ATS, and more — free
+            unwatermarked PDF &amp; DOCX on every plan.
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 p-1 bg-[#0E101B]/90 backdrop-blur-md rounded-xl overflow-x-auto no-scrollbar shrink-0 self-start md:self-end shadow-lg">
+        <div className="flex shrink-0 items-center gap-1 overflow-x-auto rounded-xl bg-white/[0.04] p-1 no-scrollbar self-start md:self-end">
           {CATEGORIES.map((cat) => {
             const isSelected = activeCategory === cat.id;
             return (
@@ -182,10 +182,10 @@ export function InteractiveTemplateShowcase() {
                 key={cat.id}
                 type="button"
                 onClick={() => handleCategoryChange(cat.id)}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                className={`cursor-pointer whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all ${
                   isSelected
-                    ? 'bg-[#5525F5] text-white shadow-lg shadow-violet-500/25'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+                    ? 'bg-white text-zinc-950'
+                    : 'text-zinc-400 hover:bg-white/[0.04] hover:text-white'
                 }`}
               >
                 {cat.label}
@@ -209,54 +209,50 @@ export function InteractiveTemplateShowcase() {
                 setActiveIndex(idx);
                 scrollToIndex(idx);
               }}
-              className={`snap-start group relative rounded-2xl p-4 sm:p-5 transition-all duration-300 cursor-pointer select-none shrink-0 w-[82vw] xs:w-[75vw] sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] ${
+              className={`group relative w-[82vw] shrink-0 cursor-pointer select-none snap-start rounded-2xl p-3 transition-all duration-300 sm:w-[calc(50%-12px)] sm:p-4 lg:w-[calc(33.333%-16px)] ${
                 isActive
-                  ? 'bg-[#121526] shadow-[0_0_35px_rgba(85,37,245,0.25)] ring-1 ring-[#5525F5]/40'
-                  : 'bg-[#0E101B]/90 hover:bg-[#131626] shadow-xl hover:shadow-2xl hover:shadow-violet-950/30 hover:-translate-y-1'
+                  ? 'bg-white/[0.07]'
+                  : 'bg-white/[0.035] hover:bg-white/[0.055]'
               }`}
             >
-              <div className="relative w-full rounded-xl bg-white overflow-hidden shadow-xl aspect-[1/1.3] flex items-center justify-center">
+              <div className="relative flex aspect-[1/1.3] w-full items-center justify-center overflow-hidden rounded-xl bg-zinc-100">
                 <img
                   src={tpl.img}
                   alt={`${tpl.name} resume template preview`}
                   loading="lazy"
-                  className="w-full h-full object-cover object-top select-none pointer-events-none"
+                  className="pointer-events-none h-full w-full select-none object-contain object-top"
                 />
 
                 <div
-                  className={`absolute inset-x-0 bottom-3 flex items-center justify-center gap-2 z-10 transition-all duration-200 ${
+                  className={`absolute inset-x-0 bottom-3 z-10 flex items-center justify-center gap-2 transition-all duration-200 ${
                     isActive
-                      ? 'opacity-100 translate-y-0'
-                      : 'opacity-0 group-hover:opacity-100 translate-y-1'
+                      ? 'translate-y-0 opacity-100'
+                      : 'translate-y-1 opacity-0 group-hover:translate-y-0 group-hover:opacity-100'
                   }`}
                 >
                   <Link
                     href={`/register?template=${encodeURIComponent(tpl.key)}`}
-                    className="px-4 py-2 rounded-lg bg-[#5525F5] hover:bg-[#4318D8] text-white font-semibold text-xs shadow-lg shadow-violet-500/30 transition-all cursor-pointer"
+                    className="cursor-pointer rounded-full bg-white px-4 py-2 text-xs font-semibold text-zinc-950 transition hover:bg-zinc-100"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    Use Template
+                    Use template
                   </Link>
                   <Link
                     href="/examples"
-                    className="px-3.5 py-2 rounded-lg bg-black/80 hover:bg-black text-white font-medium text-xs backdrop-blur-md transition-all shadow-md"
+                    className="cursor-pointer rounded-full bg-black/80 px-3.5 py-2 text-xs font-medium text-white backdrop-blur-md transition hover:bg-black"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    View Samples
+                    Samples
                   </Link>
                 </div>
               </div>
 
-              <div className="pt-3.5 flex items-baseline justify-between gap-2">
+              <div className="flex items-baseline justify-between gap-2 pt-3.5">
                 <div>
-                  <h3 className="text-sm font-bold text-white group-hover:text-violet-300 transition-colors">
-                    {tpl.name}
-                  </h3>
-                  <p className="text-[11px] text-zinc-400 mt-0.5 line-clamp-1">
-                    {tpl.desc}
-                  </p>
+                  <h3 className="text-sm font-semibold text-white">{tpl.name}</h3>
+                  <p className="mt-0.5 line-clamp-1 text-[11px] text-zinc-500">{tpl.desc}</p>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/[0.06] text-zinc-300 font-semibold shrink-0">
+                <span className="shrink-0 rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[10px] font-medium text-zinc-400">
                   {tpl.tag}
                 </span>
               </div>

@@ -132,7 +132,7 @@ export class PaymentsService {
         enabled = map.get('lifetime_promo_enabled') !== 'false';
       }
       if (map.has('lifetime_promo_cap')) {
-        const parsed = parseInt(map.get('lifetime_promo_cap') || '10', 10);
+        const parsed = parseInt(map.get('lifetime_promo_cap') || '200', 10);
         if (!Number.isNaN(parsed) && parsed > 0) {
           totalCap = parsed;
         }

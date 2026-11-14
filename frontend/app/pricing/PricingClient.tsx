@@ -471,7 +471,7 @@ export function PricingClient() {
             </h2>
             <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
               {promo.bannerText ||
-                'To validate HypeResume with our earliest job seekers, our first 10 founding members unlock permanent Lifetime Pro access at ₹999 ($19). Live seat count verified directly from our database.'}
+                'To validate HypeResume with our earliest job seekers, our first 200 founding members unlock permanent Lifetime Pro access at ₹999 ($19). Live seat count verified directly from our database.'}
             </p>
           </div>
           <Button
