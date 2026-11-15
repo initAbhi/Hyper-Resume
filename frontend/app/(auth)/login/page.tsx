@@ -3,13 +3,10 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Alert } from '@/components/ui/alert';
 import { Logo } from '@/components/ui/Logo';
 import { useAuth } from '@/lib/auth-context';
 import { analytics } from '@/lib/analytics';
+import { cn } from '@/lib/utils';
 
 function buildPostLoginTarget(searchParams: ReturnType<typeof useSearchParams>): string {
   const redirect = searchParams?.get('redirect');
@@ -34,6 +31,25 @@ function buildPostLoginTarget(searchParams: ReturnType<typeof useSearchParams>):
   return '/app';
 }
 
+function LabelInputContainer({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return <div className={cn('flex w-full flex-col space-y-2', className)}>{children}</div>;
+}
+
+function BottomGradient() {
+  return (
+    <>
+      <span className="absolute inset-x-0 -bottom-px block h-px w-full bg-gradient-to-r from-transparent via-violet-500 to-transparent opacity-0 transition duration-500 group-hover/btn:opacity-100" />
+      <span className="absolute inset-x-10 -bottom-px mx-auto block h-px w-1/2 bg-gradient-to-r from-transparent via-indigo-400 to-transparent opacity-0 blur-sm transition duration-500 group-hover/btn:opacity-100" />
+    </>
+  );
+}
+
 function LoginFormContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -48,7 +64,6 @@ function LoginFormContent() {
   const postLoginTarget = buildPostLoginTarget(searchParams);
   const querySuffix = searchParams?.toString() ? `?${searchParams.toString()}` : '';
 
-  // Load Google Identity Services script if client ID is configured
   useEffect(() => {
     if (!googleClientId) return;
 
@@ -81,13 +96,13 @@ function LoginFormContent() {
         const btnContainer = document.getElementById('google-btn-rendered');
         if (btnContainer) {
           window.google.accounts.id.renderButton(btnContainer, {
-            theme: 'outline',
+            theme: 'filled_black',
             size: 'large',
             type: 'standard',
             text: 'continue_with',
-            shape: 'rectangular',
+            shape: 'pill',
             logo_alignment: 'left',
-            width: 384,
+            width: 360,
           });
           setIsGoogleReady(true);
         }
@@ -127,92 +142,107 @@ function LoginFormContent() {
     }
   };
 
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center py-16 px-4 bg-slate-50/50 dark:bg-transparent min-h-[calc(100vh-80px)]">
-      <Link
-        href="/"
-        className="mb-8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-lg transition-transform hover:scale-[1.02]"
-        aria-label="HypeResume Home"
-      >
-        <Logo variant="full" size="lg" priority />
-      </Link>
-      <Card className="w-full max-w-md shadow-lg border-slate-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl">
-        <CardHeader className="text-center pb-4 pt-6">
-          <CardTitle className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Welcome Back
-          </CardTitle>
-          <CardDescription className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Sign in to continue optimizing your ATS-ready resumes
-          </CardDescription>
-        </CardHeader>
-        <div className="px-6 pb-2">
-          {errorMessage && (
-            <Alert variant="destructive" className="text-xs mb-4">
-              {errorMessage}
-            </Alert>
-          )}
+  const inputClass =
+    'flex h-11 w-full rounded-lg border border-white/10 bg-zinc-950 px-3 text-sm text-white shadow-[0px_0px_1px_1px_rgba(255,255,255,0.06)] transition placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/60';
 
-          {isGoogleLoading && (
-            <div className="w-full py-2.5 px-4 mb-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 text-[#285FEA] text-xs flex items-center justify-center gap-2 font-medium">
-              <span className="w-4 h-4 border-2 border-[#285FEA] border-t-transparent rounded-full animate-spin" />
+  return (
+    <div className="relative flex min-h-[calc(100vh-4rem)] flex-1 flex-col items-center justify-center overflow-hidden bg-[#050505] px-4 py-16">
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(ellipse 70% 50% at 50% -10%, rgba(85,37,245,0.28), transparent 55%)',
+        }}
+        aria-hidden
+      />
+
+      <div className="relative z-10 w-full max-w-md">
+        <Link
+          href="/"
+          className="mb-8 flex justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 rounded-lg"
+          aria-label="HypeResume Home"
+        >
+          <Logo variant="full" size="lg" theme="dark" priority />
+        </Link>
+
+        <div className="rounded-2xl border border-white/10 bg-[#0c0c0e]/90 p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_24px_80px_rgba(0,0,0,0.55)] backdrop-blur-xl sm:p-8">
+          <div className="text-center">
+            <h1 className="font-rubik text-2xl font-semibold tracking-tight text-white">
+              Welcome back
+            </h1>
+            <p className="mt-1.5 text-sm text-zinc-400">
+              Sign in to continue building evidence-backed applications
+            </p>
+          </div>
+
+          {errorMessage ? (
+            <div className="mt-5 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2.5 text-xs text-red-200">
+              {errorMessage}
+            </div>
+          ) : null}
+
+          {isGoogleLoading ? (
+            <div className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-violet-400/30 bg-violet-500/10 px-4 py-2.5 text-xs font-medium text-violet-200">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-violet-300 border-t-transparent" />
               Signing you in with Google...
             </div>
-          )}
+          ) : null}
 
-          {/* Official Google Button Container */}
           {googleClientId ? (
             <>
-              <div id="google-btn-rendered" className="w-full flex justify-center min-h-[44px]" />
-              {!isGoogleReady && (
-                <div className="w-full h-11 rounded-xl bg-slate-100 dark:bg-zinc-800 animate-pulse flex items-center justify-center text-xs text-slate-400">
+              <div className="mt-6 flex w-full justify-center">
+                <div id="google-btn-rendered" className="min-h-[44px] w-full max-w-[360px]" />
+              </div>
+              {!isGoogleReady ? (
+                <div className="mt-2 flex h-11 w-full animate-pulse items-center justify-center rounded-xl bg-white/[0.06] text-xs text-zinc-500">
                   Loading Google Sign-In...
                 </div>
-              )}
-
-              {/* Divider */}
-              <div className="relative my-5">
+              ) : null}
+              <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-200 dark:border-zinc-800" />
+                  <div className="w-full border-t border-white/10" />
                 </div>
                 <div className="relative flex justify-center text-[11px] uppercase">
-                  <span className="bg-white dark:bg-zinc-900 px-3 text-slate-400 font-semibold tracking-wider">
-                    Or sign in with email
+                  <span className="bg-[#0c0c0e] px-3 font-semibold tracking-wider text-zinc-500">
+                    Or continue with email
                   </span>
                 </div>
               </div>
             </>
-          ) : null}
-        </div>
+          ) : (
+            <div className="mt-6" />
+          )}
 
-        <form onSubmit={handleSubmit} autoComplete="off">
-          <CardContent className="space-y-4 pt-0">
-            <Input
-              id="login-email"
-              label="Email Address"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="off"
-              className="text-xs"
-            />
-            <div className="space-y-1">
+          <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4">
+            <LabelInputContainer>
+              <label htmlFor="login-email" className="text-xs font-medium text-zinc-300">
+                Email Address
+              </label>
+              <input
+                id="login-email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="off"
+                className={inputClass}
+              />
+            </LabelInputContainer>
+
+            <LabelInputContainer>
               <div className="flex items-center justify-between">
-                <label
-                  htmlFor="login-password"
-                  className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
-                >
+                <label htmlFor="login-password" className="text-xs font-medium text-zinc-300">
                   Password
                 </label>
                 <Link
                   href="/forgot-password"
-                  className="text-xs text-[#285FEA] hover:underline font-medium transition-colors"
+                  className="text-xs font-medium text-violet-300 transition hover:text-violet-200"
                 >
                   Forgot password?
                 </Link>
               </div>
-              <Input
+              <input
                 id="login-password"
                 type="password"
                 placeholder="••••••••"
@@ -220,42 +250,50 @@ function LoginFormContent() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="new-password"
-                className="text-xs"
+                className={inputClass}
               />
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4 pt-2 pb-6">
-            <Button
+            </LabelInputContainer>
+
+            <button
               id="login-submit-button"
               type="submit"
-              variant="primary"
-              className="w-full h-10 rounded-xl bg-[#285FEA] hover:bg-[#1E4BC8] text-white font-medium text-xs shadow-xs"
-              isLoading={isLoading}
+              disabled={isLoading}
+              className="group/btn relative mt-2 flex h-11 w-full items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-[#5525F5] text-sm font-semibold text-white shadow-[0px_1px_0px_0px_rgba(255,255,255,0.2)_inset] transition disabled:opacity-60"
             >
-              Sign In to Workspace
-            </Button>
-            <p className="text-xs text-center text-slate-500">
-              Don&apos;t have an account?{' '}
-              <Link href={`/register${querySuffix}`} className="text-[#285FEA] hover:underline font-semibold">
-                Create account
-              </Link>
-            </p>
-          </CardFooter>
-        </form>
-      </Card>
+              {isLoading ? 'Signing in…' : 'Sign in to workspace'}
+              <BottomGradient />
+            </button>
+          </form>
+
+          <p className="mt-6 text-center text-xs text-zinc-500">
+            Don&apos;t have an account?{' '}
+            <Link
+              href={`/register${querySuffix}`}
+              className="font-semibold text-violet-300 transition hover:text-violet-200"
+            >
+              Create account
+            </Link>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-xs text-slate-500">Loading sign in...</div>}>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-[#050505] text-xs text-zinc-500">
+          Loading sign in...
+        </div>
+      }
+    >
       <LoginFormContent />
     </Suspense>
   );
 }
 
-// Global declaration for Google GIS client window object
 declare global {
   interface Window {
     google?: {

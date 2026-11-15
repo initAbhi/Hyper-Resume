@@ -116,7 +116,7 @@ export class AdminService implements OnModuleInit {
     const enabledSetting = await this.settingRepo.findOne({ where: { key: 'lifetime_promo_enabled' } });
     const capSetting = await this.settingRepo.findOne({ where: { key: 'lifetime_promo_cap' } });
     const textSetting = await this.settingRepo.findOne({ where: { key: 'lifetime_promo_banner_text' } });
-    const totalCap = Math.max(1, parseInt(capSetting?.value || '10', 10) || 10);
+    const totalCap = Math.max(1, parseInt(capSetting?.value || '200', 10) || 200);
 
     return {
       enabled: enabledSetting ? enabledSetting.value !== 'false' : true,

@@ -84,27 +84,24 @@ export function AtsCompatibilityCloud() {
   ];
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 text-center">
-      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] text-zinc-300 text-xs font-semibold mb-3 font-mono uppercase tracking-wider shadow-inner">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#5525F5] animate-pulse" />
-        <span>Standard Single-Column Layouts</span>
-      </div>
-
-      <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white tracking-tight">
-        Engineered for standard parsing conventions
+    <div className="mx-auto w-full max-w-7xl px-4 py-10 text-center sm:px-6 sm:py-14 lg:px-8">
+      <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+        Built for real ATS parsers
+      </p>
+      <h3 className="mt-3 font-rubik text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+        Structured for systems that actually read resumes
       </h3>
-      <p className="text-xs sm:text-sm text-zinc-400 mt-2 max-w-xl mx-auto leading-relaxed">
-        Single-column document flow and clean text layers help ensure your qualifications extract accurately in systems like Workday, Greenhouse, Ashby, and Lever.
+      <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-zinc-400">
+        Linear flow, standard section names, and selectable UTF-8 text — the conventions Workday,
+        Greenhouse, Ashby, Lever, and peers expect.
       </p>
 
-      {/* Endless Moving ATS Cards Conveyor */}
-      <div className="mt-8 relative w-full overflow-hidden marquee-mask py-3 select-none">
-        <div className="flex animate-marquee gap-4 items-center">
-          {/* Repeating array 2x for seamless 50% infinite translation loop */}
+      <div className="relative mt-8 w-full select-none overflow-hidden marquee-mask py-2">
+        <div className="flex animate-marquee items-center gap-3">
           {[...atsEngines, ...atsEngines].map((engine, idx) => (
             <div
               key={`${engine.name}-${idx}`}
-              className="flex items-center justify-center px-6 py-3.5 rounded-xl bg-[#0E101B]/90 backdrop-blur-md shadow-lg hover:shadow-2xl hover:shadow-violet-950/30 hover:bg-[#131626] hover:-translate-y-1 transition-all duration-300 shrink-0 min-w-[145px] cursor-default"
+              className="flex min-w-[140px] shrink-0 cursor-default items-center justify-center rounded-xl bg-white/[0.04] px-6 py-3.5"
             >
               {engine.render()}
             </div>

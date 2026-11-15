@@ -24,13 +24,22 @@ const rubik = Rubik({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://hype-resume.com'),
-  title: 'HypeResume — AI Resume Builder & ATS Optimizer',
+  title: 'HypeResume — Evidence-Grounded AI Resume Builder & ATS Optimizer',
   description:
-    'Build ATS-optimized resumes that land interviews. Match your experience to any job description, improve your bullets, and export clean PDFs. Trusted by thousands of job seekers.',
-  keywords: ['resume builder', 'ATS resume', 'AI resume', 'job application', 'resume optimizer', 'resume checker'],
+    'Build an ATS-friendly resume from your real experience. Evidence-cited job match, 10 templates, free unwatermarked PDF & DOCX, and one-time Pro — no invented metrics, no auto-renew traps.',
+  keywords: [
+    'resume builder',
+    'ATS resume',
+    'AI resume',
+    'job application',
+    'resume optimizer',
+    'resume checker',
+    'free PDF resume export',
+  ],
   openGraph: {
-    title: 'HypeResume — AI Resume Builder & ATS Optimizer',
-    description: 'Build ATS-optimized resumes that land interviews. Free resume checker & job matcher.',
+    title: 'HypeResume — Proof Over Hype. Resumes Built on Real Evidence.',
+    description:
+      'ATS-friendly resumes, evidence-cited job match, and free PDF/DOCX exports. Honest AI that refuses to fabricate your career.',
     type: 'website',
     siteName: 'HypeResume',
     images: [{ url: '/logos/HypeResume-Full-Logo.png', width: 1200, height: 400, alt: 'HypeResume' }],
