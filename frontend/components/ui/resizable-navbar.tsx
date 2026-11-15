@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { IconMenu2, IconX } from '@tabler/icons-react';
+import { Menu as IconMenu2, X as IconX } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
