@@ -5,16 +5,24 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
   AlertCircle,
+  ArrowRight,
   ArrowUpRight,
   Award,
+  BookOpen,
+  Briefcase,
   CheckCircle2,
+  Copy,
+  Eye,
   FileSpreadsheet,
   Globe,
   History,
   Loader2,
+  MessageSquare,
+  Search,
   ShieldCheck,
   Sparkles,
   Trash2,
+  TrendingUp,
   Upload,
 } from 'lucide-react';
 import { LinkedInIcon } from '@/components/linkedin/LinkedInIcon';
@@ -28,7 +36,10 @@ import {
   type Resume,
 } from '@/lib/api-client';
 import {
+  calculateLiveRecruiterScore,
+  copyToClipboardSafely,
   evaluateHeadlineBudget,
+  formatCompleteProfileKit,
   formatLinkedInRoleCopyBlock,
   LINKEDIN_ABOUT_FOLD_CHARS,
   LINKEDIN_ABOUT_LIMIT,
@@ -36,9 +47,24 @@ import {
   splitAboutFold,
 } from '@/lib/linkedin-utils';
 import { AccessibleCopyButton } from '@/components/linkedin/AccessibleCopyButton';
+import { LinkedInMockupPreview } from '@/components/linkedin/LinkedInMockupPreview';
+import { LinkedInBeforeAfter } from '@/components/linkedin/LinkedInBeforeAfter';
+import { LinkedInNetworkingStudio } from '@/components/linkedin/LinkedInNetworkingStudio';
+import { LinkedInPostCreator } from '@/components/linkedin/LinkedInPostCreator';
+import { LinkedInKeywordHeatmap } from '@/components/linkedin/LinkedInKeywordHeatmap';
+import { LinkedInApplyGuideModal } from '@/components/linkedin/LinkedInApplyGuideModal';
 
 type SourceTabKey = 'resume' | 'pdf' | 'manual';
-type ResultTabKey = 'headlines' | 'about' | 'experience' | 'skills' | 'checklist';
+type ResultTabKey =
+  | 'preview'
+  | 'headlines'
+  | 'about'
+  | 'experience'
+  | 'heatmap'
+  | 'before_after'
+  | 'networking'
+  | 'posts'
+  | 'checklist';
 
 const SOURCE_TABS: Array<{ key: SourceTabKey; label: string }> = [
   { key: 'resume', label: 'From Resume' },
@@ -47,10 +73,14 @@ const SOURCE_TABS: Array<{ key: SourceTabKey; label: string }> = [
 ];
 
 const RESULT_TABS: Array<{ key: ResultTabKey; label: string }> = [
+  { key: 'preview', label: 'Live Mockup Preview' },
   { key: 'headlines', label: 'Headlines (5)' },
   { key: 'about', label: 'About (3)' },
   { key: 'experience', label: 'Experience' },
-  { key: 'skills', label: 'Skills & Gaps' },
+  { key: 'heatmap', label: 'Keyword Heatmap' },
+  { key: 'before_after', label: 'Before vs After' },
+  { key: 'networking', label: 'Networking & InMail' },
+  { key: 'posts', label: 'Content & Posts' },
   { key: 'checklist', label: 'Checklist & Sync' },
 ];
 
@@ -100,7 +130,7 @@ export default function LinkedInOptimizerStudio() {
     useState<LinkedInPdfImportResponse | null>(null);
 
   const [sourceTab, setSourceTab] = useState<SourceTabKey>('resume');
-  const [resultTab, setResultTab] = useState<ResultTabKey>('headlines');
+  const [resultTab, setResultTab] = useState<ResultTabKey>('preview');
 
   const sourceTabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const resultTabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -129,6 +159,9 @@ export default function LinkedInOptimizerStudio() {
   const [stagedSkills, setStagedSkills] = useState<string[]>([]);
   const [checkedItems, setCheckedItems] = useState<string[]>([]);
 
+  // Guide Modal
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
+
   const [isLoadingInitial, setIsLoadingInitial] = useState(true);
   const [isRunningOptimization, setIsRunningOptimization] = useState(false);
   const [isImportingPdf, setIsImportingPdf] = useState(false);
@@ -140,6 +173,14 @@ export default function LinkedInOptimizerStudio() {
     () => resumes.find((r) => r.id === selectedResumeId) || null,
     [resumes, selectedResumeId],
   );
+
+  const candidateName = useMemo(() => {
+    return (
+      selectedResume?.content?.contact?.fullName ||
+      activeAudit?.profileSnapshot?.contact?.fullName ||
+      'Alex Mercer'
+    );
+  }, [selectedResume, activeAudit]);
 
   const hydrateFromAudit = useCallback((audit: LinkedInAudit) => {
     setActiveAudit(audit);
@@ -265,7 +306,7 @@ export default function LinkedInOptimizerStudio() {
 
       setAudits((prev) => [audit, ...prev.filter((a) => a.id !== audit.id)]);
       hydrateFromAudit(audit);
-      setResultTab('headlines');
+      setResultTab('preview');
       setStatusAnnouncement(
         `LinkedIn audit completed with score ${audit.overallScore} out of 100.`,
       );
@@ -299,7 +340,7 @@ export default function LinkedInOptimizerStudio() {
       }
       setAudits((prev) => [res.audit, ...prev.filter((a) => a.id !== res.audit.id)]);
       hydrateFromAudit(res.audit);
-      setResultTab('headlines');
+      setResultTab('preview');
       setStatusAnnouncement(
         `Imported ${file.name} and generated LinkedIn optimization with score ${res.audit.overallScore} out of 100.`,
       );
@@ -370,6 +411,29 @@ export default function LinkedInOptimizerStudio() {
     );
   };
 
+  const handleInsertKeywordToHeadline = (keyword: string) => {
+    setCustomHeadline((prev) => {
+      if (!prev.trim()) return `${targetRole} | ${keyword}`;
+      if (prev.toLowerCase().includes(keyword.toLowerCase())) return prev;
+      return `${prev} · ${keyword}`;
+    });
+    setStatusAnnouncement(`Added "${keyword}" to draft headline.`);
+  };
+
+  const handleCopyFullKit = async () => {
+    if (!activeAudit) return;
+    const kit = formatCompleteProfileKit(
+      activeAudit,
+      activeAudit.appliedState?.appliedHeadline || customHeadline,
+      activeAudit.appliedState?.appliedAbout || customAbout,
+      stagedSkills,
+    );
+    const copied = await copyToClipboardSafely(kit);
+    if (copied) {
+      setStatusAnnouncement('Copied Complete LinkedIn Profile Kit to clipboard!');
+    }
+  };
+
   const handleSyncToWorkspace = async () => {
     if (!activeAudit) return;
     setErrorMessage(null);
@@ -420,6 +484,17 @@ export default function LinkedInOptimizerStudio() {
 
   const aboutChars = customAbout.trim().length;
 
+  const liveTuningScore = useMemo(() => {
+    return calculateLiveRecruiterScore({
+      headline: customHeadline,
+      about: customAbout,
+      skillsCount: stagedSkills.length || activeAudit?.optimizations?.skillsStrategy?.top3PinnedSkills?.length || 5,
+      experienceCount: activeAudit?.profileSnapshot?.experience?.length || 1,
+      targetRole: targetRole,
+      hasCustomSlug: activeAudit?.scoreReport?.urlHealth?.hasCustomSlug,
+    });
+  }, [customHeadline, customAbout, stagedSkills, activeAudit, targetRole]);
+
   return (
     <div className="max-w-7xl mx-auto space-y-5">
       {/* Studio Page Header */}
@@ -430,15 +505,39 @@ export default function LinkedInOptimizerStudio() {
               <LinkedInIcon className="w-3.5 h-3.5" />
             </span>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1A1D23] dark:text-[#F0F2F5]">
-              LinkedIn Profile Optimizer &amp; PDF Importer
+              LinkedIn Profile Optimizer &amp; Recruiter Suite
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-[#5A6270] dark:text-[#9EA7B4] mt-1">
-            Import your LinkedIn Save-to-PDF profile or audit your resume to craft search-indexed 220-char headlines, fold-optimized About hooks, and evidenced skills.
+            Industry-standard optimization: 220-char search headlines, fold-tested About hooks, live mockup preview, keyword heatmap, and cold outreach kits.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {activeAudit && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsGuideOpen(true)}
+                className="gap-1.5 text-xs text-[#0A66C2] dark:text-[#60A5FA] border-[#0A66C2]/30 hover:bg-[#0A66C2]/10"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>LinkedIn Apply Guide</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void handleCopyFullKit()}
+                className="gap-1.5 text-xs"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span>Copy Full Kit</span>
+              </Button>
+            </>
+          )}
+
           {selectedResume && (
             <Link href={`/app/resumes/${selectedResume.id}`}>
               <Button variant="outline" size="sm" className="gap-1.5 text-xs">
@@ -473,7 +572,7 @@ export default function LinkedInOptimizerStudio() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* LEFT COLUMN: Source Selector + LinkedIn PDF Importer + Audits History */}
+        {/* LEFT COLUMN: Source Selector + LinkedIn PDF Importer + Live Tuning + Audits History */}
         <div className="lg:col-span-5 space-y-4">
           <div className="rounded-xl border border-[#E2E5E9] dark:border-[#252A33] bg-white dark:bg-[#14171C] shadow-xs overflow-hidden">
             {/* Accessible Horizontal Single-Row Tabs */}
@@ -737,13 +836,24 @@ export default function LinkedInOptimizerStudio() {
               </div>
             </div>
 
-            {/* Source Tab Panel 3: Tune Custom Text (Live 220 & 2600 Char Meters) */}
+            {/* Source Tab Panel 3: Tune Custom Text (Live 220 & 2600 Char Meters + Live Re-Score) */}
             <div
               role="tabpanel"
               aria-labelledby={`${uid}-src-tab-manual`}
               hidden={sourceTab !== 'manual'}
             >
               <div className="p-4 space-y-3.5">
+                {/* Live Tuning Score Pill */}
+                <div className="p-2.5 rounded-lg border border-[#A7F3D0] bg-[#ECFDF5]/60 dark:border-[#047857]/40 dark:bg-[#064E3B]/20 flex items-center justify-between text-xs">
+                  <span className="font-bold text-[#065F46] dark:text-[#A7F3D0] flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Live Recruiter Score: {liveTuningScore.overallScore}/100
+                  </span>
+                  <span className="text-[10px] text-[#065F46] dark:text-[#A7F3D0] font-mono">
+                    H: {liveTuningScore.headlineScore}/20 · A: {liveTuningScore.aboutScore}/25
+                  </span>
+                </div>
+
                 <Input
                   id={`${uid}-custom-url`}
                   label="LinkedIn Profile URL"
@@ -897,7 +1007,7 @@ export default function LinkedInOptimizerStudio() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Live Audit Scoreboard + Optimization Studio */}
+        {/* RIGHT COLUMN: Live Audit Scoreboard + Advanced Optimization Studio */}
         <div className="lg:col-span-7 space-y-4">
           {!activeAudit ? (
             <div className="rounded-xl border border-dashed border-[#CBD0D7] dark:border-[#333945] bg-white dark:bg-[#14171C] p-10 text-center space-y-3">
@@ -908,7 +1018,7 @@ export default function LinkedInOptimizerStudio() {
                 Ready to Optimize Your LinkedIn Presence
               </h2>
               <p className="text-xs text-[#5A6270] dark:text-[#9EA7B4] max-w-md mx-auto leading-relaxed">
-                Select one of your resumes on the left or switch to <strong>LinkedIn PDF Import</strong> to generate your Recruiter Visibility Score, 5 custom headlines, fold-tested About stories, and evidenced skills.
+                Select one of your resumes on the left or switch to <strong>LinkedIn PDF Import</strong> to generate your Recruiter Visibility Score, 5 custom headlines, fold-tested About stories, live mockups, and evidenced skills.
               </p>
             </div>
           ) : (
@@ -991,7 +1101,7 @@ export default function LinkedInOptimizerStudio() {
                 </div>
               </div>
 
-              {/* Optimized Output Tabs Workspace */}
+              {/* Advanced Output Tabs Workspace */}
               <div className="rounded-xl border border-[#E2E5E9] dark:border-[#252A33] bg-white dark:bg-[#14171C] shadow-xs overflow-hidden">
                 <div
                   role="tablist"
@@ -1028,7 +1138,24 @@ export default function LinkedInOptimizerStudio() {
                   })}
                 </div>
 
-                {/* Output Panel 1: Headlines (5) */}
+                {/* Tab 1: Live Mockup Preview */}
+                <div
+                  role="tabpanel"
+                  aria-labelledby={`${uid}-res-tab-preview`}
+                  hidden={resultTab !== 'preview'}
+                >
+                  <div className="p-4">
+                    <LinkedInMockupPreview
+                      audit={activeAudit}
+                      currentHeadline={activeAudit.appliedState?.appliedHeadline || customHeadline}
+                      currentAbout={activeAudit.appliedState?.appliedAbout || customAbout}
+                      currentSkills={stagedSkills}
+                      candidateName={candidateName}
+                    />
+                  </div>
+                </div>
+
+                {/* Tab 2: Headlines (5) */}
                 <div
                   role="tabpanel"
                   aria-labelledby={`${uid}-res-tab-headlines`}
@@ -1094,7 +1221,7 @@ export default function LinkedInOptimizerStudio() {
                   </div>
                 </div>
 
-                {/* Output Panel 2: About (3) with Fold Cutoff Preview */}
+                {/* Tab 3: About (3) with Fold Cutoff Preview */}
                 <div
                   role="tabpanel"
                   aria-labelledby={`${uid}-res-tab-about`}
@@ -1168,7 +1295,7 @@ export default function LinkedInOptimizerStudio() {
                   </div>
                 </div>
 
-                {/* Output Panel 3: Experience Bullets */}
+                {/* Tab 4: Experience Bullets */}
                 <div
                   role="tabpanel"
                   aria-labelledby={`${uid}-res-tab-experience`}
@@ -1231,100 +1358,67 @@ export default function LinkedInOptimizerStudio() {
                   </div>
                 </div>
 
-                {/* Output Panel 4: Skills & Evidenced Gaps */}
+                {/* Tab 5: Keyword Heatmap & Gap Matrix */}
                 <div
                   role="tabpanel"
-                  aria-labelledby={`${uid}-res-tab-skills`}
-                  hidden={resultTab !== 'skills'}
+                  aria-labelledby={`${uid}-res-tab-heatmap`}
+                  hidden={resultTab !== 'heatmap'}
                 >
-                  <div className="p-4 space-y-4">
-                    <div className="rounded-lg border border-[#E2E5E9] dark:border-[#252A33] p-3.5 space-y-2">
-                      <h3 className="text-xs font-bold text-[#1A1D23] dark:text-[#F0F2F5] flex items-center gap-1.5">
-                        <Award className="w-3.5 h-3.5 text-[#0A66C2]" aria-hidden="true" />
-                        Top 3 Skills to Pin for Recruiter Search Cards
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                        {activeAudit.optimizations.skillsStrategy.top3PinnedSkills.map((sk) => (
-                          <span
-                            key={sk}
-                            className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[#0A66C2] text-white"
-                          >
-                            {sk}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="rounded-lg border border-[#A7F3D0] dark:border-[#047857]/50 bg-[#ECFDF5]/60 dark:bg-[#064E3B]/20 p-3.5 space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <h3 className="text-xs font-bold text-[#065F46] dark:text-[#A7F3D0]">
-                          Evidenced in Experience — Safe to Add to LinkedIn Skills
-                        </h3>
-                      </div>
-                      {activeAudit.optimizations.skillsStrategy.evidencedSkillsToAdd.length === 0 ? (
-                        <p className="text-xs text-[#065F46] dark:text-[#A7F3D0]">
-                          All skills mentioned in your work history are already indexed in your skills list.
-                        </p>
-                      ) : (
-                        <div className="flex flex-wrap gap-2">
-                          {activeAudit.optimizations.skillsStrategy.evidencedSkillsToAdd.map(
-                            (sk) => {
-                              const queued = stagedSkills.includes(sk);
-                              return (
-                                <button
-                                  key={sk}
-                                  type="button"
-                                  onClick={() => toggleStagedSkill(sk)}
-                                  className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
-                                    queued
-                                      ? 'bg-[#059669] text-white border-[#059669]'
-                                      : 'bg-white dark:bg-[#14171C] text-[#065F46] dark:text-[#A7F3D0] border-[#A7F3D0]'
-                                  }`}
-                                >
-                                  {queued ? `✓ Queued: ${sk}` : `+ Add ${sk}`}
-                                </button>
-                              );
-                            },
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="rounded-lg border border-[#FDE68A] dark:border-[#92400E]/60 bg-[#FFFBEB]/70 dark:bg-[#78350F]/20 p-3.5 space-y-2">
-                      <h3 className="text-xs font-bold text-[#92400E] dark:text-[#FDE68A]">
-                        Target Role Market Keywords (Not Evidenced Yet — Only Add If True)
-                      </h3>
-                      <p className="text-[11px] text-[#92400E] dark:text-[#FDE68A]">
-                        HyperResume never fabricates unverified skills into your profile. Confirm firsthand projects before adding any keyword below:
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {activeAudit.optimizations.skillsStrategy.targetRoleKeywordsToConfirm
-                          .length === 0 ? (
-                          <span className="text-xs text-[#92400E] dark:text-[#FDE68A]">
-                            Zero missing target-role keyword gaps detected.
-                          </span>
-                        ) : (
-                          activeAudit.optimizations.skillsStrategy.targetRoleKeywordsToConfirm.map(
-                            (kw) => (
-                              <span
-                                key={kw}
-                                className="px-2 py-0.5 rounded text-[11px] font-medium border border-[#FDE68A] dark:border-[#92400E] bg-white dark:bg-[#14171C] text-[#92400E] dark:text-[#FDE68A]"
-                              >
-                                {kw}
-                              </span>
-                            ),
-                          )
-                        )}
-                      </div>
-                    </div>
-
-                    <p className="text-[11px] text-[#848D9A]">
-                      {activeAudit.optimizations.factualVerificationNotes}
-                    </p>
+                  <div className="p-4">
+                    <LinkedInKeywordHeatmap
+                      audit={activeAudit}
+                      stagedSkills={stagedSkills}
+                      onToggleSkill={toggleStagedSkill}
+                      onInsertKeywordToHeadline={handleInsertKeywordToHeadline}
+                    />
                   </div>
                 </div>
 
-                {/* Output Panel 5: Checklist, Featured Links & Two-Way Sync */}
+                {/* Tab 6: Before vs After Comparison */}
+                <div
+                  role="tabpanel"
+                  aria-labelledby={`${uid}-res-tab-before_after`}
+                  hidden={resultTab !== 'before_after'}
+                >
+                  <div className="p-4">
+                    <LinkedInBeforeAfter
+                      audit={activeAudit}
+                      appliedHeadline={activeAudit.appliedState?.appliedHeadline || customHeadline}
+                      appliedAbout={activeAudit.appliedState?.appliedAbout || customAbout}
+                      appliedSkills={stagedSkills}
+                    />
+                  </div>
+                </div>
+
+                {/* Tab 7: Networking & InMail Studio */}
+                <div
+                  role="tabpanel"
+                  aria-labelledby={`${uid}-res-tab-networking`}
+                  hidden={resultTab !== 'networking'}
+                >
+                  <div className="p-4">
+                    <LinkedInNetworkingStudio
+                      audit={activeAudit}
+                      candidateName={candidateName}
+                    />
+                  </div>
+                </div>
+
+                {/* Tab 8: Content & Post Creator */}
+                <div
+                  role="tabpanel"
+                  aria-labelledby={`${uid}-res-tab-posts`}
+                  hidden={resultTab !== 'posts'}
+                >
+                  <div className="p-4">
+                    <LinkedInPostCreator
+                      audit={activeAudit}
+                      candidateName={candidateName}
+                    />
+                  </div>
+                </div>
+
+                {/* Tab 9: Checklist, Featured Links & Two-Way Sync */}
                 <div
                   role="tabpanel"
                   aria-labelledby={`${uid}-res-tab-checklist`}
@@ -1418,6 +1512,18 @@ export default function LinkedInOptimizerStudio() {
           )}
         </div>
       </div>
+
+      {/* LinkedIn Apply Guide Modal */}
+      {activeAudit && (
+        <LinkedInApplyGuideModal
+          isOpen={isGuideOpen}
+          onClose={() => setIsGuideOpen(false)}
+          audit={activeAudit}
+          appliedHeadline={activeAudit.appliedState?.appliedHeadline || customHeadline}
+          appliedAbout={activeAudit.appliedState?.appliedAbout || customAbout}
+          appliedSkills={stagedSkills}
+        />
+      )}
     </div>
   );
 }

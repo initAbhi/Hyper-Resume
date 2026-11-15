@@ -91,6 +91,9 @@ export default function ResumesListPage() {
       setIsSubmitting(true);
       apiClient.createResume({
         name: data.title || 'Cloned Resume',
+        templateKey: data.templateKey,
+        targetRole: data.targetRole,
+        targetCompany: data.targetCompany,
         content: data.content,
       }).then((created) => {
         router.push('/app/resumes/' + created.id);

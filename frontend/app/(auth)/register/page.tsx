@@ -284,7 +284,7 @@ function RegisterFormContent() {
               <button
                 type="button"
                 onClick={() => setShowPersonalization(!showPersonalization)}
-                className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-zinc-850 hover:bg-slate-100 dark:hover:bg-zinc-800 border border-slate-200/80 dark:border-zinc-750 text-left transition-colors"
+                className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-zinc-800/50 hover:bg-slate-100 dark:hover:bg-zinc-800 border border-slate-200/80 dark:border-zinc-700 text-left transition-colors"
               >
                 <div className="flex items-center gap-2">
                   <Target className="w-4 h-4 text-[#285FEA]" />

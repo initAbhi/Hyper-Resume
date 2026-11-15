@@ -33,18 +33,24 @@ export function DoubleColumnTemplate({
     projects = [],
   } = content;
 
-  // True Dynamic Pagination (Exact Enhancv Multi-Page Standard):
-  // A standard A4 page holds contact header, summary, education, and ~1 major role + 1 project.
-  // Any resume with >= 2 roles and projects, or >= 7 bullets, MUST paginate across 2 discrete A4 sheets.
+  const pageMode = (content.layout as any)?.pageMode || 'auto';
+
+  // Capacity calculation:
+  // A standard A4 page (297mm / 1123px) holds contact header, summary, education, and ~2-3 roles + 1-2 projects.
+  // We only paginate across 2 discrete A4 sheets if user chose 'multi', or in 'auto' mode when content genuinely exceeds 1 page.
   const totalExpBullets = experience.reduce((acc, exp) => acc + (exp.bullets?.length || 1), 0);
   const totalProjCount = projects.length;
   const totalProjHighlights = projects.reduce((acc, p) => acc + (p.highlights?.length || 1), 0);
 
   const needsSecondPage =
-    experience.length >= 3 ||
-    (experience.length >= 2 && projects.length >= 1) ||
-    totalExpBullets >= 7 ||
-    (totalExpBullets + totalProjHighlights >= 8);
+    pageMode === 'single'
+      ? false
+      : pageMode === 'multi'
+      ? true
+      : experience.length >= 4 ||
+        totalExpBullets >= 14 ||
+        (totalExpBullets + totalProjHighlights >= 16) ||
+        (experience.length >= 3 && totalExpBullets >= 10 && projects.length >= 2);
 
   let page1Experiences: typeof experience = [];
   let page2Experiences: typeof experience = [];
@@ -56,26 +62,19 @@ export function DoubleColumnTemplate({
     page1Projects = projects;
   } else {
     // Balanced 2-Page Distribution:
-    if (experience.length === 2 && projects.length >= 2) {
-      // Role 1 (Algoocean, 6 bullets) + Project 1 (Infodatabox, 4 highlights) on Page 1
-      // Role 2 (SAAR IT, 3 bullets) + Project 2 & 3 (Init.new & Trading Bot) on Page 2
-      page1Experiences = [experience[0]];
-      page1Projects = [projects[0]];
-      page2Experiences = [experience[1]];
-      page2Projects = projects.slice(1);
-    } else if (experience.length >= 3) {
+    if (experience.length >= 3) {
       page1Experiences = experience.slice(0, 2);
       page2Experiences = experience.slice(2);
       page1Projects = [];
       page2Projects = projects;
-    } else if (experience.length === 1 && projects.length >= 2) {
-      page1Experiences = experience;
-      page1Projects = [projects[0]];
-      page2Experiences = [];
+    } else if (experience.length === 2) {
+      page1Experiences = [experience[0]];
+      page2Experiences = [experience[1]];
+      page1Projects = projects.length > 0 ? [projects[0]] : [];
       page2Projects = projects.slice(1);
     } else {
-      page1Experiences = experience.slice(0, 1);
-      page2Experiences = experience.slice(1);
+      page1Experiences = experience;
+      page2Experiences = [];
       page1Projects = projects.slice(0, 1);
       page2Projects = projects.slice(1);
     }
@@ -187,9 +186,9 @@ export function DoubleColumnTemplate({
           </div>
 
           {/* 2-Column Split: Left (60% Summary + Experiences + Projects) | Right (40% Education + Skills) */}
-          <div className="grid grid-cols-1 md:grid-cols-12 print:grid-cols-12 gap-6">
+          <div className="grid grid-cols-12 gap-6">
             {/* Left Column (7 cols / 58%) */}
-            <div className="md:col-span-7 print:col-span-7 space-y-4">
+            <div className="col-span-7 space-y-4">
               {/* Summary */}
               {summary && (
                 <section className="space-y-1">
@@ -292,7 +291,7 @@ export function DoubleColumnTemplate({
             </div>
 
             {/* Right Column (5 cols / 42%): EDUCATION & KEY SKILLS */}
-            <div className="md:col-span-5 print:col-span-5 space-y-4">
+            <div className="col-span-5 space-y-4">
               {/* Education */}
               {education.length > 0 && (
                 <section className="space-y-2">
@@ -388,9 +387,9 @@ export function DoubleColumnTemplate({
           style={{ boxSizing: 'border-box' }}
         >
           <div className="space-y-4">
-            <div className={`grid grid-cols-1 ${page2Skills.length > 0 ? 'md:grid-cols-12 print:grid-cols-12 gap-6' : 'gap-4'}`}>
+            <div className={`grid ${page2Skills.length > 0 ? 'grid-cols-12 gap-6' : 'grid-cols-1 gap-4'}`}>
               {/* Left Area (7 cols if skills present, else full width) */}
-              <div className={page2Skills.length > 0 ? 'md:col-span-7 print:col-span-7 space-y-4' : 'space-y-4'}>
+              <div className={page2Skills.length > 0 ? 'col-span-7 space-y-4' : 'space-y-4'}>
                 {/* Experience Continuation */}
                 {page2Experiences.length > 0 && (
                   <section className="space-y-2.5">
@@ -479,7 +478,7 @@ export function DoubleColumnTemplate({
 
               {/* Right Area (5 cols): Tools & Technologies */}
               {page2Skills.length > 0 && (
-                <div className="md:col-span-5 print:col-span-5 space-y-4">
+                <div className="col-span-5 space-y-4">
                   <section className="space-y-2">
                     <h2 className="text-[11.5px] font-bold uppercase tracking-wider text-zinc-800 font-rubik pb-1 border-b border-zinc-200">
                       Tools & Technologies

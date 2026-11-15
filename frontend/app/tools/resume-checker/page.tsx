@@ -15,6 +15,9 @@ import {
   FileCheck2,
   Loader2,
   AlertCircle,
+  Search,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -48,6 +51,8 @@ export const MAX_UPLOAD_LIMIT_BYTES = 10 * 1024 * 1024; // 10 MB
 
 export default function ResumeCheckerPage() {
   const [resumeText, setResumeText] = useState('');
+  const [jobDescriptionText, setJobDescriptionText] = useState('');
+  const [showJdInput, setShowJdInput] = useState(false);
   const [checkerState, setCheckerState] = useState<CheckerState>('IDLE');
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -79,6 +84,16 @@ B.Tech in Computer Science & Engineering — 2021
 SKILLS
 TypeScript, Node.js, Next.js, PostgreSQL, Docker, Redis, TailwindCSS, Git`;
 
+  const sampleJobDescription = `Senior Backend Engineer
+We are looking for a Senior Backend Engineer to build resilient distributed services.
+
+Required Qualifications:
+• 3+ years of professional backend software engineering with TypeScript, Node.js, and PostgreSQL.
+• Hands-on production experience with Docker, Redis, and cloud infrastructure.
+• Proven track record designing microservices and automated CI/CD pipelines (GitHub Actions).
+• Experience with PCI-DSS compliance and database performance tuning is a plus.
+• Strong communication and collaborative ownership mindset.`;
+
   const runServerAudit = async (textToAnalyze: string, source: string = 'resume_checker') => {
     if (!textToAnalyze.trim()) return;
     setAnalysisError(null);
@@ -88,6 +103,7 @@ TypeScript, Node.js, Next.js, PostgreSQL, Docker, Redis, TailwindCSS, Git`;
     try {
       const audit = await apiClient.auditPlainTextResume({
         resumeText: textToAnalyze,
+        jobDescriptionText: jobDescriptionText.trim() || undefined,
       });
       setResults(audit);
       setCheckerState('COMPLETED');
@@ -143,7 +159,9 @@ TypeScript, Node.js, Next.js, PostgreSQL, Docker, Redis, TailwindCSS, Git`;
     analytics.track('resume_checker_started', { source: 'file_upload' });
 
     try {
-      const parsedAndAudited = await apiClient.parseAndAuditUploadedResume(file);
+      const parsedAndAudited = await apiClient.parseAndAuditUploadedResume(file, {
+        jobDescriptionText: jobDescriptionText.trim() || undefined,
+      });
       analytics.track('resume_upload_completed', {
         fileFormat: file.name.toLowerCase().endsWith('.docx') ? 'docx' : 'pdf',
       });
@@ -174,14 +192,12 @@ TypeScript, Node.js, Next.js, PostgreSQL, Docker, Redis, TailwindCSS, Git`;
   const handleCompressAndContinue = async () => {
     if (!pendingFile) return;
 
-    // Prevent duplicate compression requests
     if (checkerState === 'COMPRESSING' || checkerState === 'VERIFYING') return;
 
     setCheckerState('COMPRESSING');
     setUploadError(null);
     setAnalysisError(null);
 
-    // Provide transition feedback for verification phase
     const verifyTimer = setTimeout(() => {
       setCheckerState('VERIFYING');
     }, 1200);
@@ -191,13 +207,11 @@ TypeScript, Node.js, Next.js, PostgreSQL, Docker, Redis, TailwindCSS, Git`;
       clearTimeout(verifyTimer);
       setCompressionMeta(result);
 
-      // Scenario D: Compression failed to reach 10 MB or failed verification
       if (!result.success || !result.withinUploadLimit || !result.parsed) {
         setCheckerState('COMPRESSION_FAILED');
         return;
       }
 
-      // Scenario C: Compression succeeded and verified!
       setCheckerState('COMPRESSION_SUCCESS');
 
       analytics.track('resume_upload_completed', {
@@ -237,20 +251,20 @@ TypeScript, Node.js, Next.js, PostgreSQL, Docker, Redis, TailwindCSS, Git`;
     checkerState === 'ATS_ANALYSIS_IN_PROGRESS';
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="text-center max-w-3xl mx-auto mb-10">
-        <Badge variant="info" className="mb-3">Free Tool</Badge>
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className="text-center max-w-3xl mx-auto mb-8">
+        <Badge variant="info" className="mb-2">Advanced ATS Intelligence</Badge>
         <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Free ATS Resume Checker
+          Industry-Standard ATS Resume Checker
         </h1>
-        <p className="mt-3 text-base sm:text-lg text-zinc-600 dark:text-zinc-400">
-          Analyze your resume for formatting standards, quantifiable metric density, action verbs, and section completeness without paywalls.
+        <p className="mt-2.5 text-sm sm:text-base text-zinc-600 dark:text-zinc-400">
+          Simulate enterprise ATS platforms (Workday, Taleo, Greenhouse) with 250+ action verbs, Google XYZ formula scoring, 1,200+ skill taxonomy, and Jobscan-style keyword matching.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column: Input Form & Compression UX */}
-        <div className="lg:col-span-7 flex flex-col gap-4">
+        {/* Left Column: Input Form & Job Description Option */}
+        <div className="lg:col-span-6 flex flex-col gap-4">
           {/* Scenario B: Compression Confirmation Prompt */}
           {checkerState === 'COMPRESSION_CONFIRMATION' && pendingFile && (
             <Card className="border-amber-300 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 shadow-md">
@@ -298,7 +312,7 @@ TypeScript, Node.js, Next.js, PostgreSQL, Docker, Redis, TailwindCSS, Git`;
                     className="w-full sm:w-auto text-xs gap-1.5"
                   >
                     <Minimize2 className="w-4 h-4" />
-                    <span>Compress & Continue</span>
+                    <span>Compress &amp; Continue</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -332,22 +346,15 @@ TypeScript, Node.js, Next.js, PostgreSQL, Docker, Redis, TailwindCSS, Git`;
                   </div>
                 </div>
 
-                {/* Accessible native semantic progress bar */}
                 <progress
                   className="w-full h-1.5 rounded-full overflow-hidden appearance-none accent-blue-600 bg-blue-100 dark:bg-blue-950"
                   aria-label="PDF compression progress"
                 />
-
-                <div role="status" aria-live="polite" className="sr-only">
-                  {checkerState === 'COMPRESSING'
-                    ? 'Compressing resume PDF in progress.'
-                    : 'Verifying compressed resume integrity.'}
-                </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Scenario D & Failure State */}
+          {/* Scenario D: Compression Failure */}
           {checkerState === 'COMPRESSION_FAILED' && (
             <Card className="border-rose-300 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-950/20">
               <CardContent className="py-5 space-y-3">
@@ -364,44 +371,7 @@ TypeScript, Node.js, Next.js, PostgreSQL, Docker, Redis, TailwindCSS, Git`;
                         uploadError ||
                         'We optimized your resume, but its size is still above our 10 MB limit. You can try another file or use a more optimized PDF.'}
                     </p>
-                    {compressionMeta && (
-                      <div className="text-xs text-zinc-600 dark:text-zinc-400 mt-2 font-mono">
-                        Original: {formatFileSize(compressionMeta.originalSize)} → Compressed: {formatFileSize(compressionMeta.compressedSize)} (-{compressionMeta.reductionPercentage}%)
-                      </div>
-                    )}
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2 pt-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCompressAndContinue}
-                    className="text-xs gap-1"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Retry</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setPendingFile(null);
-                      setCheckerState('IDLE');
-                      fileInputRef.current?.click();
-                    }}
-                    className="text-xs"
-                  >
-                    Upload Another PDF
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleCancelCompression}
-                    className="text-xs"
-                  >
-                    Cancel
-                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -422,11 +392,12 @@ TypeScript, Node.js, Next.js, PostgreSQL, Docker, Redis, TailwindCSS, Git`;
             </div>
           )}
 
+          {/* Main Input Card */}
           <Card>
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-base">Paste Resume Text or Upload File</CardTitle>
-                <CardDescription>We analyze structure and wording without saving or training on your content.</CardDescription>
+                <CardDescription>Single-column extraction with Workday &amp; Taleo OCR simulation.</CardDescription>
               </div>
               <div className="flex items-center gap-2">
                 <input
@@ -451,38 +422,72 @@ TypeScript, Node.js, Next.js, PostgreSQL, Docker, Redis, TailwindCSS, Git`;
                   size="sm"
                   onClick={() => {
                     setResumeText(sampleResume);
-                    void runServerAudit(sampleResume, 'resume_checker_sample');
+                    setJobDescriptionText(sampleJobDescription);
+                    setShowJdInput(true);
                   }}
                   className="text-xs"
                   disabled={isProcessing}
                 >
-                  Sample
+                  Sample + JD
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
               {uploadError && checkerState !== 'COMPRESSION_FAILED' && (
-                <div className="mb-3 p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs">
+                <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs">
                   {uploadError}
                 </div>
               )}
               {analysisError && (
                 <div
                   role="alert"
-                  className="mb-3 p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-center gap-2"
+                  className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-center gap-2"
                 >
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{analysisError}</span>
                 </div>
               )}
+
               <textarea
-                rows={14}
+                rows={12}
                 className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-3.5 text-xs sm:text-sm font-mono text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-600 resize-y"
-                placeholder="Paste your plain resume text here..."
+                placeholder="Paste your plain resume text here, or click 'Upload File' above..."
                 value={resumeText}
                 onChange={(e) => setResumeText(e.target.value)}
               />
-              <div className="mt-4 flex items-center justify-between">
+
+              {/* Optional Job Description Matching (Jobscan Mode) */}
+              <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setShowJdInput(!showJdInput)}
+                  className="w-full p-3 bg-zinc-50 dark:bg-zinc-800/40 hover:bg-zinc-100 dark:hover:bg-zinc-800/70 transition-colors flex items-center justify-between text-xs font-semibold text-zinc-800 dark:text-zinc-200"
+                >
+                  <div className="flex items-center gap-2">
+                    <Search className="w-4 h-4 text-blue-600" />
+                    <span>Compare Against a Job Description (Jobscan Match Mode)</span>
+                    <Badge variant="neutral" className="text-[10px]">Optional</Badge>
+                  </div>
+                  {showJdInput ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+
+                {showJdInput && (
+                  <div className="p-3 bg-white dark:bg-zinc-900 space-y-2 border-t border-zinc-200 dark:border-zinc-800">
+                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                      Paste the target job description to calculate exact match rate, missing technical keywords, keyword stuffing, and boolean recruiter search test.
+                    </p>
+                    <textarea
+                      rows={6}
+                      className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/30 p-2.5 text-xs font-mono text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-600 resize-y"
+                      placeholder="Paste the target job description here..."
+                      value={jobDescriptionText}
+                      onChange={(e) => setJobDescriptionText(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-2 flex items-center justify-between">
                 <span className="text-xs text-zinc-500 font-mono">
                   {resumeText.trim().split(/\s+/).filter(Boolean).length} words
                 </span>
@@ -500,20 +505,22 @@ TypeScript, Node.js, Next.js, PostgreSQL, Docker, Redis, TailwindCSS, Git`;
           </Card>
         </div>
 
-        {/* Right Column: Analysis Report */}
-        <div className="lg:col-span-5 flex flex-col gap-4">
+        {/* Right Column: Advanced Analysis Report */}
+        <div className="lg:col-span-6 flex flex-col gap-4">
           {results ? (
             <Card className="border-blue-200 dark:border-blue-900 shadow-md">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">5-Dimension ATS Report</CardTitle>
+                  <div>
+                    <CardTitle className="text-base">Comprehensive ATS Audit Report</CardTitle>
+                    <CardDescription className="text-xs">
+                      5-dimension evaluation · Google XYZ formula · 1,200+ skill taxonomy
+                    </CardDescription>
+                  </div>
                   <div className="text-2xl font-black text-blue-600">
                     {results.score}/100
                   </div>
                 </div>
-                <CardDescription>
-                  Server-verified structural formatting, parser risk, bullet impact, and stack alignment audit.
-                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <AtsAuditBreakdown
@@ -561,22 +568,21 @@ TypeScript, Node.js, Next.js, PostgreSQL, Docker, Redis, TailwindCSS, Git`;
                       <ArrowRight className="w-4 h-4 ml-1.5" />
                     </Button>
                   </Link>
-                  <Link href="/tools/job-match" className="w-full block">
-                    <Button variant="outline" size="sm" className="w-full justify-center">
-                      <span>Match With a Job Description</span>
-                    </Button>
-                  </Link>
                 </div>
               </CardContent>
             </Card>
           ) : (
             <Card className="bg-zinc-50/50 dark:bg-zinc-900/50 border-dashed">
-              <CardContent className="py-16 text-center text-zinc-500 flex flex-col items-center gap-3">
-                <FileText className="w-10 h-10 text-zinc-400 stroke-1" />
-                <p className="text-sm">
-                  Paste your resume or upload a PDF and click <br />
-                  <strong className="text-zinc-700 dark:text-zinc-300">Analyze My Resume</strong> to see your report.
-                </p>
+              <CardContent className="py-20 text-center text-zinc-500 flex flex-col items-center gap-3">
+                <FileText className="w-12 h-12 text-zinc-400 stroke-1" />
+                <div>
+                  <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                    Ready to evaluate your resume
+                  </p>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Paste your plain text or upload a PDF/DOCX to see your score, Google XYZ breakdown, and Workday/Taleo simulation.
+                  </p>
+                </div>
               </CardContent>
             </Card>
           )}

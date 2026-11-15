@@ -445,7 +445,7 @@ export default function AiInterviewStudioPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-850 p-6 space-y-2.5">
+          <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-800/40 p-6 space-y-2.5">
             <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-blue-600" />
               <span>Free Starter Entitlement</span>

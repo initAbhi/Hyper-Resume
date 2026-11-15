@@ -328,6 +328,11 @@ export class PlainTextAtsAuditDto {
   @IsOptional()
   @MaxLength(180)
   targetRole?: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(25000)
+  jobDescriptionText?: string;
 }
 
 @Controller('ai')
@@ -576,7 +581,7 @@ export class AiController {
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   async auditResumeText(@Body() dto: PlainTextAtsAuditDto) {
-    return analyzePlainResumeTextAts(dto.resumeText, dto.targetRole);
+    return analyzePlainResumeTextAts(dto.resumeText, dto.targetRole, dto.jobDescriptionText);
   }
 
   @Post('public/ats-audit')
@@ -586,7 +591,7 @@ export class AiController {
     @Req() req: Request,
   ) {
     this.enforcePublicRateLimit(req);
-    return analyzePlainResumeTextAts(dto.resumeText, dto.targetRole);
+    return analyzePlainResumeTextAts(dto.resumeText, dto.targetRole, dto.jobDescriptionText);
   }
 
   private async runWritingCheck(dto: WritingCheckDto) {

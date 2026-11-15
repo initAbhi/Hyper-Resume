@@ -15,6 +15,7 @@ import {
   normalizeParsedProfileDraft,
   parseLinkedInProfileText,
 } from './linkedin-pdf-parser.util.js';
+import { normalizeExtractedText } from '../ai/utils/ats-taxonomy.js';
 
 @Injectable()
 export class ResumeParserService {
@@ -136,7 +137,7 @@ export class ResumeParserService {
     }
 
     // Fallback: UTF-8 plain text
-    return buffer.toString('utf-8');
+    return normalizeExtractedText(buffer.toString('utf-8'));
   }
 
   private async extractFromPdf(buffer: Buffer): Promise<string> {
@@ -149,7 +150,7 @@ export class ResumeParserService {
     try {
       const parsed = await pdf(buffer);
       if (parsed.text && parsed.text.trim().length >= 50) {
-        return parsed.text;
+        return normalizeExtractedText(parsed.text);
       }
     } catch {
       // Fallback to internal decompressor & stream extraction
@@ -186,12 +187,12 @@ export class ResumeParserService {
 
     const reconstructed = textChunks.join(' ').replace(/\s+/g, ' ');
     if (reconstructed.trim().length >= 50) {
-      return reconstructed;
+      return normalizeExtractedText(reconstructed);
     }
 
     // 3. Fallback: plain ASCII stream strings
     const readable = raw.replace(/[^a-zA-Z0-9\s.,@:;()-]/g, ' ').replace(/\s+/g, ' ');
-    return readable;
+    return normalizeExtractedText(readable);
   }
 
   private async extractFromDocx(buffer: Buffer): Promise<string> {
@@ -245,11 +246,13 @@ export class ResumeParserService {
       }
     }
 
-    return sections
-      .join('\n\n')
-      .replace(/[ \t]+/g, ' ')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim();
+    return normalizeExtractedText(
+      sections
+        .join('\n\n')
+        .replace(/[ \t]+/g, ' ')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim(),
+    );
   }
 
   private extractXmlParagraphText(xml: string): string {

@@ -40,6 +40,7 @@ export interface ResumeLayoutSettings {
   pageMargin?: number;
   accentColor?: string;
   fontFamily?: 'sans' | 'serif' | 'mono';
+  pageMode?: 'auto' | 'single' | 'multi';
 }
 
 export interface ResumeContentMeta {

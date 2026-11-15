@@ -51,6 +51,7 @@ export interface NormalizedLayoutSettings {
   pageMargin: number;
   accentColor?: string;
   fontFamily?: 'sans' | 'serif' | 'mono';
+  pageMode?: 'auto' | 'single' | 'multi';
 }
 
 export const LAYOUT_DENSITY_PRESETS: Record<
@@ -195,6 +196,7 @@ export function normalizeLayoutSettings(
         : DEFAULT_LAYOUT_SETTINGS.pageMargin,
     accentColor: layout?.accentColor,
     fontFamily: layout?.fontFamily,
+    pageMode: layout?.pageMode,
   };
 }
 

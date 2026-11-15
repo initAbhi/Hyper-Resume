@@ -23,12 +23,12 @@ export default function CoverLetterDocumentPreview({
     return (
       <div
         id="cover-letter-document-print"
-        className="w-full max-w-[794px] mx-auto bg-white text-zinc-900 shadow-xl border border-zinc-200 rounded-sm px-12 py-12 min-h-[1040px] flex flex-col justify-between"
+        className="w-full max-w-[794px] mx-auto bg-white text-zinc-900 shadow-xl border border-zinc-200 rounded-sm px-8 sm:px-12 py-8 sm:py-12 min-h-[1040px] flex flex-col justify-between"
         style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
       >
-        <div className="space-y-6">
+        <div className="space-y-5">
           {/* Classic Centered Formal Header */}
-          <header className="text-center pb-5 border-b border-zinc-300 space-y-1.5">
+          <header className="text-center pb-3.5 border-b border-zinc-300 space-y-1">
             <h1 className="text-2xl font-bold tracking-wide text-zinc-900 uppercase">
               {letter.senderName}
             </h1>
@@ -40,7 +40,7 @@ export default function CoverLetterDocumentPreview({
           </header>
 
           {/* Date & Recipient */}
-          <div className="space-y-4 text-[13px] leading-relaxed text-zinc-800">
+          <div className="space-y-3 text-[13px] leading-relaxed text-zinc-800">
             <p className="text-zinc-600">{dateLabel}</p>
             {letter.recipientLine && (
               <div className="font-medium text-zinc-900">
@@ -63,7 +63,7 @@ export default function CoverLetterDocumentPreview({
           </div>
 
           {/* Signature */}
-          <div className="pt-4 space-y-4 text-[13.5px] text-zinc-900">
+          <div className="pt-3 space-y-2 text-[13.5px] text-zinc-900">
             <p>{letter.signOff}</p>
             <p className="font-bold text-base tracking-wide">
               {letter.senderName}
@@ -82,12 +82,12 @@ export default function CoverLetterDocumentPreview({
         style={{ fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}
       >
         <div className="w-2.5 shrink-0" style={{ backgroundColor: accent }} />
-        <div className="flex-1 px-11 py-11 flex flex-col justify-between space-y-6">
-          <div className="space-y-7">
+        <div className="flex-1 px-7 sm:px-11 py-8 sm:py-11 flex flex-col justify-between space-y-6">
+          <div className="space-y-5">
             {/* Modern Header */}
-            <header className="space-y-2 pb-5 border-b border-zinc-200">
+            <header className="space-y-1.5 pb-3.5 border-b border-zinc-200">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h1 className="text-[26px] font-extrabold tracking-tight text-zinc-900">
+                <h1 className="text-[24px] sm:text-[26px] font-extrabold tracking-tight text-zinc-900">
                   {letter.senderName}
                 </h1>
                 <span
@@ -129,7 +129,7 @@ export default function CoverLetterDocumentPreview({
             </div>
 
             {/* Sign-off */}
-            <div className="pt-3 space-y-3 text-[13.5px]">
+            <div className="pt-3 space-y-2 text-[13.5px]">
               <p className="text-zinc-700">{letter.signOff}</p>
               <p className="font-bold text-[15px]" style={{ color: accent }}>
                 {letter.senderName}
@@ -145,25 +145,25 @@ export default function CoverLetterDocumentPreview({
   return (
     <div
       id="cover-letter-document-print"
-      className="w-full max-w-[794px] mx-auto bg-white text-zinc-900 shadow-xl border border-zinc-200 rounded-sm px-12 py-12 min-h-[1040px] flex flex-col justify-between"
+      className="w-full max-w-[794px] mx-auto bg-white text-zinc-900 shadow-xl border border-zinc-200 rounded-sm px-8 sm:px-12 py-8 sm:py-12 min-h-[1040px] flex flex-col justify-between"
       style={{ fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}
     >
-      <div className="space-y-7">
+      <div className="space-y-5">
         {/* Executive Split Header */}
         <header
-          className="pb-5 border-b-2 flex flex-wrap items-end justify-between gap-4"
+          className="pb-3.5 border-b-2 flex items-end justify-between gap-4"
           style={{ borderColor: accent }}
         >
-          <div className="space-y-1">
-            <h1 className="text-[26px] font-bold tracking-tight text-zinc-900">
+          <div className="space-y-0.5 min-w-0 flex-1 pr-2">
+            <h1 className="text-[24px] sm:text-[26px] font-bold tracking-tight text-zinc-900 leading-tight">
               {letter.senderName}
             </h1>
-            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: accent }}>
+            <p className="text-xs font-semibold uppercase tracking-wider leading-snug" style={{ color: accent }}>
               Candidate — {letter.targetRole}
             </p>
           </div>
           {contactItems.length > 0 && (
-            <div className="text-right text-[11.5px] text-zinc-600 space-y-0.5">
+            <div className="shrink-0 text-right text-[11.5px] text-zinc-600 space-y-0.5">
               {contactItems.map((item, idx) => (
                 <p key={idx}>{item}</p>
               ))}
@@ -172,7 +172,7 @@ export default function CoverLetterDocumentPreview({
         </header>
 
         {/* Date & Addressee */}
-        <div className="space-y-2 text-[13px] text-zinc-700">
+        <div className="space-y-1 text-[13px] text-zinc-700">
           <p className="text-xs text-zinc-500">{dateLabel}</p>
           <p className="font-semibold text-zinc-900">
             {letter.recipientLine || `${letter.companyName} Hiring Team`}
@@ -190,7 +190,7 @@ export default function CoverLetterDocumentPreview({
         </div>
 
         {/* Sign-off */}
-        <div className="pt-4 space-y-3 text-[13.5px] text-zinc-900">
+        <div className="pt-3 space-y-2 text-[13.5px] text-zinc-900">
           <p>{letter.signOff}</p>
           <p className="font-bold text-[15px]">{letter.senderName}</p>
         </div>

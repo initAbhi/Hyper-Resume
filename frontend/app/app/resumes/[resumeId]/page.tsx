@@ -110,6 +110,51 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
   const [showHighlights, setShowHighlights] = useState(true);
   const [pageSize, setPageSize] = useState<'A4' | 'US Letter'>('A4');
 
+  // Scaled True A4 Canvas Simulator State
+  const canvasContainerRef = useRef<HTMLDivElement | null>(null);
+  const [containerWidth, setContainerWidth] = useState<number | null>(null);
+  const [canvasHeight, setCanvasHeight] = useState<number | null>(null);
+  const [zoomMode, setZoomMode] = useState<'fit' | '75' | '100' | '125'>('fit');
+
+  useEffect(() => {
+    if (!resumePrintRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target === resumePrintRef.current) {
+          setCanvasHeight(entry.target.scrollHeight || entry.contentRect.height);
+        }
+      }
+    });
+    observer.observe(resumePrintRef.current);
+    return () => observer.disconnect();
+  }, [content, templateKey, pageSize]);
+
+  useEffect(() => {
+    if (!canvasContainerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target === canvasContainerRef.current) {
+          setContainerWidth(entry.contentRect.width);
+        }
+      }
+    });
+    observer.observe(canvasContainerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const targetA4Width = pageSize === 'US Letter' ? 816 : 794;
+  const fitScale = containerWidth
+    ? Math.min(1.0, Math.max(0.35, (containerWidth - 28) / targetA4Width))
+    : 0.85;
+  const effectiveScale =
+    zoomMode === 'fit'
+      ? fitScale
+      : zoomMode === '75'
+      ? 0.75
+      : zoomMode === '125'
+      ? 1.25
+      : 1.0;
+
   // Editor Navigation & Layout State
   const [activeSection, setActiveSection] = useState<EditorSection>('experience');
   const [mobileTab, setMobileTab] = useState<'editor' | 'preview' | 'ai'>('editor');
@@ -1998,20 +2043,111 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
         >
           {/* Document Canvas Preview Card */}
           <div className="p-4 sm:p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-[#F7F8FA] dark:bg-[#111317] print:p-0 print:border-none print:shadow-none print:bg-transparent">
-            <div className="print:hidden flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800 text-xs text-zinc-500 mb-4">
-              <div className="flex items-center gap-2">
+            <div className="print:hidden flex flex-wrap items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800 text-xs text-zinc-500 mb-4 gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="font-semibold text-zinc-800 dark:text-zinc-200">
                   ATS Document Canvas
                 </span>
                 <span className="text-[10px] text-zinc-400 font-mono hidden sm:inline">
-                  ({pageSize === 'A4' ? 'A4 Format' : 'US Letter (8.5" x 11")'})
+                  ({pageSize === 'A4' ? 'A4 210×297mm' : 'US Letter 8.5"×11"'})
                 </span>
+
+                {/* Quick Page Mode Toggle */}
+                <div className="flex items-center bg-zinc-200/70 dark:bg-zinc-800 p-0.5 rounded-lg text-[10px] ml-1">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleUpdateLayout({
+                        ...(content?.layout || {}),
+                        pageMode: 'single',
+                      })
+                    }
+                    className={`px-2 py-0.5 rounded-md font-medium transition-colors cursor-pointer ${
+                      content?.layout?.pageMode === 'single'
+                        ? 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 font-bold shadow-xs'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'
+                    }`}
+                    title="Fit entire resume on 1 A4 page (no empty gaps)"
+                  >
+                    1 Page
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleUpdateLayout({
+                        ...(content?.layout || {}),
+                        pageMode: 'auto',
+                      })
+                    }
+                    className={`px-2 py-0.5 rounded-md font-medium transition-colors cursor-pointer ${
+                      !content?.layout?.pageMode || content.layout.pageMode === 'auto'
+                        ? 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 font-bold shadow-xs'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'
+                    }`}
+                    title="Smart auto-fit based on content length"
+                  >
+                    Auto
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleUpdateLayout({
+                        ...(content?.layout || {}),
+                        pageMode: 'multi',
+                      })
+                    }
+                    className={`px-2 py-0.5 rounded-md font-medium transition-colors cursor-pointer ${
+                      content?.layout?.pageMode === 'multi'
+                        ? 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 font-bold shadow-xs'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'
+                    }`}
+                    title="Allow multi-page split"
+                  >
+                    2 Pages
+                  </button>
+                </div>
               </div>
+
               <div className="flex items-center gap-2">
+                {/* Zoom Controls */}
+                <div className="flex items-center bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg p-0.5 text-[11px] shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (zoomMode === '125') setZoomMode('100');
+                      else if (zoomMode === '100') setZoomMode('75');
+                      else setZoomMode('fit');
+                    }}
+                    className="w-5 h-5 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer"
+                    title="Zoom Out"
+                  >
+                    –
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setZoomMode(zoomMode === 'fit' ? '100' : 'fit')}
+                    className="px-1.5 py-0.5 font-mono text-[10px] text-zinc-700 dark:text-zinc-300 font-medium hover:text-blue-600 cursor-pointer"
+                    title="Toggle Fit / 100%"
+                  >
+                    {zoomMode === 'fit' ? `${Math.round(fitScale * 100)}% (Fit)` : `${zoomMode}%`}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (zoomMode === 'fit' || zoomMode === '75') setZoomMode('100');
+                      else if (zoomMode === '100') setZoomMode('125');
+                    }}
+                    className="w-5 h-5 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer"
+                    title="Zoom In"
+                  >
+                    +
+                  </button>
+                </div>
+
                 <button
                   type="button"
                   onClick={() => setIsTemplatePickerOpen(true)}
-                  className="font-medium text-[11px] bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2.5 py-1 rounded-md text-zinc-700 dark:text-zinc-300 hover:border-zinc-400 transition-colors flex items-center gap-1.5 shadow-2xs"
+                  className="font-medium text-[11px] bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2.5 py-1 rounded-md text-zinc-700 dark:text-zinc-300 hover:border-zinc-400 transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
                 >
                   <LayoutTemplate className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                   <span>Choose Template</span>
@@ -2019,23 +2155,46 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
               </div>
             </div>
 
-            {/* Scrollable Container on Mobile */}
-            <div className="overflow-x-auto pb-2 print:overflow-visible print:pb-0">
-              <div ref={resumePrintRef} id="resume-document-print" className="w-full">
-                {(() => {
-                  const TemplateComponent = getTemplateComponent(templateKey);
-                  return (
-                    <TemplateComponent
-                      content={content}
-                      accentColor={accentColor}
-                      fontFamily={fontFamily}
-                      showPhoto={showPhoto}
-                      photoUrl={photoUrl}
-                      highlightKeywords={activeJobKeywords.length > 0 ? activeJobKeywords : undefined}
-                      showHighlights={isExportModalOpen ? false : showHighlights}
-                    />
-                  );
-                })()}
+            {/* Scaled A4 True-Canvas Container */}
+            <div
+              ref={canvasContainerRef}
+              className="w-full flex justify-center overflow-x-auto overflow-y-visible py-2 print:overflow-visible print:p-0 print:block no-scrollbar"
+            >
+              <div
+                style={{
+                  width: `${targetA4Width}px`,
+                  transform: `scale(${effectiveScale})`,
+                  transformOrigin: 'top center',
+                  height: canvasHeight ? `${Math.ceil(canvasHeight * effectiveScale)}px` : undefined,
+                  marginBottom:
+                    effectiveScale < 1 && canvasHeight
+                      ? `-${Math.ceil(canvasHeight * (1 - effectiveScale))}px`
+                      : undefined,
+                  transition: 'transform 0.12s ease-out',
+                }}
+                className="print:transform-none print:w-full print:h-auto print:m-0 shrink-0"
+              >
+                <div
+                  ref={resumePrintRef}
+                  id="resume-document-print"
+                  style={{ width: `${targetA4Width}px` }}
+                  className="w-full print:w-full print:max-w-full"
+                >
+                  {(() => {
+                    const TemplateComponent = getTemplateComponent(templateKey);
+                    return (
+                      <TemplateComponent
+                        content={content}
+                        accentColor={accentColor}
+                        fontFamily={fontFamily}
+                        showPhoto={showPhoto}
+                        photoUrl={photoUrl}
+                        highlightKeywords={activeJobKeywords.length > 0 ? activeJobKeywords : undefined}
+                        showHighlights={isExportModalOpen ? false : showHighlights}
+                      />
+                    );
+                  })()}
+                </div>
               </div>
             </div>
           </div>
@@ -2471,6 +2630,11 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
         }}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
+        content={content}
+        accentColor={accentColor}
+        fontFamily={fontFamily}
+        showPhoto={showPhoto}
+        photoUrl={photoUrl}
       />
 
       {/* Design, Typography & Spacing Panel */}

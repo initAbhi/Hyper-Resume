@@ -8,6 +8,7 @@ import {
   SAMPLE_COUNTRIES,
   SAMPLE_STYLES,
   SampleResume,
+  getSampleTemplateKey,
 } from '@/data/sample-resumes';
 import { SampleResumeCard } from './SampleResumeCard';
 import { SampleResumeModal } from './SampleResumeModal';
@@ -43,6 +44,9 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
   const [previewResume, setPreviewResume] = useState<SampleResume | null>(null);
   const [adaptingSample, setAdaptingSample] = useState<SampleResume | null>(null);
   const [activeAdaptation, setActiveAdaptation] = useState<any>(null);
+  const [activeAdaptationSample, setActiveAdaptationSample] = useState<SampleResume | null>(null);
+  const [cloningResumeId, setCloningResumeId] = useState<string | null>(null);
+  const [libraryError, setLibraryError] = useState<string | null>(null);
 
   const hasActiveFilters =
     selectedCategory !== 'ALL' ||
@@ -113,6 +117,7 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
   }, [selectedCategory, selectedExperience, selectedCountry, selectedStyle, searchQuery]);
 
   const handleUseTemplateDirect = async (resume: SampleResume) => {
+    const templateKey = getSampleTemplateKey(resume);
     const resumeContent: ResumeContent = {
       contact: {
         fullName: user?.fullName || resume.candidate.name,
@@ -155,6 +160,13 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
         name: cert,
         issuer: resume.company,
       })),
+      layout: {
+        accentColor: resume.brandColor || '#285FEA',
+        fontFamily: templateKey === 'ivy-league' ? 'serif' : 'sans',
+        pageMargin: 16,
+        fontSizeScale: 1,
+        lineHeight: 1.4,
+      },
     };
 
     if (!isAuthenticated) {
@@ -165,6 +177,7 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
             title: `${resume.company} - ${resume.role}`,
             targetRole: resume.role,
             targetCompany: resume.company,
+            templateKey,
             content: resumeContent,
           })
         );
@@ -173,16 +186,24 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
       return;
     }
 
+    setCloningResumeId(resume.id);
+    setLibraryError(null);
+
     try {
       const created = await apiClient.createResume({
         name: `${resume.company} - ${resume.role}`,
         targetRole: resume.role,
         targetCompany: resume.company,
+        templateKey,
         content: resumeContent,
       });
 
       router.push(`/app/resumes/${created.id}`);
-    } catch (err) {
+    } catch (err: unknown) {
+      setCloningResumeId(null);
+      setLibraryError(
+        err instanceof Error ? err.message : 'Could not clone template directly. Opening preview...'
+      );
       // Fallback: open modal preview
       setPreviewResume(resume);
     }
@@ -318,6 +339,7 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
             <SampleResumeCard
               key={resume.id}
               resume={resume}
+              isCloning={cloningResumeId === resume.id}
               onPreview={(item) => setPreviewResume(item)}
               onUseTemplate={(item) => handleUseTemplateDirect(item)}
               onAdapt={(item) => setAdaptingSample(item)}
@@ -362,6 +384,7 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
         isOpen={!!adaptingSample}
         onClose={() => setAdaptingSample(null)}
         onAdaptationStarted={(adaptationData) => {
+          setActiveAdaptationSample(adaptingSample);
           setAdaptingSample(null);
           setActiveAdaptation(adaptationData);
         }}
@@ -370,8 +393,12 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
       {/* Before / After Selective Adaptation Comparison Modal */}
       <AdaptationComparisonModal
         adaptation={activeAdaptation}
+        sampleResume={activeAdaptationSample}
         isOpen={!!activeAdaptation}
-        onClose={() => setActiveAdaptation(null)}
+        onClose={() => {
+          setActiveAdaptation(null);
+          setActiveAdaptationSample(null);
+        }}
       />
     </div>
   );

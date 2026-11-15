@@ -368,6 +368,7 @@ export function validateAndReconstructAdaptation(
     summary: adaptedSummary,
     experience: validatedExperience,
     projects: validatedProjects,
+    ...(benchmark.layout || source.layout ? { layout: benchmark.layout || source.layout } : {}),
   };
 
   const sectionChanges: SectionChanges = {

@@ -85,6 +85,7 @@ export interface SampleResume {
   country: string;
   resumeStyle: ResumeStyle;
   isIllustrative: boolean;
+  templateKey?: string;
   candidate: {
     name: string;
     title: string;
@@ -101,6 +102,47 @@ export interface SampleResume {
   education: ResumeEducation[];
   projects?: ResumeProject[];
   certifications?: string[];
+}
+
+/**
+ * Resolves the real template key (Double Column, Sidebar, Ivy League, Modern Tech, etc.)
+ * matching the visual layout and company profile of a benchmark sample resume.
+ */
+export function getSampleTemplateKey(resume: { companyKey?: string; resumeStyle?: string; templateKey?: string }): string {
+  if (resume.templateKey) return resume.templateKey;
+
+  const key = (resume.companyKey || '').toLowerCase();
+
+  // Signature modern split & creative two-column
+  if (['spotify', 'airbnb', 'figma', 'bytedance', 'uber', 'apple', 'pinterest', 'snapchat', 'discord', 'roblox', 'twitter', 'x'].includes(key)) {
+    return 'double-column';
+  }
+
+  // Signature navy accent left sidebar (Kickresume / Enhancv elegant style)
+  if (['netflix', 'stripe', 'sony', 'disney', 'tesla', 'coinbase', 'databricks', 'openai', 'anthropic', 'nvidia'].includes(key)) {
+    return 'sidebar';
+  }
+
+  // Ivy League serif (Harvard / Yale academic & leadership style)
+  if (['goldman', 'citadel', 'deloitte', 'accenture', 'chime', 'mckinsey', 'bcg', 'bain', 'jpmorgan', 'morgan_stanley', 'blackrock'].includes(key)) {
+    return 'ivy-league';
+  }
+
+  // Resume style mapping
+  if (resume.resumeStyle === 'Modern Technical') {
+    return 'clean-modern';
+  }
+  if (resume.resumeStyle === 'Executive Clean') {
+    return 'executive';
+  }
+  if (resume.resumeStyle === 'Compact Single-Column') {
+    return 'jake-ats';
+  }
+  if (resume.resumeStyle === 'ATS Classic') {
+    return 'classic-ats';
+  }
+
+  return 'classic-ats';
 }
 
 export const SAMPLE_CATEGORIES = [

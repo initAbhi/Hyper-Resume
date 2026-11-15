@@ -15,6 +15,11 @@ export class ApplyAdaptationDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
+  templateKey?: string;
+
+  @IsOptional()
+  @IsString()
   summaryDecision?: 'accept' | 'reject';
 
   @IsOptional()

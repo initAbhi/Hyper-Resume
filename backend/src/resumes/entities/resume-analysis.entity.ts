@@ -38,6 +38,9 @@ export interface AtsStackAlignment {
   totalSkills: number;
   corroboratedSkills: string[];
   unreferencedSkills: string[];
+  unlistedSkills?: string[];
+  hardSkills?: string[];
+  softSkills?: string[];
 }
 
 export interface AtsBulletQualityItem {
@@ -49,6 +52,112 @@ export interface AtsBulletQualityItem {
   hasMetric: boolean;
   lengthStatus?: 'short' | 'ideal' | 'long';
   feedback: string;
+  xyzFormulaMet?: boolean;
+  actionVerbCategory?: string;
+  suggestedRewrite?: string;
+}
+
+export interface AtsParsedPreview {
+  contact: {
+    fullName?: string;
+    email?: string;
+    phone?: string;
+    location?: string;
+    linkedinUrl?: string;
+    githubUrl?: string;
+    websiteUrl?: string;
+  };
+  headline?: string;
+  summary?: string;
+  experience: Array<{
+    company: string;
+    title: string;
+    location?: string;
+    startDate?: string;
+    endDate?: string;
+    current?: boolean;
+    durationText?: string;
+    bulletCount: number;
+  }>;
+  education: Array<{
+    school: string;
+    degree?: string;
+    field?: string;
+    graduationDate?: string;
+  }>;
+  skillsByCategory: {
+    hardSkills: string[];
+    softSkills: string[];
+    toolsAndCloud: string[];
+    other: string[];
+  };
+  projects: Array<{
+    name: string;
+    techStack?: string[];
+    highlightsCount: number;
+  }>;
+  rawNormalizedText: string;
+}
+
+export interface AtsJobDescriptionMatch {
+  matchRate: number;
+  matchedKeywords: Array<{
+    keyword: string;
+    category: 'hard_skill' | 'soft_skill' | 'tool' | 'domain';
+    resumeCount: number;
+    jdImportance: 'critical' | 'high' | 'medium';
+  }>;
+  missingKeywords: Array<{
+    keyword: string;
+    category: 'hard_skill' | 'soft_skill' | 'tool' | 'domain';
+    jdImportance: 'critical' | 'high' | 'medium';
+    recommendation: string;
+  }>;
+  keywordStuffingAlerts: Array<{
+    keyword: string;
+    count: number;
+    warning: string;
+  }>;
+  recruiterSearchSimulation: {
+    passedQueries: string[];
+    failedQueries: string[];
+    readinessSummary: string;
+  };
+}
+
+export interface AtsSystemSimulations {
+  workdayReadiness: {
+    status: 'pass' | 'warning' | 'fail';
+    score: number;
+    notes: string[];
+  };
+  taleoReadiness: {
+    status: 'pass' | 'warning' | 'fail';
+    score: number;
+    notes: string[];
+  };
+  greenhouseReadiness: {
+    status: 'pass' | 'warning' | 'fail';
+    score: number;
+    notes: string[];
+  };
+}
+
+export interface AtsActionVerbAnalysis {
+  totalVerbs: number;
+  distinctVerbs: number;
+  repeatedVerbs: Array<{
+    verb: string;
+    count: number;
+    suggestedAlternatives: string[];
+  }>;
+  verbsByCategory: {
+    leadership: string[];
+    engineering: string[];
+    optimization: string[];
+    innovation: string[];
+    execution: string[];
+  };
 }
 
 export interface ResumeAuditFindings {
@@ -65,6 +174,13 @@ export interface ResumeAuditFindings {
   parserRisks?: AtsParserRisk[];
   stackAlignment?: AtsStackAlignment;
   bulletQuality: AtsBulletQualityItem[];
+  xyzFormulaBulletsCount?: number;
+  repeatedVerbsCount?: number;
+  pronounsCount?: number;
+  parsedPreview?: AtsParsedPreview;
+  jobDescriptionMatch?: AtsJobDescriptionMatch;
+  atsSystemSimulations?: AtsSystemSimulations;
+  actionVerbAnalysis?: AtsActionVerbAnalysis;
   writingQuality?: {
     score: number;
     issueCount: number;

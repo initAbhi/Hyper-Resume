@@ -369,7 +369,7 @@ export function SectionRewriterDialog({
           <span className="font-bold uppercase tracking-wider text-[10.5px] text-zinc-500 dark:text-zinc-400">
             Select Rewrite Style
           </span>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
             {TONE_OPTIONS.map((opt, idx) => {
               const selected = tone === opt.value;
               return (
@@ -403,7 +403,7 @@ export function SectionRewriterDialog({
           >
             Optional Guidance (Target Focus or Emphasis)
           </label>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <input
               id="section-rewrite-direction"
               type="text"
@@ -419,7 +419,7 @@ export function SectionRewriterDialog({
               data-testid="generate-section-rewrite-btn"
               onClick={handleGenerate}
               disabled={isLoading}
-              className="gap-1.5 shrink-0 h-9 px-4"
+              className="gap-1.5 shrink-0 h-9 px-4 font-semibold"
             >
               {isLoading ? (
                 <>
@@ -429,7 +429,8 @@ export function SectionRewriterDialog({
               ) : (
                 <>
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>{result ? 'Regenerate' : 'Generate Rewrite'}</span>
+                  <span className="hidden sm:inline">{result ? 'Regenerate' : 'Generate Rewrite'}</span>
+                  <span className="sm:hidden">{result ? 'Regenerate' : 'Rewrite'}</span>
                 </>
               )}
             </Button>
@@ -576,9 +577,9 @@ export function SectionRewriterDialog({
       {/* Footer */}
       <form
         method="dialog"
-        className="px-6 py-3.5 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 flex items-center justify-end gap-2 shrink-0"
+        className="px-4 sm:px-6 py-3.5 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 flex items-center justify-end gap-2.5 shrink-0"
       >
-        <Button type="submit" variant="outline" size="sm">
+        <Button type="submit" variant="outline" size="sm" className="px-4">
           Cancel
         </Button>
         <Button
@@ -588,7 +589,7 @@ export function SectionRewriterDialog({
           data-testid="apply-section-rewrite-btn"
           disabled={!result || isLoading}
           onClick={handleApplyRewrite}
-          className="gap-1.5"
+          className="gap-1.5 px-4 font-semibold"
         >
           <Check className="w-3.5 h-3.5" />
           <span>Apply to Section</span>

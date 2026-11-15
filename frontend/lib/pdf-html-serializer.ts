@@ -36,6 +36,7 @@ export function serializeCleanResumeHtml(
 
   const clone = container.cloneNode(true) as HTMLElement;
   clone.classList.add('pdf-export-mode');
+  clone.style.transform = 'none';
 
   clone
     .querySelectorAll('.print\\:hidden, [data-export-exclude="true"]')

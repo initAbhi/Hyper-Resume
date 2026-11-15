@@ -1,10 +1,21 @@
 'use client';
 
-import React, { useId } from 'react';
+import React, { useState, useId } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
+  Briefcase,
+  GraduationCap,
+  Sparkles,
+  Search,
+  Code2,
+  FileText,
+  Building2,
+  Flame,
+  Layers,
+  ArrowRight,
+  Info,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { ResumeAuditFindings } from '@/lib/api-client';
@@ -41,17 +52,32 @@ export function AtsAuditBreakdown({
   onOpenFixMistakes,
 }: AtsAuditBreakdownProps) {
   const uid = useId();
+  const [activeTab, setActiveTab] = useState<'overview' | 'job_match' | 'bullets' | 'skills' | 'parsed_preview'>(
+    'overview',
+  );
+  const [bulletFilter, setBulletFilter] = useState<'all' | 'needs_work' | 'xyz_met'>('all');
+
   const dimensions = findings.dimensions || [];
   const parserRisks = findings.parserRisks || [];
   const bullets = findings.bulletQuality || [];
   const stackAlignment = findings.stackAlignment;
   const alertRisks = parserRisks.filter((r) => r.severity !== 'pass');
+  const jdMatch = findings.jobDescriptionMatch;
+  const atsSim = findings.atsSystemSimulations;
+  const parsedPreview = findings.parsedPreview;
+  const verbAnalysis = findings.actionVerbAnalysis;
+
+  const filteredBullets = bullets.filter((b) => {
+    if (bulletFilter === 'needs_work') return !b.hasActionVerb || !b.hasMetric || b.lengthStatus !== 'ideal';
+    if (bulletFilter === 'xyz_met') return b.xyzFormulaMet;
+    return true;
+  });
 
   return (
-    <div className="space-y-3" data-testid="ats-audit-breakdown">
+    <div className="space-y-4" data-testid="ats-audit-breakdown">
       {/* Optional Progress Ring Summary */}
       {showScoreRing && typeof score === 'number' && (
-        <div className="flex items-center gap-4 p-3 rounded-xl bg-zinc-50/80 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/70">
+        <div className="flex items-center gap-4 p-3.5 rounded-xl bg-zinc-50/80 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/70 shadow-sm">
           <div className="hr-progress-ring-wrapper shrink-0">
             <progress
               value={score}
@@ -94,128 +120,253 @@ export function AtsAuditBreakdown({
               >
                 5-Dimension Audit
               </Badge>
+              {jdMatch && (
+                <Badge variant="info" className="text-[10px]">
+                  Jobscan Match: {jdMatch.matchRate}%
+                </Badge>
+              )}
             </div>
             <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              Weighted across formatting, quantified metrics, action verbs, stack proof, and brevity.
+              Tested against Workday, Taleo &amp; Greenhouse parsing algorithms and recruiter search heuristics.
             </p>
           </div>
         </div>
       )}
 
-      {/* Quick Counters */}
-      <div className={`grid ${compact ? 'grid-cols-2' : 'grid-cols-3'} gap-2 text-center text-xs`}>
-        <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60">
-          <div className="text-base sm:text-lg font-bold font-mono text-zinc-900 dark:text-zinc-100">
-            {findings.metricsCount}
-          </div>
-          <div className="text-[10px] text-zinc-500 font-medium">Quantified Metrics</div>
-        </div>
-        <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60">
-          <div className="text-base sm:text-lg font-bold font-mono text-zinc-900 dark:text-zinc-100">
-            {findings.actionVerbsCount}
-          </div>
-          <div className="text-[10px] text-zinc-500 font-medium">Action Verbs</div>
-        </div>
-        {!compact && (
-          <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60">
-            <div className="text-base sm:text-lg font-bold font-mono text-zinc-900 dark:text-zinc-100">
-              {findings.wordCount ?? '—'}
-            </div>
-            <div className="text-[10px] text-zinc-500 font-medium">Word Count</div>
-          </div>
+      {/* Navigation Tabs */}
+      <div className="flex items-center gap-1.5 p-1 bg-zinc-100 dark:bg-zinc-800/60 rounded-lg overflow-x-auto text-xs font-medium text-zinc-600 dark:text-zinc-300">
+        <button
+          type="button"
+          onClick={() => setActiveTab('overview')}
+          className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap ${
+            activeTab === 'overview'
+              ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-sm font-semibold'
+              : 'hover:text-zinc-900 dark:hover:text-zinc-100'
+          }`}
+        >
+          Overview &amp; Scorecard
+        </button>
+
+        {jdMatch && (
+          <button
+            type="button"
+            onClick={() => setActiveTab('job_match')}
+            className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === 'job_match'
+                ? 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 shadow-sm font-semibold'
+                : 'hover:text-zinc-900 dark:hover:text-zinc-100'
+            }`}
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span>Job Match ({jdMatch.matchRate}%)</span>
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('bullets')}
+          className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+            activeTab === 'bullets'
+              ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-sm font-semibold'
+              : 'hover:text-zinc-900 dark:hover:text-zinc-100'
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Bullets ({bullets.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('skills')}
+          className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+            activeTab === 'skills'
+              ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-sm font-semibold'
+              : 'hover:text-zinc-900 dark:hover:text-zinc-100'
+          }`}
+        >
+          <Code2 className="w-3.5 h-3.5" />
+          <span>Skills &amp; Evidence</span>
+        </button>
+
+        {parsedPreview && (
+          <button
+            type="button"
+            onClick={() => setActiveTab('parsed_preview')}
+            className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === 'parsed_preview'
+                ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-sm font-semibold'
+                : 'hover:text-zinc-900 dark:hover:text-zinc-100'
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>ATS Parsed View</span>
+          </button>
         )}
       </div>
 
-      {/* Writing & Grammar Row */}
-      {findings.writingQuality && (
-        <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60 flex items-center justify-between text-xs">
-          <span className="text-zinc-600 dark:text-zinc-300 font-medium">
-            Writing &amp; Grammar Health
-          </span>
-          {onOpenFixMistakes ? (
-            <button
-              type="button"
-              onClick={onOpenFixMistakes}
-              className="font-mono font-bold text-blue-600 dark:text-blue-400 hover:underline"
-            >
-              {findings.writingQuality.score}/100 ({findings.writingQuality.issueCount} flags)
-            </button>
-          ) : (
-            <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100">
-              {findings.writingQuality.score}/100 ({findings.writingQuality.issueCount} flags)
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* 5-Dimension Weighted ATS Scorecard */}
-      {dimensions.length > 0 && (
-        <div
-          className="space-y-2.5 p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70"
-          data-testid="ats-five-dimension-scorecard"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
-              5-Dimension Breakdown
-            </span>
-            <span className="text-[10px] font-mono text-zinc-400">100% Weighted</span>
+      {/* Tab 1: Overview & Scorecard */}
+      {activeTab === 'overview' && (
+        <div className="space-y-3">
+          {/* Quick Stats Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+            <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60">
+              <div className="text-base sm:text-lg font-bold font-mono text-zinc-900 dark:text-zinc-100">
+                {findings.metricsCount}
+              </div>
+              <div className="text-[10px] text-zinc-500 font-medium">Quantified Metrics</div>
+            </div>
+            <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60">
+              <div className="text-base sm:text-lg font-bold font-mono text-zinc-900 dark:text-zinc-100">
+                {findings.actionVerbsCount}
+              </div>
+              <div className="text-[10px] text-zinc-500 font-medium">Action Verbs</div>
+            </div>
+            <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60">
+              <div className="text-base sm:text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                {findings.xyzFormulaBulletsCount ?? 0}
+              </div>
+              <div className="text-[10px] text-zinc-500 font-medium">Google XYZ Bullets</div>
+            </div>
+            <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60">
+              <div className="text-base sm:text-lg font-bold font-mono text-zinc-900 dark:text-zinc-100">
+                {findings.wordCount ?? '—'}
+              </div>
+              <div className="text-[10px] text-zinc-500 font-medium">Word Count</div>
+            </div>
           </div>
 
-          <div className="space-y-2.5">
-            {dimensions.map((dim) => {
-              const progressId = `${uid}-dim-${dim.key}`;
-              const fillColor = getScoreStrokeColor(dim.score);
-              return (
-                <div key={dim.key} className="space-y-1">
-                  <div className="flex items-center justify-between gap-2 text-xs">
-                    <label
-                      htmlFor={progressId}
-                      className="font-medium text-zinc-800 dark:text-zinc-200 truncate"
-                    >
-                      {dim.label}{' '}
-                      <span className="text-[10px] text-zinc-400 font-normal">
-                        ({dim.weight}%)
-                      </span>
-                    </label>
-                    <Badge
-                      variant={getStatusBadgeVariant(dim.status)}
-                      className="text-[10px] font-mono shrink-0"
-                    >
-                      {dim.score}/100
+          {/* ATS Enterprise Platform Simulations (Workday, Taleo, Greenhouse) */}
+          {atsSim && (
+            <div className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Enterprise ATS Platform Simulation</span>
+                </span>
+                <span className="text-[10px] font-mono text-zinc-400">Workday · Taleo · Greenhouse</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700/60 text-xs space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-zinc-800 dark:text-zinc-200">Workday</span>
+                    <Badge variant={atsSim.workdayReadiness.status === 'pass' ? 'success' : atsSim.workdayReadiness.status === 'warning' ? 'warning' : 'destructive'} className="text-[10px]">
+                      {atsSim.workdayReadiness.score}/100
                     </Badge>
                   </div>
-                  <progress
-                    id={progressId}
-                    value={dim.score}
-                    max={100}
-                    className="hr-score-progress"
-                    style={{ '--progress-bar-fill': fillColor } as React.CSSProperties}
-                  />
                   <p className="text-[10.5px] text-zinc-500 dark:text-zinc-400 leading-snug">
-                    {dim.summary}
+                    {atsSim.workdayReadiness.notes[0]}
                   </p>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
-      {/* Expandable Parser Risks, Bullet Audit & Stack Proof Accordions */}
-      {(parserRisks.length > 0 || bullets.length > 0 || (stackAlignment && stackAlignment.totalSkills > 0)) && (
-        <section
-          className="hr-accordion space-y-2"
-          aria-label="Detailed ATS Diagnostics"
-          data-testid="ats-diagnostics-accordion"
-        >
-          {parserRisks.length > 0 && (
-            <details
-              open={alertRisks.length > 0 || !compact}
-              className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 px-3 py-2"
-              data-testid="ats-parser-risks-details"
+                <div className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700/60 text-xs space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-zinc-800 dark:text-zinc-200">Oracle Taleo</span>
+                    <Badge variant={atsSim.taleoReadiness.status === 'pass' ? 'success' : atsSim.taleoReadiness.status === 'warning' ? 'warning' : 'destructive'} className="text-[10px]">
+                      {atsSim.taleoReadiness.score}/100
+                    </Badge>
+                  </div>
+                  <p className="text-[10.5px] text-zinc-500 dark:text-zinc-400 leading-snug">
+                    {atsSim.taleoReadiness.notes[0]}
+                  </p>
+                </div>
+
+                <div className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700/60 text-xs space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-zinc-800 dark:text-zinc-200">Greenhouse / Lever</span>
+                    <Badge variant={atsSim.greenhouseReadiness.status === 'pass' ? 'success' : atsSim.greenhouseReadiness.status === 'warning' ? 'warning' : 'destructive'} className="text-[10px]">
+                      {atsSim.greenhouseReadiness.score}/100
+                    </Badge>
+                  </div>
+                  <p className="text-[10.5px] text-zinc-500 dark:text-zinc-400 leading-snug">
+                    {atsSim.greenhouseReadiness.notes[0]}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Writing & Grammar Row */}
+          {findings.writingQuality && (
+            <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60 flex items-center justify-between text-xs">
+              <span className="text-zinc-600 dark:text-zinc-300 font-medium">
+                Writing, Grammar &amp; Pronoun Health
+              </span>
+              {onOpenFixMistakes ? (
+                <button
+                  type="button"
+                  onClick={onOpenFixMistakes}
+                  className="font-mono font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  {findings.writingQuality.score}/100 ({findings.writingQuality.issueCount} flags)
+                </button>
+              ) : (
+                <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                  {findings.writingQuality.score}/100 ({findings.writingQuality.issueCount} flags)
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* 5-Dimension Weighted ATS Scorecard */}
+          {dimensions.length > 0 && (
+            <div
+              className="space-y-2.5 p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70"
+              data-testid="ats-five-dimension-scorecard"
             >
-              <summary className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 py-1 select-none justify-between">
-                <span>Parser Risks &amp; Extractability</span>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+                  5-Dimension ATS Breakdown
+                </span>
+                <span className="text-[10px] font-mono text-zinc-400">100% Weighted</span>
+              </div>
+
+              <div className="space-y-2.5">
+                {dimensions.map((dim) => {
+                  const progressId = `${uid}-dim-${dim.key}`;
+                  const fillColor = getScoreStrokeColor(dim.score);
+                  return (
+                    <div key={dim.key} className="space-y-1">
+                      <div className="flex items-center justify-between gap-2 text-xs">
+                        <label
+                          htmlFor={progressId}
+                          className="font-medium text-zinc-800 dark:text-zinc-200 truncate"
+                        >
+                          {dim.label}{' '}
+                          <span className="text-[10px] text-zinc-400 font-normal">
+                            ({dim.weight}%)
+                          </span>
+                        </label>
+                        <Badge
+                          variant={getStatusBadgeVariant(dim.status)}
+                          className="text-[10px] font-mono shrink-0"
+                        >
+                          {dim.score}/100
+                        </Badge>
+                      </div>
+                      <progress
+                        id={progressId}
+                        value={dim.score}
+                        max={100}
+                        className="hr-score-progress"
+                        style={{ '--progress-bar-fill': fillColor } as React.CSSProperties}
+                      />
+                      <p className="text-[10.5px] text-zinc-500 dark:text-zinc-400 leading-snug">
+                        {dim.summary}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Parser Risks */}
+          {parserRisks.length > 0 && (
+            <div className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+                  Parser Risks &amp; Formatting Alerts
+                </span>
                 <Badge
                   variant={
                     parserRisks.some((r) => r.severity === 'critical')
@@ -224,12 +375,12 @@ export function AtsAuditBreakdown({
                         ? 'warning'
                         : 'success'
                   }
-                  className="ml-auto text-[10px]"
+                  className="text-[10px]"
                 >
                   {alertRisks.length > 0 ? `${alertRisks.length} alert(s)` : 'All Clear'}
                 </Badge>
-              </summary>
-              <div className="pt-2 space-y-1.5">
+              </div>
+              <div className="space-y-1.5">
                 {parserRisks.map((risk) => (
                   <div
                     key={risk.id}
@@ -259,122 +410,383 @@ export function AtsAuditBreakdown({
                   </div>
                 ))}
               </div>
-            </details>
+            </div>
           )}
 
-          {bullets.length > 0 && (
-            <details
-              className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 px-3 py-2"
-              data-testid="ats-bullet-drilldown-details"
-            >
-              <summary className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 py-1 select-none justify-between">
-                <span>Per-Bullet Quality Audit ({bullets.length})</span>
-                <Badge variant="neutral" className="ml-auto text-[10px]">
-                  {findings.idealBulletCount ?? bullets.length} balanced
-                </Badge>
-              </summary>
-              <div className="pt-2 space-y-2 max-h-64 overflow-y-auto pr-1">
-                {bullets.map((b, idx) => (
-                  <div
-                    key={idx}
-                    className="p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900 text-[11px] space-y-1.5"
+          {/* Actionable Recommendations */}
+          {recommendations.length > 0 && (
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+                Targeted ATS Improvements
+              </span>
+              <ul className="space-y-1.5 text-xs">
+                {recommendations.map((rec, rIdx) => (
+                  <li
+                    key={rIdx}
+                    className="p-2.5 rounded-lg bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 text-amber-900 dark:text-amber-200 text-[11px] leading-relaxed"
                   >
-                    <p className="text-zinc-800 dark:text-zinc-200 leading-snug line-clamp-2">
-                      {b.bullet}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-1">
-                      <Badge variant={b.hasActionVerb ? 'success' : 'warning'} className="text-[9.5px]">
-                        {b.hasActionVerb ? 'Verb ✓' : 'Weak Verb'}
-                      </Badge>
-                      <Badge variant={b.hasMetric ? 'success' : 'warning'} className="text-[9.5px]">
-                        {b.hasMetric ? 'Metric ✓' : 'No Metric'}
-                      </Badge>
-                      {typeof b.wordCount === 'number' && (
-                        <Badge
-                          variant={b.lengthStatus === 'ideal' ? 'info' : 'warning'}
-                          className="text-[9.5px] font-mono"
-                        >
-                          {b.wordCount}w
+                    {rec}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab 2: Job Match (Jobscan Simulation) */}
+      {activeTab === 'job_match' && jdMatch && (
+        <div className="space-y-3" data-testid="job-match-tab">
+          <div className="p-3.5 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/40 dark:bg-blue-950/20 flex items-center justify-between">
+            <div>
+              <div className="text-xs uppercase font-semibold text-blue-600 dark:text-blue-400">
+                Jobscan Match Rate
+              </div>
+              <div className="text-2xl font-black text-zinc-900 dark:text-zinc-50">
+                {jdMatch.matchRate}%
+              </div>
+            </div>
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-xs text-right">
+              {jdMatch.recruiterSearchSimulation.readinessSummary}
+            </p>
+          </div>
+
+          {/* Recruiter Boolean Search Simulation */}
+          <div className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 space-y-2">
+            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+              Recruiter Boolean Search Test
+            </span>
+            <p className="text-xs text-zinc-600 dark:text-zinc-400">
+              When recruiters type targeted keyword queries in Workday/Taleo, does your resume surface?
+            </p>
+            <div className="space-y-1.5 text-xs font-mono">
+              {jdMatch.recruiterSearchSimulation.passedQueries.map((q, idx) => (
+                <div key={idx} className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-200 flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>Matches: {q}</span>
+                </div>
+              ))}
+              {jdMatch.recruiterSearchSimulation.failedQueries.map((q, idx) => (
+                <div key={idx} className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-200 flex items-center gap-2">
+                  <XCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                  <span>Missing from: {q}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Missing Keywords (Critical Fixes) */}
+          {jdMatch.missingKeywords.length > 0 && (
+            <div className="p-3 rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50/40 dark:bg-amber-950/20 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
+                  Missing Keywords from Job Description ({jdMatch.missingKeywords.length})
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {jdMatch.missingKeywords.map((k) => (
+                  <div key={k.keyword} className="p-2 rounded-lg bg-white dark:bg-zinc-900 border border-amber-200 dark:border-amber-900/60 text-xs flex items-start justify-between gap-2">
+                    <div>
+                      <div className="font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                        <span>{k.keyword}</span>
+                        <Badge variant={k.jdImportance === 'critical' ? 'destructive' : 'warning'} className="text-[9px]">
+                          {k.jdImportance}
                         </Badge>
-                      )}
+                      </div>
+                      <p className="text-[11px] text-zinc-600 dark:text-zinc-400 mt-0.5">{k.recommendation}</p>
                     </div>
-                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400">{b.feedback}</p>
                   </div>
                 ))}
               </div>
-            </details>
+            </div>
           )}
 
-          {stackAlignment && stackAlignment.totalSkills > 0 && (
-            <details
-              className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 px-3 py-2"
-              data-testid="ats-stack-alignment-details"
-            >
-              <summary className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 py-1 select-none justify-between">
-                <span>Stack &amp; Evidence Proof</span>
-                <Badge
-                  variant={
-                    stackAlignment.unreferencedSkills.length === 0 ? 'success' : 'warning'
-                  }
-                  className="ml-auto text-[10px] font-mono"
-                >
-                  {stackAlignment.corroboratedSkills.length}/{stackAlignment.totalSkills} proved
-                </Badge>
-              </summary>
-              <div className="pt-2 space-y-2 text-[11px]">
-                {stackAlignment.corroboratedSkills.length > 0 && (
-                  <div>
-                    <div className="text-[10px] uppercase font-semibold text-emerald-700 dark:text-emerald-300 mb-1">
-                      Evidenced in Bullets ({stackAlignment.corroboratedSkills.length})
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {stackAlignment.corroboratedSkills.map((skill) => (
-                        <Badge key={skill} variant="success" className="text-[10px]">
-                          {skill}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {stackAlignment.unreferencedSkills.length > 0 && (
-                  <div>
-                    <div className="text-[10px] uppercase font-semibold text-amber-700 dark:text-amber-300 mb-1">
-                      Listed Without Bullet Evidence ({stackAlignment.unreferencedSkills.length})
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {stackAlignment.unreferencedSkills.map((skill) => (
-                        <Badge key={skill} variant="warning" className="text-[10px]">
-                          {skill}
-                        </Badge>
-                      ))}
-                    </div>
+          {/* Matched Keywords */}
+          {jdMatch.matchedKeywords.length > 0 && (
+            <div className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 space-y-2">
+              <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+                Matched Keywords ({jdMatch.matchedKeywords.length})
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {jdMatch.matchedKeywords.map((k) => (
+                  <Badge key={k.keyword} variant="success" className="text-xs py-1 px-2">
+                    {k.keyword} ({k.resumeCount}x)
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Keyword Stuffing Warnings */}
+          {jdMatch.keywordStuffingAlerts.length > 0 && (
+            <div className="p-3 rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50/40 dark:bg-rose-950/20 space-y-1 text-xs">
+              <span className="text-[11px] font-semibold text-rose-800 dark:text-rose-300 uppercase tracking-wider">
+                Keyword Stuffing Warning
+              </span>
+              {jdMatch.keywordStuffingAlerts.map((alert) => (
+                <p key={alert.keyword} className="text-rose-900 dark:text-rose-200 text-[11px]">
+                  {alert.warning}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab 3: Bullet-by-Bullet Impact (Google XYZ Formula) */}
+      {activeTab === 'bullets' && (
+        <div className="space-y-3" data-testid="bullets-tab">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-1 text-xs">
+              <button
+                type="button"
+                onClick={() => setBulletFilter('all')}
+                className={`px-2.5 py-1 rounded-md text-xs font-medium ${
+                  bulletFilter === 'all'
+                    ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                }`}
+              >
+                All ({bullets.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setBulletFilter('needs_work')}
+                className={`px-2.5 py-1 rounded-md text-xs font-medium ${
+                  bulletFilter === 'needs_work'
+                    ? 'bg-amber-600 text-white'
+                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                }`}
+              >
+                Needs Work ({bullets.filter((b) => !b.hasActionVerb || !b.hasMetric || b.lengthStatus !== 'ideal').length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setBulletFilter('xyz_met')}
+                className={`px-2.5 py-1 rounded-md text-xs font-medium ${
+                  bulletFilter === 'xyz_met'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                }`}
+              >
+                Google XYZ Met ({findings.xyzFormulaBulletsCount ?? 0})
+              </button>
+            </div>
+
+            {verbAnalysis && verbAnalysis.repeatedVerbs.length > 0 && (
+              <Badge variant="warning" className="text-[10px]">
+                {verbAnalysis.repeatedVerbs.length} repeated verb(s)
+              </Badge>
+            )}
+          </div>
+
+          <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+            {filteredBullets.map((b, idx) => (
+              <div
+                key={idx}
+                className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 text-xs space-y-2"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-zinc-900 dark:text-zinc-100 font-medium leading-relaxed">
+                    • {b.bullet}
+                  </p>
+                  {b.contextLabel && (
+                    <span className="text-[10px] text-zinc-400 uppercase font-mono shrink-0">
+                      {b.contextLabel}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-zinc-100 dark:border-zinc-800/80">
+                  <Badge variant={b.hasActionVerb ? 'success' : 'destructive'} className="text-[10px]">
+                    {b.hasActionVerb ? `Action Verb (${b.actionVerbCategory || 'Active'})` : 'Weak Verb'}
+                  </Badge>
+                  <Badge variant={b.hasMetric ? 'success' : 'warning'} className="text-[10px]">
+                    {b.hasMetric ? 'Metric Quantified ✓' : 'No Numbers / %'}
+                  </Badge>
+                  <Badge variant={b.xyzFormulaMet ? 'success' : 'neutral'} className="text-[10px]">
+                    {b.xyzFormulaMet ? 'Google XYZ Met' : 'XYZ Incomplete'}
+                  </Badge>
+                  {typeof b.wordCount === 'number' && (
+                    <Badge variant={b.lengthStatus === 'ideal' ? 'info' : 'warning'} className="text-[10px] font-mono">
+                      {b.wordCount} words
+                    </Badge>
+                  )}
+                </div>
+
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                  {b.feedback}
+                </p>
+
+                {b.suggestedRewrite && (
+                  <div className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60 text-[11px]">
+                    <span className="text-blue-600 dark:text-blue-400 font-semibold block mb-0.5">
+                      Suggested XYZ Formula Rewrite:
+                    </span>
+                    <span className="text-zinc-800 dark:text-zinc-200 font-mono text-[10.5px]">
+                      {b.suggestedRewrite}
+                    </span>
                   </div>
                 )}
               </div>
-            </details>
-          )}
-        </section>
+            ))}
+          </div>
+        </div>
       )}
 
-      {/* Recommendations */}
-      {recommendations.length > 0 && (
-        <div className="space-y-1.5">
-          <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
-            Targeted Improvements
-          </span>
-          <ul className="space-y-1.5 text-xs">
-            {recommendations.map((rec, rIdx) => (
-              <li
-                key={rIdx}
-                className="p-2.5 rounded-lg bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 text-amber-900 dark:text-amber-200 text-[11px] leading-relaxed"
-              >
-                {rec}
-              </li>
-            ))}
-          </ul>
+      {/* Tab 4: Skills & Evidence Proof */}
+      {activeTab === 'skills' && stackAlignment && (
+        <div className="space-y-3" data-testid="skills-tab">
+          <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                Skills Substantiation (Proof Score)
+              </span>
+              <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                {stackAlignment.corroboratedSkills.length}/{stackAlignment.totalSkills} Evidenced
+              </span>
+            </div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+              Modern ATS parsers discount skills listed solely in a keyword block if they never appear inside experience bullets.
+            </p>
+          </div>
+
+          {/* Evidenced Skills */}
+          {stackAlignment.corroboratedSkills.length > 0 && (
+            <div className="p-3 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50/40 dark:bg-emerald-950/20 space-y-2">
+              <span className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
+                Proved in Experience Bullets ({stackAlignment.corroboratedSkills.length})
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {stackAlignment.corroboratedSkills.map((s) => (
+                  <Badge key={s} variant="success" className="text-xs py-1 px-2">
+                    {s} ✓
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Orphan Skills */}
+          {stackAlignment.unreferencedSkills.length > 0 && (
+            <div className="p-3 rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50/40 dark:bg-amber-950/20 space-y-2">
+              <div className="space-y-0.5">
+                <span className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
+                  Listed Without Bullet Proof ({stackAlignment.unreferencedSkills.length})
+                </span>
+                <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                  These skills are in your core list, but never referenced in an achievement bullet.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {stackAlignment.unreferencedSkills.map((s) => (
+                  <Badge key={s} variant="warning" className="text-xs py-1 px-2">
+                    {s}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Unlisted Skills Discovered in Text */}
+          {stackAlignment.unlistedSkills && stackAlignment.unlistedSkills.length > 0 && (
+            <div className="p-3 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/40 dark:bg-blue-950/20 space-y-2">
+              <div className="space-y-0.5">
+                <span className="text-[11px] font-semibold text-blue-800 dark:text-blue-300 uppercase tracking-wider">
+                  Quick Win: Unlisted Skills Evidenced in Text ({stackAlignment.unlistedSkills.length})
+                </span>
+                <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                  You wrote about these skills in your experience bullets, but forgot to list them under Core Skills!
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {stackAlignment.unlistedSkills.map((s) => (
+                  <Badge key={s} variant="info" className="text-xs py-1 px-2">
+                    + Add {s}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab 5: ATS Parsed View ("How ATS Sees Your Resume") */}
+      {activeTab === 'parsed_preview' && parsedPreview && (
+        <div className="space-y-3" data-testid="parsed-preview-tab">
+          <div className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                <FileText className="w-4 h-4 text-blue-600" />
+                <span>Extracted Recruiter Database Record</span>
+              </span>
+              <Badge variant="neutral" className="text-[10px]">Taleo/Workday OCR View</Badge>
+            </div>
+
+            {/* Candidate Header */}
+            <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/60 text-xs space-y-1">
+              <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                {parsedPreview.contact.fullName || 'Candidate Name Not Found'}
+              </div>
+              <div className="text-zinc-600 dark:text-zinc-300">
+                {parsedPreview.headline || 'No Headline'}
+              </div>
+              <div className="text-zinc-500 font-mono text-[11px] flex flex-wrap gap-x-3 gap-y-1 pt-1">
+                {parsedPreview.contact.email && <span>📧 {parsedPreview.contact.email}</span>}
+                {parsedPreview.contact.phone && <span>📞 {parsedPreview.contact.phone}</span>}
+                {parsedPreview.contact.location && <span>📍 {parsedPreview.contact.location}</span>}
+                {parsedPreview.contact.linkedinUrl && <span>🔗 LinkedIn</span>}
+                {parsedPreview.contact.githubUrl && <span>💻 GitHub</span>}
+              </div>
+            </div>
+
+            {/* Work History Timeline */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider flex items-center gap-1">
+                <Briefcase className="w-3.5 h-3.5" />
+                <span>Parsed Work History ({parsedPreview.experience.length})</span>
+              </span>
+              <div className="space-y-1.5">
+                {parsedPreview.experience.map((exp, idx) => (
+                  <div key={idx} className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900 text-xs flex items-start justify-between gap-2">
+                    <div>
+                      <div className="font-semibold text-zinc-900 dark:text-zinc-100">
+                        {exp.title} · {exp.company}
+                      </div>
+                      <div className="text-zinc-500 text-[11px]">
+                        {exp.durationText || exp.startDate || 'Date not detected'}
+                      </div>
+                    </div>
+                    <Badge variant="neutral" className="text-[10px] shrink-0">
+                      {exp.bulletCount} bullet(s)
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Education */}
+            {parsedPreview.education.length > 0 && (
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider flex items-center gap-1">
+                  <GraduationCap className="w-3.5 h-3.5" />
+                  <span>Parsed Education ({parsedPreview.education.length})</span>
+                </span>
+                <div className="space-y-1.5">
+                  {parsedPreview.education.map((edu, idx) => (
+                    <div key={idx} className="p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900 text-xs">
+                      <div className="font-semibold text-zinc-900 dark:text-zinc-100">{edu.school}</div>
+                      <div className="text-zinc-500 text-[11px]">
+                        {edu.degree} {edu.graduationDate ? `(${edu.graduationDate})` : ''}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
   );
 }
-

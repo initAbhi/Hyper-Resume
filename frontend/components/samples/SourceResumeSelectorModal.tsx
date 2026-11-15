@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { SampleResume } from '@/data/sample-resumes';
+import { SampleResume, getSampleTemplateKey } from '@/data/sample-resumes';
 import { apiClient, Resume } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import {
@@ -31,7 +31,7 @@ export function SourceResumeSelectorModal({
   onAdaptationStarted,
 }: SourceResumeSelectorModalProps) {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, creditBalance } = useAuth();
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedResumeId, setSelectedResumeId] = useState<string>('');
@@ -39,6 +39,22 @@ export function SourceResumeSelectorModal({
   const [isAdapting, setIsAdapting] = useState(false);
   const [adaptationStep, setAdaptationStep] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const timerRefs = useRef<NodeJS.Timeout[]>([]);
+
+  const clearTimers = () => {
+    timerRefs.current.forEach((t) => clearTimeout(t));
+    timerRefs.current = [];
+  };
+
+  useEffect(() => {
+    return () => {
+      clearTimers();
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (sampleResume) {
@@ -76,6 +92,16 @@ export function SourceResumeSelectorModal({
 
   if (!isOpen || !sampleResume) return null;
 
+  const handleCancel = () => {
+    clearTimers();
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsAdapting(false);
+    onClose();
+  };
+
   const handleStartAdaptation = async () => {
     if (!selectedResumeId) {
       setErrorMessage('Please select a source resume from your library.');
@@ -84,57 +110,86 @@ export function SourceResumeSelectorModal({
 
     setIsAdapting(true);
     setErrorMessage(null);
+    clearTimers();
 
-    // Multi-step loading narrative
+    // Multi-step loading narrative with progression
     setAdaptationStep('Retrieving source career facts...');
-    const stepTimer1 = setTimeout(() => {
-      setAdaptationStep('Aligning executive structure to benchmark...');
-    }, 1200);
+    timerRefs.current.push(
+      setTimeout(() => {
+        setAdaptationStep('Aligning executive structure to benchmark...');
+      }, 1200)
+    );
+    timerRefs.current.push(
+      setTimeout(() => {
+        setAdaptationStep('Running server-side factual integrity assertions...');
+      }, 2800)
+    );
+    timerRefs.current.push(
+      setTimeout(() => {
+        setAdaptationStep('Synthesizing high-impact executive bullets...');
+      }, 5500)
+    );
+    timerRefs.current.push(
+      setTimeout(() => {
+        setAdaptationStep('Finalizing ATS comparison proposal (almost ready)...');
+      }, 10000)
+    );
 
-    const stepTimer2 = setTimeout(() => {
-      setAdaptationStep('Running server-side factual integrity assertions...');
-    }, 2800);
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     try {
       // Genuine UUID v4 generated on client
       const idempotencyKey = crypto.randomUUID();
 
-      const adaptation = await apiClient.adaptResume({
-        sourceResumeId: selectedResumeId,
-        sampleId: sampleResume.id,
-        idempotencyKey,
-        targetRole: targetRole.trim() || sampleResume.role,
-        sampleBenchmarkData: {
-          contact: { fullName: sampleResume.candidate.name, email: sampleResume.candidate.email },
-          headline: sampleResume.role,
-          summary: sampleResume.summary,
-          skills: sampleResume.skills.flatMap((c) =>
-            c.skills.map((s) => ({ name: s, category: c.category }))
-          ),
-          experience: sampleResume.experience.map((e) => ({
-            company: e.company,
-            title: e.title,
-            location: e.location,
-            startDate: e.startDate,
-            endDate: e.endDate,
-            current: !!e.current,
-            bullets: e.bullets,
-          })),
-          education: sampleResume.education.map((edu) => ({
-            school: edu.school,
-            degree: edu.degree,
-            field: edu.field || edu.degree,
-            graduationDate: edu.graduationDate,
-          })),
+      const adaptation = await apiClient.adaptResume(
+        {
+          sourceResumeId: selectedResumeId,
+          sampleId: sampleResume.id,
+          idempotencyKey,
+          targetRole: targetRole.trim() || sampleResume.role,
+          sampleBenchmarkData: {
+            contact: { fullName: sampleResume.candidate.name, email: sampleResume.candidate.email },
+            headline: sampleResume.role,
+            summary: sampleResume.summary,
+            skills: sampleResume.skills.flatMap((c) =>
+              c.skills.map((s) => ({ name: s, category: c.category }))
+            ),
+            experience: sampleResume.experience.map((e) => ({
+              company: e.company,
+              title: e.title,
+              location: e.location,
+              startDate: e.startDate,
+              endDate: e.endDate,
+              current: !!e.current,
+              bullets: e.bullets,
+            })),
+            education: sampleResume.education.map((edu) => ({
+              school: edu.school,
+              degree: edu.degree,
+              field: edu.field || edu.degree,
+              graduationDate: edu.graduationDate,
+            })),
+            layout: {
+              accentColor: sampleResume.brandColor || '#285FEA',
+              fontFamily: getSampleTemplateKey(sampleResume) === 'ivy-league' ? 'serif' : 'sans',
+              pageMargin: 16,
+            },
+          },
         },
-      });
+        { signal: controller.signal }
+      );
 
-      clearTimeout(stepTimer1);
-      clearTimeout(stepTimer2);
+      clearTimers();
+      abortControllerRef.current = null;
       onAdaptationStarted(adaptation);
     } catch (err: any) {
-      clearTimeout(stepTimer1);
-      clearTimeout(stepTimer2);
+      clearTimers();
+      abortControllerRef.current = null;
+      if (err?.name === 'AbortError' || err?.message?.includes('aborted') || controller.signal.aborted) {
+        setIsAdapting(false);
+        return;
+      }
       setErrorMessage(
         err?.message || 'Adaptation failed. Your credits were not deducted. Please retry.'
       );
@@ -168,8 +223,7 @@ export function SourceResumeSelectorModal({
           </div>
           <button
             type="button"
-            onClick={onClose}
-            disabled={isAdapting}
+            onClick={handleCancel}
             className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors shrink-0"
             aria-label="Close"
           >
@@ -202,13 +256,26 @@ export function SourceResumeSelectorModal({
               <div className="flex items-center justify-between p-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200/60 dark:border-blue-800/40 text-xs">
                 <div className="flex items-center gap-2 text-blue-900 dark:text-blue-200">
                   <Coins className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-                  <span>Cost: <strong>3 Credits</strong> (Full Profile Adaptation)</span>
+                  <span>Cost: <strong>3 Credits</strong> &bull; You have: <strong>{creditBalance}</strong></span>
                 </div>
                 <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-medium">
                   <ShieldAlert className="w-3.5 h-3.5" />
                   <span>Source Preserved</span>
                 </div>
               </div>
+
+              {creditBalance < 3 && (
+                <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs flex items-center justify-between gap-2">
+                  <span>Insufficient credits (3 required).</span>
+                  <button
+                    type="button"
+                    onClick={() => router.push('/app/billing')}
+                    className="px-2.5 py-1 rounded bg-[#285FEA] text-white font-bold text-[11px] hover:bg-[#1E4BC8]"
+                  >
+                    Get Credits
+                  </button>
+                </div>
+              )}
 
               {/* Target Role Input */}
               <div className="space-y-1.5">
@@ -337,12 +404,11 @@ export function SourceResumeSelectorModal({
 
         {/* Modal Footer */}
         {isAuthenticated && (
-          <div className="px-4 sm:px-5 py-3 sm:py-3.5 bg-zinc-50/80 dark:bg-zinc-900/60 border-t border-[#E2E5E9] dark:border-[#252A33] flex items-center justify-between shrink-0">
+          <div className="px-4 sm:px-5 py-3 sm:py-3.5 bg-zinc-50/80 dark:bg-zinc-900/60 border-t border-[#E2E5E9] dark:border-[#252A33] flex items-center justify-between gap-2.5 shrink-0">
             <button
               type="button"
-              onClick={onClose}
-              disabled={isAdapting}
-              className="px-3 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+              onClick={handleCancel}
+              className="px-3.5 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 rounded-lg transition-colors cursor-pointer"
             >
               Cancel
             </button>
@@ -350,18 +416,19 @@ export function SourceResumeSelectorModal({
               type="button"
               onClick={handleStartAdaptation}
               disabled={isAdapting || isLoading || resumes.length === 0}
-              className="px-4 py-2 rounded-xl bg-[#285FEA] hover:bg-[#1E4BC8] text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+              className="px-4 sm:px-5 py-2.5 rounded-xl bg-[#285FEA] hover:bg-[#1E4BC8] text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
             >
               {isAdapting ? (
                 <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
                   <span>Adapting Profile...</span>
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Start AI Adaptation (3 Credits)</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                  <span className="hidden sm:inline">Start AI Adaptation (3 Credits)</span>
+                  <span className="sm:hidden">Adapt (3 Credits)</span>
+                  <ArrowRight className="w-3.5 h-3.5 shrink-0" />
                 </>
               )}
             </button>

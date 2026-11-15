@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { SampleResume } from '@/data/sample-resumes';
+import { SampleResume, getSampleTemplateKey } from '@/data/sample-resumes';
 import { CompanyBrandBadge } from './CompanyBrandBadge';
 import { Eye, Sparkles, MapPin, Wand2 } from 'lucide-react';
 
@@ -10,24 +10,20 @@ interface SampleResumeCardProps {
   onPreview: (resume: SampleResume) => void;
   onUseTemplate: (resume: SampleResume) => void;
   onAdapt?: (resume: SampleResume) => void;
+  isCloning?: boolean;
 }
 
 // Map each company profile to a distinctive, high-end resume template variant
-function getTemplateVariant(companyKey: string): 'double-column' | 'ivy-league' | 'sidebar' | 'classic' {
-  if (['spotify', 'airbnb', 'figma', 'bytedance', 'uber', 'apple'].includes(companyKey)) {
-    return 'double-column';
-  }
-  if (['goldman', 'citadel', 'deloitte', 'accenture', 'chime'].includes(companyKey)) {
-    return 'ivy-league';
-  }
-  if (['netflix', 'stripe', 'sony', 'disney', 'tesla'].includes(companyKey)) {
-    return 'sidebar';
-  }
+function getTemplateVariant(resume: SampleResume): 'double-column' | 'ivy-league' | 'sidebar' | 'classic' {
+  const tpl = getSampleTemplateKey(resume);
+  if (tpl === 'double-column') return 'double-column';
+  if (tpl === 'sidebar' || tpl === 'elegant') return 'sidebar';
+  if (tpl === 'ivy-league') return 'ivy-league';
   return 'classic';
 }
 
-export function SampleResumeCard({ resume, onPreview, onUseTemplate, onAdapt }: SampleResumeCardProps) {
-  const variant = getTemplateVariant(resume.companyKey);
+export function SampleResumeCard({ resume, onPreview, onUseTemplate, onAdapt, isCloning = false }: SampleResumeCardProps) {
+  const variant = getTemplateVariant(resume);
   const exp1 = resume.experience[0];
   const exp2 = resume.experience[1];
   const proj1 = resume.projects?.[0];
@@ -621,14 +617,19 @@ export function SampleResumeCard({ resume, onPreview, onUseTemplate, onAdapt }: 
 
           <button
             type="button"
+            disabled={isCloning}
             onClick={(e) => {
               e.stopPropagation();
               onUseTemplate(resume);
             }}
-            className="w-full py-1.5 px-3 rounded-lg bg-[#285FEA] text-white text-xs font-semibold shadow-md hover:bg-[#1E4BC8] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            className="w-full py-1.5 px-3 rounded-lg bg-[#285FEA] text-white text-xs font-semibold shadow-md hover:bg-[#1E4BC8] flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-70"
           >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Use Full Template</span>
+            {isCloning ? (
+              <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Sparkles className="w-3.5 h-3.5" />
+            )}
+            <span>{isCloning ? 'Cloning Template...' : 'Use Full Template'}</span>
           </button>
         </div>
       </div>

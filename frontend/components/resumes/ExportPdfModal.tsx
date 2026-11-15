@@ -264,11 +264,11 @@ function ExportPdfModalDialog({
         {/* Primary Download / Preview Actions */}
         {pdfBlobUrl && !errorMessage && (
           <div className="space-y-2">
-            <div className="flex items-center gap-2.5">
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-2.5">
               <button
                 type="button"
                 onClick={() => triggerDownload(pdfBlobUrl)}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold transition-colors cursor-pointer"
+                className="w-full sm:flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold transition-colors cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Download PDF</span>
@@ -277,7 +277,7 @@ function ExportPdfModalDialog({
                 href={pdfBlobUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-zinc-200 hover:bg-zinc-50 text-zinc-800 text-xs font-semibold transition-colors"
+                className="w-full sm:flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-zinc-200 hover:bg-zinc-50 text-zinc-800 text-xs font-semibold transition-colors"
               >
                 <ExternalLink className="w-3.5 h-3.5 text-zinc-500" />
                 <span>Preview in Tab</span>
@@ -317,7 +317,7 @@ function ExportPdfModalDialog({
             What to do next
           </h3>
 
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             <Link
               href={`/app/match?resumeId=${resumeId}`}
               className="p-3.5 rounded-xl border border-emerald-100 bg-[#f0fdf9] hover:bg-[#e6faf4] transition-all group flex flex-col justify-between space-y-2 text-left relative"

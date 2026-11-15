@@ -6,8 +6,13 @@ import type {
   ProfileCertification,
   ProfileEducation,
   ProfileExperience,
+  ProfileProject,
   ProfileSkill,
 } from '../profiles/entities/candidate-profile.entity.js';
+import {
+  extractSkillsFromCorpus,
+  normalizeExtractedText,
+} from '../ai/utils/ats-taxonomy.js';
 
 export interface LinkedInDetectionResult {
   isLinkedInPdf: boolean;
@@ -64,7 +69,7 @@ const KNOWN_SPOKEN_LANGUAGES = new Set([
 ]);
 
 const MONTH_DATE_RANGE_REGEX =
-  /^(?:[A-Z][a-z]+\s+)?\d{4}\s*[-–—]\s*(?:(?:[A-Z][a-z]+\s+)?\d{4}|Present|Current)(?:\s*\([^)]+\))?$/i;
+  /^(?:(?:[A-Za-z]+\.?|\d{1,2}\/)?\s*\d{4}|\d{1,2}\/\d{2,4})\s*[-–—to~]\s*(?:(?:[A-Za-z]+\.?|\d{1,2}\/)?\s*\d{4}|\d{1,2}\/\d{2,4}|Present|Current|Ongoing)(?:\s*\([^)]+\))?$/i;
 
 const TOTAL_DURATION_REGEX =
   /^\d+\s+years?(?:\s+\d+\s+months?)?$|^\d+\s+months?$/i;
@@ -469,65 +474,143 @@ export function parseLinkedInProfileText(rawText: string): ParsedProfileDraft {
 }
 
 export function parseGenericResumeText(rawText: string): ParsedProfileDraft {
-  const lines = preprocessLines(rawText);
+  const normalized = normalizeExtractedText(rawText);
+  const lines = preprocessLines(normalized);
   const fullText = lines.join('\n');
   const contact = extractUrlsAndContact(fullText);
 
-  const skillCatalog = [
-    'TypeScript', 'JavaScript', 'Node.js', 'NestJS', 'React', 'Next.js',
-    'Python', 'Go', 'Java', 'Rust', 'C++', 'Docker', 'Kubernetes',
-    'PostgreSQL', 'MySQL', 'MongoDB', 'Redis', 'Kafka', 'Terraform',
-    'AWS', 'GCP', 'Azure', 'GraphQL', 'Prometheus', 'OpenTelemetry', 'SQL',
+  // Extract skills from explicit skills block & augment with 1,200+ taxonomy
+  const skillSet = new Map<string, ProfileSkill>();
+
+  // Extract all from corpus taxonomy first
+  const corpusSkills = extractSkillsFromCorpus(fullText);
+  for (const cs of corpusSkills) {
+    skillSet.set(cs.name.toLowerCase(), {
+      name: cs.name,
+      category: cs.isHardSkill ? 'Technical Skills' : 'Soft Skills',
+    });
+  }
+
+  // Segment into canonical sections
+  type SecName = 'header' | 'summary' | 'experience' | 'education' | 'skills' | 'projects' | 'certifications';
+  const sectionBuckets: Record<SecName, string[]> = {
+    header: [],
+    summary: [],
+    experience: [],
+    education: [],
+    skills: [],
+    projects: [],
+    certifications: [],
+  };
+
+  const sectionHeadings: Array<{ key: SecName; regex: RegExp }> = [
+    { key: 'summary', regex: /^(?:#+\s*)?(?:professional\s+|career\s+)?(?:summary|profile|objective|about(?:\s+me)?)$/i },
+    { key: 'experience', regex: /^(?:#+\s*)?(?:work\s+|professional\s+|relevant\s+)?(?:experience|employment(?:\s+history)?|work history)$/i },
+    { key: 'education', regex: /^(?:#+\s*)?(?:education|academic\s+background|qualifications|degrees?)$/i },
+    { key: 'skills', regex: /^(?:#+\s*)?(?:technical\s+|core\s+|key\s+)?(?:skills|competencies|technologies|tech\s+stack|expertise)$/i },
+    { key: 'projects', regex: /^(?:#+\s*)?(?:selected\s+|key\s+|personal\s+|technical\s+)?projects$/i },
+    { key: 'certifications', regex: /^(?:#+\s*)?(?:certifications?|licenses?(\s+(&|and)\s+certifications?)?)$/i },
   ];
 
-  const foundSkills: ProfileSkill[] = skillCatalog
-    .filter((skill) => {
-      const escaped = skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      return new RegExp(`(?:^|[^a-zA-Z0-9])${escaped}(?:$|[^a-zA-Z0-9])`, 'i').test(fullText);
-    })
-    .map((name) => ({ name, category: 'Technical Skills' }));
+  let currentSec: SecName = 'header';
+  for (const line of lines) {
+    const cleanHeading = line.replace(/[:\-–—_=]+$/g, '').trim();
+    const matched = sectionHeadings.find((h) => h.regex.test(cleanHeading));
+    if (matched) {
+      currentSec = matched.key;
+      continue;
+    }
+    sectionBuckets[currentSec].push(line);
+  }
 
-  const firstLines = lines.filter((l) => !/@|https?:|www\./i.test(l));
-  const fullName = firstLines[0]?.slice(0, 80);
-  const headline = firstLines[1]?.slice(0, 150) || firstLines[0]?.slice(0, 150) || 'Candidate Profile';
+  // Parse candidate name & headline from header
+  const nonContactHeaderLines = sectionBuckets.header.filter(
+    (l) => !/@|https?:|www\./i.test(l) && !/^(resume|curriculum\s+vitae|cv)$/i.test(l),
+  );
+  const fullName = nonContactHeaderLines[0]?.slice(0, 80) || lines[0]?.slice(0, 80) || 'Candidate';
+  const headline =
+    nonContactHeaderLines[1]?.slice(0, 150) ||
+    nonContactHeaderLines[0]?.slice(0, 150) ||
+    'Software Engineer';
 
-  // Extract bullet points genuinely present in uploaded resume text
-  const bullets = lines
+  // Extract explicit skills tokens from skills bucket
+  for (const skillLine of sectionBuckets.skills) {
+    const stripped = skillLine.replace(/^[A-Za-z0-9\s&/()\-–—]+:\s*/, '');
+    const tokens = stripped
+      .split(/[,|•·/;\n]+/)
+      .map((t) => t.trim())
+      .filter((t) => t.length >= 2 && t.length <= 40 && !/^(skills|technologies|tools)$/i.test(t));
+    for (const token of tokens) {
+      const lower = token.toLowerCase();
+      if (!skillSet.has(lower)) {
+        skillSet.set(lower, { name: token, category: 'Technical Skills' });
+      }
+    }
+  }
+
+  // Parse Experience
+  const parsedExperience = parseExperienceBlock(sectionBuckets.experience);
+  const allBullets = lines
     .filter((l) => /^[•\-*▪]\s+/.test(l))
     .map((l) => l.replace(/^[•\-*▪]\s+/, '').trim());
-
-  const expIdx = lines.findIndex((l) => /^(?:experience|work history|employment)/i.test(l));
-  const eduIdx = lines.findIndex((l) => /^education/i.test(l));
-
-  const experienceLines =
-    expIdx >= 0
-      ? lines.slice(expIdx + 1, eduIdx > expIdx ? eduIdx : undefined)
-      : [];
-  const parsedExperience = parseExperienceBlock(experienceLines);
 
   const experience: ProfileExperience[] =
     parsedExperience.length > 0
       ? parsedExperience
-      : bullets.length > 0
+      : allBullets.length > 0
         ? [
             {
-              company: 'Extracted Work History',
+              company: 'Work Experience',
               title: headline,
               startDate: '',
               current: true,
-              bullets: bullets.slice(0, 6),
+              bullets: allBullets.slice(0, 8),
             },
           ]
         : [];
 
-  const educationLines = eduIdx >= 0 ? lines.slice(eduIdx + 1) : [];
-  const education = parseEducationBlock(educationLines);
+  // Parse Education
+  const education = parseEducationBlock(sectionBuckets.education);
 
-  const summaryIdx = lines.findIndex((l) => /^(?:summary|profile|objective)/i.test(l));
-  const summary =
-    summaryIdx >= 0 && lines[summaryIdx + 1]
-      ? lines[summaryIdx + 1].slice(0, 600)
-      : firstLines.slice(2, 4).join(' ').slice(0, 500);
+  // Parse Projects
+  const projects: ProfileProject[] = [];
+  let currentProj: ProfileProject | null = null;
+  for (const line of sectionBuckets.projects) {
+    const isBullet = /^[•\-*▪]\s+/.test(line);
+    const cleaned = line.replace(/^[•\-*▪]\s+/, '').trim();
+    if (!cleaned) continue;
+
+    if (!isBullet && line.length <= 80) {
+      currentProj = {
+        name: cleaned,
+        description: cleaned,
+        highlights: [],
+      };
+      projects.push(currentProj);
+    } else if (currentProj) {
+      currentProj.highlights.push(cleaned);
+    } else {
+      currentProj = {
+        name: 'Technical Project',
+        description: cleaned,
+        highlights: [cleaned],
+      };
+      projects.push(currentProj);
+    }
+  }
+
+  // Parse Summary (multi-line)
+  let summary = sectionBuckets.summary.join(' ').slice(0, 800).trim();
+  if (!summary && nonContactHeaderLines.length >= 3) {
+    summary = nonContactHeaderLines.slice(2, 5).join(' ').slice(0, 600).trim();
+  }
+
+  // Location heuristics
+  const locationLine = lines.slice(0, 8).find((l) =>
+    /(?:bengaluru|bangalore|hyderabad|pune|mumbai|delhi|noida|gurugram|chennai|san francisco|seattle|new york|austin|chicago|london|berlin|toronto|vancouver|remote|california|ca|ny|tx|wa|india|usa|uk|germany|canada)/i.test(
+      l,
+    ),
+  );
 
   return {
     contact: {
@@ -540,14 +623,15 @@ export function parseGenericResumeText(rawText: string): ParsedProfileDraft {
     },
     headline,
     summary,
-    location:
-      lines.find((l) => /,/.test(l) && /india|usa|uk|canada|germany|remote|bengaluru|seattle|san francisco|hyderabad/i.test(l)) ||
-      '',
-    skills: foundSkills,
+    location: locationLine ? locationLine.slice(0, 60).trim() : '',
+    skills: Array.from(skillSet.values()),
     experience,
     education,
-    projects: [],
-    certifications: [],
+    projects,
+    certifications: sectionBuckets.certifications.map((c) => ({
+      name: c.replace(/^[•\-*▪]\s+/, '').trim(),
+      issuer: 'Certification Authority',
+    })),
     sourceType: 'standard_resume',
     confidenceScore: 92,
   };

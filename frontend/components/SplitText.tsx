@@ -360,7 +360,7 @@ const SplitText = ({
         reduceWhiteSpace: false,
         onSplit: (self: GSAPSplitText) => {
           pieces = [self[unit], self.chars, self.words, self.lines].find(list => list.length) || [];
-          movers = (mask && self.masks?.length === pieces.length ? self.masks : pieces) as HTMLElement[];
+          movers = (mask && (self as any).masks?.length === pieces.length ? (self as any).masks : pieces) as HTMLElement[];
           order = gsap.utils.distribute({ each: delay / 1000, from: staggerFrom });
           centers = null;
           springs.length = 0;

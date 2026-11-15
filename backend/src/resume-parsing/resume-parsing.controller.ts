@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   HttpCode,
   HttpStatus,
@@ -47,6 +48,8 @@ export class ResumeParsingController {
   async parseAndAuditPublic(
     @Req() req: Request,
     @UploadedFile() file?: UploadedFilePayload,
+    @Body('jobDescriptionText') jobDescriptionText?: string,
+    @Body('targetRole') targetRole?: string,
   ) {
     this.enforcePublicUploadLimit(req);
     if (!file) {
@@ -58,7 +61,11 @@ export class ResumeParsingController {
       file.originalname,
       file.mimetype,
     );
-    const audit = analyzePlainResumeTextAts(parsed.extractedText, parsed.draft.headline);
+    const audit = analyzePlainResumeTextAts(
+      parsed.extractedText,
+      targetRole || parsed.draft.headline,
+      jobDescriptionText,
+    );
 
     return {
       fileName: parsed.fileName,

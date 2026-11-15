@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient, ResumeAdaptation, BulletDiff, ResumeContent } from '@/lib/api-client';
+import { SampleResume, getSampleTemplateKey } from '@/data/sample-resumes';
 import {
   X,
   Check,
@@ -20,12 +21,14 @@ import {
 
 interface AdaptationComparisonModalProps {
   adaptation: ResumeAdaptation | null;
+  sampleResume?: SampleResume | null;
   isOpen: boolean;
   onClose: () => void;
 }
 
 export function AdaptationComparisonModal({
   adaptation,
+  sampleResume,
   isOpen,
   onClose,
 }: AdaptationComparisonModalProps) {
@@ -119,6 +122,7 @@ export function AdaptationComparisonModal({
     setApplyError(null);
 
     try {
+      const sampleTemplateKey = sampleResume ? getSampleTemplateKey(sampleResume) : undefined;
       const hasBulletEdits = Object.values(editedBullets).some((group) =>
         Object.values(group || {}).some((val) => typeof val === 'string'),
       );
@@ -141,6 +145,12 @@ export function AdaptationComparisonModal({
 
         customFinalContent = {
           ...baseProposed,
+          layout: {
+            ...(baseProposed.layout || {}),
+            accentColor: sampleResume?.brandColor || baseProposed.layout?.accentColor || '#285FEA',
+            fontFamily: sampleTemplateKey === 'ivy-league' ? 'serif' : (baseProposed.layout?.fontFamily || 'sans'),
+            pageMargin: 16,
+          },
           summary:
             summaryDecision === 'accept'
               ? sectionChanges.summary?.adapted || baseProposed.summary
@@ -164,12 +174,24 @@ export function AdaptationComparisonModal({
             };
           }),
         };
+      } else if (baseProposed && sampleResume) {
+        // Ensure benchmark layout styling is propagated even if no manual bullet edits occurred
+        customFinalContent = {
+          ...baseProposed,
+          layout: {
+            ...(baseProposed.layout || {}),
+            accentColor: sampleResume.brandColor || baseProposed.layout?.accentColor || '#285FEA',
+            fontFamily: sampleTemplateKey === 'ivy-league' ? 'serif' : (baseProposed.layout?.fontFamily || 'sans'),
+            pageMargin: 16,
+          },
+        };
       }
 
       const newResume = await apiClient.applyAdaptation(adaptation.id, {
         summaryDecision,
         bulletDecisions,
         acceptedBenchmarkSkills: acceptedSkills,
+        templateKey: sampleTemplateKey,
         ...(customFinalContent ? { customFinalContent } : {}),
       });
 
@@ -191,13 +213,13 @@ export function AdaptationComparisonModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header */}
-        <div className="py-2.5 sm:py-3 px-3 sm:px-5 border-b border-[#E2E5E9] dark:border-[#252A33] bg-white/95 dark:bg-[#14171C]/95 backdrop-blur-md flex items-center justify-between gap-2.5 sm:gap-4 shrink-0">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        <div className="py-2.5 sm:py-3.5 px-3.5 sm:px-6 border-b border-[#E2E5E9] dark:border-[#252A33] bg-white/95 dark:bg-[#14171C]/95 backdrop-blur-md flex flex-wrap items-center justify-between gap-2.5 sm:gap-4 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
             <div className="w-8 sm:w-9 h-8 sm:h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shrink-0">
               <Sparkles className="w-4 sm:w-5 h-4 sm:h-5" />
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                 <h3 className="text-xs sm:text-base font-bold text-[#1A1D23] dark:text-[#F0F2F5] truncate">
                   AI Adaptation Proposal
                 </h3>
@@ -215,7 +237,7 @@ export function AdaptationComparisonModal({
             <button
               type="button"
               onClick={handleAcceptAll}
-              className="px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-all flex items-center gap-1"
+              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
             >
               <Check className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Accept All</span>
@@ -224,7 +246,7 @@ export function AdaptationComparisonModal({
             <button
               type="button"
               onClick={handleRejectAll}
-              className="px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all flex items-center gap-1"
+              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Keep Original</span>
@@ -233,7 +255,7 @@ export function AdaptationComparisonModal({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 sm:p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+              className="p-1.5 sm:p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
               aria-label="Close"
             >
               <X className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -472,12 +494,12 @@ export function AdaptationComparisonModal({
         </div>
 
         {/* Modal Footer Actions */}
-        <div className="py-3.5 px-6 border-t border-[#E2E5E9] dark:border-[#252A33] bg-zinc-50/90 dark:bg-zinc-900/80 flex items-center justify-between shrink-0">
+        <div className="py-3 px-4 sm:px-6 border-t border-[#E2E5E9] dark:border-[#252A33] bg-zinc-50/90 dark:bg-zinc-900/80 flex items-center justify-between gap-3 shrink-0">
           <button
             type="button"
             onClick={onClose}
             disabled={isApplying}
-            className="px-4 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+            className="px-3.5 sm:px-4 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 rounded-lg transition-colors cursor-pointer"
           >
             Discard
           </button>
@@ -486,18 +508,19 @@ export function AdaptationComparisonModal({
             type="button"
             onClick={handleApplyAdaptation}
             disabled={isApplying}
-            className="px-5 py-2.5 rounded-xl bg-[#285FEA] hover:bg-[#1E4BC8] text-white text-xs font-bold transition-all shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            className="px-4 sm:px-5 py-2.5 rounded-xl bg-[#285FEA] hover:bg-[#1E4BC8] text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
           >
             {isApplying ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin shrink-0" />
                 <span>Creating Adapted Resume...</span>
               </>
             ) : (
               <>
-                <FileCheck className="w-4 h-4" />
-                <span>Create Adapted Resume Draft</span>
-                <ArrowRight className="w-4 h-4" />
+                <FileCheck className="w-4 h-4 shrink-0" />
+                <span className="hidden sm:inline">Create Adapted Resume Draft</span>
+                <span className="sm:hidden">Create Draft</span>
+                <ArrowRight className="w-4 h-4 shrink-0" />
               </>
             )}
           </button>

@@ -240,6 +240,38 @@ export function DesignPanel({
               })}
             </div>
 
+            {/* Target Page Length */}
+            <div className="space-y-1.5 pt-1">
+              <span className="font-semibold text-zinc-700 dark:text-zinc-300 text-[11px] block">
+                Target Page Length
+              </span>
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { id: 'single', label: '1 Page', desc: 'Fit to 1 A4' },
+                  { id: 'auto', label: 'Auto Fit', desc: 'Smart ATS' },
+                  { id: 'multi', label: '2 Pages', desc: 'Multi-Page' },
+                ].map((mode) => {
+                  const currentMode = layout?.pageMode || 'auto';
+                  const isSelected = currentMode === mode.id;
+                  return (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      onClick={() => updateSpacingField({ pageMode: mode.id as any })}
+                      className={`p-2 rounded-lg border text-center transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'border-blue-600 bg-blue-50/70 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 font-bold'
+                          : 'border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-300 font-medium'
+                      }`}
+                    >
+                      <span className="block text-[11px] leading-tight font-semibold">{mode.label}</span>
+                      <span className="block text-[9.5px] text-zinc-500 font-normal mt-0.5">{mode.desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Precision Range Sliders */}
             <div className="space-y-3 pt-1">
               <div>

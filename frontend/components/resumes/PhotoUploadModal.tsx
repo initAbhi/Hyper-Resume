@@ -183,7 +183,7 @@ export function PhotoUploadModal({
               }`}
             >
               <Upload className="w-3.5 h-3.5" />
-              <span>Option 1: Upload File</span>
+              <span>Upload File</span>
             </button>
             <button
               type="button"
@@ -195,7 +195,7 @@ export function PhotoUploadModal({
               }`}
             >
               <Link2 className="w-3.5 h-3.5" />
-              <span>Option 2: Paste Link</span>
+              <span>Paste Image Link</span>
             </button>
           </div>
 

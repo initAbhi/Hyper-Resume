@@ -607,6 +607,8 @@ export class ResumesService {
     const sourceResume = await this.getResume(userId, adaptation.sourceResumeId);
     const proposed = adaptation.proposedContent;
 
+    const templateKeyToUse = dto.templateKey || sourceResume.templateKey;
+
     // Check customFinalContent if provided from modal
     if (dto.customFinalContent) {
       // Validate locked sections
@@ -614,16 +616,23 @@ export class ResumesService {
       const finalEducation = sourceResume.content.education || [];
       const finalCertifications = sourceResume.content.certifications || [];
 
+      const finalLayout = {
+        ...(sourceResume.content.layout || {}),
+        ...(proposed.layout || {}),
+        ...(dto.customFinalContent.layout || {}),
+      };
+
       const cleanContent: ResumeContent = {
         ...dto.customFinalContent,
         contact: finalContact,
         education: finalEducation,
         certifications: finalCertifications,
+        ...(Object.keys(finalLayout).length > 0 ? { layout: finalLayout } : {}),
       };
 
       return this.createResume(userId, {
         name: dto.title || `${sourceResume.name} (Adapted - ${adaptation.targetRole || 'Benchmark'})`,
-        templateKey: sourceResume.templateKey,
+        templateKey: templateKeyToUse,
         locale: sourceResume.locale,
         isMaster: false,
         content: cleanContent,
@@ -684,6 +693,11 @@ export class ResumesService {
       return origProj;
     });
 
+    const finalLayout = {
+      ...(sourceResume.content.layout || {}),
+      ...(proposed.layout || {}),
+    };
+
     const finalContent: ResumeContent = {
       contact: { ...sourceResume.content.contact },
       headline: finalHeadline,
@@ -693,13 +707,14 @@ export class ResumesService {
       education: sourceResume.content.education || [],
       certifications: sourceResume.content.certifications || [],
       projects: finalProjects,
+      ...(Object.keys(finalLayout).length > 0 ? { layout: finalLayout } : {}),
     };
 
     // Create a new independent draft resume
     const newResumeName = dto.title || `${sourceResume.name} (Adapted - ${adaptation.targetRole || 'Benchmark'})`;
     const newResume = await this.createResume(userId, {
       name: newResumeName,
-      templateKey: sourceResume.templateKey,
+      templateKey: templateKeyToUse,
       locale: sourceResume.locale,
       isMaster: false,
       content: finalContent,

@@ -114,6 +114,7 @@ export interface ResumeLayoutSettings {
   pageMargin?: number;
   accentColor?: string;
   fontFamily?: 'sans' | 'serif' | 'mono';
+  pageMode?: 'auto' | 'single' | 'multi';
 }
 
 export interface ResumeContentMeta {
@@ -394,6 +395,9 @@ export interface AtsStackAlignment {
   totalSkills: number;
   corroboratedSkills: string[];
   unreferencedSkills: string[];
+  unlistedSkills?: string[];
+  hardSkills?: string[];
+  softSkills?: string[];
 }
 
 export interface AtsBulletQualityItem {
@@ -405,6 +409,112 @@ export interface AtsBulletQualityItem {
   hasMetric: boolean;
   lengthStatus?: 'short' | 'ideal' | 'long';
   feedback: string;
+  xyzFormulaMet?: boolean;
+  actionVerbCategory?: string;
+  suggestedRewrite?: string;
+}
+
+export interface AtsParsedPreview {
+  contact: {
+    fullName?: string;
+    email?: string;
+    phone?: string;
+    location?: string;
+    linkedinUrl?: string;
+    githubUrl?: string;
+    websiteUrl?: string;
+  };
+  headline?: string;
+  summary?: string;
+  experience: Array<{
+    company: string;
+    title: string;
+    location?: string;
+    startDate?: string;
+    endDate?: string;
+    current?: boolean;
+    durationText?: string;
+    bulletCount: number;
+  }>;
+  education: Array<{
+    school: string;
+    degree?: string;
+    field?: string;
+    graduationDate?: string;
+  }>;
+  skillsByCategory: {
+    hardSkills: string[];
+    softSkills: string[];
+    toolsAndCloud: string[];
+    other: string[];
+  };
+  projects: Array<{
+    name: string;
+    techStack?: string[];
+    highlightsCount: number;
+  }>;
+  rawNormalizedText: string;
+}
+
+export interface AtsJobDescriptionMatch {
+  matchRate: number;
+  matchedKeywords: Array<{
+    keyword: string;
+    category: 'hard_skill' | 'soft_skill' | 'tool' | 'domain';
+    resumeCount: number;
+    jdImportance: 'critical' | 'high' | 'medium';
+  }>;
+  missingKeywords: Array<{
+    keyword: string;
+    category: 'hard_skill' | 'soft_skill' | 'tool' | 'domain';
+    jdImportance: 'critical' | 'high' | 'medium';
+    recommendation: string;
+  }>;
+  keywordStuffingAlerts: Array<{
+    keyword: string;
+    count: number;
+    warning: string;
+  }>;
+  recruiterSearchSimulation: {
+    passedQueries: string[];
+    failedQueries: string[];
+    readinessSummary: string;
+  };
+}
+
+export interface AtsSystemSimulations {
+  workdayReadiness: {
+    status: 'pass' | 'warning' | 'fail';
+    score: number;
+    notes: string[];
+  };
+  taleoReadiness: {
+    status: 'pass' | 'warning' | 'fail';
+    score: number;
+    notes: string[];
+  };
+  greenhouseReadiness: {
+    status: 'pass' | 'warning' | 'fail';
+    score: number;
+    notes: string[];
+  };
+}
+
+export interface AtsActionVerbAnalysis {
+  totalVerbs: number;
+  distinctVerbs: number;
+  repeatedVerbs: Array<{
+    verb: string;
+    count: number;
+    suggestedAlternatives: string[];
+  }>;
+  verbsByCategory: {
+    leadership: string[];
+    engineering: string[];
+    optimization: string[];
+    innovation: string[];
+    execution: string[];
+  };
 }
 
 export interface ResumeAuditFindings {
@@ -421,6 +531,13 @@ export interface ResumeAuditFindings {
   parserRisks?: AtsParserRisk[];
   stackAlignment?: AtsStackAlignment;
   bulletQuality: AtsBulletQualityItem[];
+  xyzFormulaBulletsCount?: number;
+  repeatedVerbsCount?: number;
+  pronounsCount?: number;
+  parsedPreview?: AtsParsedPreview;
+  jobDescriptionMatch?: AtsJobDescriptionMatch;
+  atsSystemSimulations?: AtsSystemSimulations;
+  actionVerbAnalysis?: AtsActionVerbAnalysis;
   writingQuality?: {
     score: number;
     issueCount: number;
@@ -1502,27 +1619,47 @@ export class ApiClient {
     apiLogger.debug(`--> ${method} ${endpoint}`, { requestId });
     const startTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
 
+    // Default 60-second timeout to prevent indefinite hangs if server drops connection
+    let timeoutId: NodeJS.Timeout | undefined;
+    let effectiveSignal = options.signal;
+    if (!effectiveSignal) {
+      const controller = new AbortController();
+      timeoutId = setTimeout(() => {
+        controller.abort(new DOMException('Request timed out after 60 seconds.', 'TimeoutError'));
+      }, 60000);
+      effectiveSignal = controller.signal;
+    }
+
     let response: Response;
     try {
       response = await fetch(url, {
         credentials: 'include',
         ...options,
         headers,
+        signal: effectiveSignal,
       });
     } catch (networkError: unknown) {
+      if (timeoutId) clearTimeout(timeoutId);
+      const isTimeout =
+        (networkError as any)?.name === 'TimeoutError' ||
+        (networkError as any)?.name === 'AbortError' ||
+        String(networkError).includes('timed out');
       apiLogger.error(`Network failure on ${method} ${endpoint} [${requestId}]`, {
         error: networkError instanceof Error ? networkError.message : String(networkError),
       });
       throw new ApiError({
         statusCode: 0,
-        code: 'NETWORK_ERROR',
-        message:
-          networkError instanceof Error
+        code: isTimeout ? 'TIMEOUT_ERROR' : 'NETWORK_ERROR',
+        message: isTimeout
+          ? 'Request timed out after 60s. The server may be busy or unreachable. Please try again.'
+          : networkError instanceof Error
             ? networkError.message
             : 'Unable to connect to the HypeResume server.',
         details: [],
         requestId,
       });
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
     }
 
     const durationMs = Math.round(
@@ -1742,7 +1879,11 @@ export class ApiClient {
     }
     const res = await this.request<Resume>('/resumes', {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        ...payload,
+        ...(targetRole ? { targetRole } : {}),
+        ...(targetCompany ? { targetCompany } : {}),
+      }),
     });
     return res.data;
   }
@@ -1816,7 +1957,11 @@ export class ApiClient {
     return res.data;
   }
 
-  async auditPlainTextResume(dto: { resumeText: string; targetRole?: string }) {
+  async auditPlainTextResume(dto: {
+    resumeText: string;
+    targetRole?: string;
+    jobDescriptionText?: string;
+  }) {
     const endpoint = this.token ? '/ai/ats-audit' : '/ai/public/ats-audit';
     const res = await this.request<PlainTextAtsAuditResponse>(endpoint, {
       method: 'POST',
@@ -2114,16 +2259,20 @@ export class ApiClient {
   }
 
   // --- Resume Adaptation Endpoints ---
-  async adaptResume(dto: {
-    sourceResumeId: string;
-    sampleId: string;
-    idempotencyKey: string;
-    targetRole?: string;
-    sampleBenchmarkData?: ResumeContent;
-  }) {
+  async adaptResume(
+    dto: {
+      sourceResumeId: string;
+      sampleId: string;
+      idempotencyKey: string;
+      targetRole?: string;
+      sampleBenchmarkData?: ResumeContent;
+    },
+    options?: { signal?: AbortSignal }
+  ) {
     const res = await this.request<ResumeAdaptation>('/resumes/adapt', {
       method: 'POST',
       body: JSON.stringify(dto),
+      signal: options?.signal,
     });
     return res.data;
   }
@@ -2158,6 +2307,7 @@ export class ApiClient {
       acceptedBenchmarkSkills?: string[];
       projectDecisions?: Record<string, 'accept' | 'reject'>;
       customFinalContent?: ResumeContent;
+      templateKey?: string;
     },
   ) {
     const res = await this.request<Resume>(`/resumes/adaptations/${adaptationId}/apply`, {
@@ -2183,9 +2333,18 @@ export class ApiClient {
     return res.data;
   }
 
-  async parseAndAuditUploadedResume(file: File) {
+  async parseAndAuditUploadedResume(
+    file: File,
+    options?: { targetRole?: string; jobDescriptionText?: string },
+  ) {
     const formData = new FormData();
     formData.append('file', file);
+    if (options?.targetRole) {
+      formData.append('targetRole', options.targetRole);
+    }
+    if (options?.jobDescriptionText) {
+      formData.append('jobDescriptionText', options.jobDescriptionText);
+    }
 
     const res = await this.request<PublicParseAndAuditResponse>(
       '/resume-parsing/public/parse-and-audit',

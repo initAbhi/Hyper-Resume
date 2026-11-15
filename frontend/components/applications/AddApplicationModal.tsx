@@ -261,8 +261,8 @@ export function AddApplicationModal({
             </div>
           </CardContent>
 
-          <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-end gap-2 shrink-0 bg-zinc-50/50 dark:bg-zinc-900/50">
-            <Button type="button" variant="outline" onClick={onClose}>
+          <div className="p-3.5 sm:p-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-end gap-2.5 shrink-0 bg-zinc-50/50 dark:bg-zinc-900/50">
+            <Button type="button" variant="outline" onClick={onClose} className="px-4">
               Cancel
             </Button>
             <Button
@@ -270,6 +270,7 @@ export function AddApplicationModal({
               variant="primary"
               isLoading={isSubmitting}
               disabled={!companyName.trim() || !jobTitle.trim()}
+              className="px-5 font-semibold"
             >
               Add Job to Pipeline
             </Button>

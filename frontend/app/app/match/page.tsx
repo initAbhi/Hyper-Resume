@@ -391,7 +391,7 @@ function JobMatchInner() {
                 <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
                   Evaluating Grounded Fit & Keywords
                 </h3>
-                <p className="text-[11px] text-zinc-500">
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
                   Cross-checking job requirements with verified resume bullet points
                 </p>
               </div>
@@ -411,7 +411,7 @@ function JobMatchInner() {
               ) : (
                 <RefreshCw className="w-5 h-5 text-emerald-600 animate-spin shrink-0 p-0.5" />
               )}
-              <span className={analysisPhase >= 0 ? 'font-semibold text-zinc-900 dark:text-zinc-100' : 'text-zinc-400'}>
+              <span className={analysisPhase >= 0 ? 'font-semibold text-zinc-900 dark:text-zinc-100' : 'text-zinc-400 dark:text-zinc-500'}>
                 Reading target job description...
               </span>
             </div>
@@ -427,7 +427,7 @@ function JobMatchInner() {
               ) : (
                 <div className="w-5 h-5 rounded-full border-2 border-zinc-200 dark:border-zinc-700 shrink-0" />
               )}
-              <span className={analysisPhase >= 1 ? 'font-semibold text-zinc-900 dark:text-zinc-100' : 'text-zinc-400'}>
+              <span className={analysisPhase >= 1 ? 'font-semibold text-zinc-900 dark:text-zinc-100' : 'text-zinc-400 dark:text-zinc-500'}>
                 Matching your skills & keywords...
               </span>
             </div>
@@ -443,7 +443,7 @@ function JobMatchInner() {
               ) : (
                 <div className="w-5 h-5 rounded-full border-2 border-zinc-200 dark:border-zinc-700 shrink-0" />
               )}
-              <span className={analysisPhase >= 2 ? 'font-semibold text-zinc-900 dark:text-zinc-100' : 'text-zinc-400'}>
+              <span className={analysisPhase >= 2 ? 'font-semibold text-zinc-900 dark:text-zinc-100' : 'text-zinc-400 dark:text-zinc-500'}>
                 Checking core responsibilities & requirements...
               </span>
             </div>
@@ -455,7 +455,7 @@ function JobMatchInner() {
               ) : (
                 <div className="w-5 h-5 rounded-full border-2 border-zinc-200 dark:border-zinc-700 shrink-0" />
               )}
-              <span className={analysisPhase >= 3 ? 'font-semibold text-zinc-900 dark:text-zinc-100' : 'text-zinc-400'}>
+              <span className={analysisPhase >= 3 ? 'font-semibold text-zinc-900 dark:text-zinc-100' : 'text-zinc-400 dark:text-zinc-500'}>
                 Scoring evidence alignment & fit...
               </span>
             </div>
@@ -549,7 +549,7 @@ function JobMatchInner() {
                     <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
                       {score}%
                     </div>
-                    <div className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">
+                    <div className="text-[10px] text-zinc-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
                       Match Fit
                     </div>
                   </div>
@@ -609,7 +609,7 @@ function JobMatchInner() {
                     className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                       requirementFilter === 'all'
                         ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-2xs'
-                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'
+                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
                     }`}
                   >
                     All ({reqs.length})
@@ -655,13 +655,13 @@ function JobMatchInner() {
                 {filteredReqs.map((req, rIdx) => (
                   <div
                     key={rIdx}
-                    className="p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-850 text-xs space-y-2.5 transition-all shadow-2xs"
+                    className="p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-800/40 hover:dark:bg-zinc-800/60 text-xs space-y-2.5 transition-all shadow-2xs"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2.5 font-medium text-zinc-900 dark:text-zinc-100">
-                        {req.status === 'supported' && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
-                        {req.status === 'needs_confirmation' && <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />}
-                        {req.status === 'not_evidenced' && <XCircle className="w-4 h-4 text-rose-600 shrink-0" />}
+                        {req.status === 'supported' && <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />}
+                        {req.status === 'needs_confirmation' && <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />}
+                        {req.status === 'not_evidenced' && <XCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />}
                         <span className="font-semibold text-[13px]">{req.explanation || req.requirementId}</span>
                       </div>
                       <Badge
@@ -678,7 +678,7 @@ function JobMatchInner() {
                     </div>
 
                     {req.evidenceQuotes && req.evidenceQuotes.length > 0 && (
-                      <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/60 dark:border-zinc-700/60 text-[11.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+                      <div className="p-3 rounded-lg bg-white dark:bg-zinc-900/70 border border-zinc-200/60 dark:border-zinc-700/60 text-[11.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">
                         <span className="font-semibold text-zinc-900 dark:text-zinc-100">Evidenced in resume: </span>
                         {req.evidenceQuotes.join(' · ')}
                       </div>
@@ -696,22 +696,22 @@ function JobMatchInner() {
 
             {/* Missing Keywords Notice */}
             {missingKws.length > 0 && (
-              <div className="p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-850 text-xs space-y-3">
+              <div className="p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-800/40 text-xs space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <span className="font-bold text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm">
                       Missing Keywords in Target Job Description
                     </span>
-                    <p className="text-zinc-500 text-[11px] mt-0.5">
+                    <p className="text-zinc-500 dark:text-zinc-400 text-[11px] mt-0.5">
                       These terms appear in the job specification but were not found in your resume. Only add them if you have genuine experience.
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={handleCopyKeywords}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 text-xs font-semibold transition-all shrink-0 cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-xs font-semibold transition-all shrink-0 cursor-pointer"
                   >
-                    {copiedKeywords ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedKeywords ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                     <span>{copiedKeywords ? 'Copied' : 'Copy Terms'}</span>
                   </button>
                 </div>
@@ -719,7 +719,7 @@ function JobMatchInner() {
                   {missingKws.map((kw: string, idx: number) => (
                     <span
                       key={idx}
-                      className="px-2.5 py-1 rounded-md text-[11px] font-mono bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 font-medium"
+                      className="px-2.5 py-1 rounded-md text-[11px] font-mono bg-white dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-700/80 text-zinc-800 dark:text-zinc-200 font-medium"
                     >
                       {kw}
                     </span>

@@ -32,18 +32,24 @@ export function SidebarTemplate({
     projects = [],
   } = content;
 
-  // True Dynamic Pagination (Exact Enhancv Multi-Page Standard):
-  // A standard A4 page holds contact header, summary, education, and ~1 major role + 1 project.
-  // Any resume with >= 2 roles and projects, or >= 7 bullets, MUST paginate across 2 discrete A4 sheets.
+  const pageMode = (content.layout as any)?.pageMode || 'auto';
+
+  // Capacity calculation:
+  // A standard A4 page (297mm / 1123px) holds contact header, summary, education, and ~2-3 roles + 1-2 projects.
+  // We only paginate across 2 discrete A4 sheets if user chose 'multi', or in 'auto' mode when content genuinely exceeds 1 page.
   const totalExpBullets = experience.reduce((acc, exp) => acc + (exp.bullets?.length || 1), 0);
   const totalProjCount = projects.length;
   const totalProjHighlights = projects.reduce((acc, p) => acc + (p.highlights?.length || 1), 0);
 
   const needsSecondPage =
-    experience.length >= 3 ||
-    (experience.length >= 2 && projects.length >= 1) ||
-    totalExpBullets >= 7 ||
-    (totalExpBullets + totalProjHighlights >= 8);
+    pageMode === 'single'
+      ? false
+      : pageMode === 'multi'
+      ? true
+      : experience.length >= 4 ||
+        totalExpBullets >= 14 ||
+        (totalExpBullets + totalProjHighlights >= 16) ||
+        (experience.length >= 3 && totalExpBullets >= 10 && projects.length >= 2);
 
   let page1Experiences: typeof experience = [];
   let page2Experiences: typeof experience = [];
@@ -55,26 +61,19 @@ export function SidebarTemplate({
     page1Projects = projects;
   } else {
     // Balanced 2-Page Distribution:
-    if (experience.length === 2 && projects.length >= 2) {
-      // Role 1 (Algoocean, 6 bullets) + Project 1 (Infodatabox, 4 highlights) on Page 1
-      // Role 2 (SAAR IT, 3 bullets) + Project 2 & 3 (Init.new & Trading Bot) on Page 2
-      page1Experiences = [experience[0]];
-      page1Projects = [projects[0]];
-      page2Experiences = [experience[1]];
-      page2Projects = projects.slice(1);
-    } else if (experience.length >= 3) {
+    if (experience.length >= 3) {
       page1Experiences = experience.slice(0, 2);
       page2Experiences = experience.slice(2);
       page1Projects = [];
       page2Projects = projects;
-    } else if (experience.length === 1 && projects.length >= 2) {
-      page1Experiences = experience;
-      page1Projects = [projects[0]];
-      page2Experiences = [];
+    } else if (experience.length === 2) {
+      page1Experiences = [experience[0]];
+      page2Experiences = [experience[1]];
+      page1Projects = projects.length > 0 ? [projects[0]] : [];
       page2Projects = projects.slice(1);
     } else {
-      page1Experiences = experience.slice(0, 1);
-      page2Experiences = experience.slice(1);
+      page1Experiences = experience;
+      page2Experiences = [];
       page1Projects = projects.slice(0, 1);
       page2Projects = projects.slice(1);
     }
@@ -92,9 +91,9 @@ export function SidebarTemplate({
         id="resume-page-1"
         style={{ boxSizing: 'border-box' }}
       >
-        <div className="flex flex-col md:flex-row print:flex-row flex-1">
+        <div className="flex flex-row flex-1">
           {/* LEFT MAIN AREA (65% width, Crisp White) */}
-          <div className="w-full md:w-[65%] print:w-[65%] p-6 sm:p-7 space-y-4 order-1">
+          <div className="w-[65%] p-6 sm:p-7 space-y-4 order-1">
             {/* Header: Name, Headline & Contact */}
             <div className="space-y-1 pb-3 border-b border-zinc-200">
               <h1 className="text-2xl sm:text-[27px] font-bold uppercase tracking-tight text-zinc-900 font-rubik leading-tight">
@@ -258,7 +257,7 @@ export function SidebarTemplate({
           </div>
 
           {/* RIGHT SIDEBAR (35% width, Deep Navy Background #142d4c) */}
-          <div className="w-full md:w-[35%] print:w-[35%] bg-[#142d4c] text-white p-6 sm:p-7 space-y-5 order-2">
+          <div className="w-[35%] bg-[#142d4c] text-white p-6 sm:p-7 space-y-5 order-2">
             {/* Avatar Centered in Navy Sidebar */}
             {showPhoto && (
               <div className="flex justify-center pb-1">
@@ -366,9 +365,9 @@ export function SidebarTemplate({
           id="resume-page-2"
           style={{ boxSizing: 'border-box' }}
         >
-          <div className="flex flex-col md:flex-row print:flex-row flex-1">
+          <div className="flex flex-row flex-1">
             {/* LEFT MAIN AREA (65% width, Crisp White) */}
-            <div className="w-full md:w-[65%] print:w-[65%] p-6 sm:p-7 space-y-4 order-1">
+            <div className="w-[65%] p-6 sm:p-7 space-y-4 order-1">
               {/* Experience Continuation */}
               {page2Experiences.length > 0 && (
                 <section className="space-y-2.5">
@@ -456,7 +455,7 @@ export function SidebarTemplate({
             </div>
 
             {/* RIGHT SIDEBAR CONTINUATION (35% width, Navy background) */}
-            <div className="w-full md:w-[35%] print:w-[35%] bg-[#142d4c] text-white p-6 sm:p-7 space-y-6 order-2">
+            <div className="w-[35%] bg-[#142d4c] text-white p-6 sm:p-7 space-y-6 order-2">
               {page2Skills.length > 0 ? (
                 <section className="space-y-2.5">
                   <h2 className="text-[11.5px] font-bold uppercase tracking-wider text-white font-rubik pb-1 border-b border-white/20">
