@@ -38,6 +38,15 @@ coverage/
 */coverage/
 .nyc_output/
 *.lcov
+context/artifacts/
+scripts/audit_results.json
+.agents/
+*/.agents/
+skills-lock.json
+*/skills-lock.json
+
+# Marketing & Ad Media (Large Assets)
+marketing/ad_assets/
 
 # Debug logs
 npm-debug.log*

@@ -25,11 +25,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           aria-invalid={!!error}
           aria-describedby={error ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined}
-          className={`flex h-9 w-full rounded-lg border bg-white dark:bg-[#1D2128] px-3.5 py-1.5 text-sm text-[#1A1D23] dark:text-[#F0F2F5] placeholder:text-[#848D9A] dark:placeholder:text-[#6C7584] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 transition-colors ${
-            error
+          className={`flex h-9 w-full rounded-lg border bg-white dark:bg-[#1D2128] px-3.5 py-1.5 text-sm text-[#1A1D23] dark:text-[#F0F2F5] placeholder:text-[#848D9A] dark:placeholder:text-[#6C7584] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 transition-colors ${error
               ? 'border-[#DC2626] focus-visible:ring-[#DC2626]/20'
               : 'border-[#E2E5E9] dark:border-[#252A33] focus-visible:ring-[#285FEA]/20 focus-visible:border-[#285FEA]'
-          } ${className}`}
+            } ${className}`}
           {...props}
         />
         {error && (
