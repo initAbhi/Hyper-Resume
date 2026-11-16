@@ -19,7 +19,7 @@ import { FaqAndFinalCta } from '@/components/home/FaqAndFinalCta';
 
 export default function HomePage() {
   return (
-    <div className="landing-page relative flex min-h-screen w-full flex-col items-center overflow-x-hidden bg-[#0a0a0a] text-white selection:bg-[#5525F5]/30 selection:text-white">
+    <div className="landing-page relative flex min-h-screen w-full flex-col items-center overflow-x-hidden bg-[#060b14] text-white selection:bg-[#3872FA]/30 selection:text-white">
       <SmoothScroll />
       <LandingHero />
       <TrustStrip />

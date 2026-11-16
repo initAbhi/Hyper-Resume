@@ -33,7 +33,7 @@ export function ApplicationPipelineWorkspace() {
         </div>
 
         <FadeContent className="mt-10" threshold={0.1}>
-          <div className="overflow-hidden rounded-2xl bg-gradient-to-b from-[#6b3aff]/80 to-[#5525F5] p-2 sm:p-3 lg:p-4">
+          <div className="overflow-hidden rounded-2xl bg-gradient-to-b from-[#4a8bff]/80 to-[#3872FA] p-2 sm:p-3 lg:p-4">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/marketing/product/applications-v2.png"

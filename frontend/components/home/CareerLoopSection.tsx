@@ -135,18 +135,18 @@ export function CareerLoopSection() {
               <FadeContent key={mod.title} delay={(i % 4) * 0.04} threshold={0.08}>
                 <Link
                   href={mod.href}
-                  className="group relative flex h-full flex-col overflow-hidden rounded-2xl bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:from-white/[0.1] hover:to-violet-500/[0.06]"
+                  className="group relative flex h-full flex-col overflow-hidden rounded-2xl bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:from-white/[0.1] hover:to-blue-500/[0.06]"
                 >
                   <span
-                    className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-violet-500/10 blur-2xl transition group-hover:bg-violet-400/20"
+                    className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-blue-500/10 blur-2xl transition group-hover:bg-blue-400/20"
                     aria-hidden
                   />
-                  <span className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-violet-500/20 text-violet-200">
+                  <span className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/20 text-blue-200">
                     <Icon className="h-4 w-4" />
                   </span>
                   <h3 className="relative mt-3 text-sm font-semibold text-white">{mod.title}</h3>
                   <p className="relative mt-1.5 flex-1 text-xs leading-relaxed text-zinc-500">{mod.body}</p>
-                  <span className="relative mt-3 inline-flex items-center gap-1 text-xs font-medium text-violet-300/80 transition group-hover:text-violet-200">
+                  <span className="relative mt-3 inline-flex items-center gap-1 text-xs font-medium text-blue-300/80 transition group-hover:text-blue-200">
                     Explore
                     <ArrowRight className="h-3 w-3 transition group-hover:translate-x-0.5" />
                   </span>

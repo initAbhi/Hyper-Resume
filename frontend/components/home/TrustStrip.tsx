@@ -27,7 +27,7 @@ export function TrustStrip() {
               key={claim}
               className="flex shrink-0 items-center gap-2 text-[12px] text-zinc-400 sm:text-[13px]"
             >
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/15 text-violet-300">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-blue-300">
                 <Check className="h-3 w-3" strokeWidth={2.5} />
               </span>
               <span className="whitespace-nowrap">{claim}</span>

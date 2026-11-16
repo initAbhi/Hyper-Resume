@@ -68,7 +68,7 @@ export function AtsScoreShowcase() {
             </div>
 
             <div className="absolute bottom-4 right-3 z-10 hidden max-w-[220px] rounded-xl bg-[#121214]/94 p-3 shadow-2xl ring-1 ring-white/10 backdrop-blur-md sm:block sm:right-4">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-violet-300">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-blue-300">
                 Evidence-safe rewrite
               </p>
               <p className="mt-1.5 text-[10px] leading-snug text-zinc-500 line-through">

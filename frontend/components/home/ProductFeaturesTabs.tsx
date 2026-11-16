@@ -127,7 +127,7 @@ export function ProductFeaturesTabs() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.25 }}
-              className="w-full overflow-hidden rounded-2xl bg-gradient-to-b from-[#6b3aff] to-[#5525F5] p-3 sm:rounded-[28px] sm:p-5 lg:p-6"
+              className="w-full overflow-hidden rounded-2xl bg-gradient-to-b from-[#4a8bff] to-[#3872FA] p-3 sm:rounded-[28px] sm:p-5 lg:p-6"
             >
               <div className="mb-4 flex flex-col items-center gap-3 text-center sm:mb-5">
                 <div className="max-w-xl">

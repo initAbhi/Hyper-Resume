@@ -14,7 +14,7 @@ export type HoverEffectItem = {
 };
 
 /**
- * Aceternity hover spotlight grid — no hairline borders; tonal surfaces + violet glow.
+ * Aceternity hover spotlight grid — no hairline borders; tonal surfaces + blue glow.
  */
 export function HoverEffect({
   items,
@@ -38,7 +38,7 @@ export function HoverEffect({
           <AnimatePresence>
             {hoveredIndex === idx && (
               <motion.span
-                className="absolute -inset-px block h-[calc(100%+2px)] w-[calc(100%+2px)] rounded-2xl bg-gradient-to-b from-violet-500/35 via-violet-500/10 to-transparent"
+                className="absolute -inset-px block h-[calc(100%+2px)] w-[calc(100%+2px)] rounded-2xl bg-gradient-to-b from-blue-500/35 via-blue-500/10 to-transparent"
                 layoutId="hoverBackground"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1, transition: { duration: 0.18 } }}
@@ -46,14 +46,14 @@ export function HoverEffect({
               />
             )}
           </AnimatePresence>
-          <div className="relative z-10 flex h-full flex-col overflow-hidden rounded-2xl bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition duration-300 group-hover:from-white/[0.1] group-hover:to-violet-500/[0.06] sm:p-5">
+          <div className="relative z-10 flex h-full flex-col overflow-hidden rounded-2xl bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition duration-300 group-hover:from-white/[0.1] group-hover:to-blue-500/[0.06] sm:p-5">
             <div
-              className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-violet-500/10 blur-2xl transition group-hover:bg-violet-400/20"
+              className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-blue-500/10 blur-2xl transition group-hover:bg-blue-400/20"
               aria-hidden
             />
             <div className="relative flex items-start justify-between gap-2">
               {item.icon ? (
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/20 text-violet-200 shadow-[0_0_24px_rgba(124,92,255,0.25)]">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/20 text-blue-200 shadow-[0_0_24px_rgba(56,114,250,0.25)]">
                   {item.icon}
                 </span>
               ) : null}
@@ -67,7 +67,7 @@ export function HoverEffect({
             <p className="relative mt-1.5 flex-1 text-[11px] leading-relaxed text-zinc-500 sm:text-xs">
               {item.description}
             </p>
-            <span className="relative mt-4 inline-flex items-center gap-1 text-[11px] font-medium text-violet-300/80 transition group-hover:text-violet-200">
+            <span className="relative mt-4 inline-flex items-center gap-1 text-[11px] font-medium text-blue-300/80 transition group-hover:text-blue-200">
               View formats
               <span className="transition group-hover:translate-x-0.5">→</span>
             </span>

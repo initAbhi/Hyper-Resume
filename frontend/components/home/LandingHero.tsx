@@ -42,12 +42,12 @@ export function LandingHero() {
   }, []);
 
   return (
-    <section className="relative w-full overflow-x-clip bg-[#0a0614] pt-28 pb-16 sm:pt-32 sm:pb-20 lg:pb-24">
+    <section className="relative w-full overflow-x-clip bg-[#060b18] pt-28 pb-16 sm:pt-32 sm:pb-20 lg:pb-24">
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            'radial-gradient(ellipse 90% 60% at 50% -8%, rgba(139,92,246,0.38), transparent 58%), radial-gradient(ellipse 45% 50% at 85% 15%, rgba(99,60,255,0.22), transparent 55%), radial-gradient(ellipse 40% 45% at 10% 40%, rgba(67,56,202,0.14), transparent 50%), linear-gradient(180deg, #12081f 0%, #0a0614 45%, #07040f 100%)',
+            'radial-gradient(ellipse 90% 60% at 50% -8%, rgba(56,114,250,0.36), transparent 58%), radial-gradient(ellipse 45% 50% at 85% 15%, rgba(37,99,235,0.22), transparent 55%), radial-gradient(ellipse 40% 45% at 10% 40%, rgba(30,64,175,0.14), transparent 50%), linear-gradient(180deg, #0b1428 0%, #060b18 45%, #040812 100%)',
         }}
         aria-hidden
       />
@@ -56,7 +56,7 @@ export function LandingHero() {
         <div className="pointer-events-none absolute inset-0 z-0 opacity-70" aria-hidden>
           <LightRays
             raysOrigin="top-center"
-            raysColor="#a78bfa"
+            raysColor="#60a5fa"
             raysSpeed={0.45}
             lightSpread={1.2}
             rayLength={1.7}
@@ -85,7 +85,7 @@ export function LandingHero() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="text-[11px] font-medium uppercase tracking-[0.22em] text-violet-300/90 sm:text-xs"
+            className="text-[11px] font-medium uppercase tracking-[0.22em] text-blue-300/90 sm:text-xs"
           >
             HypeResume
           </motion.p>
@@ -107,7 +107,7 @@ export function LandingHero() {
                   effect="slide"
                   direction="up"
                   highlight
-                  highlightColor="#7c5cff"
+                  highlightColor="#3872FA"
                   rotationInterval={3200}
                   staggerFrom="last"
                   staggerDuration={0.025}
@@ -173,7 +173,7 @@ export function LandingHero() {
                 'Evidence-cited match — gaps stay visible',
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2.5">
-                  <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-violet-500/25 text-violet-200">
+                  <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-500/25 text-blue-200">
                     <Check className="h-2.5 w-2.5" strokeWidth={3} />
                   </span>
                   <span>{item}</span>
@@ -191,7 +191,7 @@ export function LandingHero() {
           className="relative overflow-visible lg:col-span-7"
         >
           <div
-            className="pointer-events-none absolute -inset-6 rounded-[40%] bg-violet-500/15 blur-3xl sm:-inset-10"
+            className="pointer-events-none absolute -inset-6 rounded-[40%] bg-blue-500/15 blur-3xl sm:-inset-10"
             aria-hidden
           />
 
@@ -247,7 +247,7 @@ export function LandingHero() {
             >
               <div className="flex items-end gap-2">
                 <p className="font-rubik text-3xl font-semibold tabular-nums text-white">94</p>
-                <p className="mb-1 text-[11px] font-medium uppercase tracking-wider text-violet-300">
+                <p className="mb-1 text-[11px] font-medium uppercase tracking-wider text-blue-300">
                   / 100
                 </p>
               </div>
@@ -273,7 +273,7 @@ export function LandingHero() {
               transition={{ delay: 0.85, duration: 0.5 }}
               className="absolute bottom-4 left-0 z-20 w-[min(94%,250px)] rounded-2xl bg-[#121214]/95 p-3 shadow-2xl ring-1 ring-white/12 backdrop-blur-md sm:bottom-8 sm:left-2 sm:w-[270px] sm:p-3.5 lg:left-4"
             >
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-300">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-300">
                 Evidence-safe rewrite
               </p>
               <p className="mt-2 text-[10px] leading-snug text-zinc-500 line-through">

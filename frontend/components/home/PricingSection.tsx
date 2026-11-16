@@ -66,7 +66,7 @@ const PRO_OPTIONS: DisplayTier[] = [
     intensity: 1.15,
     fade: 0.74,
     buttonStyle:
-      'bg-white text-zinc-950 hover:bg-zinc-100 shadow-xl shadow-violet-500/30 ring-2 ring-violet-400/50',
+      'bg-white text-zinc-950 hover:bg-zinc-100 shadow-xl shadow-blue-500/30 ring-2 ring-blue-400/50',
     features: [
       '30 days unlimited HypeResume Pro access',
       'Unlimited tailored resume variants per JD',
@@ -126,7 +126,7 @@ export function PricingSection() {
       className="relative w-full overflow-hidden bg-[#0a0a0a] px-4 py-16 text-white sm:px-6 sm:py-24 lg:px-8"
     >
       <div
-        className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[900px] -translate-x-1/2 rounded-full bg-[#5525F5]/12 blur-3xl"
+        className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[900px] -translate-x-1/2 rounded-full bg-[#3872FA]/12 blur-3xl"
         aria-hidden
       />
 
@@ -173,7 +173,7 @@ export function PricingSection() {
           <div className="flex flex-col items-center justify-between gap-4 rounded-2xl bg-white/[0.04] p-5 text-center sm:flex-row sm:items-center sm:p-6 sm:text-left">
             <div className="space-y-1.5">
               <div className="inline-flex flex-wrap items-center justify-center gap-2 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400 sm:justify-start">
-                <Flame className="h-3.5 w-3.5 text-[#a78bfa]" />
+                <Flame className="h-3.5 w-3.5 text-[#60a5fa]" />
                 <span>Founding member offer</span>
                 {promo ? (
                   <span className="rounded-full bg-white/[0.06] px-2.5 py-0.5 font-mono text-[10px] normal-case tracking-normal text-zinc-400">
@@ -216,7 +216,7 @@ export function PricingSection() {
               <div className="relative flex h-full flex-col justify-between p-8 sm:p-9">
                 <div>
                   {p.badge ? (
-                    <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-violet-500/30 bg-violet-500/20 px-3.5 py-1 text-xs font-semibold text-violet-300 shadow-sm shadow-violet-500/20">
+                    <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-500/20 px-3.5 py-1 text-xs font-semibold text-blue-300 shadow-sm shadow-blue-500/20">
                       <span>✦</span>
                       <span>{p.badge}</span>
                     </div>
@@ -241,7 +241,7 @@ export function PricingSection() {
                   <ul className="space-y-3 pt-5 text-xs sm:text-sm">
                     {p.features.map((f) => (
                       <li key={f} className="flex items-start gap-2.5">
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-violet-400" />
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-blue-400" />
                         <span className="font-medium leading-snug text-zinc-200">{f}</span>
                       </li>
                     ))}

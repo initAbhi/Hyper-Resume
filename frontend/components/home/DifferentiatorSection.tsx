@@ -62,9 +62,9 @@ export function DifferentiatorSection() {
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <CircleCheck className="mt-0.5 h-4 w-4 shrink-0 text-violet-400" />
+                  <CircleCheck className="mt-0.5 h-4 w-4 shrink-0 text-blue-400" />
                   <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wider text-violet-400/80 sm:hidden">
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-blue-400/80 sm:hidden">
                       What we ship
                     </p>
                     <p className="text-sm leading-relaxed text-zinc-200">{row.fix}</p>

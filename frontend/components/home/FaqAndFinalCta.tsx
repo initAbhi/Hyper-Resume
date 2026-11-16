@@ -64,7 +64,7 @@ export function FaqAndFinalCta() {
                     aria-expanded={isOpen}
                   >
                     <span className="text-[15px] font-medium text-white sm:text-base">{faq.q}</span>
-                    <span className="shrink-0 text-[11px] font-medium uppercase tracking-wider text-[#a78bfa]">
+                    <span className="shrink-0 text-[11px] font-medium uppercase tracking-wider text-[#60a5fa]">
                       {isOpen ? 'Close' : 'Open'}
                     </span>
                   </button>
@@ -96,7 +96,7 @@ export function FaqAndFinalCta() {
           <h2 className="font-rubik text-3xl font-semibold tracking-tight sm:text-5xl">
             Make your next{' '}
             <GradientText
-              colors={['#ffffff', '#C4B5FD', '#5525F5', '#ffffff']}
+              colors={['#ffffff', '#93C5FD', '#3872FA', '#ffffff']}
               animationSpeed={6}
               className="inline"
             >

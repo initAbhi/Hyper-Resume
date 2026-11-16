@@ -9,7 +9,7 @@ export function ProductWorkflowPreview() {
   return (
     <div className="relative w-full max-w-5xl mx-auto">
       {/* Ambient glow behind the card */}
-      <div className="absolute -inset-4 bg-gradient-to-r from-blue-500/10 via-violet-500/10 to-blue-500/10 rounded-3xl blur-2xl opacity-60 dark:opacity-40 pointer-events-none" />
+      <div className="absolute -inset-4 bg-gradient-to-r from-blue-500/15 via-sky-500/10 to-blue-500/15 rounded-3xl blur-2xl opacity-60 dark:opacity-40 pointer-events-none" />
       
       <div className="relative rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xl overflow-hidden">
         {/* Toolbar */}
