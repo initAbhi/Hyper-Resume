@@ -809,7 +809,7 @@ export function evaluateStructuredResumeAts(
     })),
   });
 
-  const pronounsCount = writingAudit.issues.filter((i) => i.category === 'pronoun').length;
+  const pronounsCount = writingAudit.issues.filter((i) => i.id.startsWith('pronoun')).length;
 
   const wordCount = rawDiagnostics?.wordCountOverride ?? computeTotalWordsFromContent(content);
   if (wordCount < 180) {
