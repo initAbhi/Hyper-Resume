@@ -1680,14 +1680,19 @@ export class ApiClient {
       apiLogger.error(`Network failure on ${method} ${endpoint} [${requestId}]`, {
         error: networkError instanceof Error ? networkError.message : String(networkError),
       });
+      const rawNetworkMsg = networkError instanceof Error ? networkError.message : '';
+      const isOpaqueFetchFailure =
+        !rawNetworkMsg ||
+        /^failed to fetch$/i.test(rawNetworkMsg.trim()) ||
+        /^load failed$/i.test(rawNetworkMsg.trim());
       throw new ApiError({
         statusCode: 0,
         code: isTimeout ? 'TIMEOUT_ERROR' : 'NETWORK_ERROR',
         message: isTimeout
           ? 'Request timed out after 60s. The server may be busy or unreachable. Please try again.'
-          : networkError instanceof Error
-            ? networkError.message
-            : 'Unable to connect to the HypeResume server.',
+          : isOpaqueFetchFailure
+            ? 'Unable to connect to the HypeResume server. Please try again in a moment.'
+            : rawNetworkMsg,
         details: [],
         requestId,
       });

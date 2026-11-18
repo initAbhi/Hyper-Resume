@@ -3,10 +3,39 @@
 import React, { useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 
+function isSafeMarkdownHref(href: string): boolean {
+  const trimmed = href.trim();
+  return (
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('/app/') ||
+    trimmed.startsWith('/r/')
+  );
+}
+
 function renderInlineMarkdown(text: string): React.ReactNode[] {
-  // Parse **bold**, `code`, and *italic* safely without dangerouslySetInnerHTML
-  const tokens = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\*[^*]+\*)/g);
+  // Parse [label](url), **bold**, `code`, and *italic* safely without dangerouslySetInnerHTML
+  const tokens = text.split(/(\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*|`[^`]+`|\*[^*]+\*)/g);
   return tokens.map((token, idx) => {
+    const linkMatch = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+    if (linkMatch) {
+      const [, label, href] = linkMatch;
+      if (isSafeMarkdownHref(href)) {
+        const isExternal = href.startsWith('http://') || href.startsWith('https://');
+        return (
+          <a
+            key={idx}
+            href={href}
+            target={isExternal ? '_blank' : undefined}
+            rel={isExternal ? 'noopener noreferrer' : undefined}
+            className="font-medium text-blue-600 dark:text-blue-400 underline underline-offset-2 hover:text-blue-700 dark:hover:text-blue-300 break-all"
+          >
+            {label}
+          </a>
+        );
+      }
+      return <React.Fragment key={idx}>{label}</React.Fragment>;
+    }
     if (token.startsWith('**') && token.endsWith('**') && token.length > 4) {
       return (
         <strong key={idx} className="font-semibold">

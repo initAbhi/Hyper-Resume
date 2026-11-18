@@ -16,6 +16,7 @@ import { AgentToolExecution } from './entities/agent-tool-execution.entity.js';
 import { AgentMessage } from './entities/agent-message.entity.js';
 import { ToolRegistryService } from './tools/tool-registry.service.js';
 import { computeProposalHash } from './tools/definitions/propose-edits.tool.js';
+import { applySectionDiffsToResumeContent } from './tools/definitions/resume-diff-applier.js';
 import { CreditsService } from '../credits/credits.service.js';
 import { AgentService } from './agent.service.js';
 import { Resume } from '../resumes/entities/resume.entity.js';
@@ -371,6 +372,9 @@ export class AgentExecutorService {
                 proposalHash: proposalData.proposalHash,
                 resumeId: proposalData.resumeId,
                 expectedResumeVersion: proposalData.expectedResumeVersion,
+                beforeAtsScore: proposalData.beforeAtsScore,
+                projectedAtsScore: proposalData.projectedAtsScore,
+                changeSummary: proposalData.changeSummary,
                 expiresAt: proposalData.expiresAt,
               },
             };
@@ -391,6 +395,8 @@ export class AgentExecutorService {
               resumeId: proposalData.resumeId,
               expectedResumeVersion: proposalData.expectedResumeVersion,
               sectionDiffs: proposalData.sectionDiffs,
+              beforeAtsScore: proposalData.beforeAtsScore,
+              projectedAtsScore: proposalData.projectedAtsScore,
               expiresAt: proposalData.expiresAt,
               changeSummary: proposalData.changeSummary,
             });
@@ -584,6 +590,17 @@ export class AgentExecutorService {
       }
       if (!args.jobDescriptionId && job.jobDescriptionId) args.jobDescriptionId = job.jobDescriptionId;
       if (!args.jobDescriptionText && job.descriptionText) args.jobDescriptionText = job.descriptionText;
+    } else if (toolName === 'restore_resume_version') {
+      if (!args.versionId && Array.isArray(workflowState.resumeVersions) && workflowState.resumeVersions.length > 0) {
+        const requestedNum = Number(args.targetVersionNumber);
+        const match = Number.isFinite(requestedNum) && requestedNum > 0
+          ? workflowState.resumeVersions.find((v: any) => Number(v.versionNumber) === requestedNum)
+          : workflowState.resumeVersions[0];
+        if (match?.id) {
+          args.versionId = match.id;
+        }
+      }
+      delete args.targetVersionNumber;
     }
 
     return args;
@@ -687,12 +704,31 @@ export class AgentExecutorService {
       };
     } else if (toolName === 'run_ats_audit') {
       const normalizedIssues = this.extractAtsIssues(payload);
+      const findingsObj = payload.findings && typeof payload.findings === 'object' ? payload.findings : {};
       workflowState.atsAudit = {
         overallScore: payload.overallScore ?? payload.atsScore ?? payload.score,
         issues: normalizedIssues,
         recommendations: Array.isArray(payload.recommendations) ? payload.recommendations : normalizedIssues,
-        wordCount: payload.wordCount ?? payload.findings?.wordCount,
+        wordCount: payload.wordCount ?? findingsObj.wordCount,
         summary: payload.summary,
+        dimensions: Array.isArray(findingsObj.dimensions)
+          ? findingsObj.dimensions.map((d: any) => ({
+              name: d.name || d.key,
+              score: d.score,
+              status: d.status,
+            }))
+          : [],
+        overusedVerbs: findingsObj.actionVerbAnalysis?.overusedVerbs || [],
+        unbackedSkills: findingsObj.stackAlignment?.unbackedSkills || [],
+        weakBullets: Array.isArray(findingsObj.bulletQuality)
+          ? findingsObj.bulletQuality
+              .filter((b: any) => !b.xyzCompliant || b.isPassiveOpener || b.wordCount > 36)
+              .slice(0, 8)
+              .map((b: any) => ({
+                text: String(b.text || '').slice(0, 120),
+                feedback: b.feedback,
+              }))
+          : [],
       };
     } else if (toolName === 'generate_bullet_variations') {
       workflowState.bulletVariations = {
@@ -711,29 +747,53 @@ export class AgentExecutorService {
       const expArr = Array.isArray(contentObj.experience) ? contentObj.experience : [];
       const skillArr = Array.isArray(contentObj.skills) ? contentObj.skills : [];
       const projArr = Array.isArray(contentObj.projects) ? contentObj.projects : [];
+      const eduArr = Array.isArray(contentObj.education) ? contentObj.education : [];
+      const certArr = Array.isArray(contentObj.certifications) ? contentObj.certifications : [];
+      const customArr = Array.isArray(contentObj.customSections) ? contentObj.customSections : [];
       workflowState.readResume = {
         resumeId: meta.resumeId || payload.resumeId || payload.id,
         name: meta.name || payload.name || contentObj.contact?.fullName || 'Your Resume',
-        fullName: contentObj.contact?.fullName,
+        templateKey: meta.templateKey || payload.templateKey,
+        version: meta.version,
+        contact: {
+          fullName: contentObj.contact?.fullName,
+          email: contentObj.contact?.email,
+          phone: contentObj.contact?.phone,
+          location: contentObj.contact?.location,
+          linkedinUrl: contentObj.contact?.linkedinUrl,
+          githubUrl: contentObj.contact?.githubUrl,
+          websiteUrl: contentObj.contact?.websiteUrl,
+        },
         headline: contentObj.headline,
-        summary: typeof contentObj.summary === 'string' ? contentObj.summary.slice(0, 400) : undefined,
+        summary: typeof contentObj.summary === 'string' ? contentObj.summary : undefined,
         experienceCount: expArr.length,
         skillsCount: skillArr.length,
-        skills: skillArr.map((s: any) => (typeof s === 'string' ? s : s?.name)).filter(Boolean).slice(0, 25),
-        experiencePreview: expArr.slice(0, 3).map((e: any) => ({
+        skills: skillArr.map((s: any) => (typeof s === 'string' ? s : s?.name)).filter(Boolean),
+        experience: expArr.map((e: any, idx: number) => ({
+          index: idx,
           title: e?.title,
           company: e?.company,
-          bullets: Array.isArray(e?.bullets) ? e.bullets.slice(0, 3) : [],
+          dates: `${e?.startDate || ''} - ${e?.current ? 'Present' : e?.endDate || ''}`,
+          bullets: Array.isArray(e?.bullets) ? e.bullets : [],
         })),
-        projectsPreview: projArr.slice(0, 3).map((p: any) => ({
+        projects: projArr.map((p: any, idx: number) => ({
+          index: idx,
           name: p?.name,
-          technologies: p?.technologies,
+          description: p?.description,
+          highlights: Array.isArray(p?.highlights) ? p.highlights : [],
         })),
+        education: eduArr,
+        certifications: certArr,
+        customSections: customArr.map((c: any) => ({ title: c?.title, kind: c?.kind, entryCount: (c?.entries || []).length })),
+        layout: contentObj.layout,
       };
     } else if (toolName === 'read_resume_versions') {
-      workflowState.resumeVersions = Array.isArray(payload.versions)
-        ? payload.versions.slice(0, 5)
-        : [];
+      const versionList = Array.isArray(data)
+        ? data
+        : Array.isArray(payload.versions)
+          ? payload.versions
+          : [];
+      workflowState.resumeVersions = versionList.slice(0, 10);
     } else if (toolName === 'read_career_profile') {
       workflowState.careerProfile = {
         headline: payload.headline,
@@ -760,6 +820,9 @@ export class AgentExecutorService {
     if (diffs.summary?.proposed && diffs.summary.proposed.trim() !== (diffs.summary.original || '').trim()) {
       changedSections.push('**Summary**');
     }
+    if (diffs.contact?.changedFields?.length) {
+      changedSections.push(`**Contact** (${diffs.contact.changedFields.join(', ')})`);
+    }
     const bulletChanges = Array.isArray(diffs.experience)
       ? diffs.experience.reduce(
           (acc: number, exp: any) =>
@@ -768,25 +831,45 @@ export class AgentExecutorService {
               ? exp.bulletDiffs.filter(
                   (b: any) => (b?.proposed || '').trim() !== (b?.original || '').trim(),
                 ).length
-              : 0),
+              : 0) +
+            (Array.isArray(exp?.addedBullets) ? exp.addedBullets.length : 0),
           0,
         )
       : 0;
     if (bulletChanges > 0) {
       changedSections.push(`**${bulletChanges} Experience Bullet${bulletChanges === 1 ? '' : 's'}**`);
     }
-    const addedSkills = Array.isArray(diffs.skills?.addedSkills) ? diffs.skills.addedSkills : [];
-    if (addedSkills.length > 0) {
-      changedSections.push(`**${addedSkills.length} New Skill${addedSkills.length === 1 ? '' : 's'}** (${addedSkills.slice(0, 5).join(', ')})`);
+    if (Array.isArray(diffs.projects) && diffs.projects.length > 0) {
+      changedSections.push(`**${diffs.projects.length} Project${diffs.projects.length === 1 ? '' : 's'}**`);
     }
+    const addedSkills = Array.isArray(diffs.skills?.addedSkills) ? diffs.skills.addedSkills : [];
+    const removedSkills = Array.isArray(diffs.skills?.removedSkills) ? diffs.skills.removedSkills : [];
+    if (addedSkills.length > 0 || removedSkills.length > 0) {
+      const skillParts: string[] = [];
+      if (addedSkills.length > 0) skillParts.push(`+${addedSkills.length} added`);
+      if (removedSkills.length > 0) skillParts.push(`-${removedSkills.length} unbacked removed`);
+      changedSections.push(`**Skills** (${skillParts.join(', ')})`);
+    }
+    if (diffs.certifications?.proposed) changedSections.push('**Certifications**');
+    if (diffs.education?.proposed) changedSections.push('**Education**');
+    if (diffs.customSections?.proposed) changedSections.push('**Custom Sections**');
+    if (diffs.templateKey?.proposed) changedSections.push(`**Template → ${diffs.templateKey.proposed}**`);
+    if (diffs.layout?.changedFields?.length) changedSections.push(`**Layout** (${diffs.layout.changedFields.join(', ')})`);
 
     const parts: string[] = [];
-    if (workflowState.atsAudit?.overallScore !== undefined) {
-      parts.push(`**Current ATS Score:** ${workflowState.atsAudit.overallScore}/100.`);
+    const beforeScore = proposalData.beforeAtsScore ?? workflowState.atsAudit?.overallScore;
+    const projectedScore = proposalData.projectedAtsScore;
+    if (typeof beforeScore === 'number' && typeof projectedScore === 'number') {
+      const delta = projectedScore - beforeScore;
+      const deltaStr = delta > 0 ? ` (+${delta})` : delta < 0 ? ` (${delta})` : '';
+      parts.push(`**Verified ATS Score Projection:** **${beforeScore}/100 → ${projectedScore}/100${deltaStr}**`);
+    } else if (typeof beforeScore === 'number') {
+      parts.push(`**Current ATS Score:** ${beforeScore}/100.`);
     }
+
     if (changedSections.length > 0) {
       parts.push(
-        `I've prepared proposed edits across ${changedSections.join(', ')}. Review the diff card below and click **Review & Approve** to apply them to your live resume canvas (nothing is modified until you approve).`,
+        `I've prepared targeted edits across ${changedSections.join(', ')}. Review each change in the diff card below (you can cherry-pick individual sections) and click **Review & Approve** to apply them to your live resume.`,
       );
     } else {
       parts.push(
@@ -813,7 +896,7 @@ export class AgentExecutorService {
     }
 
     try {
-      const compactState = JSON.stringify(workflowState).slice(0, 5000);
+      const compactState = JSON.stringify(workflowState).slice(0, 12000);
       const response = await this.geminiProvider.callGeminiWithFunctions(
         [
           {
@@ -828,7 +911,7 @@ export class AgentExecutorService {
         undefined,
         {
           systemInstruction:
-            'You are HyperResume\'s AI Career Agent. Give a direct, specific, actionable Markdown response grounded strictly in the candidate\'s real resume and tool outputs. Quote exact details (ATS score, specific weak areas, headline, skills, or roles) when present. Never invent metrics or fake experience. If the user asked for advice on improving their resume, give concrete resume-specific changes and offer to apply them with a single prompt. NEVER say robotic filler like "I\'ve finished executing your request" or "All steps have been verified."',
+            'You are HyperResume\'s Principal AI Career & Resume Copilot. Give a sharp, specific, line-by-line actionable Markdown response grounded strictly in the candidate\'s FULL resume and verified ATS audit results. Cite exact role titles, project names, overused action verbs, unbacked skills, and exact bullet weaknesses when present. Never invent metrics or fake experience. Whenever you recommend resume improvements, end with a clear 1-line offer like: "Say **\'apply these changes\'** and I will immediately generate a live diff proposal to implement every point above." NEVER say robotic filler like "I\'ve finished executing your request" or "All steps have been verified."',
           temperature: 0.3,
         },
       );
@@ -1041,7 +1124,11 @@ export class AgentExecutorService {
           );
         }
 
-        return { success: true, newVersion: (execResult.data as any)?.newVersion || 1, resumed: hasRemainingSteps };
+        return {
+          success: true,
+          newVersion: (execResult.data as any)?.newLiveVersion || (execResult.data as any)?.newVersion || 1,
+          resumed: hasRemainingSteps,
+        };
       }
 
       if (!execution.resumeId) {
@@ -1074,54 +1161,16 @@ export class AgentExecutorService {
       execution.approvedAt = new Date();
       await manager.save(execution);
 
-      // 4. Apply server-persisted diffs to resume content (honoring optional selective acceptedFieldPaths)
+      // 4. Apply server-persisted diffs to resume content & templateKey via shared whole-resume applier
       const sectionDiffs = serverPayload.sectionDiffs || {};
-      const acceptedSet =
-        Array.isArray(acceptedFieldPaths) && acceptedFieldPaths.length > 0
-          ? new Set(acceptedFieldPaths)
-          : null;
-      const shouldApply = (fieldPath: string) => {
-        if (!acceptedSet) return true;
-        if (acceptedSet.has(fieldPath)) return true;
-        // Support both dot notation (experience.0.bullets.1) and bracket notation (experience[0].bullets[1])
-        const normalizedDot = fieldPath.replace(/\[(\d+)\]/g, '.$1');
-        const normalizedBracket = normalizedDot.replace(/\.(\d+)/g, '[$1]');
-        return acceptedSet.has(normalizedDot) || acceptedSet.has(normalizedBracket);
-      };
-
       if (resume.content) {
-        if (sectionDiffs.headline?.proposed && shouldApply('headline')) {
-          resume.content.headline = sectionDiffs.headline.proposed;
-        }
-        if (sectionDiffs.summary?.proposed && shouldApply('summary')) {
-          resume.content.summary = sectionDiffs.summary.proposed;
-        }
-        if (Array.isArray(sectionDiffs.experience) && Array.isArray(resume.content.experience)) {
-          for (let expIdx = 0; expIdx < sectionDiffs.experience.length; expIdx++) {
-            const expDiff = sectionDiffs.experience[expIdx];
-            const targetExp = resume.content.experience[expIdx];
-            if (!targetExp || !Array.isArray(expDiff?.bulletDiffs) || !Array.isArray(targetExp.bullets)) {
-              continue;
-            }
-            for (const bDiff of expDiff.bulletDiffs) {
-              const fieldPath = `experience.${expIdx}.bullets.${bDiff?.bulletIndex}`;
-              if (
-                typeof bDiff?.bulletIndex === 'number' &&
-                typeof bDiff?.proposed === 'string' &&
-                bDiff.bulletIndex >= 0 &&
-                bDiff.bulletIndex < targetExp.bullets.length &&
-                shouldApply(fieldPath)
-              ) {
-                targetExp.bullets[bDiff.bulletIndex] = bDiff.proposed;
-              }
-            }
-          }
-        }
-        if (Array.isArray(sectionDiffs.skills?.proposed) && shouldApply('skills')) {
-          resume.content.skills = sectionDiffs.skills.proposed;
-        }
-        if (Array.isArray(sectionDiffs.projects?.proposed) && shouldApply('projects')) {
-          resume.content.projects = sectionDiffs.projects.proposed;
+        const applied = applySectionDiffsToResumeContent(resume.content, sectionDiffs, {
+          acceptedFieldPaths,
+          currentTemplateKey: resume.templateKey,
+        });
+        resume.content = applied.content;
+        if (applied.templateKey && applied.templateKey !== resume.templateKey) {
+          resume.templateKey = applied.templateKey;
         }
       }
 

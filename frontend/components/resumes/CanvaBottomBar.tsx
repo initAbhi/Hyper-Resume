@@ -26,6 +26,8 @@ export interface CanvaBottomBarProps {
   onFitPage?: () => void;
   onOpenAddContent?: () => void;
   shiftRight?: boolean;
+  shiftForAgent?: boolean;
+  shiftForInspector?: boolean;
 }
 
 export function CanvaBottomBar({
@@ -40,6 +42,8 @@ export function CanvaBottomBar({
   onFitPage,
   onOpenAddContent,
   shiftRight = false,
+  shiftForAgent = false,
+  shiftForInspector = false,
 }: CanvaBottomBarProps) {
   const currentPercent = Math.round(effectiveScale * 100);
 
@@ -63,12 +67,17 @@ export function CanvaBottomBar({
     if (idx >= 0 && idx < ZOOM_STEPS.length - 1) onSetZoomMode(ZOOM_STEPS[idx + 1]);
   };
 
+  const horizontalPositionClass = shiftForInspector || shiftForAgent
+    ? 'left-1/2 lg:left-[calc(50%+210px)] xl:left-[calc(50%+225px)]'
+    : shiftRight
+      ? 'left-1/2 lg:left-[calc(50vw+220px)]'
+      : 'left-1/2 lg:left-[calc(50%+36px)]';
+
   return (
     <div
       data-export-exclude="true"
       data-testid="canva-bottom-bar"
-      className={`print:hidden fixed bottom-[max(0.75rem,env(safe-area-inset-bottom,12px))] ${shiftRight ? 'left-1/2 lg:left-[calc(50vw+220px)]' : 'left-1/2'
-        } -translate-x-1/2 z-30 flex items-center gap-1.5 sm:gap-3 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-zinc-200/80 dark:border-zinc-800 shadow-xl text-xs text-zinc-700 dark:text-zinc-200 select-none animate-in fade-in slide-in-from-bottom-2 duration-200 max-w-[calc(100vw-1rem)] overflow-x-auto no-scrollbar transition-[left] duration-300`}
+      className={`print:hidden fixed bottom-[max(0.75rem,env(safe-area-inset-bottom,12px))] ${horizontalPositionClass} -translate-x-1/2 z-30 flex items-center gap-1.5 sm:gap-3 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-zinc-200/80 dark:border-zinc-800 shadow-xl text-xs text-zinc-700 dark:text-zinc-200 select-none animate-in fade-in slide-in-from-bottom-2 duration-200 max-w-[calc(100vw-1rem)] overflow-x-auto no-scrollbar transition-[left] duration-300`}
     >
       {/* Undo / Redo controls */}
       <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">

@@ -8,8 +8,10 @@ import type { ResumeContent } from '@/lib/api-client';
 interface TemplatePickerProps {
   isOpen: boolean;
   onClose: () => void;
+  docked?: boolean;
   currentTemplateKey: string;
   onSelectTemplate: (templateKey: string) => void;
+  onPreviewTemplate?: (preview: { templateKey: string; label: string } | null) => void;
   pageSize?: 'A4' | 'US Letter';
   onPageSizeChange?: (size: 'A4' | 'US Letter') => void;
   content?: ResumeContent | null;
@@ -198,8 +200,10 @@ function TemplateThumbnail({
 export function TemplatePicker({
   isOpen,
   onClose,
+  docked = false,
   currentTemplateKey,
   onSelectTemplate,
+  onPreviewTemplate,
   pageSize = 'A4',
   onPageSizeChange,
   content,
@@ -253,15 +257,22 @@ export function TemplatePicker({
 
   // Close on Escape key press
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      onPreviewTemplate?.(null);
+      return;
+    }
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        onPreviewTemplate?.(null);
         onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      onPreviewTemplate?.(null);
+    };
+  }, [isOpen, onClose, onPreviewTemplate]);
 
   const previewContent = useMemo(() => {
     return getSafePreviewContent(content);
@@ -301,27 +312,22 @@ export function TemplatePicker({
     if (onPageSizeChange) onPageSizeChange(size);
   };
 
-  return (
-    <>
-      {/* Mobile-only subtle backdrop: dismiss on tap, NO BLUR */}
-      <div
-        className="fixed inset-0 bg-black/25 z-30 lg:hidden transition-opacity animate-in fade-in"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      {/* Slide-in Left Drawer: Fixed on the left, does NOT block or blur the resume on desktop */}
+  const asidePanel = (
       <aside
         data-export-exclude="true"
         aria-label="Resume Templates Panel"
-        className="fixed inset-y-0 left-0 z-40 w-full sm:w-[420px] lg:w-[440px] bg-white dark:bg-zinc-900 shadow-2xl border-r border-zinc-200 dark:border-zinc-800 flex flex-col pointer-events-auto animate-in slide-in-from-left duration-200 ease-out"
+        className={
+          docked
+            ? 'w-full h-full bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 shadow-sm flex flex-col overflow-hidden'
+            : 'fixed inset-y-0 left-0 z-40 w-full sm:w-[420px] lg:w-[440px] bg-white dark:bg-zinc-900 shadow-2xl border-r border-zinc-200 dark:border-zinc-800 flex flex-col pointer-events-auto animate-in slide-in-from-left duration-200 ease-out'
+        }
       >
         {/* Drawer Header */}
-        <div className="px-5 py-3.5 border-b border-zinc-200 dark:border-zinc-800 shrink-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xs">
+        <div className="px-4 sm:px-5 py-3.5 border-b border-zinc-200 dark:border-zinc-800 shrink-0 bg-white/95 dark:bg-zinc-900/95">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                <span>Select a Template</span>
+                <span>Templates</span>
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                   {AVAILABLE_TEMPLATES.length} Styles
                 </span>
@@ -331,14 +337,17 @@ export function TemplatePicker({
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
-                <span>Live previewing right on your resume</span>
+                <span>Hover to preview live · Click to apply</span>
               </div>
             </div>
 
             <button
               type="button"
-              onClick={onClose}
-              className="p-2 min-w-[34px] min-h-[34px] flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              onClick={() => {
+                onPreviewTemplate?.(null);
+                onClose();
+              }}
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
               aria-label="Close template picker"
               title="Close (Esc)"
             >
@@ -407,13 +416,16 @@ export function TemplatePicker({
           )}
 
         {/* Templates Grid (Scrollable) */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+        <div
+          className="flex-1 overflow-y-auto p-4 space-y-4 overscroll-contain studio-preview-group"
+          onMouseLeave={() => onPreviewTemplate?.(null)}
+        >
           {filteredTemplates.length === 0 ? (
             <div className="py-12 text-center text-xs text-zinc-500">
               No templates match &ldquo;{searchQuery}&rdquo;
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3.5 sm:gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-3.5">
               {filteredTemplates.map((tpl) => {
                 const isSelected =
                   currentTemplateKey === tpl.key ||
@@ -421,19 +433,23 @@ export function TemplatePicker({
                   (currentTemplateKey === 'default' && tpl.key === 'double-column');
 
                 return (
-                  <div
+                  <button
                     key={tpl.key}
+                    type="button"
+                    {...({ interestfor: 'resume-document-print' } as Record<string, string>)}
                     data-template-key={tpl.key}
-                    onClick={() => onSelectTemplate(tpl.key)}
-                    className="group cursor-pointer flex flex-col text-left space-y-1.5 focus:outline-none"
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        onSelectTemplate(tpl.key);
-                      }
+                    onMouseEnter={() =>
+                      onPreviewTemplate?.({ templateKey: tpl.key, label: tpl.name })
+                    }
+                    onFocus={() =>
+                      onPreviewTemplate?.({ templateKey: tpl.key, label: tpl.name })
+                    }
+                    onBlur={() => onPreviewTemplate?.(null)}
+                    onClick={() => {
+                      onPreviewTemplate?.(null);
+                      onSelectTemplate(tpl.key);
                     }}
+                    className="group cursor-pointer flex flex-col text-left space-y-1.5 focus:outline-none rounded-lg"
                   >
                     {/* Miniature Visual Resume Preview Card */}
                     <div
@@ -464,7 +480,7 @@ export function TemplatePicker({
                       {/* Hover Overlay */}
                       {!isSelected && (
                         <div className="absolute inset-0 bg-emerald-950/10 dark:bg-emerald-400/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2 text-center">
-                          <span className="bg-zinc-900/90 text-white text-[10.5px] font-semibold px-2.5 py-1 rounded-full shadow-md backdrop-blur-xs">
+                          <span className="bg-zinc-900/95 text-white text-[10.5px] font-semibold px-2.5 py-1 rounded-full shadow-md">
                             Preview live
                           </span>
                         </div>
@@ -492,7 +508,7 @@ export function TemplatePicker({
                         {tpl.description}
                       </p>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -500,17 +516,7 @@ export function TemplatePicker({
         </div>
 
         {/* Bottom Fixed Controls Bar */}
-        <div className="p-4 sm:p-5 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 space-y-3.5 shrink-0">
-          {/* Continue Editing Button */}
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full py-2.5 px-4 bg-emerald-700 hover:bg-emerald-800 active:scale-[0.99] text-white text-xs font-bold rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <Check className="w-3.5 h-3.5" />
-            <span>Continue Editing ({activeTemplate.name})</span>
-          </button>
-
+        <div className="p-3.5 sm:p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/90 dark:bg-zinc-950/70 space-y-2.5 shrink-0">
           {/* Document Size Selector */}
           <div className="flex items-center justify-between text-xs">
             <span className="font-medium text-zinc-700 dark:text-zinc-300">
@@ -563,8 +569,41 @@ export function TemplatePicker({
               <option value="Spanish">Spanish (Español)</option>
             </select>
           </div>
+
+          {/* Active Template Live Status */}
+          <div className="pt-2 border-t border-zinc-200/70 dark:border-zinc-800 flex items-center justify-between text-[11px]">
+            <span className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-medium truncate">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              <span className="truncate">Active: {activeTemplate.name}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                onPreviewTemplate?.(null);
+                onClose();
+              }}
+              className="px-2.5 py-1 rounded-md font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/70 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
+            >
+              Collapse
+            </button>
+          </div>
         </div>
       </aside>
+  );
+
+  if (docked) {
+    return asidePanel;
+  }
+
+  return (
+    <>
+      {/* Mobile-only subtle backdrop: dismiss on tap, NO BLUR */}
+      <div
+        className="fixed inset-0 bg-black/25 z-30 lg:hidden transition-opacity animate-in fade-in"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      {asidePanel}
     </>
   );
 }

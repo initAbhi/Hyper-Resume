@@ -22,6 +22,7 @@ import type { ResumeContent, CustomSectionKind } from '@/lib/api-client';
 export interface AddContentDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  docked?: boolean;
   content: ResumeContent;
   onUpdateContent: (updater: (prev: ResumeContent) => ResumeContent) => void;
   onScrollToSection?: (sectionId: string) => void;
@@ -30,6 +31,7 @@ export interface AddContentDrawerProps {
 export function AddContentDrawer({
   isOpen,
   onClose,
+  docked = false,
   content,
   onUpdateContent,
   onScrollToSection,
@@ -217,38 +219,37 @@ export function AddContentDrawer({
     },
   ];
 
-  return (
-    <div
-      data-export-exclude="true"
-      className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs print:hidden animate-in fade-in duration-200"
-      onClick={onClose}
-    >
+  const panelBody = (
       <div
         id="canva-add-content-drawer"
-        role="dialog"
+        role={docked ? 'region' : 'dialog'}
         aria-label="Add Content and Sections"
-        className="w-full max-w-md bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 shadow-2xl h-full flex flex-col p-5 overflow-y-auto animate-in slide-in-from-right duration-200"
+        className={
+          docked
+            ? 'w-full h-full bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 shadow-sm flex flex-col overflow-hidden'
+            : 'relative w-full max-w-md bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 shadow-2xl h-full flex flex-col overflow-hidden animate-in slide-in-from-right duration-200 pointer-events-auto z-10'
+        }
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold shrink-0">
               <Plus className="w-4 h-4" />
             </div>
-            <div>
-              <h2 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
+            <div className="min-w-0">
+              <h2 className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
                 Add Section &amp; Content
               </h2>
-              <p className="text-[11px] text-zinc-500">
-                Insert sections or entries live onto your canvas
+              <p className="text-[11px] text-zinc-500 truncate">
+                Inserts directly onto your live canvas
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
             aria-label="Close add content drawer"
           >
             <X className="w-4 h-4" />
@@ -256,7 +257,7 @@ export function AddContentDrawer({
         </div>
 
         {/* Content Items List */}
-        <div className="py-4 space-y-4 flex-1">
+        <div className="p-4 sm:p-5 space-y-4 flex-1 overflow-y-auto overscroll-contain">
           {/* Core Sections */}
           <div className="space-y-2.5">
             <h3 className="text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider">
@@ -505,17 +506,37 @@ export function AddContentDrawer({
         </div>
 
         {/* Footer */}
-        <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 text-[11px] text-zinc-600 dark:text-zinc-400 flex items-center justify-between">
-          <span>Instant live canvas sync</span>
+        <div className="px-4 py-2.5 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/60 text-[11px] flex items-center justify-between shrink-0">
+          <span className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            Instant live canvas sync
+          </span>
           <button
             type="button"
             onClick={onClose}
-            className="font-medium text-zinc-600 dark:text-zinc-300 hover:underline cursor-pointer"
+            className="px-2.5 py-1 rounded-md font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/70 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
           >
-            Done
+            Collapse
           </button>
         </div>
       </div>
+  );
+
+  if (docked) {
+    return panelBody;
+  }
+
+  return (
+    <div
+      data-export-exclude="true"
+      className="fixed inset-0 z-50 flex justify-end pointer-events-none print:hidden"
+    >
+      <div
+        className="fixed inset-0 bg-black/20 lg:hidden pointer-events-auto transition-opacity"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      {panelBody}
     </div>
   );
 }

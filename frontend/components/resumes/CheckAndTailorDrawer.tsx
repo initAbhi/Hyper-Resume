@@ -35,6 +35,7 @@ interface KeywordItem {
 interface CheckAndTailorDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  docked?: boolean;
   resumeId: string;
   resumeContent: ResumeContent;
   onUpdateContent: (updater: (prev: ResumeContent) => ResumeContent) => void;
@@ -84,6 +85,7 @@ function mapImportanceToPriority(importance?: string): 'High' | 'Medium' | 'Low'
 export function CheckAndTailorDrawer({
   isOpen,
   onClose,
+  docked = false,
   resumeId,
   resumeContent,
   onUpdateContent,
@@ -387,16 +389,14 @@ export function CheckAndTailorDrawer({
   const activeCompany = activeMatch?.jobDescription?.companyName || 'Target Company';
   const requirementsList = activeMatch?.analysis?.matchedRequirements || [];
 
-  return (
-    <div id="check-tailor-drawer" className="fixed inset-0 z-50 flex">
-      {/* Backdrop */}
+  const panelBody = (
       <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity animate-in fade-in"
-        onClick={onClose}
-      />
-
-      {/* Slide-in Left Drawer */}
-      <div className="relative w-full max-w-[460px] bg-white dark:bg-zinc-900 h-full shadow-2xl border-r border-zinc-200 dark:border-zinc-800 flex flex-col z-10 animate-in slide-in-from-left duration-200">
+        className={
+          docked
+            ? 'w-full h-full bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 shadow-sm flex flex-col overflow-hidden'
+            : 'relative w-full max-w-[460px] bg-white dark:bg-zinc-900 h-full shadow-2xl border-r border-zinc-200 dark:border-zinc-800 flex flex-col z-10 animate-in slide-in-from-left duration-200 pointer-events-auto'
+        }
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
           <div className="flex items-center gap-2 font-bold text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 min-w-0">
@@ -999,6 +999,25 @@ export function CheckAndTailorDrawer({
           )}
         </div>
       </div>
+  );
+
+  if (docked) {
+    return (
+      <div id="check-tailor-drawer" className="h-full w-full">
+        {panelBody}
+      </div>
+    );
+  }
+
+  return (
+    <div id="check-tailor-drawer" className="fixed inset-0 z-50 flex pointer-events-none">
+      {/* Mobile-only light backdrop (NO blur) */}
+      <div
+        className="fixed inset-0 bg-black/25 lg:hidden pointer-events-auto transition-opacity"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      {panelBody}
     </div>
   );
 }

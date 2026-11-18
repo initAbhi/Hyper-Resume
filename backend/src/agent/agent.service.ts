@@ -14,6 +14,7 @@ import { AgentMessage } from './entities/agent-message.entity.js';
 import { AgentTask } from './entities/agent-task.entity.js';
 import { AgentTaskEvent } from './entities/agent-task-event.entity.js';
 import { AgentStreamTicket } from './entities/agent-stream-ticket.entity.js';
+import { AgentToolExecution } from './entities/agent-tool-execution.entity.js';
 import { CreditsService } from '../credits/credits.service.js';
 import { CreateAgentMessageDto, CreateConversationDto } from './dto/agent-message.dto.js';
 
@@ -88,11 +89,53 @@ export class AgentService implements OnModuleDestroy {
 
   async getConversationTasks(userId: string, conversationId: string): Promise<AgentTask[]> {
     await this.getConversation(userId, conversationId);
-    return this.taskRepo.find({
+    const tasks = await this.taskRepo.find({
       where: { conversationId, userId },
       order: { createdAt: 'DESC' },
       take: 25,
     });
+
+    // Hydrate full stagedProposal for any AWAITING_APPROVAL task so page refreshes & SSE reconnects
+    // always recover the complete diff card without losing pending proposals.
+    const awaiting = tasks.filter((t) => {
+      const activeProp = (t.metadata?.activeProposal as Record<string, any> | undefined);
+      return t.status === 'AWAITING_APPROVAL' && typeof activeProp?.proposalId === 'string';
+    });
+    if (awaiting.length > 0 && typeof this.dataSource?.getRepository === 'function') {
+      try {
+        const execRepo = this.dataSource.getRepository(AgentToolExecution);
+        for (const task of awaiting) {
+          const activeProp = (task.metadata?.activeProposal as Record<string, any> | undefined);
+          const proposalId = activeProp?.proposalId as string | undefined;
+          if (!proposalId) continue;
+          const exec = await execRepo.findOne({
+            where: { id: proposalId, userId, status: 'PENDING_APPROVAL' },
+          });
+          if (exec?.outputPayload) {
+            const payload = exec.outputPayload as Record<string, any>;
+            task.metadata = {
+              ...task.metadata,
+              stagedProposal: {
+                taskId: task.id,
+                executionId: exec.id,
+                proposalHash: exec.proposalHash,
+                resumeId: exec.resumeId,
+                expectedResumeVersion: exec.expectedResumeVersion ?? payload.expectedResumeVersion ?? 1,
+                sectionDiffs: payload.sectionDiffs || {},
+                beforeAtsScore: payload.beforeAtsScore,
+                projectedAtsScore: payload.projectedAtsScore,
+                changeSummary: payload.changeSummary,
+                expiresAt: exec.expiresAt?.toISOString() || activeProp?.expiresAt,
+              },
+            };
+          }
+        }
+      } catch {
+        // Non-fatal hydration fallback
+      }
+    }
+
+    return tasks;
   }
 
   async updateConversation(
@@ -121,8 +164,10 @@ export class AgentService implements OnModuleDestroy {
   ): Promise<{ taskId: string; conversationId: string; messageId: string }> {
     const conversation = await this.getConversation(userId, conversationId);
 
-    const resolvedResumeId =
-      dto.activeResumeId || dto.context?.activeResumeId || conversation.activeResumeId;
+    const isResumeDetached = Boolean(dto.context?.resumeDetached);
+    const resolvedResumeId = isResumeDetached
+      ? undefined
+      : dto.activeResumeId || dto.context?.activeResumeId || conversation.activeResumeId || undefined;
 
     const existingConvContext =
       ((conversation.metadata as Record<string, any>)?.workflowContext as Record<string, unknown>) ||
@@ -133,12 +178,19 @@ export class AgentService implements OnModuleDestroy {
       ...dto.context,
       activeResumeId: resolvedResumeId,
     };
+    if (isResumeDetached) {
+      delete mergedContext.activeResumeId;
+      delete mergedContext.activeResumeName;
+      delete mergedContext.resumeDetached;
+    }
 
     // Strip any model/client-supplied userId defensively
     delete mergedContext.userId;
 
     if (dto.activeResumeId || dto.context) {
-      if (resolvedResumeId) {
+      if (isResumeDetached) {
+        conversation.activeResumeId = null as unknown as string;
+      } else if (resolvedResumeId) {
         conversation.activeResumeId = resolvedResumeId;
       }
       // Persist only lightweight references on conversation metadata (avoid duplicating large raw JDs)
@@ -467,6 +519,17 @@ export class AgentService implements OnModuleDestroy {
 
       this.eventEmitter.on(`conversation:${conversationId}`, liveListener);
 
+      // Periodic 8s keepalive heartbeat prevents idle SSE disconnects across proxies/browsers during long AI steps
+      const heartbeatTimer = setInterval(() => {
+        if (!isDisposed) {
+          observer.next({
+            type: 'heartbeat',
+            data: { ts: Date.now() },
+          });
+        }
+      }, 8_000);
+      heartbeatTimer.unref?.();
+
       // Step 2 & 3: Subscribe to PG LISTEN (multi-instance) and query historical replay
       (async () => {
         try {
@@ -526,6 +589,7 @@ export class AgentService implements OnModuleDestroy {
 
       return () => {
         isDisposed = true;
+        clearInterval(heartbeatTimer);
         this.eventEmitter.removeListener(`conversation:${conversationId}`, liveListener);
         void this.unsubscribePgChannel(conversationId);
       };

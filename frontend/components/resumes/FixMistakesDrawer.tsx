@@ -32,6 +32,7 @@ import {
 interface FixMistakesDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  docked?: boolean;
   resumeTitle: string;
   resumeTargetRole?: string;
   content: ResumeContent;
@@ -145,6 +146,7 @@ function renderDiffSegment(issue: WritingIssueItem) {
 export function FixMistakesDrawer({
   isOpen,
   onClose,
+  docked = false,
   resumeTitle,
   resumeTargetRole,
   content,
@@ -168,8 +170,9 @@ export function FixMistakesDrawer({
   const [activeTab, setActiveTab] = useState<FilterTabId>('all');
   const [liveStatusMessage, setLiveStatusMessage] = useState('');
 
-  // Sync open state cleanly with native modal <dialog>
+  // Sync open state cleanly with native modal <dialog> when in overlay mode
   useEffect(() => {
+    if (docked) return;
     const dialog = dialogRef.current;
     if (!dialog) return;
 
@@ -180,7 +183,17 @@ export function FixMistakesDrawer({
     } else if (dialog.open) {
       dialog.close();
     }
-  }, [isOpen]);
+  }, [isOpen, docked]);
+
+  // Escape handler in docked mode
+  useEffect(() => {
+    if (!docked || !isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [docked, isOpen, onClose]);
 
   const ignoredSet = useMemo(() => new Set(ignoredIds), [ignoredIds]);
 
@@ -263,27 +276,9 @@ export function FixMistakesDrawer({
     );
   };
 
-  return (
-    <dialog
-      ref={dialogRef}
-      id="fix-mistakes-drawer"
-      aria-labelledby={titleId}
-      onClose={onClose}
-      onCancel={(e) => {
-        e.preventDefault();
-        onClose();
-      }}
-      onPointerDown={(e) => {
-        pointerDownOutsideRef.current = isPointerOutsideDialog(e);
-      }}
-      onPointerUp={(e) => {
-        if (pointerDownOutsideRef.current && isPointerOutsideDialog(e)) {
-          onClose();
-        }
-        pointerDownOutsideRef.current = false;
-      }}
-      className="m-0 ml-auto h-full max-h-none w-full max-w-[460px] p-0 border-l border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-2xl [overscroll-behavior:contain] backdrop:bg-black/45 backdrop:backdrop-blur-xs backdrop:overflow-hidden backdrop:[overscroll-behavior:contain]"
-    >
+  if (docked && !isOpen) return null;
+
+  const innerContent = (
       <div className="flex flex-col h-full w-full">
         {/* Top Drawer Header */}
         <header className="flex items-start justify-between gap-3 p-3.5 sm:p-5 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
@@ -566,6 +561,42 @@ export function FixMistakesDrawer({
           )}
         </footer>
       </div>
+  );
+
+  if (docked) {
+    return (
+      <aside
+        id="fix-mistakes-drawer"
+        aria-labelledby={titleId}
+        className="h-full w-full bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 shadow-sm overflow-hidden flex flex-col"
+      >
+        {innerContent}
+      </aside>
+    );
+  }
+
+  return (
+    <dialog
+      ref={dialogRef}
+      id="fix-mistakes-drawer"
+      aria-labelledby={titleId}
+      onClose={onClose}
+      onCancel={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
+      onPointerDown={(e) => {
+        pointerDownOutsideRef.current = isPointerOutsideDialog(e);
+      }}
+      onPointerUp={(e) => {
+        if (pointerDownOutsideRef.current && isPointerOutsideDialog(e)) {
+          onClose();
+        }
+        pointerDownOutsideRef.current = false;
+      }}
+      className="m-0 ml-auto h-full max-h-none w-full max-w-[460px] p-0 border-l border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-2xl [overscroll-behavior:contain] backdrop:bg-black/25 backdrop:overflow-hidden backdrop:[overscroll-behavior:contain]"
+    >
+      {innerContent}
     </dialog>
   );
 }

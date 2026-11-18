@@ -14,9 +14,6 @@ async function bootstrap() {
     logger,
   });
 
-  // Enable NestJS lifecycle shutdown hooks (OnModuleDestroy / OnApplicationShutdown) for SIGTERM/SIGINT
-  app.enableShutdownHooks();
-
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT', 3001);
   const frontendUrl = configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
@@ -149,6 +146,74 @@ async function bootstrap() {
   logger.log(`Server started on port ${port} in ${configService.get('NODE_ENV')} mode`, 'Bootstrap');
   if (enableSwagger) {
     logger.log(`Swagger documentation available at http://localhost:${port}/api/docs`, 'Bootstrap');
+  }
+
+  // Fast, leak-free shutdown so open SSE/HTTP keep-alive sockets never orphan dist/main.js on port 3001
+  const httpServer = app.getHttpServer();
+  let isShuttingDown = false;
+
+  const gracefulShutdown = (reason: string) => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+    logger.log(`Shutting down server (${reason})...`, 'Shutdown');
+
+    const forceExitTimer = setTimeout(() => {
+      process.exit(0);
+    }, 1500);
+    forceExitTimer.unref();
+
+    if (typeof httpServer?.closeIdleConnections === 'function') {
+      httpServer.closeIdleConnections();
+    }
+    if (typeof httpServer?.closeAllConnections === 'function') {
+      httpServer.closeAllConnections();
+    }
+
+    app
+      .close()
+      .catch(() => undefined)
+      .finally(() => {
+        clearTimeout(forceExitTimer);
+        process.exit(0);
+      });
+  };
+
+  for (const sig of ['SIGINT', 'SIGTERM', 'SIGBREAK', 'SIGHUP'] as const) {
+    process.on(sig, () => gracefulShutdown(sig));
+  }
+
+  // In dev watch mode, self-terminate immediately if either the direct parent (nest --watch)
+  // or the top-level dev-watch runner dies (prevents orphaned dist/main.js holding port 3001 on Windows)
+  if (isDev && process.env.NEST_DEV_WATCH === '1') {
+    const watchedPids = [
+      process.ppid,
+      Number(process.env.NEST_DEV_WATCH_PID || 0),
+    ].filter((pid, idx, arr) => Number.isInteger(pid) && pid > 1 && arr.indexOf(pid) === idx);
+
+    if (watchedPids.length > 0) {
+      const parentWatchdog = setInterval(() => {
+        for (const pid of watchedPids) {
+          try {
+            process.kill(pid, 0);
+          } catch (err: any) {
+            if (err?.code === 'ESRCH') {
+              clearInterval(parentWatchdog);
+              // Also terminate orphaned nest --watch parent if top-level dev-watch died
+              if (process.ppid > 1 && process.ppid !== pid) {
+                try {
+                  process.kill(process.ppid, 'SIGTERM');
+                } catch {
+                  // Ignore if already exited
+                }
+              }
+              gracefulShutdown(`parent watcher ${pid} exited`);
+              return;
+            }
+          }
+        }
+      }, 1000);
+      parentWatchdog.unref();
+    }
   }
 }
 

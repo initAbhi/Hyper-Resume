@@ -30,7 +30,19 @@ export interface ProposalSummaryStats {
 export function analyzeProposalChanges(
   proposal: AgentApprovalProposal,
 ): ProposalSummaryStats {
-  const { headline, summary, experience, skills } = proposal.sectionDiffs || {};
+  const {
+    headline,
+    summary,
+    contact,
+    experience,
+    projects,
+    skills,
+    education,
+    certifications,
+    customSections,
+    templateKey,
+    layout,
+  } = proposal.sectionDiffs || {};
   let affectedSections = 0;
   let totalChanges = 0;
   const metricConfirmations: MetricConfirmationItem[] = [];
@@ -53,17 +65,63 @@ export function analyzeProposalChanges(
     totalChanges += 1;
   }
 
+  if (contact?.changedFields && contact.changedFields.length > 0) {
+    affectedSections += 1;
+    totalChanges += contact.changedFields.length;
+  }
+
   if (skills && Array.isArray(skills.proposed)) {
     const origSet = new Set(
       (skills.original || []).map((s) => (s?.name || '').trim().toLowerCase()),
     );
+    const propSet = new Set(
+      skills.proposed.map((s) => (s?.name || '').trim().toLowerCase()),
+    );
     const addedCount = skills.proposed.filter(
       (s) => s?.name && !origSet.has(s.name.trim().toLowerCase()),
     ).length;
-    if (addedCount > 0 || skills.proposed.length !== (skills.original || []).length) {
+    const removedCount = (skills.original || []).filter(
+      (s) => s?.name && !propSet.has(s.name.trim().toLowerCase()),
+    ).length;
+    if (addedCount > 0 || removedCount > 0 || skills.proposed.length !== (skills.original || []).length) {
       affectedSections += 1;
-      totalChanges += Math.max(1, addedCount);
+      totalChanges += Math.max(1, addedCount + removedCount);
     }
+  }
+
+  if (Array.isArray(projects) && projects.length > 0) {
+    let projChanges = 0;
+    for (const p of projects) {
+      if (p.description && p.description.proposed.trim() !== (p.description.original || '').trim()) {
+        projChanges += 1;
+      }
+      projChanges += (p.highlightDiffs || []).length + (p.addedHighlights || []).length;
+    }
+    if (projChanges > 0) {
+      affectedSections += 1;
+      totalChanges += projChanges;
+    }
+  }
+
+  if (education?.proposed) {
+    affectedSections += 1;
+    totalChanges += 1;
+  }
+  if (certifications?.proposed) {
+    affectedSections += 1;
+    totalChanges += 1;
+  }
+  if (customSections?.proposed) {
+    affectedSections += 1;
+    totalChanges += 1;
+  }
+  if (templateKey?.proposed && templateKey.proposed !== templateKey.original) {
+    affectedSections += 1;
+    totalChanges += 1;
+  }
+  if (layout?.changedFields && layout.changedFields.length > 0) {
+    affectedSections += 1;
+    totalChanges += layout.changedFields.length;
   }
 
   if (Array.isArray(experience)) {
@@ -142,7 +200,19 @@ export function AgentDiffCard({
 }: AgentDiffCardProps) {
   const idPrefix = useId();
   const stats = analyzeProposalChanges(proposal);
-  const { headline, summary, experience, skills } = proposal.sectionDiffs || {};
+  const {
+    headline,
+    summary,
+    contact,
+    experience,
+    projects,
+    skills,
+    education,
+    certifications,
+    customSections,
+    templateKey,
+    layout,
+  } = proposal.sectionDiffs || {};
   const isFieldSelected = (path: string) =>
     !selectedFieldPaths || selectedFieldPaths[path] !== false;
 
@@ -158,7 +228,25 @@ export function AgentDiffCard({
       .filter((s) => s?.name && !origSet.has(s.name.trim().toLowerCase()))
       .map((s) => s.name);
   }, [skills]);
-  const hasSkillsChange = addedSkillsList.length > 0;
+  const removedSkillsList = React.useMemo(() => {
+    if (!skills || !Array.isArray(skills.proposed)) return [];
+    if (Array.isArray(skills.removedSkills) && skills.removedSkills.length > 0) {
+      return skills.removedSkills;
+    }
+    const propSet = new Set(
+      skills.proposed.map((s) => (s?.name || '').trim().toLowerCase()),
+    );
+    return (skills.original || [])
+      .filter((s) => s?.name && !propSet.has(s.name.trim().toLowerCase()))
+      .map((s) => s.name);
+  }, [skills]);
+  const hasSkillsChange = addedSkillsList.length > 0 || removedSkillsList.length > 0;
+  const hasAtsProjection =
+    typeof proposal.beforeAtsScore === 'number' &&
+    typeof proposal.projectedAtsScore === 'number';
+  const atsDelta = hasAtsProjection
+    ? (proposal.projectedAtsScore as number) - (proposal.beforeAtsScore as number)
+    : 0;
 
   const hasHeadlineChange = Boolean(
     headline &&
@@ -203,9 +291,17 @@ export function AgentDiffCard({
             </p>
           </div>
         </div>
-        <span className="shrink-0 inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-950/70 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-          Pending Review
-        </span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {hasAtsProjection && (
+            <span className="inline-flex items-center rounded-full bg-emerald-100 dark:bg-emerald-950/70 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+              ATS {proposal.beforeAtsScore} → {proposal.projectedAtsScore}
+              {atsDelta > 0 ? ` (+${atsDelta})` : ''}
+            </span>
+          )}
+          <span className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-950/70 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+            Pending Review
+          </span>
+        </div>
       </div>
 
       {/* Diff Body */}
@@ -476,23 +572,206 @@ export function AgentDiffCard({
                     type="checkbox"
                     checked={isFieldSelected('skills')}
                     onChange={(e) => onToggleFieldSelect('skills', e.target.checked)}
-                    aria-label="Include skills additions"
+                    aria-label="Include skills changes"
                     className="h-3.5 w-3.5 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                   />
                 )}
-                Skills (+{addedSkillsList.length} added)
+                Skills (
+                {[
+                  addedSkillsList.length > 0 ? `+${addedSkillsList.length} added` : '',
+                  removedSkillsList.length > 0 ? `-${removedSkillsList.length} removed` : '',
+                ]
+                  .filter(Boolean)
+                  .join(', ')}
+                )
               </label>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {addedSkillsList.map((skillName) => (
                 <span
-                  key={skillName}
+                  key={`add-${skillName}`}
                   className="inline-flex items-center rounded-md bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 dark:text-emerald-200"
                 >
                   + {skillName}
                 </span>
               ))}
+              {removedSkillsList.map((skillName) => (
+                <span
+                  key={`rm-${skillName}`}
+                  className="inline-flex items-center rounded-md bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 px-2 py-0.5 text-[11px] font-medium text-rose-800 dark:text-rose-200 line-through"
+                >
+                  - {skillName}
+                </span>
+              ))}
             </div>
+          </div>
+        )}
+
+        {Array.isArray(projects) && projects.length > 0 && (
+          <div
+            data-diff-section="projects"
+            className="rounded-lg border border-zinc-200/80 dark:border-zinc-800 p-2.5 space-y-2"
+          >
+            <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400 cursor-pointer">
+              {onToggleFieldSelect && (
+                <input
+                  type="checkbox"
+                  checked={isFieldSelected('projects')}
+                  onChange={(e) => onToggleFieldSelect('projects', e.target.checked)}
+                  aria-label="Include project changes"
+                  className="h-3.5 w-3.5 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+              )}
+              Projects ({projects.length} updated)
+            </label>
+            {projects.map((proj) => (
+              <div key={proj.projectIndex} className="space-y-1.5 pl-1 border-l-2 border-blue-200 dark:border-blue-800">
+                <p className="text-[11px] font-semibold text-zinc-800 dark:text-zinc-200">{proj.name}</p>
+                {proj.description && (
+                  <div className="space-y-1">
+                    {proj.description.original && (
+                      <div className="rounded bg-rose-50/90 dark:bg-rose-950/30 border border-rose-200/70 px-2 py-1 text-xs text-rose-900 dark:text-rose-200">
+                        <del>{proj.description.original}</del>
+                      </div>
+                    )}
+                    <div className="rounded bg-emerald-50/90 dark:bg-emerald-950/30 border border-emerald-200/80 px-2 py-1 text-xs text-emerald-950 dark:text-emerald-200">
+                      <ins className="no-underline font-medium">{proj.description.proposed}</ins>
+                    </div>
+                  </div>
+                )}
+                {(proj.highlightDiffs || []).map((h) => (
+                  <div key={h.highlightIndex} className="space-y-1">
+                    <div className="rounded bg-rose-50/90 dark:bg-rose-950/30 border border-rose-200/70 px-2 py-1 text-xs text-rose-900 dark:text-rose-200">
+                      <del>{h.original}</del>
+                    </div>
+                    <div className="rounded bg-emerald-50/90 dark:bg-emerald-950/30 border border-emerald-200/80 px-2 py-1 text-xs text-emerald-950 dark:text-emerald-200">
+                      <ins className="no-underline font-medium">{h.proposed}</ins>
+                    </div>
+                  </div>
+                ))}
+                {(proj.addedHighlights || []).map((added, aIdx) => (
+                  <div
+                    key={`add-h-${aIdx}`}
+                    className="rounded bg-emerald-50/90 dark:bg-emerald-950/30 border border-emerald-200/80 px-2 py-1 text-xs text-emerald-950 dark:text-emerald-200"
+                  >
+                    <span className="text-[9.5px] font-bold uppercase text-emerald-700 mr-1.5">Added</span>
+                    <ins className="no-underline font-medium">{added}</ins>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {contact?.changedFields && contact.changedFields.length > 0 && (
+          <div
+            data-diff-section="contact"
+            className="rounded-lg border border-zinc-200/80 dark:border-zinc-800 p-2.5 space-y-1.5"
+          >
+            <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400 cursor-pointer">
+              {onToggleFieldSelect && (
+                <input
+                  type="checkbox"
+                  checked={isFieldSelected('contact')}
+                  onChange={(e) => onToggleFieldSelect('contact', e.target.checked)}
+                  aria-label="Include contact changes"
+                  className="h-3.5 w-3.5 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+              )}
+              Contact ({contact.changedFields.join(', ')})
+            </label>
+            <div className="space-y-1 text-xs">
+              {contact.changedFields.map((field) => (
+                <div key={field} className="rounded bg-emerald-50/90 dark:bg-emerald-950/30 border border-emerald-200/80 px-2 py-1 text-emerald-950 dark:text-emerald-200">
+                  <span className="font-semibold capitalize">{field}:</span> {String(contact.proposed[field] || '')}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(templateKey?.proposed || (layout?.changedFields && layout.changedFields.length > 0)) && (
+          <div
+            data-diff-section="design"
+            className="rounded-lg border border-zinc-200/80 dark:border-zinc-800 p-2.5 space-y-1.5 text-xs"
+          >
+            {templateKey?.proposed && (
+              <label className="flex items-center gap-2 cursor-pointer text-zinc-800 dark:text-zinc-200">
+                {onToggleFieldSelect && (
+                  <input
+                    type="checkbox"
+                    checked={isFieldSelected('templateKey')}
+                    onChange={(e) => onToggleFieldSelect('templateKey', e.target.checked)}
+                    aria-label="Include template switch"
+                    className="h-3.5 w-3.5 rounded border-zinc-300 text-blue-600 cursor-pointer"
+                  />
+                )}
+                <span>
+                  Switch Template: <del className="text-rose-700 dark:text-rose-300">{templateKey.original}</del> →{' '}
+                  <strong className="text-emerald-700 dark:text-emerald-300">{templateKey.proposed}</strong>
+                </span>
+              </label>
+            )}
+            {layout?.changedFields && layout.changedFields.length > 0 && (
+              <label className="flex items-center gap-2 cursor-pointer text-zinc-800 dark:text-zinc-200">
+                {onToggleFieldSelect && (
+                  <input
+                    type="checkbox"
+                    checked={isFieldSelected('layout')}
+                    onChange={(e) => onToggleFieldSelect('layout', e.target.checked)}
+                    aria-label="Include layout changes"
+                    className="h-3.5 w-3.5 rounded border-zinc-300 text-blue-600 cursor-pointer"
+                  />
+                )}
+                <span>
+                  Update Layout: <strong className="text-emerald-700 dark:text-emerald-300">{layout.changedFields.join(', ')}</strong>
+                </span>
+              </label>
+            )}
+          </div>
+        )}
+
+        {(certifications?.proposed || education?.proposed || customSections?.proposed) && (
+          <div className="rounded-lg border border-zinc-200/80 dark:border-zinc-800 p-2.5 space-y-1.5 text-xs text-zinc-800 dark:text-zinc-200">
+            {certifications?.proposed && (
+              <label className="flex items-center gap-2 cursor-pointer">
+                {onToggleFieldSelect && (
+                  <input
+                    type="checkbox"
+                    checked={isFieldSelected('certifications')}
+                    onChange={(e) => onToggleFieldSelect('certifications', e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-zinc-300 text-blue-600 cursor-pointer"
+                  />
+                )}
+                <span>Update Certifications ({certifications.proposed.length} entries)</span>
+              </label>
+            )}
+            {education?.proposed && (
+              <label className="flex items-center gap-2 cursor-pointer">
+                {onToggleFieldSelect && (
+                  <input
+                    type="checkbox"
+                    checked={isFieldSelected('education')}
+                    onChange={(e) => onToggleFieldSelect('education', e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-zinc-300 text-blue-600 cursor-pointer"
+                  />
+                )}
+                <span>Update Education ({education.proposed.length} entries)</span>
+              </label>
+            )}
+            {customSections?.proposed && (
+              <label className="flex items-center gap-2 cursor-pointer">
+                {onToggleFieldSelect && (
+                  <input
+                    type="checkbox"
+                    checked={isFieldSelected('customSections')}
+                    onChange={(e) => onToggleFieldSelect('customSections', e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-zinc-300 text-blue-600 cursor-pointer"
+                  />
+                )}
+                <span>Update Custom Sections ({customSections.proposed.length} sections)</span>
+              </label>
+            )}
           </div>
         )}
 

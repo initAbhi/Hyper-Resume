@@ -69,22 +69,40 @@ export interface BulletDiffItem {
 }
 
 export interface ExperienceSectionDiff {
+  experienceIndex?: number;
   company: string;
   title: string;
   bulletDiffs: BulletDiffItem[];
+  addedBullets?: string[];
+}
+
+export interface ProjectSectionDiff {
+  projectIndex: number;
+  name: string;
+  description?: { original: string; proposed: string };
+  highlightDiffs?: Array<{ highlightIndex: number; original: string; proposed: string }>;
+  addedHighlights?: string[];
 }
 
 export interface SkillSectionDiff {
   original: Array<{ name: string; category?: string }>;
   proposed: Array<{ name: string; category?: string }>;
   addedSkills?: string[];
+  removedSkills?: string[];
 }
 
 export interface ProposalSectionDiffs {
   headline?: { original: string; proposed: string };
   summary?: { original: string; proposed: string };
+  contact?: { original: Record<string, unknown>; proposed: Record<string, unknown>; changedFields?: string[] };
   experience?: ExperienceSectionDiff[];
+  projects?: ProjectSectionDiff[];
   skills?: SkillSectionDiff;
+  education?: { original: unknown[]; proposed: unknown[] };
+  certifications?: { original: unknown[]; proposed: unknown[] };
+  customSections?: { original: unknown[]; proposed: unknown[] };
+  templateKey?: { original: string; proposed: string };
+  layout?: { original: Record<string, unknown>; proposed: Record<string, unknown>; changedFields?: string[] };
 }
 
 export interface AgentApprovalProposal {
@@ -94,6 +112,8 @@ export interface AgentApprovalProposal {
   resumeId: string;
   expectedResumeVersion: number;
   sectionDiffs: ProposalSectionDiffs;
+  beforeAtsScore?: number;
+  projectedAtsScore?: number;
   expiresAt: string;
   changeSummary?: string;
 }
@@ -107,6 +127,7 @@ export interface AgentMessageContext {
   route?: string;
   activeResumeId?: string;
   activeResumeName?: string;
+  resumeDetached?: boolean;
   activeJobId?: string;
   jobTitle?: string;
   companyName?: string;
@@ -279,6 +300,7 @@ export interface AgentStreamOptions {
 }
 
 const KNOWN_SSE_EVENT_NAMES = [
+  'heartbeat',
   'task_status',
   'plan_created',
   'step_progress',
@@ -365,9 +387,9 @@ export class AgentStreamConnection {
     this.lastEventId = options.lastEventId;
     this.expectedTaskId = options.taskId;
     this.highestNumericSeq = parseNumericSequence(options.lastEventId);
-    this.maxRetries = options.maxRetries ?? 5;
+    this.maxRetries = options.maxRetries ?? 8;
     this.baseRetryDelayMs = options.baseRetryDelayMs ?? 1000;
-    this.maxRetryDelayMs = options.maxRetryDelayMs ?? 16000;
+    this.maxRetryDelayMs = options.maxRetryDelayMs ?? 10000;
     this.EventSourceCtor =
       options.EventSourceCtor ??
       (typeof window !== 'undefined' && typeof window.EventSource !== 'undefined'
@@ -401,9 +423,21 @@ export class AgentStreamConnection {
       // Single-use ticket kept strictly in memory; never persisted in storage
       ticketRes = await this.client.requestStreamTicket(this.conversationId);
     } catch (err) {
+      if (this.isDisposed) return;
       const error = err instanceof Error ? err : new Error('Failed to obtain SSE stream ticket.');
-      this.handlers.onError?.(error);
-      this.scheduleReconnect();
+      const isNonRetryableClientError =
+        err instanceof ApiError &&
+        err.statusCode >= 400 &&
+        err.statusCode < 500 &&
+        err.statusCode !== 408 &&
+        err.statusCode !== 429;
+      if (isNonRetryableClientError) {
+        this.handlers.onError?.(error);
+        this.handlers.onClose?.();
+        return;
+      }
+      // Transient network/server restart error: reconnect with backoff and only emit onError if retries are exhausted
+      this.scheduleReconnect(error);
       return;
     }
 
@@ -471,6 +505,10 @@ export class AgentStreamConnection {
   }
 
   private processIncomingMessage(rawEventName: string, ev: MessageEvent): void {
+    if (rawEventName.trim().toLowerCase() === 'heartbeat') {
+      return;
+    }
+
     let parsedData: Record<string, unknown> = {};
     let resolvedRawType = rawEventName;
     let resolvedId = ev.lastEventId || '';
@@ -589,12 +627,22 @@ export class AgentStreamConnection {
     }
   }
 
-  private scheduleReconnect(): void {
+  private scheduleReconnect(lastError?: Error): void {
     if (this.isDisposed || this.isTerminal) return;
 
     if (this.retryAttempt >= this.maxRetries) {
+      const rawMsg = lastError?.message?.trim() || '';
+      const isOpaqueFetchFailure =
+        !rawMsg ||
+        /^failed to fetch$/i.test(rawMsg) ||
+        /^load failed$/i.test(rawMsg) ||
+        /networkerror/i.test(rawMsg);
       this.handlers.onError?.(
-        new Error('Live updates disconnected after maximum reconnect attempts. Please retry.'),
+        new Error(
+          isOpaqueFetchFailure
+            ? 'Live updates disconnected after maximum reconnect attempts. Please retry.'
+            : rawMsg,
+        ),
       );
       this.handlers.onClose?.();
       return;

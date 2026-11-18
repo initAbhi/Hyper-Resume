@@ -94,12 +94,12 @@ import {
   moveBulletAt,
 } from '@/lib/resume-path-updater';
 import { TemplatePicker } from '@/components/resumes/TemplatePicker';
-import { DesignPanel } from '@/components/resumes/DesignPanel';
+import { DesignPanel, ACCENT_SWATCHES } from '@/components/resumes/DesignPanel';
 import { PhotoUploadModal } from '@/components/resumes/PhotoUploadModal';
 import { CheckAndTailorDrawer } from '@/components/resumes/CheckAndTailorDrawer';
 import { ExportPdfModal } from '@/components/resumes/ExportPdfModal';
 import { CanvasFloatingToolbar } from '@/components/resumes/CanvasFloatingToolbar';
-import { CanvaDock } from '@/components/resumes/CanvaDock';
+import { CanvaDock, type StudioPanel } from '@/components/resumes/CanvaDock';
 import { CanvaBottomBar } from '@/components/resumes/CanvaBottomBar';
 import { AddContentDrawer } from '@/components/resumes/AddContentDrawer';
 import { AgentChatPanel } from '@/components/resumes/AgentChatPanel';
@@ -148,13 +148,59 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
   const [templateKey, setTemplateKey] = useState('double-column');
   const [serverVersion, setServerVersion] = useState<number>(1);
 
-  // Competitor-Grade Template & Customizer States
-  const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
-  const [isDesignPanelOpen, setIsDesignPanelOpen] = useState(false);
-  const [isAddContentOpen, setIsAddContentOpen] = useState(false);
-  const [isRearrangeDrawerOpen, setIsRearrangeDrawerOpen] = useState(false);
+  // Unified Docked Live-Studio Inspector Panel State (zero backdrop blur, zero canvas overlap)
+  const [activePanel, setActivePanel] = useState<StudioPanel>('agent');
+  const [isDesktopLg, setIsDesktopLg] = useState(true);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const sync = () => setIsDesktopLg(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+
+  const isTemplatePickerOpen = activePanel === 'templates';
+  const isDesignPanelOpen = activePanel === 'design';
+  const isAddContentOpen = activePanel === 'content';
+  const isRearrangeDrawerOpen = activePanel === 'sections';
+  const isAuditDrawerOpen = activePanel === 'ats';
+  const isCheckTailorOpen = activePanel === 'tailor';
+  const isFixMistakesOpen = activePanel === 'mistakes';
+  const isAgentPanelOpen = activePanel === 'agent';
+
+  // Instant Hover / Focus Live Preview State (direct impact without needing an extra click)
+  const [livePreview, setLivePreview] = useState<{
+    templateKey?: string;
+    accentColor?: string;
+    fontFamily?: 'sans' | 'serif' | 'mono';
+    layout?: Partial<ResumeLayoutSettings>;
+    label?: string;
+  } | null>(null);
+
+  const openStudioPanel = useCallback((panel: Exclude<StudioPanel, null>) => {
+    setLivePreview(null);
+    if (panel === 'agent') {
+      setHasMountedDesktopAgent(true);
+    }
+    setActivePanel(panel);
+  }, []);
+
+  const toggleStudioPanel = useCallback((panel: Exclude<StudioPanel, null>) => {
+    setLivePreview(null);
+    if (panel === 'agent') {
+      setHasMountedDesktopAgent(true);
+    }
+    setActivePanel((prev) => (prev === panel ? null : panel));
+  }, []);
+
+  const closeStudioPanel = useCallback(() => {
+    setLivePreview(null);
+    setActivePanel(null);
+  }, []);
+
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
-  const [isCheckTailorOpen, setIsCheckTailorOpen] = useState(false);
   const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
   const [activeMatchScore, setActiveMatchScore] = useState<number | null>(null);
   const [activeJobKeywords, setActiveJobKeywords] = useState<string[]>([]);
@@ -165,6 +211,18 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
   const [photoUrl, setPhotoUrl] = useState('');
   const [showHighlights, setShowHighlights] = useState(true);
   const [pageSize, setPageSize] = useState<'A4' | 'US Letter'>('A4');
+
+  // Effective live-rendered visual props (merges hover/focus preview seamlessly)
+  const effectiveTemplateKey = livePreview?.templateKey ?? templateKey;
+  const effectiveAccentColor = livePreview?.accentColor ?? accentColor;
+  const effectiveFontFamily = livePreview?.fontFamily ?? fontFamily;
+  const effectiveLayout = React.useMemo<ResumeLayoutSettings | undefined>(() => {
+    if (!livePreview?.layout) return content?.layout;
+    return {
+      ...(content?.layout || {}),
+      ...livePreview.layout,
+    };
+  }, [content?.layout, livePreview?.layout]);
 
   // Scaled True A4 Canvas Simulator State
   const [canvasContainerEl, setCanvasContainerEl] = useState<HTMLDivElement | null>(null);
@@ -195,7 +253,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
     });
     observer.observe(resumePrintEl);
     return () => observer.disconnect();
-  }, [resumePrintEl, content, templateKey, pageSize]);
+  }, [resumePrintEl, content, effectiveTemplateKey, effectiveLayout, pageSize]);
 
   useEffect(() => {
     if (!canvasContainerEl) return;
@@ -251,7 +309,6 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
   // Editor Navigation & Layout State
   const [activeSection, setActiveSection] = useState<EditorSection>('experience');
   const [mobileTab, setMobileTab] = useState<'editor' | 'preview' | 'ai'>('editor');
-  const [isAuditDrawerOpen, setIsAuditDrawerOpen] = useState(false);
 
   // Autosave & Network State
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved' | 'error' | 'conflict'>('saved');
@@ -266,7 +323,6 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // Phase 3: Split-Screen Agent Workspace & Visual Diff State
-  const [isAgentPanelOpen, setIsAgentPanelOpen] = useState(true);
   const [hasMountedDesktopAgent, setHasMountedDesktopAgent] = useState(false);
   const [isMobileAgentOpen, setIsMobileAgentOpen] = useState(false);
   const [hasMountedMobileAgent, setHasMountedMobileAgent] = useState(false);
@@ -312,6 +368,18 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
         setResume(refreshed);
         if (refreshed.content) {
           setContent(refreshed.content);
+          if (refreshed.content.layout?.accentColor) {
+            setAccentColor(refreshed.content.layout.accentColor);
+          }
+          if (refreshed.content.layout?.fontFamily) {
+            setFontFamily(refreshed.content.layout.fontFamily);
+          }
+          if (typeof refreshed.content.layout?.showPhoto === 'boolean') {
+            setShowPhoto(refreshed.content.layout.showPhoto);
+          }
+          if (typeof refreshed.content.layout?.showHighlights === 'boolean') {
+            setShowHighlights(refreshed.content.layout.showHighlights);
+          }
         }
         setResumeName(refreshed.name);
         setTemplateKey(refreshed.templateKey || templateKey);
@@ -350,7 +418,6 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
   }, [showAgentToast]);
 
   // Grammar, Spelling & Buzzword Checker State
-  const [isFixMistakesOpen, setIsFixMistakesOpen] = useState(false);
   const [aiWritingReport, setAiWritingReport] = useState<WritingCheckResponse | null>(null);
   const [isRunningAiWritingCheck, setIsRunningAiWritingCheck] = useState(false);
   const [aiWritingCheckError, setAiWritingCheckError] = useState<string | null>(null);
@@ -683,7 +750,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
   };
 
   const handleLocateWritingIssue = (issue: WritingIssueItem) => {
-    setIsFixMistakesOpen(false);
+    if (!isDesktopLg) closeStudioPanel();
     setMobileTab('editor');
 
     let targetSection: EditorSection = 'summary';
@@ -1206,8 +1273,8 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
     const mId = params.get('matchId');
     const openTailor = params.get('tailor');
     if (mId) setActiveMatchId(mId);
-    if (openTailor === '1' || openTailor === 'true') setIsCheckTailorOpen(true);
-  }, []);
+    if (openTailor === '1' || openTailor === 'true') openStudioPanel('tailor');
+  }, [openStudioPanel]);
 
   // Version Snapshots & Rollback
   const handleOpenVersions = async () => {
@@ -1306,10 +1373,10 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
     if (!resumePrintRef.current || !content) return;
     applyResumeLayoutToDom(
       resumePrintRef.current,
-      content.layout,
+      effectiveLayout,
       content.customSections,
     );
-  }, [content, templateKey, accentColor, fontFamily, showPhoto, showHighlights, isExportModalOpen, pageSize]);
+  }, [content, effectiveLayout, effectiveTemplateKey, effectiveAccentColor, effectiveFontFamily, showPhoto, showHighlights, isExportModalOpen, pageSize]);
 
   // Conflict Resolution
   const handleReloadServerVersion = async () => {
@@ -1368,21 +1435,229 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
     );
   }
 
+  const isNonAgentToolActive = Boolean(activePanel && activePanel !== 'agent');
+
+  const handleQuickAccentColor = (newColor: string) => {
+    setLivePreview(null);
+    setAccentColor(newColor);
+    handleUpdateLayout({
+      ...(content.layout || {}),
+      accentColor: newColor,
+    });
+  };
+
+  const handleQuickFontFamily = (newFont: 'sans' | 'serif' | 'mono') => {
+    setLivePreview(null);
+    setFontFamily(newFont);
+    handleUpdateLayout({
+      ...(content.layout || {}),
+      fontFamily: newFont,
+    });
+  };
+
+  const renderStudioToolPanel = (docked: boolean) => {
+    if (isTemplatePickerOpen) {
+      return (
+        <TemplatePicker
+          isOpen={true}
+          docked={docked}
+          onClose={closeStudioPanel}
+          currentTemplateKey={templateKey}
+          onSelectTemplate={(newKey) => {
+            setLivePreview(null);
+            setTemplateKey(newKey);
+            scheduleAutosave(content, resumeName, newKey);
+          }}
+          onPreviewTemplate={(preview) =>
+            setLivePreview(
+              preview
+                ? { templateKey: preview.templateKey, label: preview.label }
+                : null,
+            )
+          }
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          content={content}
+          accentColor={effectiveAccentColor}
+          fontFamily={effectiveFontFamily}
+          showPhoto={showPhoto}
+          photoUrl={photoUrl}
+        />
+      );
+    }
+
+    if (isDesignPanelOpen) {
+      return (
+        <DesignPanel
+          isOpen={true}
+          docked={docked}
+          onClose={closeStudioPanel}
+          accentColor={accentColor}
+          onAccentColorChange={handleQuickAccentColor}
+          fontFamily={fontFamily}
+          onFontFamilyChange={handleQuickFontFamily}
+          showPhoto={showPhoto}
+          onShowPhotoChange={(nextShow) => {
+            setShowPhoto(nextShow);
+            updateContent((prev) => ({
+              ...prev,
+              layout: {
+                ...prev.layout,
+                showPhoto: nextShow,
+              },
+            }));
+          }}
+          photoUrl={photoUrl}
+          onPhotoUrlChange={(newUrl) => {
+            setPhotoUrl(newUrl);
+            updateContent((prev) => ({
+              ...prev,
+              contact: {
+                ...prev.contact,
+                photoUrl: newUrl,
+              },
+            }));
+          }}
+          showHighlights={showHighlights}
+          onShowHighlightsChange={(nextHighlights) => {
+            setShowHighlights(nextHighlights);
+            updateContent((prev) => ({
+              ...prev,
+              layout: {
+                ...prev.layout,
+                showHighlights: nextHighlights,
+              },
+            }));
+          }}
+          layout={content.layout}
+          onLayoutChange={handleUpdateLayout}
+          onPreviewChange={(preview) => setLivePreview(preview)}
+        />
+      );
+    }
+
+    if (isRearrangeDrawerOpen) {
+      return (
+        <SectionRearrangeDrawer
+          isOpen={true}
+          docked={docked}
+          onClose={closeStudioPanel}
+          content={content}
+          onUpdateLayout={handleUpdateLayout}
+          onPreviewLayout={(preview) =>
+            setLivePreview(
+              preview
+                ? { layout: preview.layout, label: preview.label }
+                : null,
+            )
+          }
+        />
+      );
+    }
+
+    if (isAddContentOpen) {
+      return (
+        <AddContentDrawer
+          isOpen={true}
+          docked={docked}
+          onClose={closeStudioPanel}
+          content={content}
+          onUpdateContent={updateContent}
+          onScrollToSection={(sectionId) => {
+            const el = document.getElementById(sectionId);
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              el.focus();
+            }
+          }}
+        />
+      );
+    }
+
+    if (isCheckTailorOpen) {
+      return (
+        <CheckAndTailorDrawer
+          isOpen={true}
+          docked={docked}
+          onClose={closeStudioPanel}
+          resumeId={resumeId}
+          resumeContent={content}
+          onUpdateContent={updateContent}
+          initialMatchId={activeMatchId}
+          onMatchChange={handleMatchChange}
+          onToggleHighlights={setShowHighlights}
+          isHighlightsEnabled={showHighlights}
+        />
+      );
+    }
+
+    if (isFixMistakesOpen) {
+      return (
+        <FixMistakesDrawer
+          isOpen={true}
+          docked={docked}
+          onClose={closeStudioPanel}
+          resumeTitle={resumeName}
+          resumeTargetRole={resume?.targetRole}
+          content={content}
+          localReport={localWritingReport}
+          aiReport={aiWritingReport}
+          activeReport={activeWritingReport}
+          ignoredIds={ignoredWritingIssueIds}
+          onIgnoreIssue={(id) =>
+            setIgnoredWritingIssueIds((prev) =>
+              prev.includes(id) ? prev : [...prev, id],
+            )
+          }
+          onResetIgnored={() => setIgnoredWritingIssueIds([])}
+          onApplyContent={(nextContent) => {
+            updateContent(() => nextContent);
+          }}
+          onRunAiDeepCheck={handleRunAiWritingCheck}
+          isRunningAiCheck={isRunningAiWritingCheck}
+          aiCheckError={aiWritingCheckError}
+          onLocateIssue={handleLocateWritingIssue}
+        />
+      );
+    }
+
+    if (isAuditDrawerOpen || (!docked && mobileTab === 'ai')) {
+      return (
+        <AtsAuditDrawer
+          isOpen={true}
+          docked={docked}
+          onClose={() => {
+            closeStudioPanel();
+            if (mobileTab === 'ai') setMobileTab('preview');
+          }}
+          score={analysis?.score ?? liveScore}
+          analysis={analysis}
+          isAnalyzing={isAnalyzing}
+          onRunAudit={handleRunAudit}
+          onOpenFixMistakes={() => openStudioPanel('mistakes')}
+          resumeId={resumeId}
+          resumeTitle={resumeName || content?.headline}
+        />
+      );
+    }
+
+    return null;
+  };
+
   return (
     <div
-      className={`space-y-4 print:space-y-0 print:p-0 print:m-0 print:max-w-none transition-[margin,max-width] duration-300 ease-in-out ${isTemplatePickerOpen
-        ? 'lg:ml-[440px] lg:max-w-[calc(100vw-440px)] lg:mr-0 px-2 sm:px-4'
-        : 'max-w-[1600px] mx-auto px-2 sm:px-4'
-        } ${editorMode === 'canvas' ? 'pb-28 sm:pb-36 print:pb-0' : ''
+      className={`print:space-y-0 print:p-0 print:m-0 print:max-w-none print:block print:h-auto print:overflow-visible max-w-[1680px] mx-auto px-2 sm:px-4 ${editorMode === 'canvas'
+          ? 'flex flex-col gap-3 lg:h-[calc(100dvh-5.5rem)] lg:overflow-hidden pb-28 sm:pb-36 lg:pb-0 print:pb-0'
+          : 'space-y-4'
         }`}
     >
       {errorMessage && (
-        <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs">
+        <div className="shrink-0 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs">
           {errorMessage}
         </div>
       )}
       {/* Top Action Bar */}
-      <div className="print:hidden flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-3 border-b border-zinc-200 dark:border-zinc-800">
+      <div className="print:hidden shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-3 border-b border-zinc-200 dark:border-zinc-800">
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           <Link
             href="/app/resumes"
@@ -1548,8 +1823,12 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setIsAuditDrawerOpen(true)}
-            className="hidden lg:flex items-center gap-1.5 text-xs font-semibold border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+            onClick={() => toggleStudioPanel('ats')}
+            className={`hidden lg:flex items-center gap-1.5 text-xs font-semibold ${
+              isAuditDrawerOpen
+                ? 'border-blue-500 bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-200'
+                : 'border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50'
+            }`}
             title="Inspect ATS Score & Evidence Audit"
           >
             <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
@@ -1567,8 +1846,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                 setHasMountedMobileAgent(true);
                 setIsMobileAgentOpen((prev) => !prev);
               } else {
-                setHasMountedDesktopAgent(true);
-                setIsAgentPanelOpen((prev) => !prev);
+                toggleStudioPanel('agent');
               }
             }}
             className={`hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors cursor-pointer relative ${
@@ -1624,8 +1902,12 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
             <button
               id="fix-mistakes-btn"
               type="button"
-              onClick={() => setIsFixMistakesOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              onClick={() => toggleStudioPanel('mistakes')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
+                isFixMistakesOpen
+                  ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-200 ring-1 ring-amber-300 dark:ring-amber-700'
+                  : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+              }`}
               title="Inspect grammar, spelling, buzzwords, and weak phrasing with 1-click fixes"
             >
               <CheckCircle2
@@ -1649,8 +1931,12 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
             {/* ATS Check & Tailor Button */}
             <button
               type="button"
-              onClick={() => setIsCheckTailorOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              onClick={() => toggleStudioPanel('tailor')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
+                isCheckTailorOpen
+                  ? 'bg-cyan-50 dark:bg-cyan-950/50 text-cyan-800 dark:text-cyan-200 ring-1 ring-cyan-300 dark:ring-cyan-700'
+                  : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+              }`}
             >
               <span className="font-mono font-bold text-[11px] text-blue-600 dark:text-blue-400">
                 ATS
@@ -1665,8 +1951,12 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
             <button
               id="rearrange-sections-btn"
               type="button"
-              onClick={() => setIsRearrangeDrawerOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              onClick={() => toggleStudioPanel('sections')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
+                isRearrangeDrawerOpen
+                  ? 'bg-sky-50 dark:bg-sky-950/50 text-sky-800 dark:text-sky-200 ring-1 ring-sky-300 dark:ring-sky-700'
+                  : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+              }`}
               title="Drag & drop to reorder or hide resume sections"
             >
               <ArrowUpDown className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
@@ -1676,32 +1966,40 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
             {/* Templates Drawer Button */}
             <button
               type="button"
-              onClick={() => setIsTemplatePickerOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shadow-2xs"
+              onClick={() => toggleStudioPanel('templates')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold border transition-colors shadow-2xs cursor-pointer ${
+                isTemplatePickerOpen
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40'
+              }`}
             >
-              <LayoutTemplate className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              <LayoutTemplate className="w-3.5 h-3.5" />
               <span>Templates</span>
             </button>
 
             {/* Color Button (opens Design panel) */}
             <button
               type="button"
-              onClick={() => setIsDesignPanelOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              onClick={() => toggleStudioPanel('design')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
+                isDesignPanelOpen
+                  ? 'bg-purple-50 dark:bg-purple-950/50 text-purple-800 dark:text-purple-200 ring-1 ring-purple-300 dark:ring-purple-700'
+                  : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+              }`}
               title="Customize accent colors"
             >
               <Palette className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
               <span>Color</span>
               <span
                 className="w-2.5 h-2.5 rounded-full border border-black/10 dark:border-white/20 inline-block shrink-0"
-                style={{ backgroundColor: accentColor }}
+                style={{ backgroundColor: effectiveAccentColor }}
               />
             </button>
 
             {/* Font Button (opens Design panel) */}
             <button
               type="button"
-              onClick={() => setIsDesignPanelOpen(true)}
+              onClick={() => openStudioPanel('design')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
               title="Customize typography & font family"
             >
@@ -1713,7 +2011,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
             <button
               id="design-spacing-btn"
               type="button"
-              onClick={() => setIsDesignPanelOpen(true)}
+              onClick={() => openStudioPanel('design')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
               title="Customize font scale, line height, margins & section spacing"
             >
@@ -1823,7 +2121,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
 
       {/* Conflict Resolution Banner */}
       {hasConflict && (
-        <div className="print:hidden p-4 rounded-xl border border-rose-300 bg-rose-50 dark:bg-rose-950/40 text-rose-900 dark:text-rose-200 flex items-center justify-between text-xs">
+        <div className="print:hidden shrink-0 p-4 rounded-xl border border-rose-300 bg-rose-50 dark:bg-rose-950/40 text-rose-900 dark:text-rose-200 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
             <span>
@@ -1862,21 +2160,24 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
 
       {/* Main Layout: Adapts dynamically between Canva-style Full Canvas and Classic Split-Form */}
       <div
-        className={`print:block print:w-full print:m-0 print:p-0 ${editorMode === 'form'
+        className={`print:block print:w-full print:m-0 print:p-0 print:h-auto print:overflow-visible ${editorMode === 'form'
           ? 'grid grid-cols-1 lg:grid-cols-12 gap-5 items-start'
-          : 'flex flex-col lg:flex-row items-start gap-4 lg:gap-6'
+          : 'flex flex-col lg:flex-row items-start lg:items-stretch lg:flex-1 lg:min-h-0 gap-4 lg:gap-5'
           }`}
       >
-        {/* Canva Left Tool Dock (Visible in Canvas Mode on desktop when template picker is closed) */}
-        {editorMode === 'canvas' && !isTemplatePickerOpen && (
+        {/* Canva Left Tool Dock (Always visible in Canvas Mode so user can switch tools in 1 click) */}
+        {editorMode === 'canvas' && (
           <CanvaDock
-            onOpenTemplates={() => setIsTemplatePickerOpen(true)}
-            onOpenDesign={() => setIsDesignPanelOpen(true)}
-            onOpenAddContent={() => setIsAddContentOpen(true)}
-            onOpenAtsAudit={() => setIsAuditDrawerOpen(true)}
-            onOpenTailor={() => setIsCheckTailorOpen(true)}
-            onOpenFixMistakes={() => setIsFixMistakesOpen(true)}
-            onOpenRearrange={() => setIsRearrangeDrawerOpen(true)}
+            activePanel={activePanel}
+            onOpenAgent={() => toggleStudioPanel('agent')}
+            hasPendingProposal={Boolean(activeAgentProposal)}
+            onOpenTemplates={() => toggleStudioPanel('templates')}
+            onOpenDesign={() => toggleStudioPanel('design')}
+            onOpenAddContent={() => toggleStudioPanel('content')}
+            onOpenAtsAudit={() => toggleStudioPanel('ats')}
+            onOpenTailor={() => toggleStudioPanel('tailor')}
+            onOpenFixMistakes={() => toggleStudioPanel('mistakes')}
+            onOpenRearrange={() => toggleStudioPanel('sections')}
             onOpenVersions={handleOpenVersions}
             onOpenPhoto={() => setIsPhotoModalOpen(true)}
             onOpenExport={() => setIsExportModalOpen(true)}
@@ -1884,19 +2185,19 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
             atsScore={analysis?.score ?? liveScore}
             matchScore={activeMatchScore}
             mistakesCount={visibleWritingIssueCount}
-            activeAccentColor={accentColor}
+            activeAccentColor={effectiveAccentColor}
           />
         )}
 
-        {/* Phase 3: Desktop Split-Screen AI Agent Pane (kept mounted once opened so SSE never drops on collapse) */}
+        {/* Phase 3: Desktop Split-Screen AI Agent Pane (kept mounted once opened so SSE never drops on tool switch) */}
         {(hasMountedDesktopAgent || isAgentPanelOpen) && (
           <div
             id="desktop-agent-pane"
             className={`${
-              editorMode === 'canvas' && isAgentPanelOpen && !isTemplatePickerOpen
-                ? 'hidden lg:block'
+              editorMode === 'canvas' && isAgentPanelOpen
+                ? 'hidden lg:flex lg:flex-col'
                 : 'hidden'
-            } lg:w-[40%] shrink-0 lg:sticky lg:top-20 print:hidden min-w-0`}
+            } lg:w-[370px] xl:w-[410px] shrink-0 lg:h-full lg:min-h-0 print:hidden min-w-0`}
           >
             <AgentChatPanel
               resumeId={resumeId}
@@ -1910,14 +2211,41 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
               onFocusDiffField={(path) => setFocusedDiffPath(path)}
               onProposalApproved={handleAgentProposalApproved}
               onProposalRejected={handleAgentProposalRejected}
-              onCollapse={() => setIsAgentPanelOpen(false)}
+              onCollapse={closeStudioPanel}
             />
           </div>
         )}
 
-        {/* PANEL 1: Left Section Editor (Visible only in Classic Form Mode) */}
+        {/* Docked Left Studio Inspector Pane (Desktop Canvas Mode — zero blur, zero overlap over resume canvas) */}
+        {editorMode === 'canvas' && isDesktopLg && isNonAgentToolActive && (
+          <div
+            id="desktop-studio-inspector"
+            data-testid="desktop-studio-inspector"
+            className="hidden lg:flex lg:flex-col lg:w-[360px] xl:w-[400px] shrink-0 lg:h-full lg:min-h-0 print:hidden min-w-0 animate-in fade-in slide-in-from-left-2 duration-150"
+          >
+            {renderStudioToolPanel(true)}
+          </div>
+        )}
+
+        {/* PANEL 1: Left Section Editor OR Docked Tool Inspector (Visible in Classic Form Mode) */}
         {editorMode === 'form' && (
           <div className={`print:hidden min-w-0 lg:col-span-5 space-y-3 ${mobileTab !== 'editor' ? 'hidden lg:block' : ''}`}>
+            {isDesktopLg && isNonAgentToolActive ? (
+              <div className="space-y-2.5 lg:sticky lg:top-4">
+                <button
+                  type="button"
+                  onClick={closeStudioPanel}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back to Form Fields</span>
+                </button>
+                <div className="h-[calc(100dvh-11rem)] min-h-[520px]">
+                  {renderStudioToolPanel(true)}
+                </div>
+              </div>
+            ) : (
+            <>
             {/* Section Navigation Tabs (Single-Row Accessible Scrollable Tablist) */}
             <div
               role="tablist"
@@ -2789,17 +3117,19 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                 />
               )}
             </div>
+            </>
+            )}
           </div>
         )}
 
-        {/* PANEL 2: Interactive Resume Canvas (60% width alongside Desktop Agent Pane, 100% when collapsed) */}
+        {/* PANEL 2: Interactive Resume Canvas (Always visible, bright, unblurred, auto-scales beside active docked tool) */}
         <div
           className={`${editorMode === 'form'
-            ? 'lg:col-span-7'
-            : isAgentPanelOpen && !isTemplatePickerOpen
-              ? 'w-full lg:w-[60%] flex-1 min-w-0'
-              : 'flex-1 min-w-0 max-w-5xl mx-auto w-full'
-            } space-y-3 print:space-y-0 print:p-0 print:m-0 print:w-full print:block ${mobileTab !== 'preview' && editorMode === 'form' ? 'hidden lg:block' : ''
+            ? 'lg:col-span-7 space-y-3'
+            : activePanel
+              ? 'w-full flex-1 min-w-0 lg:h-full lg:min-h-0 lg:flex lg:flex-col'
+              : 'flex-1 min-w-0 max-w-5xl mx-auto w-full lg:h-full lg:min-h-0 lg:flex lg:flex-col'
+            } print:space-y-0 print:p-0 print:m-0 print:w-full print:h-auto print:block ${mobileTab !== 'preview' && editorMode === 'form' ? 'hidden lg:block' : ''
             }`}
         >
           {/* ATS Alignment Score & Audit Banner (Visible in Classic Forms Mode) */}
@@ -2809,35 +3139,122 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
               analysis={analysis}
               isAnalyzing={isAnalyzing}
               onRunAudit={handleRunAudit}
-              onOpenDetails={() => setIsAuditDrawerOpen(true)}
+              onOpenDetails={() => toggleStudioPanel('ats')}
               resumeId={resumeId}
             />
           )}
 
           {/* Document Canvas Preview Card */}
-          <div className="p-2 sm:p-4 md:p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-[#F7F8FA] dark:bg-[#111317] print:p-0 print:border-none print:shadow-none print:bg-transparent overflow-hidden">
-            <div className="print:hidden flex flex-wrap items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800 text-xs text-zinc-500 mb-4 gap-2">
+          <div
+            className={`p-2 sm:p-4 md:p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-[#F7F8FA] dark:bg-[#111317] print:p-0 print:border-none print:shadow-none print:bg-transparent overflow-clip print:overflow-visible print:block print:h-auto ${
+              editorMode === 'canvas' ? 'lg:flex-1 lg:min-h-0 lg:flex lg:flex-col' : ''
+            }`}
+          >
+            {/* Compact Direct Live-Design Canvas Header Bar (1-click + hover preview without opening any modal!) */}
+            <div className="print:hidden shrink-0 flex flex-wrap items-center justify-between pb-2.5 border-b border-zinc-200 dark:border-zinc-800 text-xs text-zinc-500 mb-3 gap-2">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-semibold text-zinc-800 dark:text-zinc-200">
-                  ATS Document Canvas
+                  Live Canvas
                 </span>
-                <span className="text-[10px] text-zinc-600 dark:text-zinc-400 font-mono hidden sm:inline">
-                  ({pageSize === 'A4' ? 'A4 210×297mm' : 'US Letter 8.5"×11"'})
+                <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono hidden xl:inline">
+                  {pageSize === 'A4' ? 'A4' : 'Letter'}
                 </span>
 
-                {/* Quick Score Capsule Pill */}
-                <button
-                  type="button"
-                  onClick={() => setIsAuditDrawerOpen(true)}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors cursor-pointer"
-                  title="Inspect ATS Alignment & Evidence Audit"
+                {/* Instant Quick Color Dots (Hover to live-preview, click to commit) */}
+                <div
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/80 shadow-2xs studio-preview-group"
+                  onMouseLeave={() => setLivePreview(null)}
+                  aria-label="Quick accent colors"
                 >
-                  <Sparkles className="w-2.5 h-2.5 text-blue-600 dark:text-blue-400" />
-                  <span>Score: {analysis?.score ?? liveScore}/100</span>
-                </button>
+                  {ACCENT_SWATCHES.slice(0, 6).map((swatch) => {
+                    const isSelected = accentColor.toLowerCase() === swatch.hex.toLowerCase();
+                    return (
+                      <button
+                        key={swatch.id}
+                        type="button"
+                        {...({ interestfor: 'resume-document-print' } as Record<string, string>)}
+                        onMouseEnter={() =>
+                          setLivePreview({ accentColor: swatch.hex, label: swatch.label })
+                        }
+                        onFocus={() =>
+                          setLivePreview({ accentColor: swatch.hex, label: swatch.label })
+                        }
+                        onBlur={() => setLivePreview(null)}
+                        onClick={() => handleQuickAccentColor(swatch.hex)}
+                        title={`Color: ${swatch.label} (hover to preview, click to apply)`}
+                        aria-label={`Set accent color to ${swatch.label}`}
+                        className={`w-4 h-4 rounded-full transition-transform cursor-pointer flex items-center justify-center ${
+                          isSelected
+                            ? 'ring-2 ring-offset-1 ring-zinc-900 dark:ring-white dark:ring-offset-zinc-900 scale-110'
+                            : 'hover:scale-115'
+                        }`}
+                        style={{ backgroundColor: swatch.hex }}
+                      />
+                    );
+                  })}
+                  <label
+                    className="w-4 h-4 rounded-full border border-zinc-300 dark:border-zinc-600 overflow-hidden cursor-pointer flex items-center justify-center ml-0.5 hover:scale-110 transition-transform"
+                    title="Pick custom accent color (live)"
+                  >
+                    <input
+                      type="color"
+                      aria-label="Quick custom accent color"
+                      value={/^#[0-9a-f]{6}$/i.test(accentColor) ? accentColor : '#2563eb'}
+                      onInput={(e) =>
+                        handleQuickAccentColor((e.target as HTMLInputElement).value)
+                      }
+                      onChange={(e) => handleQuickAccentColor(e.target.value)}
+                      className="w-6 h-6 -m-1 border-0 cursor-pointer bg-transparent p-0"
+                    />
+                  </label>
+                </div>
+
+                {/* Instant Quick Font Switcher (Hover to live-preview, click to commit) */}
+                <div
+                  className="flex items-center bg-zinc-200/70 dark:bg-zinc-800 p-0.5 rounded-lg text-[10px] studio-preview-group"
+                  onMouseLeave={() => setLivePreview(null)}
+                  role="group"
+                  aria-label="Quick font family"
+                >
+                  {(
+                    [
+                      { id: 'sans', label: 'Sans', title: 'Inter (Sans-serif)' },
+                      { id: 'serif', label: 'Serif', title: 'Georgia (Serif)' },
+                      { id: 'mono', label: 'Mono', title: 'Roboto Mono (Tech)' },
+                    ] as const
+                  ).map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      {...({ interestfor: 'resume-document-print' } as Record<string, string>)}
+                      onMouseEnter={() =>
+                        setLivePreview({ fontFamily: f.id, label: f.title })
+                      }
+                      onFocus={() =>
+                        setLivePreview({ fontFamily: f.id, label: f.title })
+                      }
+                      onBlur={() => setLivePreview(null)}
+                      onClick={() => handleQuickFontFamily(f.id)}
+                      title={`Font: ${f.title}`}
+                      className={`px-2 py-0.5 rounded-md font-medium transition-colors cursor-pointer ${
+                        f.id === 'serif'
+                          ? 'font-serif'
+                          : f.id === 'mono'
+                            ? 'font-mono'
+                            : 'font-sans'
+                      } ${
+                        fontFamily === f.id
+                          ? 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 font-bold shadow-xs'
+                          : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
 
                 {/* Quick Page Mode Toggle */}
-                <div className="flex items-center bg-zinc-200/70 dark:bg-zinc-800 p-0.5 rounded-lg text-[10px] ml-1">
+                <div className="flex items-center bg-zinc-200/70 dark:bg-zinc-800 p-0.5 rounded-lg text-[10px]">
                   <button
                     type="button"
                     onClick={() =>
@@ -2892,9 +3309,61 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                     2 Pages
                   </button>
                 </div>
+
+                {/* Live Hover Preview Pill (intentionally non-live-region per accessibility guidance) */}
+                {livePreview?.label && (
+                  <span
+                    data-testid="live-preview-pill"
+                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-600 text-white shadow-xs"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                    Previewing: {livePreview.label}
+                  </span>
+                )}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                {/* Quick Score Capsule Pill */}
+                <button
+                  type="button"
+                  onClick={() => toggleStudioPanel('ats')}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10.5px] font-bold bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors cursor-pointer"
+                  title="Inspect ATS Alignment & Evidence Audit"
+                >
+                  <Sparkles className="w-2.5 h-2.5 text-blue-600 dark:text-blue-400" />
+                  <span>{analysis?.score ?? liveScore}/100</span>
+                </button>
+
+                {/* Quick Inspector Shortcut: Design */}
+                <button
+                  type="button"
+                  onClick={() => toggleStudioPanel('design')}
+                  className={`font-medium text-[11px] border px-2 py-1 rounded-md transition-colors flex items-center gap-1 shadow-2xs cursor-pointer ${
+                    isDesignPanelOpen
+                      ? 'bg-purple-600 text-white border-purple-600'
+                      : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:border-purple-400'
+                  }`}
+                  title="Open full Design, Spacing & Margins controls"
+                >
+                  <Palette className="w-3 h-3" />
+                  <span className="hidden sm:inline">Design</span>
+                </button>
+
+                {/* Quick Inspector Shortcut: Templates */}
+                <button
+                  type="button"
+                  onClick={() => toggleStudioPanel('templates')}
+                  className={`font-medium text-[11px] border px-2 py-1 rounded-md transition-colors flex items-center gap-1 shadow-2xs cursor-pointer ${
+                    isTemplatePickerOpen
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:border-blue-400'
+                  }`}
+                  title="Browse & live-preview all 10 ATS templates"
+                >
+                  <LayoutTemplate className="w-3 h-3" />
+                  <span className="hidden sm:inline">Templates</span>
+                </button>
+
                 {/* Zoom Controls */}
                 <div className="flex items-center bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg p-0.5 text-[11px] shadow-2xs">
                   <button
@@ -2915,7 +3384,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                     className="px-1.5 py-0.5 font-mono text-[10px] text-zinc-700 dark:text-zinc-300 font-medium hover:text-blue-600 cursor-pointer"
                     title="Toggle Fit / 100%"
                   >
-                    {zoomMode === 'fit' ? `${Math.round(fitScale * 100)}% (Fit)` : `${zoomMode}%`}
+                    {zoomMode === 'fit' ? `${Math.round(fitScale * 100)}%` : `${zoomMode}%`}
                   </button>
                   <button
                     type="button"
@@ -2929,52 +3398,17 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                     +
                   </button>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => setIsTemplatePickerOpen(true)}
-                  className="font-medium text-[11px] bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2.5 py-1 rounded-md text-zinc-700 dark:text-zinc-300 hover:border-zinc-400 transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                >
-                  <LayoutTemplate className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                  <span>Choose Template</span>
-                </button>
               </div>
             </div>
-
-            {/* Live Template Preview Floating Status Banner */}
-            {isTemplatePickerOpen && (
-              <div className="print:hidden flex items-center justify-between gap-3 p-2.5 sm:p-3 px-3.5 sm:px-4 mb-3 rounded-xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-blue-500/10 border border-emerald-500/30 text-emerald-950 dark:text-emerald-50 text-xs shadow-xs animate-in fade-in slide-in-from-top-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="relative flex h-2.5 w-2.5 shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                  </span>
-                  <span className="font-medium truncate">
-                    Live Preview:{' '}
-                    <strong className="font-bold text-emerald-700 dark:text-emerald-300">
-                      {AVAILABLE_TEMPLATES.find((t) => t.key === templateKey)?.name || templateKey}
-                    </strong>
-                  </span>
-                  <span className="text-zinc-500 dark:text-zinc-400 text-[11px] hidden md:inline">
-                    — Pick any template on the left to see live changes immediately
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsTemplatePickerOpen(false)}
-                  className="px-3 py-1 text-xs font-bold bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white rounded-lg transition-all cursor-pointer shadow-xs flex items-center gap-1 shrink-0"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Done</span>
-                </button>
-              </div>
-            )}
 
             {/* Scaled A4 True-Canvas Container */}
             <div
               ref={canvasContainerRef}
-              className={`w-full overflow-x-auto overflow-y-visible py-2 print:overflow-visible print:p-0 print:block no-scrollbar touch-pan-x touch-pan-y overscroll-contain select-text ${editorMode === 'canvas' ? 'pb-36 print:pb-0' : ''
-                }`}
+              className={`w-full overflow-x-auto py-2 print:overflow-visible print:p-0 print:h-auto print:block select-text ${
+                editorMode === 'canvas'
+                  ? 'overflow-y-hidden lg:flex-1 lg:min-h-0 lg:overflow-y-auto overscroll-x-contain lg:overscroll-contain [scrollbar-gutter:stable] pb-24 lg:pb-24 print:pb-0'
+                  : 'overflow-y-hidden overscroll-x-contain'
+              }`}
             >
               <div
                 style={{
@@ -2997,11 +3431,12 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                   <div
                     ref={setResumePrintRef}
                     id="resume-document-print"
+                    data-live-preview={livePreview ? 'true' : undefined}
                     style={{ width: `${targetA4Width}px` }}
                     className="w-full print:w-full print:max-w-full"
                   >
                     {(() => {
-                      const TemplateComponent = getTemplateComponent(templateKey);
+                      const TemplateComponent = getTemplateComponent(effectiveTemplateKey);
                       return (
                         <CanvasEditProvider
                           isEditable={editorMode === 'canvas' && !isExportModalOpen}
@@ -3027,8 +3462,8 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                         >
                           <TemplateComponent
                             content={content}
-                            accentColor={accentColor}
-                            fontFamily={fontFamily}
+                            accentColor={effectiveAccentColor}
+                            fontFamily={effectiveFontFamily}
                             showPhoto={showPhoto}
                             photoUrl={photoUrl}
                             highlightKeywords={activeJobKeywords.length > 0 ? activeJobKeywords : undefined}
@@ -3379,88 +3814,8 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
         onCreateSnapshot={handleCreateVersionSnapshot}
         onRestoreVersion={handleRestoreVersion}
       />
-      {/* Template Picker Drawer */}
-      <TemplatePicker
-        isOpen={isTemplatePickerOpen}
-        onClose={() => setIsTemplatePickerOpen(false)}
-        currentTemplateKey={templateKey}
-        onSelectTemplate={(newKey) => {
-          setTemplateKey(newKey);
-          scheduleAutosave(content, resumeName, newKey);
-        }}
-        pageSize={pageSize}
-        onPageSizeChange={setPageSize}
-        content={content}
-        accentColor={accentColor}
-        fontFamily={fontFamily}
-        showPhoto={showPhoto}
-        photoUrl={photoUrl}
-      />
-
-      {/* Design, Typography & Spacing Panel */}
-      <DesignPanel
-        isOpen={isDesignPanelOpen}
-        onClose={() => setIsDesignPanelOpen(false)}
-        accentColor={accentColor}
-        onAccentColorChange={(newColor) => {
-          setAccentColor(newColor);
-          handleUpdateLayout({
-            ...(content.layout || {}),
-            accentColor: newColor,
-          });
-        }}
-        fontFamily={fontFamily}
-        onFontFamilyChange={(newFont) => {
-          setFontFamily(newFont);
-          handleUpdateLayout({
-            ...(content.layout || {}),
-            fontFamily: newFont,
-          });
-        }}
-        showPhoto={showPhoto}
-        onShowPhotoChange={(nextShow) => {
-          setShowPhoto(nextShow);
-          updateContent((prev) => ({
-            ...prev,
-            layout: {
-              ...prev.layout,
-              showPhoto: nextShow,
-            },
-          }));
-        }}
-        photoUrl={photoUrl}
-        onPhotoUrlChange={(newUrl) => {
-          setPhotoUrl(newUrl);
-          updateContent((prev) => ({
-            ...prev,
-            contact: {
-              ...prev.contact,
-              photoUrl: newUrl,
-            },
-          }));
-        }}
-        showHighlights={showHighlights}
-        onShowHighlightsChange={(nextHighlights) => {
-          setShowHighlights(nextHighlights);
-          updateContent((prev) => ({
-            ...prev,
-            layout: {
-              ...prev.layout,
-              showHighlights: nextHighlights,
-            },
-          }));
-        }}
-        layout={content.layout}
-        onLayoutChange={handleUpdateLayout}
-      />
-
-      {/* Section Drag-and-Drop Reorder Drawer */}
-      <SectionRearrangeDrawer
-        isOpen={isRearrangeDrawerOpen}
-        onClose={() => setIsRearrangeDrawerOpen(false)}
-        content={content}
-        onUpdateLayout={handleUpdateLayout}
-      />
+      {/* Mobile / Tablet Overlay Fallback for Studio Inspector Tools (< lg only; desktop uses docked Left Studio Inspector) */}
+      {!isDesktopLg && renderStudioToolPanel(false)}
 
       {/* Native <dialog> AI Section Rewriter Modal */}
       <SectionRewriterDialog
@@ -3490,43 +3845,6 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
         }}
       />
 
-      {/* Live Check & Tailor Drawer (Real Job Matching, Keyword Gap Analysis & AI Tailoring) */}
-      <CheckAndTailorDrawer
-        isOpen={isCheckTailorOpen}
-        onClose={() => setIsCheckTailorOpen(false)}
-        resumeId={resumeId}
-        resumeContent={content}
-        onUpdateContent={updateContent}
-        initialMatchId={activeMatchId}
-        onMatchChange={handleMatchChange}
-        onToggleHighlights={setShowHighlights}
-        isHighlightsEnabled={showHighlights}
-      />
-
-      {/* Grammar, Spelling & Buzzword Audit Drawer */}
-      <FixMistakesDrawer
-        isOpen={isFixMistakesOpen}
-        onClose={() => setIsFixMistakesOpen(false)}
-        resumeTitle={resumeName}
-        resumeTargetRole={resume?.targetRole}
-        content={content}
-        localReport={localWritingReport}
-        aiReport={aiWritingReport}
-        activeReport={activeWritingReport}
-        ignoredIds={ignoredWritingIssueIds}
-        onIgnoreIssue={(id) =>
-          setIgnoredWritingIssueIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
-        }
-        onResetIgnored={() => setIgnoredWritingIssueIds([])}
-        onApplyContent={(nextContent) => {
-          updateContent(() => nextContent);
-        }}
-        onRunAiDeepCheck={handleRunAiWritingCheck}
-        isRunningAiCheck={isRunningAiWritingCheck}
-        aiCheckError={aiWritingCheckError}
-        onLocateIssue={handleLocateWritingIssue}
-      />
-
       {/* Recruiter Share Link & View Analytics Drawer */}
       <ShareAnalyticsDrawer
         isOpen={isShareDrawerOpen}
@@ -3535,22 +3853,6 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
         resumeTitle={resumeName || 'Resume'}
         shareState={shareState}
         onShareStateChange={setShareState}
-      />
-
-      {/* Full ATS Audit & Resume Alignment Drawer (Slide-Over, doesn't compress canvas) */}
-      <AtsAuditDrawer
-        isOpen={isAuditDrawerOpen || mobileTab === 'ai'}
-        onClose={() => {
-          setIsAuditDrawerOpen(false);
-          if (mobileTab === 'ai') setMobileTab('preview');
-        }}
-        score={analysis?.score ?? liveScore}
-        analysis={analysis}
-        isAnalyzing={isAnalyzing}
-        onRunAudit={handleRunAudit}
-        onOpenFixMistakes={() => setIsFixMistakesOpen(true)}
-        resumeId={resumeId}
-        resumeTitle={resumeName || content?.headline}
       />
 
       {/* Direct Vector ATS PDF Export Modal */}
@@ -3575,25 +3877,8 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
           onUndo={handleUndo}
           onRedo={handleRedo}
           onFitPage={() => setZoomMode('fit')}
-          onOpenAddContent={() => setIsAddContentOpen(true)}
-          shiftRight={isTemplatePickerOpen}
-        />
-      )}
-
-      {/* In-Canvas Content & Sections Inserter Drawer */}
-      {content && (
-        <AddContentDrawer
-          isOpen={isAddContentOpen}
-          onClose={() => setIsAddContentOpen(false)}
-          content={content}
-          onUpdateContent={updateContent}
-          onScrollToSection={(sectionId) => {
-            const el = document.getElementById(sectionId);
-            if (el) {
-              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              el.focus();
-            }
-          }}
+          onOpenAddContent={() => toggleStudioPanel('content')}
+          shiftForInspector={Boolean(activePanel)}
         />
       )}
       {/* Phase 3: Mobile & Form-Mode Slide-Over AI Agent Drawer (kept mounted once opened so SSE survives close/locate) */}

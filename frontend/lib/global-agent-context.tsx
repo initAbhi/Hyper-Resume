@@ -102,6 +102,8 @@ export interface GlobalAgentContextValue {
   pageContext: AgentMessageContext;
   updateContext: (patch: Partial<AgentMessageContext>) => void;
   clearJobContext: () => void;
+  clearResumeContext: () => void;
+  selectResumeContext: (resume: { id: string; name: string }) => void;
   conversations: Array<{ id: string; title?: string | null; updatedAt: string }>;
   conversationId: string | null;
   selectConversation: (conversationId: string) => Promise<void>;
@@ -356,7 +358,8 @@ function GlobalAgentProviderCore({
               ['PENDING', 'PLANNING', 'RUNNING', 'AWAITING_APPROVAL'].includes(t.status),
             );
             if (inFlight) {
-              const plan = (inFlight.metadata as Record<string, any> | undefined)?.plan;
+              const meta = (inFlight.metadata as Record<string, any> | undefined) || {};
+              const plan = meta.plan;
               setActiveTask({
                 taskId: inFlight.id,
                 status: inFlight.status,
@@ -367,6 +370,9 @@ function GlobalAgentProviderCore({
                     ? 'Waiting for your approval'
                     : 'Resuming task…',
               });
+              if (inFlight.status === 'AWAITING_APPROVAL' && meta.stagedProposal) {
+                setActiveProposal(meta.stagedProposal as AgentApprovalProposal);
+              }
             }
           } catch {
             // Non-fatal fallback
@@ -642,7 +648,16 @@ function GlobalAgentProviderCore({
   );
 
   const updateContext = useCallback((patch: Partial<AgentMessageContext>) => {
-    setPageContext((prev) => mergeAgentContext(prev, patch));
+    setPageContext((prev) => {
+      // If the user explicitly detached a resume, don't silently re-attach via background page sync
+      if (prev.resumeDetached && patch.activeResumeId && patch.resumeDetached !== false) {
+        const rest = { ...patch };
+        delete rest.activeResumeId;
+        delete rest.activeResumeName;
+        return mergeAgentContext(prev, rest);
+      }
+      return mergeAgentContext(prev, patch);
+    });
   }, []);
 
   const clearJobContext = useCallback(() => {
@@ -650,9 +665,116 @@ function GlobalAgentProviderCore({
       route: prev.route,
       activeResumeId: prev.activeResumeId,
       activeResumeName: prev.activeResumeName,
+      resumeDetached: prev.resumeDetached,
       tone: prev.tone,
     }));
   }, []);
+
+  const clearResumeContext = useCallback(() => {
+    setPageContext((prev) => {
+      const next: AgentMessageContext = {
+        ...prev,
+        resumeDetached: true,
+      };
+      delete next.activeResumeId;
+      delete next.activeResumeName;
+      return next;
+    });
+    setActiveProposal(null);
+    setConfirmedMetricIds({});
+    setSelectedFieldPaths({});
+    setNotice({
+      type: 'info',
+      message: 'Resume detached — click "+ Attach resume" anytime to pick another.',
+    });
+  }, []);
+
+  const selectResumeContext = useCallback((resume: { id: string; name: string }) => {
+    setPageContext((prev) => ({
+      ...prev,
+      activeResumeId: resume.id,
+      activeResumeName: resume.name,
+      resumeDetached: false,
+    }));
+    setActiveProposal((prev) => (prev && prev.resumeId !== resume.id ? null : prev));
+    setNotice({
+      type: 'info',
+      message: `Switched assistant context to "${resume.name}".`,
+    });
+  }, []);
+
+  // Resilient Task Polling Safety Net for Global Drawer (prevents stuck spinners / lost proposals on SSE blips)
+  const isGlobalTaskInFlight =
+    activeTask?.status === 'PENDING' ||
+    activeTask?.status === 'PLANNING' ||
+    activeTask?.status === 'RUNNING';
+
+  useEffect(() => {
+    if (!isGlobalTaskInFlight || !conversationId || !activeTask?.taskId) return;
+    if (typeof client.listConversationTasks !== 'function') return;
+
+    const targetTaskId = activeTask.taskId;
+    const targetConvId = conversationId;
+    const poll = async () => {
+      try {
+        const tasks = await client.listConversationTasks(targetConvId);
+        const match = tasks.find((t) => t.id === targetTaskId);
+        if (!match) return;
+        const meta = (match.metadata as Record<string, any> | undefined) || {};
+        const plan = meta.plan;
+        if (match.status === 'AWAITING_APPROVAL') {
+          setActiveTask((prev) => ({
+            taskId: match.id,
+            status: 'AWAITING_APPROVAL',
+            goal: plan?.goal || prev?.goal,
+            steps: Array.isArray(plan?.steps) ? plan.steps : prev?.steps || [],
+            statusMessage: 'Waiting for your approval',
+            errorMessage: null,
+          }));
+          setConnectionState('idle');
+          setStreamError(null);
+          if (meta.stagedProposal) {
+            setActiveProposal(meta.stagedProposal as AgentApprovalProposal);
+          }
+          void refreshMessages(targetConvId);
+        } else if (match.status === 'COMPLETED') {
+          setActiveTask((prev) => ({
+            taskId: match.id,
+            status: 'COMPLETED',
+            goal: plan?.goal || prev?.goal,
+            steps: Array.isArray(plan?.steps) ? plan.steps : prev?.steps || [],
+            statusMessage: 'Completed',
+            errorMessage: null,
+          }));
+          setStreamingText('');
+          setConnectionState('idle');
+          setStreamError(null);
+          void refreshMessages(targetConvId);
+          if (onTaskCompletedRefresh) {
+            void onTaskCompletedRefresh().catch(() => {});
+          }
+        } else if (match.status === 'FAILED' || match.status === 'AWAITING_CREDITS') {
+          setActiveTask((prev) => ({
+            taskId: match.id,
+            status: match.status,
+            goal: plan?.goal || prev?.goal,
+            steps: Array.isArray(plan?.steps) ? plan.steps : prev?.steps || [],
+            statusMessage: null,
+            errorMessage: meta.executionError || meta.lastError || 'The task encountered an error.',
+          }));
+          setStreamingText('');
+          setConnectionState('idle');
+        }
+      } catch {
+        // Non-fatal fallback poll
+      }
+    };
+
+    const intervalId = setInterval(() => {
+      void poll();
+    }, 3500);
+    return () => clearInterval(intervalId);
+  }, [isGlobalTaskInFlight, conversationId, activeTask?.taskId, client, refreshMessages, onTaskCompletedRefresh]);
 
   const submitMessage = useCallback(
     async (overrideContent?: string, overrideContext?: Partial<AgentMessageContext>) => {
@@ -933,6 +1055,8 @@ function GlobalAgentProviderCore({
         pageContext,
         updateContext,
         clearJobContext,
+        clearResumeContext,
+        selectResumeContext,
         conversations,
         conversationId,
         selectConversation,

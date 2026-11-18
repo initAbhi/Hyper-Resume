@@ -8,7 +8,9 @@ import {
   BookmarkCheck,
   Bot,
   Briefcase,
+  Check,
   CheckCircle2,
+  ChevronDown,
   ExternalLink,
   FileText,
   History,
@@ -16,6 +18,7 @@ import {
   Mail,
   MapPin,
   Mic,
+  Paperclip,
   Plus,
   RefreshCw,
   Send,
@@ -28,6 +31,7 @@ import {
   X,
 } from 'lucide-react';
 import { useGlobalAgent } from '@/lib/global-agent-context';
+import { apiClient, type Resume } from '@/lib/api-client';
 import { AgentTaskProgress } from '@/components/resumes/AgentTaskProgress';
 import { AgentDiffCard } from '@/components/resumes/AgentDiffCard';
 import { AgentApprovalModal } from '@/components/resumes/AgentApprovalModal';
@@ -45,6 +49,8 @@ export function GlobalAgentDrawer() {
     closeDrawer,
     pageContext,
     clearJobContext,
+    clearResumeContext,
+    selectResumeContext,
     conversations,
     conversationId,
     selectConversation,
@@ -90,15 +96,54 @@ export function GlobalAgentDrawer() {
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
   const [isApprovalBusy, setIsApprovalBusy] = useState(false);
   const [showHistoryMenu, setShowHistoryMenu] = useState(false);
+  const [showResumePicker, setShowResumePicker] = useState(false);
+  const [availableResumes, setAvailableResumes] = useState<Resume[]>([]);
+  const [isLoadingResumes, setIsLoadingResumes] = useState(false);
+
+  const handleToggleResumePicker = async () => {
+    const nextOpen = !showResumePicker;
+    setShowResumePicker(nextOpen);
+    if (nextOpen && availableResumes.length === 0 && !isLoadingResumes) {
+      setIsLoadingResumes(true);
+      try {
+        const res = await apiClient.listResumes();
+        setAvailableResumes(Array.isArray(res) ? res : []);
+      } catch {
+        setAvailableResumes([]);
+      } finally {
+        setIsLoadingResumes(false);
+      }
+    }
+  };
 
   const getAcceptedFieldPaths = () => {
     if (!activeProposal) return undefined;
     const explicitUnchecked = Object.values(selectedFieldPaths).some((v) => v === false);
     if (!explicitUnchecked) return undefined;
     const accepted: string[] = [];
-    const { headline, summary, experience } = activeProposal.sectionDiffs || {};
+    const {
+      headline,
+      summary,
+      contact,
+      experience,
+      projects,
+      skills,
+      education,
+      certifications,
+      customSections,
+      templateKey,
+      layout,
+    } = activeProposal.sectionDiffs || {};
     if (headline && selectedFieldPaths['headline'] !== false) accepted.push('headline');
     if (summary && selectedFieldPaths['summary'] !== false) accepted.push('summary');
+    if (contact && selectedFieldPaths['contact'] !== false) accepted.push('contact');
+    if (skills && selectedFieldPaths['skills'] !== false) accepted.push('skills');
+    if (projects && selectedFieldPaths['projects'] !== false) accepted.push('projects');
+    if (education && selectedFieldPaths['education'] !== false) accepted.push('education');
+    if (certifications && selectedFieldPaths['certifications'] !== false) accepted.push('certifications');
+    if (customSections && selectedFieldPaths['customSections'] !== false) accepted.push('customSections');
+    if (templateKey && selectedFieldPaths['templateKey'] !== false) accepted.push('templateKey');
+    if (layout && selectedFieldPaths['layout'] !== false) accepted.push('layout');
     if (Array.isArray(experience)) {
       experience.forEach((exp, expIdx) => {
         (exp.bulletDiffs || []).forEach((b) => {
@@ -317,42 +362,159 @@ export function GlobalAgentDrawer() {
             </div>
           </div>
 
-          {/* Synchronized Page Context Bar */}
-          {(pageContext.activeResumeName ||
-            pageContext.activeResumeId ||
-            pageContext.jobTitle ||
-            pageContext.companyName) && (
-            <div
-              data-testid="global-agent-context-bar"
-              className="px-4 py-2 border-b border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/40 flex flex-wrap items-center gap-1.5 text-[11px] shrink-0"
-            >
-              {(pageContext.activeResumeName || pageContext.activeResumeId) && (
-                <span className="inline-flex items-center gap-1 rounded-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 px-2 py-0.5 text-zinc-700 dark:text-zinc-300 max-w-[200px] truncate">
-                  <FileText className="w-3 h-3 text-blue-600 shrink-0" aria-hidden="true" />
-                  <span className="truncate">
+          {/* Interactive Context Bar: Attach, Switch, or Remove Resume & Target Job */}
+          <div
+            data-testid="global-agent-context-bar"
+            className="relative px-4 py-2 border-b border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/40 flex flex-wrap items-center gap-1.5 text-[11px] shrink-0"
+          >
+            {pageContext.activeResumeName || pageContext.activeResumeId ? (
+              <span
+                data-testid="attached-resume-chip"
+                className="inline-flex items-center gap-1 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 pl-2 pr-1 py-0.5 text-zinc-700 dark:text-zinc-200 max-w-[230px] shadow-2xs"
+              >
+                <button
+                  type="button"
+                  onClick={() => void handleToggleResumePicker()}
+                  className="inline-flex items-center gap-1 min-w-0 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+                  aria-label="Switch attached resume"
+                  aria-expanded={showResumePicker}
+                  title="Click to switch resume"
+                >
+                  <FileText className="w-3 h-3 text-blue-600 dark:text-blue-400 shrink-0" aria-hidden="true" />
+                  <span className="truncate font-medium">
                     {pageContext.activeResumeName || 'Active Resume'}
                   </span>
+                  <ChevronDown className="w-3 h-3 text-zinc-400 shrink-0" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowResumePicker(false);
+                    clearResumeContext();
+                  }}
+                  className="ml-0.5 p-0.5 rounded-full text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer shrink-0"
+                  aria-label="Remove attached resume"
+                  title="Detach resume from assistant"
+                >
+                  <X className="w-3 h-3" aria-hidden="true" />
+                </button>
+              </span>
+            ) : (
+              <button
+                type="button"
+                data-testid="attach-resume-btn"
+                onClick={() => void handleToggleResumePicker()}
+                aria-expanded={showResumePicker}
+                className="inline-flex items-center gap-1 rounded-full border border-dashed border-zinc-300 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900/80 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 px-2.5 py-0.5 text-zinc-600 dark:text-zinc-400 font-medium transition-colors cursor-pointer"
+              >
+                <Paperclip className="w-3 h-3 shrink-0" aria-hidden="true" />
+                <span>Attach resume</span>
+              </button>
+            )}
+
+            {(pageContext.jobTitle || pageContext.companyName) && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 pl-2 pr-1 py-0.5 text-blue-800 dark:text-blue-200 max-w-[230px]">
+                <Briefcase className="w-3 h-3 shrink-0" aria-hidden="true" />
+                <span className="truncate">
+                  {pageContext.jobTitle || 'Role'}
+                  {pageContext.companyName ? ` @ ${pageContext.companyName}` : ''}
                 </span>
-              )}
-              {(pageContext.jobTitle || pageContext.companyName) && (
-                <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 px-2 py-0.5 text-blue-800 dark:text-blue-200 max-w-[240px]">
-                  <Briefcase className="w-3 h-3 shrink-0" aria-hidden="true" />
-                  <span className="truncate">
-                    {pageContext.jobTitle || 'Role'}
-                    {pageContext.companyName ? ` @ ${pageContext.companyName}` : ''}
+                <button
+                  type="button"
+                  onClick={clearJobContext}
+                  className="ml-0.5 p-0.5 rounded-full hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 cursor-pointer shrink-0"
+                  aria-label="Clear selected job context"
+                  title="Remove job context"
+                >
+                  <X className="w-3 h-3" aria-hidden="true" />
+                </button>
+              </span>
+            )}
+
+            {/* Resume Switcher / Attachment Popover */}
+            {showResumePicker && (
+              <div
+                data-testid="resume-context-picker"
+                className="absolute left-4 top-full mt-1 z-30 w-72 max-h-64 overflow-y-auto rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-xl p-1.5 space-y-0.5"
+              >
+                <div className="flex items-center justify-between px-2 py-1 border-b border-zinc-100 dark:border-zinc-800 mb-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                    Select Resume Context
                   </span>
                   <button
                     type="button"
-                    onClick={clearJobContext}
-                    className="ml-0.5 hover:text-rose-600 cursor-pointer"
-                    aria-label="Clear selected job context"
+                    onClick={() => setShowResumePicker(false)}
+                    className="p-0.5 rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
+                    aria-label="Close resume picker"
                   >
                     <X className="w-3 h-3" aria-hidden="true" />
                   </button>
-                </span>
-              )}
-            </div>
-          )}
+                </div>
+
+                {isLoadingResumes ? (
+                  <div className="flex items-center gap-2 px-2.5 py-3 text-xs text-zinc-500">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+                    <span>Loading your resumes…</span>
+                  </div>
+                ) : availableResumes.length === 0 ? (
+                  <div className="px-2.5 py-2 text-xs text-zinc-500 space-y-1.5">
+                    <p>No resumes found yet.</p>
+                    <Link
+                      href="/app/resumes"
+                      onClick={() => {
+                        setShowResumePicker(false);
+                        closeDrawer();
+                      }}
+                      className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 font-semibold hover:underline"
+                    >
+                      Go to My Resumes <ArrowUpRight className="w-3 h-3" aria-hidden="true" />
+                    </Link>
+                  </div>
+                ) : (
+                  availableResumes.map((r) => {
+                    const isSelected = pageContext.activeResumeId === r.id;
+                    return (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => {
+                          selectResumeContext({ id: r.id, name: r.name });
+                          setShowResumePicker(false);
+                        }}
+                        className={`w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors cursor-pointer ${
+                          isSelected
+                            ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-semibold'
+                            : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                        }`}
+                      >
+                        <span className="flex items-center gap-1.5 min-w-0">
+                          <FileText className="w-3.5 h-3.5 shrink-0 text-blue-500" aria-hidden="true" />
+                          <span className="truncate">{r.name}</span>
+                        </span>
+                        {isSelected && <Check className="w-3.5 h-3.5 shrink-0 text-blue-600 dark:text-blue-400" aria-hidden="true" />}
+                      </button>
+                    );
+                  })
+                )}
+
+                {(pageContext.activeResumeId || pageContext.activeResumeName) && (
+                  <div className="pt-1 mt-1 border-t border-zinc-100 dark:border-zinc-800">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowResumePicker(false);
+                        clearResumeContext();
+                      }}
+                      className="w-full flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-left text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-medium cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                      <span>Detach resume (chat without resume)</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Notice Banner */}
           {notice && (
@@ -439,46 +601,75 @@ export function GlobalAgentDrawer() {
             )}
 
             {/* Messages */}
-            {messages
-              .filter((m) => m.role === 'user' || m.role === 'assistant')
-              .map((msg) => {
+            {(() => {
+              const visibleMessages = messages.filter(
+                (m) => m.role === 'user' || m.role === 'assistant',
+              );
+              return visibleMessages.map((msg, idx) => {
                 const isUser = msg.role === 'user';
+                const isLastAssistant = !isUser && idx === visibleMessages.length - 1;
+                const offersApplyAction =
+                  isLastAssistant &&
+                  !isTaskRunning &&
+                  !isSubmitting &&
+                  !activeProposal &&
+                  Boolean(pageContext.activeResumeId) &&
+                  /\b(apply these changes|propose|implement|ats score|rewrite|improve)\b/i.test(
+                    msg.content,
+                  );
+
                 return (
-                  <div
-                    key={msg.id}
-                    data-message-role={msg.role}
-                    className={`flex items-start gap-2.5 ${isUser ? 'flex-row-reverse' : ''}`}
-                  >
+                  <div key={msg.id} className="space-y-2">
                     <div
-                      aria-hidden="true"
-                      className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${
-                        isUser
-                          ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-zinc-800'
-                          : 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border-blue-200/80 dark:border-blue-800'
-                      }`}
+                      data-message-role={msg.role}
+                      className={`flex items-start gap-2.5 ${isUser ? 'flex-row-reverse' : ''}`}
                     >
-                      {isUser ? (
-                        <UserIcon className="w-3.5 h-3.5" />
-                      ) : (
-                        <Bot className="w-3.5 h-3.5" />
-                      )}
+                      <div
+                        aria-hidden="true"
+                        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${
+                          isUser
+                            ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-zinc-800'
+                            : 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border-blue-200/80 dark:border-blue-800'
+                        }`}
+                      >
+                        {isUser ? (
+                          <UserIcon className="w-3.5 h-3.5" />
+                        ) : (
+                          <Bot className="w-3.5 h-3.5" />
+                        )}
+                      </div>
+                      <div
+                        className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed break-words ${
+                          isUser
+                            ? 'bg-[#285FEA] text-white rounded-tr-sm shadow-2xs'
+                            : 'bg-zinc-100/90 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border border-zinc-200/70 dark:border-zinc-800 rounded-tl-sm'
+                        }`}
+                      >
+                        <AgentMessageContent
+                          content={msg.content}
+                          isUser={isUser}
+                          createdAt={msg.createdAt}
+                        />
+                      </div>
                     </div>
-                    <div
-                      className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed break-words ${
-                        isUser
-                          ? 'bg-[#285FEA] text-white rounded-tr-sm shadow-2xs'
-                          : 'bg-zinc-100/90 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border border-zinc-200/70 dark:border-zinc-800 rounded-tl-sm'
-                      }`}
-                    >
-                      <AgentMessageContent
-                        content={msg.content}
-                        isUser={isUser}
-                        createdAt={msg.createdAt}
-                      />
-                    </div>
+                    {offersApplyAction && (
+                      <div className="pl-9 flex flex-wrap gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void submitMessage('Apply all the changes you just suggested to my resume')
+                          }
+                          className="inline-flex items-center gap-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-[11px] font-semibold shadow-2xs transition-colors cursor-pointer"
+                        >
+                          <Sparkles className="w-3 h-3" aria-hidden="true" />
+                          <span>Apply these changes</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
-              })}
+              });
+            })()}
 
             {streamingText && (
               <div className="flex items-start gap-2.5">

@@ -91,9 +91,29 @@ export class DurableTaskWorker implements OnModuleInit, OnModuleDestroy {
       this.reservationReaperInterval = undefined;
     }
 
+    const ownedTaskIds = Array.from(this.activeHeartbeats.keys());
     for (const [taskId, timer] of this.activeHeartbeats.entries()) {
       clearInterval(timer);
       this.activeHeartbeats.delete(taskId);
+    }
+
+    // Release active leases immediately on graceful shutdown so a restarted worker reclaims tasks in ~1s instead of waiting 60s
+    if (ownedTaskIds.length > 0 && typeof this.taskRepo?.createQueryBuilder === 'function') {
+      void this.taskRepo
+        .createQueryBuilder()
+        .update(AgentTask)
+        .set({
+          status: 'PENDING',
+          heartbeatAt: null as unknown as Date,
+          updatedAt: new Date(),
+        })
+        .where("lease_token = :leaseToken AND status IN ('PLANNING', 'RUNNING')", {
+          leaseToken: this.workerInstanceId,
+        })
+        .execute()
+        .catch((err: any) => {
+          this.logger.warn(`Graceful lease release failed: ${err?.message || err}`);
+        });
     }
 
     this.logger.log(`DurableTaskWorker stopped (${this.workerInstanceId})`);

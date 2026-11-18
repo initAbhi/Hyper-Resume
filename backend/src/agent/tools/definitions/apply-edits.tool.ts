@@ -11,6 +11,7 @@ import { DataSource, Repository } from 'typeorm';
 import { ResumesService } from '../../../resumes/resumes.service.js';
 import { Resume } from '../../../resumes/entities/resume.entity.js';
 import { AgentToolExecution } from '../../entities/agent-tool-execution.entity.js';
+import { applySectionDiffsToResumeContent } from './resume-diff-applier.js';
 import {
   AgentTool,
   checkNoForbiddenUserId,
@@ -159,46 +160,19 @@ export class ApplyApprovedEditsTool implements AgentTool<ApplyApprovedEditsArgs,
           );
         }
 
-        // Apply all server-persisted section diffs (headline, summary, experience, skills, projects)
+        // Apply all server-persisted section diffs via shared whole-resume applier
         const serverPayload = execution.outputPayload as any;
         const sectionDiffs = serverPayload?.sectionDiffs || {};
-        if (liveResume.content) {
-          if (sectionDiffs.headline?.proposed) {
-            liveResume.content.headline = sectionDiffs.headline.proposed;
-          }
-          if (sectionDiffs.summary?.proposed) {
-            liveResume.content.summary = sectionDiffs.summary.proposed;
-          }
-          if (Array.isArray(sectionDiffs.experience) && Array.isArray(liveResume.content.experience)) {
-            for (let expIdx = 0; expIdx < sectionDiffs.experience.length; expIdx++) {
-              const expDiff = sectionDiffs.experience[expIdx];
-              const targetExp = liveResume.content.experience[expIdx];
-              if (!targetExp || !Array.isArray(expDiff?.bulletDiffs) || !Array.isArray(targetExp.bullets)) {
-                continue;
-              }
-              for (const bDiff of expDiff.bulletDiffs) {
-                if (
-                  typeof bDiff?.bulletIndex === 'number' &&
-                  typeof bDiff?.proposed === 'string' &&
-                  bDiff.bulletIndex >= 0 &&
-                  bDiff.bulletIndex < targetExp.bullets.length
-                ) {
-                  targetExp.bullets[bDiff.bulletIndex] = bDiff.proposed;
-                }
-              }
-            }
-          }
-          if (Array.isArray(sectionDiffs.skills?.proposed)) {
-            liveResume.content.skills = sectionDiffs.skills.proposed;
-          }
-          if (Array.isArray(sectionDiffs.projects?.proposed)) {
-            liveResume.content.projects = sectionDiffs.projects.proposed;
-          }
-        }
+        const applied = applySectionDiffsToResumeContent(liveResume.content, sectionDiffs, {
+          currentTemplateKey: liveResume.templateKey,
+        });
 
         const updatedResume = await this.resumesService.updateResume(context.userId, args.resumeId, {
           expectedVersion: liveResume.version,
-          content: liveResume.content,
+          content: applied.content,
+          ...(applied.templateKey && applied.templateKey !== liveResume.templateKey
+            ? { templateKey: applied.templateKey }
+            : {}),
         });
 
         // Mark execution record as consumed & approved

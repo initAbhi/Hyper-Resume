@@ -178,6 +178,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
   const currentNav = navItems.find((item) =>
     item.href === '/app' ? pathname === '/app' : pathname.startsWith(item.href)
   );
+  const isResumeEditor = /^\/app\/resumes\/[^/]+$/.test(pathname);
 
   // Dynamic per-page document title for authenticated workspace routes (UX-31)
   useEffect(() => {
@@ -555,7 +556,11 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
         )}
 
         {/* Dynamic Page Viewport (Scrollable container with clean padding) */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 print:p-0 print:overflow-visible">
+        <main
+          className={`flex-1 min-h-0 overflow-y-auto print:p-0 print:overflow-visible ${
+            isResumeEditor ? 'p-3 sm:p-4 lg:p-4' : 'p-4 sm:p-6 lg:p-8'
+          }`}
+        >
           {children}
         </main>
       </div>

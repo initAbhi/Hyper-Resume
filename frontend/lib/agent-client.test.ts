@@ -419,5 +419,56 @@ describe('AgentApiClient & Ticket-Authenticated SSE Stream (Phase 3)', () => {
     );
     expect(hashErr.code).toBe('HASH_MISMATCH');
   });
+
+  it('retries transient ticket fetch failures silently and ignores heartbeat events', async () => {
+    FakeEventSource.instances = [];
+    let attempt = 0;
+    const { transport } = createMockTransport({
+      'POST /agent/conversations/conv-1/stream-ticket': () => {
+        attempt += 1;
+        if (attempt === 1) {
+          throw new TypeError('Failed to fetch');
+        }
+        return {
+          ticket: 'recovered-ticket',
+          expiresInSeconds: 30,
+        };
+      },
+    });
+    const client = new AgentApiClient(transport);
+
+    const errors: string[] = [];
+    const reconnects: number[] = [];
+    const unknownEvents: string[] = [];
+    let opened = false;
+
+    const conn = client.connectToStream(
+      'conv-1',
+      {
+        onOpen: () => {
+          opened = true;
+        },
+        onReconnecting: (n) => reconnects.push(n),
+        onError: (err) => errors.push(err.message),
+        onUnknownEvent: (ev) => unknownEvents.push(ev.rawType),
+      },
+      { EventSourceCtor: FakeEventSource, baseRetryDelayMs: 15, maxRetryDelayMs: 30, maxRetries: 3 },
+    );
+
+    await new Promise((r) => setTimeout(r, 45));
+
+    // Must recover without surfacing a premature "Failed to fetch" error
+    expect(errors).toEqual([]);
+    expect(reconnects).toEqual([1]);
+    expect(FakeEventSource.instances.length).toBe(1);
+    expect(FakeEventSource.instances[0].url).toContain('ticket=recovered-ticket');
+
+    FakeEventSource.instances[0].emitOpen();
+    FakeEventSource.instances[0].emitEvent('heartbeat', { ts: Date.now() }, '');
+    expect(opened).toBe(true);
+    expect(unknownEvents).toEqual([]);
+
+    conn.disconnect();
+  });
 });
 

@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsIn,
   IsNotEmpty,
   IsOptional,
@@ -23,6 +24,10 @@ export class AgentMessageContextDto {
   @IsString()
   @MaxLength(255)
   activeResumeName?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  resumeDetached?: boolean;
 
   @IsOptional()
   @IsString()

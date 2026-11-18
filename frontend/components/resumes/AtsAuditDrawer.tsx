@@ -21,6 +21,7 @@ import type { ResumeAnalysis } from '@/lib/api-client';
 interface AtsAuditDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  docked?: boolean;
   score: number;
   analysis: ResumeAnalysis | null;
   isAnalyzing: boolean;
@@ -33,6 +34,7 @@ interface AtsAuditDrawerProps {
 export function AtsAuditDrawer({
   isOpen,
   onClose,
+  docked = false,
   score,
   analysis,
   isAnalyzing,
@@ -51,8 +53,9 @@ export function AtsAuditDrawer({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Prevent background scroll when drawer is open
+  // Prevent background scroll only in overlay mode
   useEffect(() => {
+    if (docked) return;
     if (isOpen) {
       document.body.style.overflow = 'hidden';
     } else {
@@ -61,28 +64,20 @@ export function AtsAuditDrawer({
     return () => {
       document.body.style.overflow = '';
     };
-  }, [isOpen]);
+  }, [isOpen, docked]);
 
   if (!isOpen) return null;
 
-  return (
-    <div
-      id="ats-audit-drawer-root"
-      className="fixed inset-0 z-50 flex justify-end"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="ats-audit-title"
-    >
-      {/* Dimmed Backdrop */}
+  const panelBody = (
       <div
-        className="fixed inset-0 bg-black/45 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
-        onClick={onClose}
-      />
-
-      {/* Slide-over Right Drawer */}
-      <div className="relative w-full max-w-[480px] bg-white dark:bg-zinc-900 h-full shadow-2xl border-l border-zinc-200 dark:border-zinc-800 flex flex-col z-10 animate-in slide-in-from-right duration-250">
+        className={
+          docked
+            ? 'w-full h-full bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 shadow-sm flex flex-col overflow-hidden'
+            : 'relative w-full max-w-[480px] bg-white dark:bg-zinc-900 h-full shadow-2xl border-l border-zinc-200 dark:border-zinc-800 flex flex-col z-10 animate-in slide-in-from-right duration-250 pointer-events-auto'
+        }
+      >
         {/* Drawer Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 shrink-0 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xs">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 shrink-0 bg-white dark:bg-zinc-900">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center shrink-0">
               <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -217,20 +212,43 @@ export function AtsAuditDrawer({
         </div>
 
         {/* Drawer Footer */}
-        <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50 shrink-0 flex items-center justify-between gap-3">
+        <div className="px-4 py-2.5 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/60 shrink-0 flex items-center justify-between gap-3">
           <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-            Current Score: <strong className="text-zinc-800 dark:text-zinc-200 font-mono">{score}/100</strong>
+            Live Score: <strong className="text-zinc-800 dark:text-zinc-200 font-mono">{score}/100</strong>
           </span>
           <Button
             variant="outline"
             size="sm"
             onClick={onClose}
-            className="text-xs"
+            className="text-xs h-7"
           >
-            Close
+            {docked ? 'Collapse' : 'Close'}
           </Button>
         </div>
       </div>
+  );
+
+  if (docked) {
+    return (
+      <div id="ats-audit-drawer-root" className="h-full w-full" aria-labelledby="ats-audit-title">
+        {panelBody}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      id="ats-audit-drawer-root"
+      className="fixed inset-0 z-50 flex justify-end pointer-events-none"
+      role="dialog"
+      aria-labelledby="ats-audit-title"
+    >
+      <div
+        className="fixed inset-0 bg-black/25 lg:hidden pointer-events-auto transition-opacity"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      {panelBody}
     </div>
   );
 }

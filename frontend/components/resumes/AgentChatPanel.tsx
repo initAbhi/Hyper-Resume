@@ -94,6 +94,7 @@ export function AgentChatPanel({
 }: AgentChatPanelProps) {
   const inputId = useId();
   const inputHintId = useId();
+  const messagesListRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const streamRef = useRef<AgentStreamConnection | null>(null);
   const lastEventIdRef = useRef<string | undefined>(undefined);
@@ -143,15 +144,28 @@ export function AgentChatPanel({
   // Keep latest callbacks in refs so SSE listeners never close over stale props
   const onProposalChangeRef = useRef(onProposalChange);
   onProposalChangeRef.current = onProposalChange;
+  const openEventStreamRef = useRef<
+    ((convId: string, taskId: string, opts?: { forceReplay?: boolean }) => void) | null
+  >(null);
 
   const scrollToBottom = useCallback(() => {
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const behavior: ScrollBehavior = prefersReducedMotion ? 'auto' : 'smooth';
+
+    if (messagesListRef.current && typeof messagesListRef.current.scrollTo === 'function') {
+      messagesListRef.current.scrollTo({
+        top: messagesListRef.current.scrollHeight,
+        behavior,
+      });
+      return;
+    }
+
     if (messagesEndRef.current && typeof messagesEndRef.current.scrollIntoView === 'function') {
-      const prefersReducedMotion =
-        typeof window !== 'undefined' &&
-        typeof window.matchMedia === 'function' &&
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       messagesEndRef.current.scrollIntoView({
-        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        behavior,
         block: 'end',
       });
     }
@@ -201,7 +215,8 @@ export function AgentChatPanel({
               ['PENDING', 'PLANNING', 'RUNNING', 'AWAITING_APPROVAL'].includes(t.status),
             );
             if (active) {
-              const plan = (active.metadata as Record<string, any> | undefined)?.plan;
+              const meta = (active.metadata as Record<string, any> | undefined) || {};
+              const plan = meta.plan;
               setActiveTask({
                 taskId: active.id,
                 status: active.status,
@@ -212,6 +227,11 @@ export function AgentChatPanel({
                     ? 'Waiting for your approval'
                     : 'Resuming active task…',
               });
+              if (active.status === 'AWAITING_APPROVAL' && meta.stagedProposal) {
+                onProposalChangeRef.current(meta.stagedProposal as AgentApprovalProposal);
+              }
+              // Reconnect SSE stream with full task replay so in-flight progress & staged approval diffs restore seamlessly
+              openEventStreamRef.current?.(matching.id, active.id, { forceReplay: true });
             }
           } catch {
             // Non-fatal task rehydration fallback
@@ -267,10 +287,14 @@ export function AgentChatPanel({
   );
 
   const openEventStream = useCallback(
-    (convId: string, taskId: string) => {
+    (convId: string, taskId: string, opts?: { forceReplay?: boolean }) => {
       if (streamRef.current) {
         streamRef.current.disconnect();
         streamRef.current = null;
+      }
+
+      if (opts?.forceReplay) {
+        lastEventIdRef.current = undefined;
       }
 
       setConnectionState('connecting');
@@ -460,6 +484,7 @@ export function AgentChatPanel({
           },
           onReconnecting: () => {
             setConnectionState('reconnecting');
+            setStreamError(null);
           },
           onError: (err) => {
             setConnectionState('disconnected');
@@ -469,11 +494,15 @@ export function AgentChatPanel({
             setConnectionState((prev) => (prev === 'disconnected' ? 'disconnected' : 'idle'));
           },
         },
-        { lastEventId: lastEventIdRef.current, taskId },
+        {
+          lastEventId: opts?.forceReplay ? undefined : lastEventIdRef.current,
+          taskId,
+        },
       );
     },
     [client, refreshMessages],
   );
+  openEventStreamRef.current = openEventStream;
 
   const handleSubmitMessage = async (rawContent?: string) => {
     const content = (rawContent ?? inputValue).trim();
@@ -497,6 +526,7 @@ export function AgentChatPanel({
     setInputError(null);
     setStreamError(null);
 
+    let optimisticMsgId: string | null = null;
     try {
       let targetConvId = conversationId;
       if (!targetConvId) {
@@ -510,7 +540,7 @@ export function AgentChatPanel({
       }
 
       const idempotencyKey = generateIdempotencyKey();
-      const optimisticMsgId = `optimistic-${idempotencyKey}`;
+      optimisticMsgId = `optimistic-${idempotencyKey}`;
       const optimisticUserMsg: AgentMessage = {
         id: optimisticMsgId,
         conversationId: targetConvId,
@@ -549,6 +579,12 @@ export function AgentChatPanel({
 
       openEventStream(targetConvId, submitted.taskId);
     } catch (err) {
+      if (optimisticMsgId) {
+        setMessages((prev) => prev.filter((m) => m.id !== optimisticMsgId));
+      }
+      if (!rawContent) {
+        setInputValue(content);
+      }
       setInputError(
         err instanceof Error
           ? err.message
@@ -613,10 +649,29 @@ export function AgentChatPanel({
       const explicitUnchecked = Object.values(selectedFieldPaths).some((v) => v === false);
       if (!explicitUnchecked) return undefined;
       const accepted: string[] = [];
-      const { headline, summary, experience, skills } = proposal.sectionDiffs || {};
+      const {
+        headline,
+        summary,
+        contact,
+        experience,
+        projects,
+        skills,
+        education,
+        certifications,
+        customSections,
+        templateKey,
+        layout,
+      } = proposal.sectionDiffs || {};
       if (headline && selectedFieldPaths['headline'] !== false) accepted.push('headline');
       if (summary && selectedFieldPaths['summary'] !== false) accepted.push('summary');
+      if (contact && selectedFieldPaths['contact'] !== false) accepted.push('contact');
       if (skills && selectedFieldPaths['skills'] !== false) accepted.push('skills');
+      if (projects && selectedFieldPaths['projects'] !== false) accepted.push('projects');
+      if (education && selectedFieldPaths['education'] !== false) accepted.push('education');
+      if (certifications && selectedFieldPaths['certifications'] !== false) accepted.push('certifications');
+      if (customSections && selectedFieldPaths['customSections'] !== false) accepted.push('customSections');
+      if (templateKey && selectedFieldPaths['templateKey'] !== false) accepted.push('templateKey');
+      if (layout && selectedFieldPaths['layout'] !== false) accepted.push('layout');
       if (Array.isArray(experience)) {
         experience.forEach((exp, expIdx) => {
           (exp.bulletDiffs || []).forEach((b) => {
@@ -737,14 +792,82 @@ export function AgentChatPanel({
     activeTask?.status === 'PLANNING' ||
     activeTask?.status === 'RUNNING';
 
+  // Resilient Task Polling Safety Net: prevents stuck spinners or missed proposals if SSE ever blips or disconnects
+  useEffect(() => {
+    if (!isTaskActive || !conversationId || !activeTask?.taskId) return;
+    if (typeof client.listConversationTasks !== 'function') return;
+
+    const targetTaskId = activeTask.taskId;
+    const targetConvId = conversationId;
+
+    const poll = async () => {
+      try {
+        const tasks = await client.listConversationTasks(targetConvId);
+        const match = tasks.find((t) => t.id === targetTaskId);
+        if (!match) return;
+        const meta = (match.metadata as Record<string, any> | undefined) || {};
+        const plan = meta.plan;
+
+        if (match.status === 'AWAITING_APPROVAL') {
+          setActiveTask((prev) => ({
+            taskId: match.id,
+            status: 'AWAITING_APPROVAL',
+            goal: plan?.goal || prev?.goal,
+            steps: Array.isArray(plan?.steps) ? plan.steps : prev?.steps || [],
+            statusMessage: 'Waiting for your approval',
+            errorMessage: null,
+          }));
+          setConnectionState('idle');
+          setStreamError(null);
+          if (meta.stagedProposal) {
+            onProposalChangeRef.current(meta.stagedProposal as AgentApprovalProposal);
+          }
+          void refreshMessages(targetConvId);
+        } else if (match.status === 'COMPLETED') {
+          setActiveTask((prev) => ({
+            taskId: match.id,
+            status: 'COMPLETED',
+            goal: plan?.goal || prev?.goal,
+            steps: Array.isArray(plan?.steps) ? plan.steps : prev?.steps || [],
+            statusMessage: 'Task completed',
+            errorMessage: null,
+          }));
+          setStreamingAssistantText('');
+          setConnectionState('idle');
+          setStreamError(null);
+          void refreshMessages(targetConvId);
+        } else if (match.status === 'FAILED' || match.status === 'AWAITING_CREDITS') {
+          setActiveTask((prev) => ({
+            taskId: match.id,
+            status: match.status,
+            goal: plan?.goal || prev?.goal,
+            steps: Array.isArray(plan?.steps) ? plan.steps : prev?.steps || [],
+            statusMessage: null,
+            errorMessage:
+              meta.executionError || meta.lastError || 'The task encountered an unexpected error.',
+          }));
+          setStreamingAssistantText('');
+          setConnectionState('idle');
+        }
+      } catch {
+        // Non-fatal fallback poll
+      }
+    };
+
+    const intervalId = setInterval(() => {
+      void poll();
+    }, 3500);
+    return () => clearInterval(intervalId);
+  }, [isTaskActive, conversationId, activeTask?.taskId, client, refreshMessages]);
+
   return (
     <aside
       data-testid="agent-chat-panel"
       aria-label="AI Career Agent"
-      className={`flex flex-col bg-white dark:bg-zinc-950 border border-zinc-200/90 dark:border-zinc-800 shadow-sm overflow-hidden ${
+      className={`flex flex-col bg-white dark:bg-zinc-950 border border-zinc-200/90 dark:border-zinc-800 shadow-sm overflow-clip ${
         isMobileDrawer
           ? 'h-full w-full rounded-none sm:rounded-l-2xl'
-          : 'rounded-2xl h-[calc(100vh-6.5rem)] min-h-[520px]'
+          : 'rounded-2xl h-full min-h-0 w-full'
       }`}
     >
       {/* Panel Header */}
@@ -821,6 +944,16 @@ export function AgentChatPanel({
                     type="button"
                     onClick={async () => {
                       setShowHistoryMenu(false);
+                      if (streamRef.current) {
+                        streamRef.current.disconnect();
+                        streamRef.current = null;
+                      }
+                      lastEventIdRef.current = undefined;
+                      setActiveTask(null);
+                      setStreamingAssistantText('');
+                      setStreamError(null);
+                      setConnectionState('idle');
+                      onProposalChangeRef.current(null);
                       setConversationId(conv.id);
                       activeConversationIdRef.current = conv.id;
                       const history = await client.getConversationMessages(conv.id);
@@ -886,8 +1019,9 @@ export function AgentChatPanel({
 
       {/* Scrollable Conversation Area */}
       <div
+        ref={messagesListRef}
         data-testid="agent-messages-list"
-        className="flex-1 overflow-y-auto px-4 py-4 space-y-4 overscroll-contain"
+        className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4 overscroll-contain [scrollbar-gutter:stable]"
       >
         {/* Loading Skeleton */}
         {isLoadingHistory && (
@@ -949,46 +1083,74 @@ export function AgentChatPanel({
         )}
 
         {/* Persisted Messages */}
-        {messages
-          .filter((m) => m.role === 'user' || m.role === 'assistant')
-          .map((msg) => {
+        {(() => {
+          const visibleMessages = messages.filter(
+            (m) => m.role === 'user' || m.role === 'assistant',
+          );
+          return visibleMessages.map((msg, idx) => {
             const isUser = msg.role === 'user';
+            const isLastAssistant = !isUser && idx === visibleMessages.length - 1;
+            const offersApplyAction =
+              isLastAssistant &&
+              !isTaskActive &&
+              !isSubmitting &&
+              !activeProposal &&
+              /\b(apply these changes|propose|implement|ats score|rewrite|improve)\b/i.test(
+                msg.content,
+              );
+
             return (
-              <div
-                key={msg.id}
-                data-message-role={msg.role}
-                className={`flex items-start gap-2.5 ${isUser ? 'flex-row-reverse' : ''}`}
-              >
+              <div key={msg.id} className="space-y-2">
                 <div
-                  aria-hidden="true"
-                  className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${
-                    isUser
-                      ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-zinc-800 dark:border-zinc-200'
-                      : 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border-blue-200/80 dark:border-blue-800'
-                  }`}
+                  data-message-role={msg.role}
+                  className={`flex items-start gap-2.5 ${isUser ? 'flex-row-reverse' : ''}`}
                 >
-                  {isUser ? (
-                    <UserIcon className="w-3.5 h-3.5" />
-                  ) : (
-                    <Bot className="w-3.5 h-3.5" />
-                  )}
+                  <div
+                    aria-hidden="true"
+                    className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${
+                      isUser
+                        ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-zinc-800 dark:border-zinc-200'
+                        : 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border-blue-200/80 dark:border-blue-800'
+                    }`}
+                  >
+                    {isUser ? (
+                      <UserIcon className="w-3.5 h-3.5" />
+                    ) : (
+                      <Bot className="w-3.5 h-3.5" />
+                    )}
+                  </div>
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed break-words ${
+                      isUser
+                        ? 'bg-blue-600 text-white rounded-tr-sm shadow-2xs'
+                        : 'bg-zinc-100/90 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border border-zinc-200/70 dark:border-zinc-800 rounded-tl-sm'
+                    }`}
+                  >
+                    <AgentMessageContent
+                      content={msg.content}
+                      isUser={isUser}
+                      createdAt={msg.createdAt}
+                    />
+                  </div>
                 </div>
-                <div
-                  className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed break-words ${
-                    isUser
-                      ? 'bg-blue-600 text-white rounded-tr-sm shadow-2xs'
-                      : 'bg-zinc-100/90 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border border-zinc-200/70 dark:border-zinc-800 rounded-tl-sm'
-                  }`}
-                >
-                  <AgentMessageContent
-                    content={msg.content}
-                    isUser={isUser}
-                    createdAt={msg.createdAt}
-                  />
-                </div>
+                {offersApplyAction && (
+                  <div className="pl-9 flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void handleSubmitMessage('Apply all the changes you just suggested to my resume')
+                      }
+                      className="inline-flex items-center gap-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-[11px] font-semibold shadow-2xs transition-colors cursor-pointer"
+                    >
+                      <Sparkles className="w-3 h-3" aria-hidden="true" />
+                      <span>Apply these changes</span>
+                    </button>
+                  </div>
+                )}
               </div>
             );
-          })}
+          });
+        })()}
 
         {/* Streamed Assistant Text Preview */}
         {streamingAssistantText && (
@@ -1118,7 +1280,7 @@ export function AgentChatPanel({
             {conversationId && activeTask && (
               <button
                 type="button"
-                onClick={() => openEventStream(conversationId, activeTask.taskId)}
+                onClick={() => openEventStream(conversationId, activeTask.taskId, { forceReplay: true })}
                 className="px-2 py-1 rounded-md bg-white dark:bg-zinc-900 border border-amber-300 dark:border-amber-700 text-[11px] font-semibold hover:bg-amber-100 cursor-pointer shrink-0"
               >
                 Reconnect
