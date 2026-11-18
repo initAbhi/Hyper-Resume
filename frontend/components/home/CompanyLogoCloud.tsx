@@ -108,7 +108,7 @@ export function CompanyLogoCloud() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 text-center sm:px-6 sm:py-10 lg:px-8">
-      <p className="mb-6 text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+      <p className="mb-6 text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
         Built for candidates targeting companies like
       </p>
 

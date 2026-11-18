@@ -26,6 +26,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { LinkedInIcon } from '@/components/linkedin/LinkedInIcon';
+import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -167,7 +168,9 @@ export default function LinkedInOptimizerStudio() {
   const [isImportingPdf, setIsImportingPdf] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { user, refreshUser } = useAuth();
   const [statusAnnouncement, setStatusAnnouncement] = useState('');
+  const [confirmDeleteAuditId, setConfirmDeleteAuditId] = useState<string | null>(null);
 
   const selectedResume = useMemo(
     () => resumes.find((r) => r.id === selectedResumeId) || null,
@@ -178,9 +181,10 @@ export default function LinkedInOptimizerStudio() {
     return (
       selectedResume?.content?.contact?.fullName ||
       activeAudit?.profileSnapshot?.contact?.fullName ||
-      'Alex Mercer'
+      user?.fullName ||
+      'Candidate'
     );
-  }, [selectedResume, activeAudit]);
+  }, [selectedResume, activeAudit, user?.fullName]);
 
   const hydrateFromAudit = useCallback((audit: LinkedInAudit) => {
     setActiveAudit(audit);
@@ -201,13 +205,11 @@ export default function LinkedInOptimizerStudio() {
     const autoCompleted = (audit.scoreReport?.checklist || [])
       .filter((c) => c.completed)
       .map((c) => c.id);
+    // Respect explicit user checklist state (even empty/unchecked) instead of re-merging autoCompleted — FN-40
     setCheckedItems(
-      Array.from(
-        new Set([
-          ...(audit.appliedState?.checkedChecklistIds || []),
-          ...autoCompleted,
-        ]),
-      ),
+      audit.appliedState?.checkedChecklistIds !== undefined
+        ? audit.appliedState.checkedChecklistIds
+        : autoCompleted,
     );
   }, []);
 
@@ -307,6 +309,7 @@ export default function LinkedInOptimizerStudio() {
       setAudits((prev) => [audit, ...prev.filter((a) => a.id !== audit.id)]);
       hydrateFromAudit(audit);
       setResultTab('preview');
+      void refreshUser().catch(() => {});
       setStatusAnnouncement(
         `LinkedIn audit completed with score ${audit.overallScore} out of 100.`,
       );
@@ -341,6 +344,7 @@ export default function LinkedInOptimizerStudio() {
       setAudits((prev) => [res.audit, ...prev.filter((a) => a.id !== res.audit.id)]);
       hydrateFromAudit(res.audit);
       setResultTab('preview');
+      void refreshUser().catch(() => {});
       setStatusAnnouncement(
         `Imported ${file.name} and generated LinkedIn optimization with score ${res.audit.overallScore} out of 100.`,
       );
@@ -441,9 +445,11 @@ export default function LinkedInOptimizerStudio() {
     try {
       const res = await apiClient.applyLinkedInAuditUpdates(activeAudit.id, {
         appliedHeadline:
+          customHeadline.trim() ||
           activeAudit.appliedState?.appliedHeadline ||
           activeAudit.optimizations?.headlineSuggestions?.[0]?.headline,
         appliedAbout:
+          customAbout.trim() ||
           activeAudit.appliedState?.appliedAbout ||
           activeAudit.optimizations?.aboutOptions?.[0]?.about,
         appliedSkills: stagedSkills,
@@ -798,7 +804,7 @@ export default function LinkedInOptimizerStudio() {
                   <p className="text-xs font-semibold text-[#1A1D23] dark:text-[#F0F2F5]">
                     {pdfFile ? pdfFile.name : 'Select or drop your LinkedIn Profile PDF'}
                   </p>
-                  <p className="text-[11px] text-[#848D9A] mt-0.5">
+                  <p className="text-[11px] text-[#5A6270] dark:text-[#9EA7B4] mt-0.5">
                     Up to 10MB · Extracts career timeline cleanly without skill hallucination
                   </p>
                 </div>
@@ -876,7 +882,7 @@ export default function LinkedInOptimizerStudio() {
                           ? 'text-[#DC2626]'
                           : headlineBudget.status === 'optimal'
                             ? 'text-[#059669]'
-                            : 'text-[#848D9A]'
+                            : 'text-[#5A6270] dark:text-[#9EA7B4]'
                       }`}
                     >
                       {headlineBudget.length}/{LINKEDIN_HEADLINE_LIMIT}
@@ -910,7 +916,7 @@ export default function LinkedInOptimizerStudio() {
                       className={`text-[10px] font-mono ${
                         aboutChars > LINKEDIN_ABOUT_LIMIT
                           ? 'text-[#DC2626]'
-                          : 'text-[#848D9A]'
+                          : 'text-[#5A6270] dark:text-[#9EA7B4]'
                       }`}
                     >
                       {aboutChars}/{LINKEDIN_ABOUT_LIMIT}
@@ -957,7 +963,7 @@ export default function LinkedInOptimizerStudio() {
             </div>
 
             {audits.length === 0 ? (
-              <p className="text-xs text-[#848D9A] py-2">
+              <p className="text-xs text-[#5A6270] dark:text-[#9EA7B4] py-2">
                 Run an optimization or import a LinkedIn PDF to store audit snapshots here.
               </p>
             ) : (
@@ -981,7 +987,7 @@ export default function LinkedInOptimizerStudio() {
                         <div className="font-semibold text-[#1A1D23] dark:text-[#F0F2F5] truncate">
                           {audit.title}
                         </div>
-                        <div className="text-[11px] text-[#848D9A] flex items-center gap-2 mt-0.5">
+                        <div className="text-[11px] text-[#5A6270] dark:text-[#9EA7B4] flex items-center gap-2 mt-0.5">
                           <span>Score: {audit.overallScore}/100</span>
                           <span>·</span>
                           <span>
@@ -991,14 +997,36 @@ export default function LinkedInOptimizerStudio() {
                           </span>
                         </div>
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => void handleDeleteAudit(audit.id)}
-                        aria-label={`Delete audit ${audit.title}`}
-                        className="p-1 rounded text-[#848D9A] hover:text-[#DC2626] transition-colors cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
-                      </button>
+                      {confirmDeleteAuditId === audit.id ? (
+                        <div className="inline-flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setConfirmDeleteAuditId(null);
+                              void handleDeleteAudit(audit.id);
+                            }}
+                            className="px-2 py-0.5 text-[10px] font-semibold rounded bg-rose-600 text-white hover:bg-rose-700 cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteAuditId(null)}
+                            className="px-1.5 py-0.5 text-[10px] rounded border border-[#E2E5E9] dark:border-[#252A33] text-[#5A6270] dark:text-[#9EA7B4] cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteAuditId(audit.id)}
+                          aria-label={`Delete audit ${audit.title}`}
+                          className="p-1 rounded text-[#5A6270] dark:text-[#9EA7B4] hover:text-[#DC2626] transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                        </button>
+                      )}
                     </div>
                   );
                 })}
@@ -1048,7 +1076,7 @@ export default function LinkedInOptimizerStudio() {
                     <span className="text-3xl font-extrabold text-[#1A1D23] dark:text-[#F0F2F5] tabular-nums">
                       {activeAudit.overallScore}
                     </span>
-                    <span className="text-xs font-medium text-[#848D9A]">/100</span>
+                    <span className="text-xs font-medium text-[#5A6270] dark:text-[#9EA7B4]">/100</span>
                   </div>
                 </div>
 
@@ -1185,7 +1213,7 @@ export default function LinkedInOptimizerStudio() {
                               <span className="px-2 py-0.5 text-[10px] font-semibold rounded bg-[#0A66C2]/10 text-[#0A66C2] dark:bg-[#0A66C2]/20 dark:text-[#60A5FA]">
                                 {item.style}
                               </span>
-                              <span className="text-[11px] font-mono text-[#848D9A]">
+                              <span className="text-[11px] font-mono text-[#5A6270] dark:text-[#9EA7B4]">
                                 {item.charCount}/220 chars
                               </span>
                             </div>
@@ -1251,7 +1279,7 @@ export default function LinkedInOptimizerStudio() {
                               <span className="px-2 py-0.5 text-[10px] font-semibold rounded bg-[#285FEA]/10 text-[#285FEA] dark:text-[#60A5FA]">
                                 {opt.tone}
                               </span>
-                              <span className="text-[11px] font-mono text-[#848D9A]">
+                              <span className="text-[11px] font-mono text-[#5A6270] dark:text-[#9EA7B4]">
                                 {opt.charCount}/2,600 chars
                               </span>
                             </div>
@@ -1303,7 +1331,7 @@ export default function LinkedInOptimizerStudio() {
                 >
                   <div className="p-4 space-y-3.5">
                     {activeAudit.optimizations.experienceOptimizations.length === 0 ? (
-                      <p className="text-xs text-[#848D9A]">
+                      <p className="text-xs text-[#5A6270] dark:text-[#9EA7B4]">
                         No work experience entries present in the selected snapshot yet.
                       </p>
                     ) : (

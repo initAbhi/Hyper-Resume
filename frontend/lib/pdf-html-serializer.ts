@@ -39,7 +39,7 @@ export function serializeCleanResumeHtml(
   clone.style.transform = 'none';
 
   clone
-    .querySelectorAll('.print\\:hidden, [data-export-exclude="true"]')
+    .querySelectorAll('.print\\:hidden, [data-export-exclude="true"], [data-hr-hidden="true"]')
     .forEach((el) => el.remove());
 
   clone

@@ -13,6 +13,10 @@ export class ProfilesService {
     private readonly profileRepository: Repository<CandidateProfile>,
   ) {}
 
+  async getProfile(userId: string): Promise<CandidateProfile> {
+    return this.getProfileByUserId(userId);
+  }
+
   async getProfileByUserId(userId: string): Promise<CandidateProfile> {
     let profile = await this.profileRepository.findOne({
       where: { userId },
@@ -35,6 +39,13 @@ export class ProfilesService {
     }
 
     return profile;
+  }
+
+  async updateProfile(
+    userId: string,
+    dto: UpdateProfileDto,
+  ): Promise<CandidateProfile> {
+    return this.updateProfileByUserId(userId, dto);
   }
 
   async updateProfileByUserId(

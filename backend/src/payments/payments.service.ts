@@ -211,6 +211,11 @@ export class PaymentsService {
         : this.activeProvider;
 
     const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (user?.isLifetimePro) {
+      throw new ConflictException(
+        'Your account already has Lifetime Pro access — no additional pass is required.',
+      );
+    }
     const orderId = `ord_${crypto.randomBytes(12).toString('hex')}`;
     const idempotencyKey = `idemp_${orderId}`;
 
@@ -369,7 +374,36 @@ export class PaymentsService {
         };
       }
 
+      // Bind gateway payment strictly to this order, user, and amount (prevents payment spoofing)
+      const gwMeta = (verification.metadata || {}) as Record<string, unknown>;
+      const gwOrderId = typeof gwMeta.orderId === 'string' ? gwMeta.orderId : undefined;
+      const gwUserId = typeof gwMeta.userId === 'string' ? gwMeta.userId : undefined;
+      const amountInsufficient =
+        typeof verification.amountMinor === 'number' &&
+        verification.amountMinor > 0 &&
+        verification.amountMinor < payment.amountMinor;
+      if (
+        (gwOrderId && gwOrderId !== payment.orderId) ||
+        (gwUserId && gwUserId !== payment.userId) ||
+        amountInsufficient
+      ) {
+        this.logger.warn(
+          `Payment verification binding mismatch for order ${payment.orderId}: gwOrder=${gwOrderId}, gwUser=${gwUserId}, gwAmount=${verification.amountMinor}, expected=${payment.amountMinor}`,
+        );
+        throw new BadRequestException(
+          'Gateway payment does not match this order or amount.',
+        );
+      }
+
       if (verification.providerPaymentId) {
+        const existingBound = await this.paymentRepository.findOne({
+          where: { providerTransactionId: verification.providerPaymentId },
+        });
+        if (existingBound && existingBound.id !== payment.id) {
+          throw new ConflictException(
+            'This gateway payment transaction is already bound to another order.',
+          );
+        }
         providerPaymentId = verification.providerPaymentId;
       }
     } else if (process.env.NODE_ENV !== 'test') {
@@ -440,26 +474,37 @@ export class PaymentsService {
       const pRepo = manager ? manager.getRepository(Payment) : this.paymentRepository;
       const uRepo = manager ? manager.getRepository(User) : this.userRepository;
 
-      const freshPayment = await pRepo.findOne({ where: { id: payment.id } });
+      const freshPayment = manager
+        ? await pRepo.findOne({
+            where: { id: payment.id },
+            lock: { mode: 'pessimistic_write' },
+          })
+        : await pRepo.findOne({ where: { id: payment.id } });
       if (freshPayment?.status === 'succeeded') {
         const existingUser = await uRepo.findOne({ where: { id: payment.userId } });
         return { capturedNow: false, user: existingUser };
       }
 
-      payment.status = 'succeeded';
+      const targetPayment = freshPayment || payment;
+      targetPayment.status = 'succeeded';
       if (providerTxId && providerTxId.trim()) {
-        payment.providerTransactionId = providerTxId.trim();
+        targetPayment.providerTransactionId = providerTxId.trim();
       }
-      await pRepo.save(payment);
+      await pRepo.save(targetPayment);
 
-      let user = await uRepo.findOne({ where: { id: payment.userId } });
+      const user = manager
+        ? await uRepo.findOne({
+            where: { id: payment.userId },
+            lock: { mode: 'pessimistic_write' },
+          })
+        : await uRepo.findOne({ where: { id: payment.userId } });
       if (user) {
         if (isLifetime) {
           user.isLifetimePro = true;
           user.proPlanId = 'pro_lifetime';
           user.proExpiresAt = null;
           await uRepo.save(user);
-        } else if (durationDays && durationDays > 0) {
+        } else if (durationDays && durationDays > 0 && !user.isLifetimePro) {
           const now = new Date();
           const currentExpiry =
             user.proExpiresAt && new Date(user.proExpiresAt) > now
@@ -608,37 +653,67 @@ export class PaymentsService {
       const isLifetime = Boolean(meta.isLifetime);
       const durationDays = Number(meta.durationDays ?? 0);
 
-      payment.status = 'refunded';
-      await this.paymentRepository.save(payment);
+      const applyRefund = async (manager?: EntityManager): Promise<boolean> => {
+        const pRepo = manager ? manager.getRepository(Payment) : this.paymentRepository;
+        const uRepo = manager ? manager.getRepository(User) : this.userRepository;
 
-      const user = await this.userRepository.findOne({ where: { id: payment.userId } });
-      if (user) {
-        if (isLifetime) {
-          user.isLifetimePro = false;
-          user.proPlanId = null;
-        } else if (durationDays > 0 && user.proExpiresAt) {
-          const reduced = new Date(user.proExpiresAt).getTime() - durationDays * 86400000;
-          user.proExpiresAt = reduced > Date.now() ? new Date(reduced) : null;
-          if (!user.proExpiresAt) user.proPlanId = null;
+        const lockedPayment = manager
+          ? await pRepo.findOne({
+              where: { id: payment.id },
+              lock: { mode: 'pessimistic_write' },
+            })
+          : await pRepo.findOne({ where: { id: payment.id } });
+
+        if (!lockedPayment || lockedPayment.status === 'refunded') {
+          return false;
         }
-        await this.userRepository.save(user);
-      }
 
-      if (creditsToRevert > 0) {
-        await this.creditsService.addTransaction(
-          payment.userId,
-          -creditsToRevert,
-          'refund',
-          `refund-payment-${payment.id}`,
-          `Reversal due to payment refund: ${payment.orderId}`,
-          { orderId: payment.orderId },
-        );
-      }
+        lockedPayment.status = 'refunded';
+        await pRepo.save(lockedPayment);
+
+        const user = manager
+          ? await uRepo.findOne({
+              where: { id: payment.userId },
+              lock: { mode: 'pessimistic_write' },
+            })
+          : await uRepo.findOne({ where: { id: payment.userId } });
+
+        if (user) {
+          if (isLifetime) {
+            user.isLifetimePro = false;
+            user.proPlanId = null;
+          } else if (durationDays > 0 && user.proExpiresAt) {
+            const reduced = new Date(user.proExpiresAt).getTime() - durationDays * 86400000;
+            user.proExpiresAt = reduced > Date.now() ? new Date(reduced) : null;
+            if (!user.proExpiresAt) user.proPlanId = null;
+          }
+          await uRepo.save(user);
+        }
+
+        if (creditsToRevert > 0) {
+          await this.creditsService.addTransaction(
+            payment.userId,
+            -creditsToRevert,
+            'refund',
+            `refund-payment-${payment.id}`,
+            `Reversal due to payment refund: ${payment.orderId}`,
+            { orderId: payment.orderId },
+            manager,
+          );
+        }
+        return true;
+      };
+
+      const refundedNow = this.dataSource
+        ? await this.dataSource.transaction((manager) => applyRefund(manager))
+        : await applyRefund(undefined);
 
       return {
         processed: true,
         paymentId: payment.id,
-        message: 'Refund processed and entitlements reverted',
+        message: refundedNow
+          ? 'Refund processed and entitlements reverted'
+          : 'Refund already processed (idempotent)',
       };
     }
 

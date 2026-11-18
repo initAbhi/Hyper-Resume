@@ -199,7 +199,7 @@ export function SourceResumeSelectorModal({
 
   return (
     <div
-      onClick={onClose}
+      onClick={handleCancel}
       className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5"
     >
       <div
@@ -264,13 +264,13 @@ export function SourceResumeSelectorModal({
                 </div>
               </div>
 
-              {creditBalance < 3 && (
+              {creditBalance < 3 && !user?.hasActivePro && (
                 <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs flex items-center justify-between gap-2">
                   <span>Insufficient credits (3 required).</span>
                   <button
                     type="button"
-                    onClick={() => router.push('/app/billing')}
-                    className="px-2.5 py-1 rounded bg-[#285FEA] text-white font-bold text-[11px] hover:bg-[#1E4BC8]"
+                    onClick={() => router.push('/pricing')}
+                    className="px-2.5 py-1 rounded bg-[#285FEA] text-white font-bold text-[11px] hover:bg-[#1E4BC8] cursor-pointer"
                   >
                     Get Credits
                   </button>
@@ -336,19 +336,17 @@ export function SourceResumeSelectorModal({
                         <div
                           key={resume.id}
                           onClick={() => !isAdapting && setSelectedResumeId(resume.id)}
-                          className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
-                            isSelected
+                          className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${isSelected
                               ? 'border-[#285FEA] bg-[#285FEA]/5 dark:bg-[#285FEA]/10 shadow-xs'
                               : 'border-[#E2E5E9] dark:border-[#252A33] hover:border-zinc-400 dark:hover:border-zinc-600'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center gap-3 min-w-0">
                             <div
-                              className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                                isSelected
+                              className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected
                                   ? 'border-[#285FEA] bg-[#285FEA]'
                                   : 'border-zinc-300 dark:border-zinc-600'
-                              }`}
+                                }`}
                             >
                               {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                             </div>
@@ -415,7 +413,7 @@ export function SourceResumeSelectorModal({
             <button
               type="button"
               onClick={handleStartAdaptation}
-              disabled={isAdapting || isLoading || resumes.length === 0}
+              disabled={isAdapting || isLoading || resumes.length === 0 || (!user?.hasActivePro && creditBalance < 3)}
               className="px-4 sm:px-5 py-2.5 rounded-xl bg-[#285FEA] hover:bg-[#1E4BC8] text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
             >
               {isAdapting ? (

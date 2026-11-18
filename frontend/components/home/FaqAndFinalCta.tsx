@@ -41,7 +41,7 @@ export function FaqAndFinalCta() {
       <section className="w-full bg-[#0a0a0a] px-4 py-16 text-white sm:px-6 sm:py-24 lg:px-8">
         <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-12 lg:gap-16">
           <AnimatedContent distance={30} duration={0.7} className="lg:col-span-4">
-            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
               Questions
             </p>
             <h2 className="mt-3 font-rubik text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -120,7 +120,7 @@ export function FaqAndFinalCta() {
               </span>
             </Link>
           </div>
-          <p className="mt-5 text-xs text-zinc-500">
+          <p className="mt-5 text-xs text-zinc-400">
             5 AI credits on signup · Free PDF &amp; DOCX · One-time Pro from ₹149 / $3
           </p>
         </div>

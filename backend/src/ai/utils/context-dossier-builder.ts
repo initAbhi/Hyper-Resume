@@ -32,19 +32,30 @@ export class ContextDossierBuilder {
   ): InterviewContextDossier {
     const topSkills = (resumeContent.skills || [])
       .slice(0, 10)
-      .map((s) => s.name.trim())
+      .flatMap((s: any) => {
+        if (typeof s === 'string') return [s.trim()];
+        if (typeof s?.name === 'string') return [s.name.trim()];
+        if (Array.isArray(s?.items)) return s.items.filter((i: unknown) => typeof i === 'string').map((i: string) => i.trim());
+        return [];
+      })
       .filter(Boolean);
 
     const keyExperiences = (resumeContent.experience || []).slice(0, 2).map((exp) => ({
-      title: exp.title,
-      company: exp.company,
-      bullets: (exp.bullets || []).slice(0, 3).map((b) => b.trim()),
+      title: exp.title || '',
+      company: exp.company || '',
+      bullets: (exp.bullets || [])
+        .slice(0, 3)
+        .filter((b): b is string => typeof b === 'string')
+        .map((b) => b.trim()),
     }));
 
     const keyProjects = (resumeContent.projects || []).slice(0, 2).map((proj) => ({
-      name: proj.name,
+      name: proj.name || '',
       description: proj.description?.slice(0, 200) || '',
-      highlights: (proj.highlights || []).slice(0, 2).map((h) => h.trim()),
+      highlights: (proj.highlights || [])
+        .slice(0, 2)
+        .filter((h): h is string => typeof h === 'string')
+        .map((h) => h.trim()),
     }));
 
     let targetJobContext: InterviewContextDossier['targetJobContext'];

@@ -26,6 +26,7 @@ import {
   Target,
   Layers,
   ArrowUpRight,
+  Bot,
 } from 'lucide-react';
 import {
   apiClient,
@@ -34,6 +35,8 @@ import {
   type JobTailorSuggestionsResponse,
 } from '@/lib/api-client';
 import { TailoredDraftDialog } from '@/components/match/TailoredDraftDialog';
+import { useOptionalGlobalAgent } from '@/lib/global-agent-context';
+import { useAuth } from '@/lib/auth-context';
 
 const SAMPLE_JOB_DESCRIPTION = `We are seeking a Senior Backend Engineer to join our high-growth platform team.
 
@@ -53,14 +56,19 @@ Requirements:
 function JobMatchInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const globalAgent = useOptionalGlobalAgent();
+  const { refreshUser } = useAuth();
   const preselectedResumeId = searchParams.get('resumeId');
   const preselectedMatchId = searchParams.get('matchId');
+  const preselectedRole = searchParams.get('role');
+  const preselectedCompany = searchParams.get('company');
 
   // Input State
   const [resumes, setResumes] = useState<Resume[]>([]);
+  const [pastMatches, setPastMatches] = useState<JobMatch[]>([]);
   const [selectedResumeId, setSelectedResumeId] = useState<string>(preselectedResumeId || '');
-  const [companyName, setCompanyName] = useState('');
-  const [jobTitle, setJobTitle] = useState('');
+  const [companyName, setCompanyName] = useState(preselectedCompany || '');
+  const [jobTitle, setJobTitle] = useState(preselectedRole || '');
   const [jobDescriptionText, setJobDescriptionText] = useState('');
 
   // Workflow State
@@ -79,18 +87,24 @@ function JobMatchInner() {
   const [isLoadingTailorSuggestions, setIsLoadingTailorSuggestions] = useState(false);
   const [tailorSuggestionsError, setTailorSuggestionsError] = useState<string | null>(null);
 
-  // Load existing resumes on mount
+  // Load existing resumes & past matches on mount (without selectedResumeId dep loop — FN-41)
   useEffect(() => {
     let isMounted = true;
     async function loadUserResumes() {
       try {
-        const data = await apiClient.listResumes();
+        const [data, history] = await Promise.all([
+          apiClient.listResumes(),
+          apiClient.listJobMatches().catch(() => [] as JobMatch[]),
+        ]);
         if (!isMounted) return;
         setResumes(data);
-        if (data.length > 0 && !selectedResumeId) {
+        setPastMatches(Array.isArray(history) ? history : []);
+        setSelectedResumeId((current) => {
+          if (current) return current;
+          if (data.length === 0) return '';
           const preselected = data.find((r) => r.id === preselectedResumeId);
-          setSelectedResumeId(preselected ? preselected.id : data[0].id);
-        }
+          return preselected ? preselected.id : data[0].id;
+        });
       } catch {
         // Ignore initial load failure
       } finally {
@@ -102,7 +116,7 @@ function JobMatchInner() {
     return () => {
       isMounted = false;
     };
-  }, [preselectedResumeId, selectedResumeId]);
+  }, [preselectedResumeId]);
 
   // Hydrate preselected match report if navigated from Live Job Search
   useEffect(() => {
@@ -113,6 +127,8 @@ function JobMatchInner() {
       .then((match) => {
         if (!isMounted) return;
         setCompletedMatch(match);
+      setPastMatches((prev) => [match, ...prev.filter((m) => m.id !== match.id)]);
+      void refreshUser().catch(() => {});
         if (match.resumeId) setSelectedResumeId(match.resumeId);
         if (match.jobDescription?.companyName) setCompanyName(match.jobDescription.companyName);
         if (match.jobDescription?.title) setJobTitle(match.jobDescription.title);
@@ -125,6 +141,30 @@ function JobMatchInner() {
       isMounted = false;
     };
   }, [preselectedMatchId]);
+
+  // Sync selected resume and target job into Global Agent Context
+  useEffect(() => {
+    if (!globalAgent) return;
+    const activeResume = resumes.find((r) => r.id === selectedResumeId);
+    globalAgent.updateContext({
+      activeResumeId: selectedResumeId || undefined,
+      activeResumeName: activeResume?.name,
+      jobTitle: jobTitle || completedMatch?.jobDescription?.title || undefined,
+      companyName: companyName || completedMatch?.jobDescription?.companyName || undefined,
+      jobDescriptionId: completedMatch?.jobDescriptionId || undefined,
+      jobDescriptionText: jobDescriptionText || undefined,
+    });
+  }, [
+    globalAgent,
+    resumes,
+    selectedResumeId,
+    jobTitle,
+    companyName,
+    completedMatch?.jobDescriptionId,
+    completedMatch?.jobDescription?.title,
+    completedMatch?.jobDescription?.companyName,
+    jobDescriptionText,
+  ]);
 
   const handlePasteClipboard = async () => {
     try {
@@ -178,6 +218,8 @@ function JobMatchInner() {
       });
 
       setCompletedMatch(match);
+      setPastMatches((prev) => [match, ...prev.filter((m) => m.id !== match.id)]);
+      void refreshUser().catch(() => {});
     } catch (err: unknown) {
       setErrorMessage(
         err instanceof Error ? err.message : 'Match analysis failed. Please try again.',
@@ -237,6 +279,47 @@ function JobMatchInner() {
         <Alert variant="destructive">{errorMessage}</Alert>
       )}
 
+      {/* Recent Match History Strip (FN-49) */}
+      {pastMatches.length > 0 && (
+        <div className="rounded-xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+              Recent Match History ({pastMatches.length})
+            </h2>
+          </div>
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            {pastMatches.slice(0, 8).map((item) => {
+              const isSelected = completedMatch?.id === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    setCompletedMatch(item);
+                    if (item.resumeId) setSelectedResumeId(item.resumeId);
+                    if (item.jobDescription?.title) setJobTitle(item.jobDescription.title);
+                    if (item.jobDescription?.companyName) setCompanyName(item.jobDescription.companyName);
+                    if (item.jobDescription?.originalText) setJobDescriptionText(item.jobDescription.originalText);
+                  }}
+                  className={`shrink-0 px-3 py-1.5 rounded-lg border text-left text-xs transition-colors cursor-pointer ${
+                    isSelected
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-900 dark:text-blue-100'
+                      : 'border-slate-200 dark:border-zinc-800 bg-slate-50/60 dark:bg-zinc-800/40 text-zinc-700 dark:text-zinc-300 hover:border-slate-300 dark:hover:border-zinc-700'
+                  }`}
+                >
+                  <div className="font-semibold truncate max-w-[180px]">
+                    {item.jobDescription?.title || 'Target Role'}
+                  </div>
+                  <div className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                    {item.score}% fit{item.jobDescription?.companyName ? ` · ${item.jobDescription.companyName}` : ''}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Input Form Card with Premium Framing */}
       <form
         onSubmit={handleStartAnalysis}
@@ -245,7 +328,7 @@ function JobMatchInner() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {/* Source Resume Selection */}
           <div className="space-y-1.5">
-            <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+            <label htmlFor="match-resume-select" className="flex items-center gap-1.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
               <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
               <span>Grounding Resume</span>
             </label>
@@ -262,6 +345,8 @@ function JobMatchInner() {
               </div>
             ) : (
               <select
+                id="match-resume-select"
+                aria-label="Grounding Resume"
                 value={selectedResumeId}
                 onChange={(e) => setSelectedResumeId(e.target.value)}
                 className="w-full text-xs py-2.5 px-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50/60 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-zinc-900 transition-all font-medium"
@@ -282,11 +367,12 @@ function JobMatchInner() {
 
           {/* Target Company */}
           <div className="space-y-1.5">
-            <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+            <label htmlFor="match-company-input" className="flex items-center gap-1.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
               <Building2 className="w-3.5 h-3.5 text-zinc-400" />
               <span>Target Company (Optional)</span>
             </label>
             <input
+              id="match-company-input"
               type="text"
               placeholder="e.g. Stripe, Razorpay, Google"
               value={companyName}
@@ -297,11 +383,12 @@ function JobMatchInner() {
 
           {/* Target Role */}
           <div className="space-y-1.5">
-            <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+            <label htmlFor="match-role-input" className="flex items-center gap-1.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
               <Briefcase className="w-3.5 h-3.5 text-zinc-400" />
               <span>Target Role Title (Optional)</span>
             </label>
             <input
+              id="match-role-input"
               type="text"
               placeholder="e.g. Senior Backend Engineer"
               value={jobTitle}
@@ -315,7 +402,7 @@ function JobMatchInner() {
         <div className="space-y-2">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <label className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+              <label htmlFor="match-jd-textarea" className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
                 Job Description
               </label>
               {jobDescriptionText.length > 0 && (
@@ -346,6 +433,7 @@ function JobMatchInner() {
           </div>
 
           <textarea
+            id="match-jd-textarea"
             rows={8}
             placeholder="Paste the full job posting requirements, responsibilities, and required tech stack here..."
             value={jobDescriptionText}
@@ -506,11 +594,12 @@ function JobMatchInner() {
           setTimeout(() => setCopiedKeywords(false), 2000);
         };
 
+        const evidenceRatio = reqs.length > 0 ? Math.round((supportedCount / reqs.length) * 100) : score;
         const subScores = analysis.subScores || {
-          requiredSkills: (completedMatch as any).scoreComponents?.requiredSkillsScore ?? 85,
-          experienceAlignment: (completedMatch as any).scoreComponents?.experienceScore ?? 88,
-          educationAlignment: (completedMatch as any).scoreComponents?.responsibilityScore ?? 90,
-          actionMetricsDensity: (completedMatch as any).scoreComponents?.formattingScore ?? 80,
+          requiredSkills: (completedMatch as any).scoreComponents?.requiredSkillsScore ?? evidenceRatio,
+          experienceAlignment: (completedMatch as any).scoreComponents?.experienceScore ?? score,
+          educationAlignment: (completedMatch as any).scoreComponents?.responsibilityScore ?? evidenceRatio,
+          actionMetricsDensity: (completedMatch as any).scoreComponents?.formattingScore ?? score,
         };
 
         return (
@@ -593,6 +682,60 @@ function JobMatchInner() {
                 </div>
               ))}
             </div>
+
+            {/* Phase 4: Contextual AI Career Agent Actions */}
+            {globalAgent && (
+              <div
+                data-testid="match-agent-actions"
+                className="flex flex-wrap items-center gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/80"
+              >
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 mr-1">
+                  <Bot className="w-3.5 h-3.5 text-[#285FEA]" aria-hidden="true" />
+                  AI Agent:
+                </span>
+                {[
+                  {
+                    label: 'Explain Match & Skill Gaps',
+                    prompt: `Explain my match score for ${jobTitle || completedMatch?.jobDescription?.title || 'this role'} at ${companyName || completedMatch?.jobDescription?.companyName || 'this company'} and distinguish evidenced skills from missing skills.`,
+                  },
+                  {
+                    label: 'Tailor Resume for This Job',
+                    prompt: `Propose tailored resume edits for ${jobTitle || completedMatch?.jobDescription?.title || 'this role'} at ${companyName || completedMatch?.jobDescription?.companyName || 'this company'} and wait for my approval.`,
+                  },
+                  {
+                    label: 'Draft Cover Letter',
+                    prompt: `Draft a tailored cover letter for ${jobTitle || completedMatch?.jobDescription?.title || 'this role'} at ${companyName || completedMatch?.jobDescription?.companyName || 'this company'} aligned with my active resume.`,
+                  },
+                  {
+                    label: 'Prep Mock Interview',
+                    prompt: `Prepare me for a technical screening for ${jobTitle || completedMatch?.jobDescription?.title || 'this role'} at ${companyName || completedMatch?.jobDescription?.companyName || 'this company'} and ask me the first question.`,
+                  },
+                ].map((action) => (
+                  <button
+                    key={action.label}
+                    type="button"
+                    onClick={() =>
+                      globalAgent.launchPrompt({
+                        prompt: action.prompt,
+                        autoSubmit: true,
+                        context: {
+                          activeResumeId: selectedResumeId || undefined,
+                          activeResumeName: resumes.find((r) => r.id === selectedResumeId)?.name,
+                          jobTitle: jobTitle || completedMatch?.jobDescription?.title || undefined,
+                          companyName:
+                            companyName || completedMatch?.jobDescription?.companyName || undefined,
+                          jobDescriptionId: completedMatch?.jobDescriptionId || undefined,
+                          jobDescriptionText: jobDescriptionText || undefined,
+                        },
+                      })
+                    }
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-blue-200/80 dark:border-blue-800/70 bg-blue-50/50 dark:bg-blue-950/30 text-[#285FEA] dark:text-blue-300 hover:bg-blue-100/70 dark:hover:bg-blue-950/60 transition-colors cursor-pointer"
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Detailed Requirements with Filter Tabs */}
             <div className="space-y-4 pt-2">

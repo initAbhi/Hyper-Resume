@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { constructMetadata } from '@/lib/seo';
 import { PricingClient } from './PricingClient';
 
@@ -9,5 +9,15 @@ export const metadata = constructMetadata({
 });
 
 export default function PricingPage() {
-  return <PricingClient />;
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center text-xs text-zinc-500">
+          Loading pricing plans...
+        </div>
+      }
+    >
+      <PricingClient />
+    </Suspense>
+  );
 }

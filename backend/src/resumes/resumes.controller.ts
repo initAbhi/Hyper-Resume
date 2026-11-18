@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Put,
@@ -35,6 +36,14 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import type { User } from '../users/entities/user.entity.js';
 
+import { IsOptional, IsString } from 'class-validator';
+
+class ListResumesQueryDto extends PaginationQueryDto {
+  @IsOptional()
+  @IsString()
+  archived?: string;
+}
+
 @Controller('resumes')
 @UseGuards(JwtAuthGuard)
 export class ResumesController {
@@ -57,9 +66,10 @@ export class ResumesController {
   @Get()
   async listResumes(
     @CurrentUser() user: User,
-    @Query() pagination: PaginationQueryDto,
+    @Query() query: ListResumesQueryDto,
   ) {
-    return this.resumesService.listResumes(user.id, pagination);
+    const showArchived = query.archived === 'true' || query.archived === '1';
+    return this.resumesService.listResumes(user.id, query, showArchived);
   }
 
   @Post('adapt')
@@ -83,7 +93,7 @@ export class ResumesController {
   @Get('adaptations/:adaptationId')
   async getAdaptation(
     @CurrentUser() user: User,
-    @Param('adaptationId') adaptationId: string,
+    @Param('adaptationId', ParseUUIDPipe) adaptationId: string,
   ) {
     return this.resumesService.getAdaptation(user.id, adaptationId);
   }
@@ -92,7 +102,7 @@ export class ResumesController {
   @HttpCode(HttpStatus.CREATED)
   async applyAdaptation(
     @CurrentUser() user: User,
-    @Param('adaptationId') adaptationId: string,
+    @Param('adaptationId', ParseUUIDPipe) adaptationId: string,
     @Body() dto: ApplyAdaptationDto,
   ) {
     return this.resumesService.applyAdaptation(user.id, adaptationId, dto);
@@ -106,7 +116,7 @@ export class ResumesController {
   @Get(':resumeId')
   async getResume(
     @CurrentUser() user: User,
-    @Param('resumeId') resumeId: string,
+    @Param('resumeId', ParseUUIDPipe) resumeId: string,
   ) {
     return this.resumesService.getResume(user.id, resumeId);
   }
@@ -114,7 +124,7 @@ export class ResumesController {
   @Patch(':resumeId')
   async updateResume(
     @CurrentUser() user: User,
-    @Param('resumeId') resumeId: string,
+    @Param('resumeId', ParseUUIDPipe) resumeId: string,
     @Body() dto: UpdateResumeDto,
   ) {
     return this.resumesService.updateResume(user.id, resumeId, dto);
@@ -124,16 +134,25 @@ export class ResumesController {
   @HttpCode(HttpStatus.OK)
   async archiveResume(
     @CurrentUser() user: User,
-    @Param('resumeId') resumeId: string,
+    @Param('resumeId', ParseUUIDPipe) resumeId: string,
   ) {
     return this.resumesService.archiveResume(user.id, resumeId);
+  }
+
+  @Post(':resumeId/restore')
+  @HttpCode(HttpStatus.OK)
+  async restoreResume(
+    @CurrentUser() user: User,
+    @Param('resumeId', ParseUUIDPipe) resumeId: string,
+  ) {
+    return this.resumesService.restoreResume(user.id, resumeId);
   }
 
   @Post(':resumeId/duplicate')
   @HttpCode(HttpStatus.CREATED)
   async duplicateResume(
     @CurrentUser() user: User,
-    @Param('resumeId') resumeId: string,
+    @Param('resumeId', ParseUUIDPipe) resumeId: string,
     @Body() dto?: DuplicateResumeDto,
   ) {
     return this.resumesService.duplicateResume(user.id, resumeId, dto?.name);
@@ -142,7 +161,7 @@ export class ResumesController {
   @Get(':resumeId/versions')
   async listVersions(
     @CurrentUser() user: User,
-    @Param('resumeId') resumeId: string,
+    @Param('resumeId', ParseUUIDPipe) resumeId: string,
   ) {
     return this.resumesService.listVersions(user.id, resumeId);
   }
@@ -150,8 +169,8 @@ export class ResumesController {
   @Get(':resumeId/versions/:versionId')
   async getVersion(
     @CurrentUser() user: User,
-    @Param('resumeId') resumeId: string,
-    @Param('versionId') versionId: string,
+    @Param('resumeId', ParseUUIDPipe) resumeId: string,
+    @Param('versionId', ParseUUIDPipe) versionId: string,
   ) {
     return this.resumesService.getVersion(user.id, resumeId, versionId);
   }
@@ -160,7 +179,7 @@ export class ResumesController {
   @HttpCode(HttpStatus.CREATED)
   async createVersion(
     @CurrentUser() user: User,
-    @Param('resumeId') resumeId: string,
+    @Param('resumeId', ParseUUIDPipe) resumeId: string,
     @Body() dto: CreateResumeVersionDto,
   ) {
     return this.resumesService.createVersion(user.id, resumeId, dto);
@@ -170,8 +189,8 @@ export class ResumesController {
   @HttpCode(HttpStatus.OK)
   async restoreVersion(
     @CurrentUser() user: User,
-    @Param('resumeId') resumeId: string,
-    @Param('versionId') versionId: string,
+    @Param('resumeId', ParseUUIDPipe) resumeId: string,
+    @Param('versionId', ParseUUIDPipe) versionId: string,
   ) {
     return this.resumesService.restoreVersion(user.id, resumeId, versionId);
   }
@@ -180,7 +199,7 @@ export class ResumesController {
   @HttpCode(HttpStatus.CREATED)
   async runAnalysis(
     @CurrentUser() user: User,
-    @Param('resumeId') resumeId: string,
+    @Param('resumeId', ParseUUIDPipe) resumeId: string,
     @Body() dto: RunResumeAnalysisDto,
   ) {
     return this.resumesService.runAnalysis(user.id, resumeId, dto);
@@ -190,7 +209,7 @@ export class ResumesController {
   @HttpCode(HttpStatus.OK)
   async exportVectorPdf(
     @CurrentUser() user: User,
-    @Param('resumeId') resumeId: string,
+    @Param('resumeId', ParseUUIDPipe) resumeId: string,
     @Body() dto: ExportPdfDto,
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
@@ -218,7 +237,7 @@ export class ResumesController {
   @HttpCode(HttpStatus.OK)
   async exportNativeDocx(
     @CurrentUser() user: User,
-    @Param('resumeId') resumeId: string,
+    @Param('resumeId', ParseUUIDPipe) resumeId: string,
     @Body() dto: ExportDocxDto,
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
@@ -245,7 +264,7 @@ export class ResumesController {
   @Get(':resumeId/share')
   async getShareAnalytics(
     @CurrentUser() user: User,
-    @Param('resumeId') resumeId: string,
+    @Param('resumeId', ParseUUIDPipe) resumeId: string,
   ) {
     return this.resumeSharesService.getShareWithAnalytics(user.id, resumeId);
   }
@@ -253,7 +272,7 @@ export class ResumesController {
   @Put(':resumeId/share')
   async upsertShareSettings(
     @CurrentUser() user: User,
-    @Param('resumeId') resumeId: string,
+    @Param('resumeId', ParseUUIDPipe) resumeId: string,
     @Body() dto: UpdateResumeShareDto,
   ) {
     return this.resumeSharesService.upsertShareSettings(user.id, resumeId, dto);
@@ -263,7 +282,7 @@ export class ResumesController {
   @HttpCode(HttpStatus.OK)
   async regenerateShareSlug(
     @CurrentUser() user: User,
-    @Param('resumeId') resumeId: string,
+    @Param('resumeId', ParseUUIDPipe) resumeId: string,
   ) {
     return this.resumeSharesService.regenerateSlug(user.id, resumeId);
   }
@@ -272,7 +291,7 @@ export class ResumesController {
   @HttpCode(HttpStatus.OK)
   async resetShareAnalytics(
     @CurrentUser() user: User,
-    @Param('resumeId') resumeId: string,
+    @Param('resumeId', ParseUUIDPipe) resumeId: string,
   ) {
     return this.resumeSharesService.resetAnalytics(user.id, resumeId);
   }

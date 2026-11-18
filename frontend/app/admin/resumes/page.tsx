@@ -17,11 +17,12 @@ export default function AdminResumesPage() {
   const [resumes, setResumes] = useState<AdminResumeItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [limit, setLimit] = useState(50);
 
-  const loadResumes = async () => {
+  const loadResumes = async (limitOverride?: number) => {
     setLoading(true);
     try {
-      const data = await apiClient.getAdminResumes(search, 100);
+      const data = await apiClient.getAdminResumes(search, limitOverride ?? limit);
       setResumes(data);
     } catch (err) {
       logger.error('Failed to load resumes', err);
@@ -54,7 +55,8 @@ export default function AdminResumesPage() {
         </div>
 
         <button
-          onClick={loadResumes}
+          type="button"
+          onClick={() => void loadResumes()}
           disabled={loading}
           className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition shadow-2xs self-start"
         >
@@ -125,10 +127,18 @@ export default function AdminResumesPage() {
                 <th className="px-5 py-3.5">Last Updated</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {resumes.length === 0 ? (
+            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+              {loading ? (
+                [1, 2, 3, 4].map((n) => (
+                  <tr key={n}>
+                    <td colSpan={6} className="px-5 py-4">
+                      <div className="h-5 rounded bg-slate-100 dark:bg-zinc-800 animate-pulse" />
+                    </td>
+                  </tr>
+                ))
+              ) : resumes.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-slate-400">
+                  <td colSpan={6} className="px-5 py-12 text-center text-slate-500 dark:text-zinc-400">
                     No resumes found matching criteria.
                   </td>
                 </tr>
@@ -175,6 +185,22 @@ export default function AdminResumesPage() {
           </table>
         </div>
       </div>
+
+      {resumes.length >= limit && (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={() => {
+              const nextLimit = limit + 50;
+              setLimit(nextLimit);
+              void loadResumes(nextLimit);
+            }}
+            className="rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-800 transition cursor-pointer"
+          >
+            Load More Resumes ({resumes.length} loaded)
+          </button>
+        </div>
+      )}
     </div>
   );
 }

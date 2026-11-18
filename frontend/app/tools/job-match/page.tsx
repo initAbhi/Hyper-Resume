@@ -232,6 +232,7 @@ export default function JobMatchToolPage() {
           </CardHeader>
           <CardContent>
             <textarea
+              aria-label="Your resume text"
               rows={9}
               className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-3 text-xs sm:text-sm font-mono text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-600 resize-y"
               placeholder="Paste your resume skills & experience (min 25 chars)..."
@@ -255,6 +256,7 @@ export default function JobMatchToolPage() {
           </CardHeader>
           <CardContent>
             <textarea
+              aria-label="Target job description"
               rows={9}
               className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-3 text-xs sm:text-sm font-mono text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-600 resize-y"
               placeholder="Paste the job description here (min 25 chars)..."

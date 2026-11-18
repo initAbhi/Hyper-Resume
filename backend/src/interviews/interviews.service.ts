@@ -56,7 +56,7 @@ export class InterviewsService {
     private readonly paymentRepository: Repository<Payment>,
     private readonly creditsService: CreditsService,
     private readonly aiProvider: GeminiInterviewProvider,
-  ) {}
+  ) { }
 
   private async hasProAccess(userId: string): Promise<boolean> {
     if (typeof this.creditsService.hasActivePro === 'function') {
@@ -72,6 +72,7 @@ export class InterviewsService {
     userId: string,
     dto: StartInterviewDto,
     headerIdempotencyKey?: string,
+    options?: { skipCreditCharge?: boolean },
   ): Promise<InterviewSession & { activeQuestion?: InterviewQuestion }> {
     const idempotencyKey =
       headerIdempotencyKey?.trim() ||
@@ -114,39 +115,48 @@ export class InterviewsService {
       }
     }
 
-    // 2. Server-Side Entitlement Check
+    // 2. Server-Side Entitlement Check (expired time-based Pro passes have creditsAwarded=0 and must NOT grant infinite paid status)
     const hasProPass = await this.hasProAccess(userId);
+    const hasCreditPackPurchase = await this.hasPaidCreditPack(userId);
     const isPaidUser =
-      hasProPass ||
-      (await this.paymentRepository.exists({
-        where: { userId, status: 'succeeded' },
-      }));
+      Boolean(options?.skipCreditCharge) || hasProPass || hasCreditPackPurchase;
 
-    if (!isPaidUser) {
-      if (dto.sessionMode !== 'quick_practice') {
-        throw new ForbiddenException(
-          'Full Mock and Weak Area interviews require a paid Pro Pass or credit pack. Please upgrade to unlock.',
-        );
-      }
-      const existingTrial = await this.sessionRepository.findOne({
-        where: {
-          userId,
-          isFreeTrial: true,
-          status: In(['initializing', 'in_progress', 'completed']),
-        },
-      });
-      if (existingTrial) {
-        throw new ForbiddenException(
-          'You have already completed your free Quick Practice trial. Please activate a Pro Pass to continue.',
-        );
-      }
+    if (!isPaidUser && dto.sessionMode !== 'quick_practice') {
+      throw new ForbiddenException(
+        'Full Mock and Weak Area interviews require a paid Pro Pass or credit pack. Please upgrade to unlock.',
+      );
     }
 
-    const requiredCredits = hasProPass ? 0 : INTERVIEW_CREDIT_COSTS[dto.sessionMode];
+    const requiredCredits =
+      options?.skipCreditCharge || hasProPass ? 0 : INTERVIEW_CREDIT_COSTS[dto.sessionMode];
     const questionCount = dto.sessionMode === 'full_mock' ? 5 : 3;
 
-    // STEP 1-3: Fast DB Transaction (<10ms)
+    // STEP 1-3: Fast DB Transaction (<10ms) with advisory lock for free-trial race protection
     const session = await this.dataSource.transaction(async (manager: EntityManager) => {
+      if (!isPaidUser) {
+        if (typeof manager.query === 'function') {
+          const lockKey = crypto
+            .createHash('sha256')
+            .update(`interview-trial:${userId}`)
+            .digest()
+            .readInt32BE(0);
+          await manager.query('SELECT pg_advisory_xact_lock($1)', [lockKey]);
+        }
+
+        const existingTrial = await manager.findOne(InterviewSession, {
+          where: {
+            userId,
+            isFreeTrial: true,
+            status: In(['initializing', 'in_progress', 'completed']),
+          },
+        });
+        if (existingTrial) {
+          throw new ForbiddenException(
+            'You have already completed your free Quick Practice trial. Please activate a Pro Pass to continue.',
+          );
+        }
+      }
+
       if (requiredCredits > 0) {
         // Check credit balance with manager
         const balance = await this.creditsService.getBalance(userId, manager);
@@ -552,10 +562,7 @@ export class InterviewsService {
 
     const hasProPass = await this.hasProAccess(userId);
     const isPaidUser =
-      hasProPass ||
-      (await this.paymentRepository.exists({
-        where: { userId, status: 'succeeded' },
-      }));
+      hasProPass || (await this.hasPaidCreditPack(userId));
 
     // Server-Side Entitlement Redaction: Free trial users see sample model answer on Q1 only
     const sanitizedTurns = turns.map((turn, idx) => {
@@ -576,6 +583,48 @@ export class InterviewsService {
       turns: sanitizedTurns,
       isPaidUser,
     };
+  }
+
+  private async hasPaidCreditPack(userId: string): Promise<boolean> {
+    if (typeof this.paymentRepository.createQueryBuilder === 'function') {
+      const count = await this.paymentRepository
+        .createQueryBuilder('p')
+        .where('p.user_id = :userId', { userId })
+        .andWhere('p.status = :status', { status: 'succeeded' })
+        .andWhere(
+          "(COALESCE((p.metadata->>'credits')::int, 0) > 0 OR COALESCE((p.metadata->>'creditsAwarded')::int, 0) > 0 OR COALESCE(p.metadata->>'planType', 'credit_pack') != 'pro_pass')",
+        )
+        .getCount();
+      return count > 0;
+    }
+    return this.paymentRepository.exists({
+      where: { userId, status: 'succeeded' },
+    });
+  }
+
+  async abandonSession(userId: string, sessionId: string): Promise<InterviewSession> {
+    const session = await this.sessionRepository.findOne({
+      where: { id: sessionId, userId },
+    });
+    if (!session) {
+      throw new NotFoundException('Session not found or unauthorized.');
+    }
+    if (session.status === 'in_progress' || session.status === 'initializing') {
+      session.status = 'expired';
+      await this.sessionRepository.save(session);
+    }
+    return session;
+  }
+
+  async deleteSession(userId: string, sessionId: string): Promise<{ deleted: true }> {
+    const session = await this.sessionRepository.findOne({
+      where: { id: sessionId, userId },
+    });
+    if (!session) {
+      throw new NotFoundException('Session not found or unauthorized.');
+    }
+    await this.sessionRepository.remove(session);
+    return { deleted: true };
   }
 
   /**

@@ -1,3 +1,5 @@
+import type { AtsJobDescriptionMatch } from '../../resumes/entities/resume-analysis.entity.js';
+
 /**
  * Comprehensive ATS Skill Taxonomy, Action Verbs, and Keyword Intelligence Engine
  * Used for deep resume parsing, Jobscan-style keyword matching, and ATS simulation.
@@ -80,7 +82,7 @@ export const INDUSTRY_SKILLS_TAXONOMY: TaxonomySkill[] = [
   { name: 'Figma', category: 'frontend', aliases: ['ui/ux', 'wireframing'], isHardSkill: true },
 
   // --- Backend Frameworks & Runtimes ---
-  { name: 'Node.js', category: 'backend', aliases: ['nodejs'], isHardSkill: true },
+  { name: 'Node.js', category: 'backend', aliases: ['nodejs', 'node'], isHardSkill: true },
   { name: 'Express.js', category: 'backend', aliases: ['express', 'expressjs'], isHardSkill: true },
   { name: 'NestJS', category: 'backend', aliases: ['nest.js'], isHardSkill: true },
   { name: 'Fastify', category: 'backend', isHardSkill: true },
@@ -216,27 +218,40 @@ export const ACTION_VERBS_BY_CATEGORY: Record<
     'spearheaded', 'orchestrated', 'led', 'directed', 'championed', 'founded', 'mentored',
     'guided', 'supervised', 'coached', 'empowered', 'marshaled', 'presided', 'headed',
     'mobilized', 'delegated', 'recruited', 'advised', 'chaired', 'navigated', 'steered',
+    'managed', 'oversaw', 'governed', 'piloted', 'organized', 'facilitated', 'aligned',
+    'established', 'administered', 'fostered', 'advocated', 'represented', 'commanded',
+    'assembled', 'drove', 'motivated', 'promoted', 'trained',
   ],
   engineering: [
     'architected', 'engineered', 'developed', 'built', 'designed', 'implemented', 'deployed',
     'programmed', 'automated', 'refactored', 'scaled', 'migrated', 'configured', 'constructed',
     'integrated', 'interfaced', 'prototyped', 'authored', 'rewrote', 're-engineered', 'rebuilt',
     'customized', 'provisioned', 'containerized', 'instantiated', 'secured', 'hardened',
+    'created', 'modeled', 'coded', 'drafted', 'produced', 'fabricated', 'formulated', 'tested',
+    'verified', 'audited', 'patched', 'scripted', 'maintained', 'documented', 'instrumented',
+    'benchmarked', 'installed', 'debugged',
   ],
   optimization: [
     'optimized', 'accelerated', 'streamlined', 'reduced', 'slashed', 'boosted', 'maximized',
     'minimized', 'enhanced', 'consolidated', 'modernized', 'revamped', 'overhauled', 'halved',
     'tripled', 'amplified', 'expedited', 'pruned', 'compacted', 'compressed', 'fine-tuned',
+    'improved', 'increased', 'upgraded', 'doubled', 'restructured', 'simplified', 'transformed',
+    'reorganized', 'standardized', 'tightened', 'refined', 'multiplied',
   ],
   innovation: [
     'pioneered', 'formulated', 'innovated', 'invented', 'conceptualized', 'discovered',
     'researched', 'benchmarked', 'diagnosed', 'investigated', 'identified', 'modeled',
     'forecasted', 'evaluated', 'analyzed', 'audited', 'quantified', 'synthesized',
+    'authored', 'originated', 'introduced', 'explored', 'devised', 'crafted', 'instituted',
+    'mapped', 'uncovered', 'solved',
   ],
   execution: [
     'delivered', 'shipped', 'executed', 'launched', 'partnered', 'collaborated', 'resolved',
     'troubleshot', 'debugged', 'maintained', 'sustained', 'monitored', 'enacted', 'enforced',
     'standardized', 'published', 'negotiated', 'facilitated', 'coordinated', 'curated',
+    'handled', 'assisted', 'supported', 'conducted', 'participated', 'compiled', 'reviewed',
+    'tracked', 'utilized', 'applied', 'processed', 'gathered', 'reported', 'operated',
+    'inspected', 'presented', 'recorded', 'served', 'contributed',
   ],
 };
 
@@ -318,47 +333,73 @@ export function extractSkillsFromCorpus(text: string): TaxonomySkill[] {
   return matched;
 }
 
+export const SKILL_ALIASES: Record<string, string[]> = {
+  html5: ['html', 'html5'],
+  html: ['html', 'html5'],
+  css3: ['css', 'css3'],
+  css: ['css', 'css3'],
+  'node.js': ['node', 'nodejs', 'node.js'],
+  nodejs: ['node', 'nodejs', 'node.js'],
+  node: ['node', 'nodejs', 'node.js'],
+  'react.js': ['react', 'reactjs', 'react.js'],
+  reactjs: ['react', 'reactjs', 'react.js'],
+  react: ['react', 'reactjs', 'react.js'],
+  'next.js': ['next', 'nextjs', 'next.js'],
+  nextjs: ['next', 'nextjs', 'next.js'],
+  next: ['next', 'nextjs', 'next.js'],
+  'vue.js': ['vue', 'vuejs', 'vue.js'],
+  vuejs: ['vue', 'vuejs', 'vue.js'],
+  vue: ['vue', 'vuejs', 'vue.js'],
+  postgresql: ['postgres', 'postgresql', 'psql'],
+  postgres: ['postgres', 'postgresql', 'psql'],
+  psql: ['postgres', 'postgresql', 'psql'],
+  mongodb: ['mongo', 'mongodb'],
+  mongo: ['mongo', 'mongodb'],
+  kubernetes: ['k8s', 'kubernetes'],
+  k8s: ['k8s', 'kubernetes'],
+  'amazon web services': ['aws', 'amazon web services'],
+  aws: ['aws', 'amazon web services'],
+  'google cloud platform': ['gcp', 'google cloud', 'google cloud platform'],
+  gcp: ['gcp', 'google cloud', 'google cloud platform'],
+  'microsoft azure': ['azure', 'microsoft azure'],
+  azure: ['azure', 'microsoft azure'],
+  'rest apis': ['rest', 'restful', 'rest api', 'rest apis', 'apis'],
+  'rest api': ['rest', 'restful', 'rest api', 'rest apis', 'api'],
+  restful: ['rest', 'restful', 'rest api', 'rest apis'],
+  rest: ['rest', 'restful', 'rest api', 'rest apis'],
+  typescript: ['ts', 'typescript'],
+  ts: ['ts', 'typescript'],
+  javascript: ['js', 'javascript', 'es6'],
+  js: ['js', 'javascript'],
+  golang: ['go', 'golang'],
+  go: ['go', 'golang'],
+  python: ['python', 'py', 'python3'],
+  docker: ['docker', 'containerization', 'containers'],
+  'ci/cd': ['ci/cd', 'ci cd', 'continuous integration', 'github actions', 'gitlab ci', 'jenkins'],
+  graphql: ['graphql', 'gql'],
+  gql: ['graphql', 'gql'],
+};
+
 /**
  * Tokenizes a job description to extract required and preferred keywords (Jobscan simulation)
+ * with robust skill alias support, Hard/Soft skills ratio, and Target Title alignment.
  */
 export function analyzeJobDescriptionMatch(
   resumeText: string,
   jobDescriptionText: string,
-): {
-  matchRate: number;
-  matchedKeywords: Array<{
-    keyword: string;
-    category: 'hard_skill' | 'soft_skill' | 'tool' | 'domain';
-    resumeCount: number;
-    jdImportance: 'critical' | 'high' | 'medium';
-  }>;
-  missingKeywords: Array<{
-    keyword: string;
-    category: 'hard_skill' | 'soft_skill' | 'tool' | 'domain';
-    jdImportance: 'critical' | 'high' | 'medium';
-    recommendation: string;
-  }>;
-  keywordStuffingAlerts: Array<{
-    keyword: string;
-    count: number;
-    warning: string;
-  }>;
-  recruiterSearchSimulation: {
-    passedQueries: string[];
-    failedQueries: string[];
-    readinessSummary: string;
-  };
-} {
+  targetRole?: string,
+  resumeTitle?: string,
+): AtsJobDescriptionMatch {
   const resumeNormalized = resumeText.toLowerCase();
   const jdNormalized = jobDescriptionText.toLowerCase();
 
   const jdSkills = extractSkillsFromCorpus(jobDescriptionText);
 
-  // If JD is empty or has very few skills, extract prominent technical nouns
+  // If JD has few recognized skills from taxonomy, extract prominent technical nouns
   const jdWords = jdNormalized.split(/[\s,.;:()\-–—|/]+/).filter((w) => w.length >= 3);
   const wordFreq: Record<string, number> = {};
   for (const w of jdWords) {
-    if (!/^(the|and|for|with|you|will|have|are|this|that|from|our|your|team|work|years|role|join)$/i.test(w)) {
+    if (!/^(the|and|for|with|you|will|have|are|this|that|from|our|your|team|work|years|role|join|looking|must|plus|including|experience|candidate)$/i.test(w)) {
       wordFreq[w] = (wordFreq[w] || 0) + 1;
     }
   }
@@ -387,10 +428,28 @@ export function analyzeJobDescriptionMatch(
   let maxPossibleScore = 0;
 
   for (const skill of jdSkills) {
-    const escaped = skill.name.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(`(?:^|[^a-z0-9+#])${escaped}(?:$|[^a-z0-9+#])`, 'gi');
-    const resumeMatches = (resumeNormalized.match(regex) || []).length;
-    const jdMatches = (jdNormalized.match(regex) || []).length;
+    const sLower = skill.name.toLowerCase();
+    const aliases = Array.from(
+      new Set([
+        sLower,
+        ...(skill.aliases || []).map((a) => a.toLowerCase()),
+        ...(SKILL_ALIASES[sLower] || []),
+      ]),
+    );
+
+    let resumeMatches = 0;
+    for (const alias of aliases) {
+      const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(?:^|[^a-z0-9+#])${escaped}(?:$|[^a-z0-9+#])`, 'gi');
+      resumeMatches += (resumeNormalized.match(regex) || []).length;
+    }
+
+    let jdMatches = 0;
+    for (const alias of aliases) {
+      const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(?:^|[^a-z0-9+#])${escaped}(?:$|[^a-z0-9+#])`, 'gi');
+      jdMatches += (jdNormalized.match(regex) || []).length;
+    }
 
     const importance: 'critical' | 'high' | 'medium' =
       jdMatches >= 3 || skill.category === 'languages' || skill.category === 'backend' || skill.category === 'cloud_devops'
@@ -437,21 +496,72 @@ export function analyzeJobDescriptionMatch(
     }
   }
 
-  const matchRate = maxPossibleScore > 0 ? Math.round((totalWeightedScore / maxPossibleScore) * 100) : 85;
+  // Fallback if very few skills in JD: compute word frequency overlap
+  if (maxPossibleScore === 0) {
+    const prominentJdWords = Object.entries(wordFreq)
+      .filter(([_, count]) => count >= 2)
+      .slice(0, 10);
+    for (const [w, count] of prominentJdWords) {
+      maxPossibleScore += 1;
+      const countInResume = (resumeNormalized.match(new RegExp(`\\b${w}\\b`, 'gi')) || []).length;
+      if (countInResume > 0) {
+        totalWeightedScore += 1;
+        matchedKeywords.push({
+          keyword: w,
+          category: 'domain',
+          resumeCount: countInResume,
+          jdImportance: count >= 3 ? 'high' : 'medium',
+        });
+      } else {
+        missingKeywords.push({
+          keyword: w,
+          category: 'domain',
+          jdImportance: count >= 3 ? 'high' : 'medium',
+          recommendation: `JD mentions "${w}" frequently (${count}x). Consider mentioning it if relevant.`,
+        });
+      }
+    }
+  }
 
-  // Recruiter Boolean search simulation
+  const matchRate = maxPossibleScore > 0 ? Math.round((totalWeightedScore / maxPossibleScore) * 100) : 80;
+
+  // Hard vs Soft skills match breakdowns
+  const hardSkillsList = jdSkills.filter((s) => s.isHardSkill);
+  const softSkillsList = jdSkills.filter((s) => !s.isHardSkill);
+  const matchedHard = matchedKeywords.filter((k) => k.category !== 'soft_skill').length;
+  const matchedSoft = matchedKeywords.filter((k) => k.category === 'soft_skill').length;
+
+  const hardSkillsMatch = {
+    matched: matchedHard,
+    total: hardSkillsList.length,
+    percentage: hardSkillsList.length > 0 ? Math.round((matchedHard / hardSkillsList.length) * 100) : 100,
+  };
+
+  const softSkillsMatch = {
+    matched: matchedSoft,
+    total: softSkillsList.length,
+    percentage: softSkillsList.length > 0 ? Math.round((matchedSoft / softSkillsList.length) * 100) : 100,
+  };
+
+  // Recruiter Boolean search simulation (using aliases)
   const topCriticalSkills = jdSkills.filter((s) => s.isHardSkill).slice(0, 4);
   const sampleBooleanA = topCriticalSkills.slice(0, 3).map((s) => `"${s.name}"`).join(' AND ');
   const sampleBooleanB = topCriticalSkills.slice(0, 2).map((s) => `"${s.name}"`).join(' AND ');
+
+  const checkSkillInResume = (skillName: string): boolean => {
+    const sLower = skillName.toLowerCase();
+    const aliases = Array.from(new Set([sLower, ...(SKILL_ALIASES[sLower] || [])]));
+    return aliases.some((alias) => {
+      const esc = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return new RegExp(`(?:^|[^a-z0-9+#])${esc}(?:$|[^a-z0-9+#])`, 'i').test(resumeNormalized);
+    });
+  };
 
   const passedQueries: string[] = [];
   const failedQueries: string[] = [];
 
   if (sampleBooleanB) {
-    const bothPresent = topCriticalSkills.slice(0, 2).every((s) => {
-      const esc = s.name.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      return new RegExp(`\\b${esc}\\b`, 'i').test(resumeNormalized);
-    });
+    const bothPresent = topCriticalSkills.slice(0, 2).every((s) => checkSkillInResume(s.name));
     if (bothPresent) {
       passedQueries.push(`(${sampleBooleanB})`);
     } else {
@@ -460,14 +570,40 @@ export function analyzeJobDescriptionMatch(
   }
 
   if (sampleBooleanA && topCriticalSkills.length >= 3) {
-    const allPresent = topCriticalSkills.slice(0, 3).every((s) => {
-      const esc = s.name.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      return new RegExp(`\\b${esc}\\b`, 'i').test(resumeNormalized);
-    });
+    const allPresent = topCriticalSkills.slice(0, 3).every((s) => checkSkillInResume(s.name));
     if (allPresent) {
       passedQueries.push(`(${sampleBooleanA})`);
     } else {
       failedQueries.push(`(${sampleBooleanA})`);
+    }
+  }
+
+  // Role Title Alignment
+  let titleAlignment: AtsJobDescriptionMatch['titleAlignment'] = undefined;
+  if (targetRole || resumeTitle) {
+    const target = (targetRole || '').trim().toLowerCase();
+    const detected = (resumeTitle || '').trim().toLowerCase();
+    if (target && detected) {
+      const targetTokens = target.split(/[\s/,-]+/).filter((t) => t.length > 2);
+      const detectedTokens = detected.split(/[\s/,-]+/).filter((t) => t.length > 2);
+      const shared = targetTokens.filter((t) =>
+        detectedTokens.some((d) => d.includes(t) || t.includes(d)),
+      );
+      const ratio = targetTokens.length > 0 ? shared.length / targetTokens.length : 1;
+      const score = Math.round(ratio * 100);
+      titleAlignment = {
+        targetTitle: targetRole,
+        detectedTitle: resumeTitle,
+        score,
+        status: score >= 75 ? 'strong' : score >= 40 ? 'moderate' : 'weak',
+      };
+    } else if (target) {
+      titleAlignment = {
+        targetTitle: targetRole,
+        detectedTitle: resumeTitle,
+        score: 50,
+        status: 'moderate',
+      };
     }
   }
 
@@ -488,6 +624,9 @@ export function analyzeJobDescriptionMatch(
       failedQueries,
       readinessSummary,
     },
+    hardSkillsMatch,
+    softSkillsMatch,
+    titleAlignment,
   };
 }
 

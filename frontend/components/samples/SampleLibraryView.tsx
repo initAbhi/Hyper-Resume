@@ -48,6 +48,49 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
   const [cloningResumeId, setCloningResumeId] = useState<string | null>(null);
   const [libraryError, setLibraryError] = useState<string | null>(null);
 
+  // Sync ?discipline= or ?category= deep-link query param on mount (FN-41)
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const param = (params.get('discipline') || params.get('category') || '').trim().toLowerCase();
+    if (!param) return;
+    const matched = SAMPLE_CATEGORIES.find(
+      (c) => c.id.toLowerCase() === param || c.label.toLowerCase().includes(param),
+    );
+    if (matched) {
+      setSelectedCategory(matched.id);
+    }
+  }, []);
+
+  // Clear any stuck cloning status when navigating back, switching tabs, or unmounting
+  React.useEffect(() => {
+    setCloningResumeId(null);
+
+    const handleClearCloning = () => {
+      setCloningResumeId(null);
+    };
+
+    window.addEventListener('pageshow', handleClearCloning);
+    window.addEventListener('focus', handleClearCloning);
+    window.addEventListener('popstate', handleClearCloning);
+
+    return () => {
+      window.removeEventListener('pageshow', handleClearCloning);
+      window.removeEventListener('focus', handleClearCloning);
+      window.removeEventListener('popstate', handleClearCloning);
+      setCloningResumeId(null);
+    };
+  }, []);
+
+  // Safety fallback: auto-reset cloning spinner if unresolved after 6 seconds
+  React.useEffect(() => {
+    if (!cloningResumeId) return;
+    const timer = setTimeout(() => {
+      setCloningResumeId(null);
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [cloningResumeId]);
+
   const hasActiveFilters =
     selectedCategory !== 'ALL' ||
     selectedExperience !== 'ALL' ||
@@ -116,6 +159,12 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
     });
   }, [selectedCategory, selectedExperience, selectedCountry, selectedStyle, searchQuery]);
 
+  const toSafeUrl = (raw?: string) => {
+    const trimmed = (raw || '').trim();
+    if (!trimmed) return undefined;
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  };
+
   const handleUseTemplateDirect = async (resume: SampleResume) => {
     const templateKey = getSampleTemplateKey(resume);
     const resumeContent: ResumeContent = {
@@ -124,8 +173,9 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
         email: user?.email || resume.candidate.email,
         phone: resume.candidate.phone,
         location: resume.candidate.location,
-        linkedinUrl: resume.candidate.linkedin ? `https://${resume.candidate.linkedin}` : undefined,
-        githubUrl: resume.candidate.github ? `https://${resume.candidate.github}` : undefined,
+        linkedinUrl: toSafeUrl(resume.candidate.linkedin),
+        githubUrl: toSafeUrl(resume.candidate.github),
+        websiteUrl: toSafeUrl(resume.candidate.portfolio),
       },
       headline: resume.role,
       summary: resume.summary,
@@ -154,16 +204,16 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
         name: proj.name,
         description: proj.description,
         highlights: proj.highlights,
-        url: proj.url,
+        url: toSafeUrl(proj.url),
       })),
       certifications: resume.certifications?.map((cert) => ({
         name: cert,
-        issuer: resume.company,
+        issuer: '',
       })),
       layout: {
         accentColor: resume.brandColor || '#285FEA',
-        fontFamily: templateKey === 'ivy-league' ? 'serif' : 'sans',
-        pageMargin: 16,
+        fontFamily: templateKey === 'ivy-league' || templateKey === 'jake-ats' ? 'serif' : 'sans',
+        pageMargin: 32,
         fontSizeScale: 1,
         lineHeight: 1.4,
       },
@@ -181,7 +231,7 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
             content: resumeContent,
           })
         );
-      } catch {}
+      } catch { }
       router.push('/login?redirect=/app/resumes&action=clone_sample');
       return;
     }
@@ -190,14 +240,34 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
     setLibraryError(null);
 
     try {
+      const baseName = `${resume.company} - ${resume.role}`;
+      let uniqueName = baseName;
+      try {
+        const existing = await apiClient.listResumes();
+        const existingNames = new Set(
+          (Array.isArray(existing) ? existing : []).map((r) => (r.name || '').trim().toLowerCase()),
+        );
+        if (existingNames.has(baseName.toLowerCase())) {
+          let counter = 2;
+          while (existingNames.has(`${baseName} (${counter})`.toLowerCase())) {
+            counter += 1;
+          }
+          uniqueName = `${baseName} (${counter})`;
+        }
+      } catch {
+        // Proceed with baseName if listing fails
+      }
+
       const created = await apiClient.createResume({
-        name: `${resume.company} - ${resume.role}`,
+        name: uniqueName,
         targetRole: resume.role,
         targetCompany: resume.company,
         templateKey,
         content: resumeContent,
       });
 
+      // Clear cloning state before navigating so returning to this view doesn't retain the loading spinner
+      setCloningResumeId(null);
       router.push(`/app/resumes/${created.id}`);
     } catch (err: unknown) {
       setCloningResumeId(null);
@@ -206,6 +276,8 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
       );
       // Fallback: open modal preview
       setPreviewResume(resume);
+    } finally {
+      setCloningResumeId(null);
     }
   };
 
@@ -224,15 +296,14 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
                 key={cat.id}
                 type="button"
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`px-3.5 py-2 sm:py-1.5 rounded-md text-xs font-bold tracking-wider transition-all uppercase whitespace-nowrap shrink-0 cursor-pointer min-h-[36px] sm:min-h-0 flex items-center justify-center ${
-                  isActive
+                className={`px-3.5 py-2 sm:py-1.5 rounded-md text-xs font-bold tracking-wider transition-all uppercase whitespace-nowrap shrink-0 cursor-pointer min-h-[36px] sm:min-h-0 flex items-center justify-center ${isActive
                     ? isProPill
                       ? 'bg-[#285FEA] text-white shadow-xs'
                       : 'bg-[#1A1D23] text-white dark:bg-white dark:text-[#0D0F12] shadow-xs'
                     : isProPill
-                    ? 'bg-[#285FEA]/10 text-[#285FEA] dark:bg-[#285FEA]/20 dark:text-[#60A5FA] border border-[#285FEA]/20 hover:bg-[#285FEA]/15'
-                    : 'bg-white dark:bg-[#14171C] text-[#5A6270] dark:text-[#9EA7B4] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5] hover:bg-[#F1F3F5] dark:hover:bg-[#1D2128] border border-[#E2E5E9] dark:border-[#252A33]'
-                }`}
+                      ? 'bg-[#285FEA]/10 text-[#285FEA] dark:bg-[#285FEA]/20 dark:text-[#60A5FA] border border-[#285FEA]/20 hover:bg-[#285FEA]/15'
+                      : 'bg-white dark:bg-[#14171C] text-[#5A6270] dark:text-[#9EA7B4] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5] hover:bg-[#F1F3F5] dark:hover:bg-[#1D2128] border border-[#E2E5E9] dark:border-[#252A33]'
+                  }`}
               >
                 {cat.label}
               </button>
@@ -267,6 +338,7 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
           <div className="flex flex-wrap items-center gap-2">
             {/* Experience Level Selector */}
             <select
+              aria-label="Filter by experience level"
               value={selectedExperience}
               onChange={(e) => setSelectedExperience(e.target.value)}
               className="py-1.5 px-2.5 rounded-lg bg-white dark:bg-[#14171C] border border-[#E2E5E9] dark:border-[#252A33] text-xs font-medium text-[#1A1D23] dark:text-[#F0F2F5] focus:outline-none focus:border-[#285FEA] shadow-xs cursor-pointer"
@@ -280,6 +352,7 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
 
             {/* Country Selector */}
             <select
+              aria-label="Filter by country"
               value={selectedCountry}
               onChange={(e) => setSelectedCountry(e.target.value)}
               className="py-1.5 px-2.5 rounded-lg bg-white dark:bg-[#14171C] border border-[#E2E5E9] dark:border-[#252A33] text-xs font-medium text-[#1A1D23] dark:text-[#F0F2F5] focus:outline-none focus:border-[#285FEA] shadow-xs cursor-pointer"
@@ -293,6 +366,7 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
 
             {/* Style Selector */}
             <select
+              aria-label="Filter by resume style"
               value={selectedStyle}
               onChange={(e) => setSelectedStyle(e.target.value)}
               className="py-1.5 px-2.5 rounded-lg bg-white dark:bg-[#14171C] border border-[#E2E5E9] dark:border-[#252A33] text-xs font-medium text-[#1A1D23] dark:text-[#F0F2F5] focus:outline-none focus:border-[#285FEA] shadow-xs cursor-pointer"
@@ -325,11 +399,27 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
             Showing <strong className="text-[#1A1D23] dark:text-[#F0F2F5] font-bold">{filteredResumes.length}</strong> of{' '}
             <strong className="text-[#1A1D23] dark:text-[#F0F2F5]">{SAMPLE_RESUMES.length}</strong> Verified ATS Resumes
           </span>
-          <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-[#848D9A]">
+          <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-[#5A6270] dark:text-[#9EA7B4]">
             <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-            <span>100% Verified ATS Standard Single-Column Formats</span>
+            <span>100% Verified ATS-Compliant Formats (Single &amp; Two-Column)</span>
           </div>
         </div>
+
+        {libraryError && (
+          <div
+            role="alert"
+            className="rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 px-3.5 py-2.5 text-xs text-rose-800 dark:text-rose-200 flex items-center justify-between gap-2"
+          >
+            <span>{libraryError}</span>
+            <button
+              type="button"
+              onClick={() => setLibraryError(null)}
+              className="font-semibold underline cursor-pointer shrink-0"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 4-Column Responsive Grid */}

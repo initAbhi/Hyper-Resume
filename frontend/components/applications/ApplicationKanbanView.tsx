@@ -37,7 +37,15 @@ const KANBAN_COLUMNS: {
   { key: 'offer', label: 'Offer Received', dotColor: 'bg-teal-500' },
   { key: 'negotiating', label: 'Negotiating', dotColor: 'bg-indigo-500' },
   { key: 'accepted', label: 'Accepted', dotColor: 'bg-emerald-500' },
+  { key: 'rejected', label: 'Closed / Archived', dotColor: 'bg-rose-400' },
 ];
+
+const CLOSED_STATUSES = new Set<JobApplicationStatus>([
+  'rejected',
+  'withdrawn',
+  'ghosted',
+  'archived',
+]);
 
 export function ApplicationKanbanView({
   applications,
@@ -61,13 +69,25 @@ export function ApplicationKanbanView({
 
   return (
     <div className="w-full overflow-x-auto pb-4 no-scrollbar">
-      <div className="flex gap-4 min-w-[1260px] items-start">
+      <div className="flex gap-4 min-w-[1440px] items-start">
         {KANBAN_COLUMNS.map((col, colIdx) => {
-          const colApps = applications.filter((a) => a.status === col.key);
+          const colApps = applications.filter((a) => {
+            if (col.key === 'bookmarked') return a.status === 'bookmarked' || a.status === 'draft';
+            if (col.key === 'rejected') return CLOSED_STATUSES.has(a.status);
+            return a.status === col.key;
+          });
 
           return (
             <div
               key={col.key}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const draggedId = e.dataTransfer.getData('text/plain');
+                if (draggedId) {
+                  onUpdateStatus(draggedId, col.key);
+                }
+              }}
               className="flex-1 min-w-[220px] rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 p-3"
             >
               {/* Column Header */}
@@ -98,7 +118,9 @@ export function ApplicationKanbanView({
                     return (
                       <div
                         key={app.id}
-                        className="group relative p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-700 shadow-xs hover:shadow-sm transition-all"
+                        draggable
+                        onDragStart={(e) => e.dataTransfer.setData('text/plain', app.id)}
+                        className="group relative p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-700 shadow-xs hover:shadow-sm transition-all cursor-grab active:cursor-grabbing"
                       >
                         {/* Title and Company */}
                         <div

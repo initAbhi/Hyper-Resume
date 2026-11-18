@@ -73,7 +73,7 @@ export function ProductFeaturesTabs() {
     <section className="relative w-full overflow-hidden bg-[#0a0a0a] px-4 py-16 text-white sm:px-6 sm:py-24 lg:px-8">
       <div className="relative z-10 mx-auto max-w-5xl">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
             Complete job-seeker platform
           </p>
           <h2 className="mt-3 font-rubik text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -91,17 +91,32 @@ export function ProductFeaturesTabs() {
             aria-label="Product modules"
             className="no-visible-scrollbar flex max-w-full flex-row items-center gap-1 overflow-x-auto rounded-full bg-white/[0.04] p-1 sm:gap-1.5"
           >
-            {FEATURE_TABS.map((tab) => {
+            {FEATURE_TABS.map((tab, idx) => {
               const isActive = tab.value === active;
               return (
                 <button
                   key={tab.value}
+                  id={`feature-tab-${tab.value}`}
                   type="button"
                   role="tab"
                   aria-selected={isActive}
+                  aria-controls={`feature-panel-${tab.value}`}
+                  tabIndex={isActive ? 0 : -1}
                   onClick={() => setActive(tab.value)}
+                  onKeyDown={(e) => {
+                    let nextIdx = idx;
+                    if (e.key === 'ArrowRight') nextIdx = (idx + 1) % FEATURE_TABS.length;
+                    else if (e.key === 'ArrowLeft') nextIdx = (idx - 1 + FEATURE_TABS.length) % FEATURE_TABS.length;
+                    else if (e.key === 'Home') nextIdx = 0;
+                    else if (e.key === 'End') nextIdx = FEATURE_TABS.length - 1;
+                    else return;
+                    e.preventDefault();
+                    const nextTab = FEATURE_TABS[nextIdx];
+                    setActive(nextTab.value);
+                    document.getElementById(`feature-tab-${nextTab.value}`)?.focus();
+                  }}
                   className={cn(
-                    'relative shrink-0 rounded-full px-3.5 py-2 text-sm font-medium transition-colors sm:px-4',
+                    'relative shrink-0 rounded-full px-3.5 py-2 text-sm font-medium transition-colors sm:px-4 cursor-pointer',
                     isActive ? 'text-white' : 'text-zinc-400 hover:text-zinc-200',
                   )}
                 >
@@ -123,6 +138,10 @@ export function ProductFeaturesTabs() {
           <AnimatePresence mode="wait">
             <motion.div
               key={current.value}
+              id={`feature-panel-${current.value}`}
+              role="tabpanel"
+              aria-labelledby={`feature-tab-${current.value}`}
+              tabIndex={0}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}

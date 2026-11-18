@@ -75,7 +75,7 @@ export function CareerLoopSection() {
     <section className="relative w-full bg-[#0a0a0a] px-4 py-16 text-white sm:px-6 sm:py-24 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
             One platform
           </p>
           <h2 className="mt-3 font-rubik text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -145,7 +145,7 @@ export function CareerLoopSection() {
                     <Icon className="h-4 w-4" />
                   </span>
                   <h3 className="relative mt-3 text-sm font-semibold text-white">{mod.title}</h3>
-                  <p className="relative mt-1.5 flex-1 text-xs leading-relaxed text-zinc-500">{mod.body}</p>
+                  <p className="relative mt-1.5 flex-1 text-xs leading-relaxed text-zinc-400">{mod.body}</p>
                   <span className="relative mt-3 inline-flex items-center gap-1 text-xs font-medium text-blue-300/80 transition group-hover:text-blue-200">
                     Explore
                     <ArrowRight className="h-3 w-3 transition group-hover:translate-x-0.5" />

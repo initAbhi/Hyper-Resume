@@ -52,6 +52,9 @@ export interface NormalizedLayoutSettings {
   accentColor?: string;
   fontFamily?: 'sans' | 'serif' | 'mono';
   pageMode?: 'auto' | 'single' | 'multi';
+  showPhoto?: boolean;
+  showHighlights?: boolean;
+  pageSize?: 'A4' | 'US Letter';
 }
 
 export const LAYOUT_DENSITY_PRESETS: Record<
@@ -140,8 +143,8 @@ export function normalizeLayoutSettings(
 ): NormalizedLayoutSettings {
   const knownCustomKeys = Array.isArray(customSections)
     ? customSections
-        .filter((s) => Boolean(s?.id))
-        .map((s) => `${CUSTOM_SECTION_PREFIX}${s.id}` as ResumeSectionKey)
+      .filter((s) => Boolean(s?.id))
+      .map((s) => `${CUSTOM_SECTION_PREFIX}${s.id}` as ResumeSectionKey)
     : null;
   const knownCustomSet = knownCustomKeys ? new Set(knownCustomKeys) : null;
 
@@ -197,6 +200,9 @@ export function normalizeLayoutSettings(
     accentColor: layout?.accentColor,
     fontFamily: layout?.fontFamily,
     pageMode: layout?.pageMode,
+    showPhoto: layout?.showPhoto,
+    showHighlights: layout?.showHighlights,
+    pageSize: layout?.pageSize,
   };
 }
 
@@ -246,7 +252,11 @@ export function detectSectionKeyFromHeading(
 ): ResumeSectionKey | null {
   const normalized = (headingText || '').trim().toLowerCase();
   if (!normalized) return null;
-  if (normalized.includes('summary') || normalized.includes('profile')) {
+  if (
+    normalized.includes('summary') ||
+    normalized.includes('profile') ||
+    normalized.includes('overview')
+  ) {
     return 'summary';
   }
   if (
@@ -346,8 +356,10 @@ export function applyResumeLayoutToDom(
     const preMarked = section.dataset.resumeSection;
     const headingEl = section.querySelector('h2, h3');
     const detectedKey: ResumeSectionKey | null =
-      preMarked && isCustomSectionKey(preMarked)
-        ? preMarked
+      preMarked &&
+        (isCustomSectionKey(preMarked) ||
+          (DEFAULT_SECTION_ORDER as string[]).includes(preMarked))
+        ? (preMarked as ResumeSectionKey)
         : detectSectionKeyFromHeading(headingEl?.textContent);
     if (!detectedKey) continue;
 
@@ -358,9 +370,13 @@ export function applyResumeLayoutToDom(
 
     if (hiddenSet.has(detectedKey)) {
       section.style.display = 'none';
+      section.hidden = true;
+      section.setAttribute('aria-hidden', 'true');
       section.dataset.hrHidden = 'true';
     } else {
       section.style.display = '';
+      section.hidden = false;
+      section.removeAttribute('aria-hidden');
       delete section.dataset.hrHidden;
     }
 
@@ -374,6 +390,12 @@ export function applyResumeLayoutToDom(
   }
 
   for (const parent of sectionParents) {
+    // Preserve intentional multi-column CSS grids (e.g. ExecutiveTemplate's 2-column Education/Skills grid)
+    const isMultiColGrid =
+      parent.className.includes('grid-cols-') && !parent.className.includes('grid-cols-1 ');
+    if (isMultiColGrid) {
+      continue;
+    }
     if (!isDefaultOrder || !isDefaultSpacing) {
       parent.style.display = 'flex';
       parent.style.flexDirection = 'column';
@@ -387,13 +409,14 @@ export function applyResumeLayoutToDom(
     }
   }
 
-  // 2. Page Margin Application (respecting templates with flush full-bleed sidebars)
+  // 2. Page Margin Application (respecting templates with flush full-bleed sidebars/banners)
   const pageEls = Array.from(
     container.querySelectorAll<HTMLElement>('.resume-page-a4'),
   );
   for (const pageEl of pageEls) {
+    const isFlushFullBleed = /\bp-0!?(\s|$)/.test(pageEl.className);
     const cs = window.getComputedStyle(pageEl);
-    const hasOuterPadding = parseFloat(cs.paddingLeft || '0') > 4;
+    const hasOuterPadding = !isFlushFullBleed && parseFloat(cs.paddingLeft || '0') > 4;
     if (!isDefaultMargin && (hasOuterPadding || pageEl.dataset.hrMarginManaged === 'true')) {
       pageEl.style.padding = `${cfg.pageMargin}px`;
       pageEl.dataset.hrMarginManaged = 'true';
@@ -403,10 +426,23 @@ export function applyResumeLayoutToDom(
     }
   }
 
-  // 3. Read-first, Write-second Typography Scaling & Line Height
+  // 3. Read-first, Write-second Typography Scaling & Line Height (skip nested children of already-scaled elements to prevent double-scaling)
   const textEls = Array.from(
-    container.querySelectorAll<HTMLElement>('h1, h2, h3, p, li, span, a'),
-  ).filter((el) => !el.closest('svg') && !el.classList.contains('sr-only'));
+    container.querySelectorAll<HTMLElement>('h1, h2, h3, p, li, span, a, div[data-editable-field="true"]'),
+  ).filter((el) => {
+    if (
+      el.closest('svg') ||
+      el.closest('[data-export-exclude="true"]') ||
+      el.classList.contains('sr-only')
+    ) {
+      return false;
+    }
+    // Avoid double-scaling nested spans/links inside an already-scaled paragraph/list/heading
+    const parentScaled = el.parentElement?.closest<HTMLElement>(
+      'h1, h2, h3, p, li, div[data-editable-field="true"]',
+    );
+    return !parentScaled || !container.contains(parentScaled);
+  });
 
   // Pass A (Read baseline font sizes once before mutating any inline fontSize)
   const baseSizes = textEls.map((el) => {

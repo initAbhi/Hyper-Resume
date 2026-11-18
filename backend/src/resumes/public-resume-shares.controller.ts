@@ -18,15 +18,10 @@ import {
 } from './resume-shares.service.js';
 import { RecordShareEventDto } from './dto/update-resume-share.dto.js';
 import { ExportPdfDto } from './dto/export-pdf.dto.js';
+import { createPublicRateLimiter } from '../common/utils/public-rate-limit.util.js';
 
 function extractViewerContext(req: Request): ViewerTelemetryContext {
-  const forwarded = req.headers['x-forwarded-for'];
-  const clientIp =
-    (Array.isArray(forwarded)
-      ? forwarded[0]
-      : forwarded?.split(',')[0]?.trim()) ||
-    req.ip ||
-    'unknown';
+  const clientIp = req.ip || req.socket?.remoteAddress || 'unknown';
   const uaHeader = req.headers['user-agent'];
   const refHeader = req.headers['referer'] || req.headers['referrer'];
 
@@ -39,6 +34,10 @@ function extractViewerContext(req: Request): ViewerTelemetryContext {
 
 @Controller('public/resumes')
 export class PublicResumeSharesController {
+  private readonly enforceEventLimit = createPublicRateLimiter(40, 10 * 60 * 1000);
+  private readonly enforceDocxLimit = createPublicRateLimiter(15, 10 * 60 * 1000);
+  private readonly enforcePdfLimit = createPublicRateLimiter(10, 10 * 60 * 1000);
+
   constructor(private readonly sharesService: ResumeSharesService) {}
 
   @Get(':slug')
@@ -62,6 +61,7 @@ export class PublicResumeSharesController {
     @Body() dto: RecordShareEventDto,
     @Req() req: Request,
   ) {
+    this.enforceEventLimit(req);
     return this.sharesService.recordPublicEvent(
       slug,
       dto.eventType,
@@ -76,6 +76,7 @@ export class PublicResumeSharesController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
+    this.enforceDocxLimit(req);
     const normalizedSize = pageSize === 'US Letter' ? 'US Letter' : 'A4';
     const result = await this.sharesService.exportPublicDocx(
       slug,
@@ -103,6 +104,7 @@ export class PublicResumeSharesController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
+    this.enforcePdfLimit(req);
     const result = await this.sharesService.exportPublicPdf(
       slug,
       dto,

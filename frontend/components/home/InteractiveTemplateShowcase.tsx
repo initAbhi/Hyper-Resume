@@ -162,7 +162,7 @@ export function InteractiveTemplateShowcase() {
     <div className="w-full space-y-8 text-white sm:space-y-10">
       <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
         <div className="max-w-2xl space-y-3">
-          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
             10 ATS-verified templates
           </p>
           <h2 className="font-rubik text-3xl font-semibold tracking-tight text-white sm:text-4xl">
@@ -250,7 +250,7 @@ export function InteractiveTemplateShowcase() {
               <div className="flex items-baseline justify-between gap-2 pt-3.5">
                 <div>
                   <h3 className="text-sm font-semibold text-white">{tpl.name}</h3>
-                  <p className="mt-0.5 line-clamp-1 text-[11px] text-zinc-500">{tpl.desc}</p>
+                  <p className="mt-0.5 line-clamp-1 text-[11px] text-zinc-400">{tpl.desc}</p>
                 </div>
                 <span className="shrink-0 rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[10px] font-medium text-zinc-400">
                   {tpl.tag}

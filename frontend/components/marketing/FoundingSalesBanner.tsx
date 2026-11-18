@@ -83,7 +83,7 @@ export function FoundingSalesBanner() {
             href="/pricing?plan=pro_lifetime"
             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white text-zinc-950 hover:bg-emerald-100 font-semibold text-[11px] transition-colors shrink-0"
           >
-            <span>Claim ₹999 Lifetime</span>
+            <span>Claim Lifetime Offer</span>
             <ArrowRight className="w-3 h-3" />
           </Link>
         </div>

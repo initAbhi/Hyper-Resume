@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X, Check, Palette, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import type { ResumeLayoutSettings } from '@/lib/api-client';
 import {
@@ -25,10 +25,10 @@ export const FONT_OPTIONS: Array<{
   name: string;
   preview: string;
 }> = [
-  { id: 'sans', name: 'Inter (Sans-serif)', preview: 'The quick brown fox' },
-  { id: 'serif', name: 'Georgia (Serif)', preview: 'The quick brown fox' },
-  { id: 'mono', name: 'Roboto Mono (Tech)', preview: 'The quick brown fox' },
-];
+    { id: 'sans', name: 'Inter (Sans-serif)', preview: 'The quick brown fox' },
+    { id: 'serif', name: 'Georgia (Serif)', preview: 'The quick brown fox' },
+    { id: 'mono', name: 'Roboto Mono (Tech)', preview: 'The quick brown fox' },
+  ];
 
 interface DesignPanelProps {
   isOpen: boolean;
@@ -63,6 +63,15 @@ export function DesignPanel({
   layout,
   onLayoutChange,
 }: DesignPanelProps) {
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const spacing = normalizeLayoutSettings(layout);
@@ -75,15 +84,16 @@ export function DesignPanel({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-50 flex justify-end pointer-events-none">
+      {/* Backdrop (mobile only, no blur) */}
       <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity animate-in fade-in"
+        className="fixed inset-0 bg-black/20 lg:hidden pointer-events-auto transition-opacity animate-in fade-in"
         onClick={onClose}
+        aria-hidden="true"
       />
 
       {/* Slide-in Right Panel */}
-      <div className="relative w-full max-w-[380px] bg-white dark:bg-zinc-900 h-full shadow-2xl border-l border-zinc-200 dark:border-zinc-800 flex flex-col z-10 animate-in slide-in-from-right duration-200">
+      <div className="relative w-full max-w-[380px] bg-white dark:bg-zinc-900 h-full shadow-2xl border-l border-zinc-200 dark:border-zinc-800 flex flex-col z-10 animate-in slide-in-from-right duration-200 pointer-events-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
           <div className="flex items-center gap-2 font-bold text-sm text-zinc-900 dark:text-zinc-100">
@@ -91,8 +101,10 @@ export function DesignPanel({
             <span>Design & Typography</span>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1 rounded-md text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            aria-label="Close design panel"
+            className="p-1 rounded-md text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -102,11 +114,20 @@ export function DesignPanel({
         <div className="flex-1 overflow-y-auto p-5 space-y-6 text-xs">
           {/* 1. Accent Color Palette */}
           <div className="space-y-2.5">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <span className="font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider text-[11px]">
                 Accent Color
               </span>
-              <span className="font-mono text-[10px] text-zinc-500">{accentColor}</span>
+              <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="color"
+                  aria-label="Custom accent color"
+                  value={/^#[0-9a-f]{6}$/i.test(accentColor) ? accentColor : '#2563eb'}
+                  onChange={(e) => onAccentColorChange(e.target.value)}
+                  className="w-5 h-5 rounded border border-zinc-300 dark:border-zinc-700 cursor-pointer bg-transparent p-0"
+                />
+                <span className="font-mono text-[10px] text-zinc-500">{accentColor}</span>
+              </label>
             </div>
 
             <div className="grid grid-cols-4 gap-2.5 pt-1">
@@ -115,11 +136,10 @@ export function DesignPanel({
                   key={swatch.id}
                   type="button"
                   onClick={() => onAccentColorChange(swatch.hex)}
-                  className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all cursor-pointer ${
-                    accentColor.toLowerCase() === swatch.hex.toLowerCase()
+                  className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all cursor-pointer ${accentColor.toLowerCase() === swatch.hex.toLowerCase()
                       ? 'border-zinc-900 dark:border-white ring-2 ring-zinc-900/10 dark:ring-white/20 bg-zinc-50 dark:bg-zinc-800/80 shadow-xs scale-102'
                       : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'
-                  }`}
+                    }`}
                 >
                   <div
                     className="w-7 h-7 rounded-full shadow-inner flex items-center justify-center text-white"
@@ -148,24 +168,22 @@ export function DesignPanel({
                   key={f.id}
                   type="button"
                   onClick={() => onFontFamilyChange(f.id)}
-                  className={`w-full p-3 rounded-xl border text-left flex items-center justify-between transition-all ${
-                    fontFamily === f.id
+                  className={`w-full p-3 rounded-xl border text-left flex items-center justify-between transition-all ${fontFamily === f.id
                       ? 'border-blue-600 ring-2 ring-blue-600/20 bg-blue-50/20 dark:bg-blue-950/20'
                       : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700'
-                  }`}
+                    }`}
                 >
                   <div>
                     <div className="font-semibold text-zinc-900 dark:text-zinc-100 text-xs">
                       {f.name}
                     </div>
                     <div
-                      className={`text-[11px] text-zinc-500 mt-0.5 ${
-                        f.id === 'serif'
+                      className={`text-[11px] text-zinc-500 mt-0.5 ${f.id === 'serif'
                           ? 'font-serif'
                           : f.id === 'mono'
-                          ? 'font-mono'
-                          : 'font-sans'
-                      }`}
+                            ? 'font-mono'
+                            : 'font-sans'
+                        }`}
                     >
                       {f.preview}
                     </div>
@@ -222,11 +240,10 @@ export function DesignPanel({
                         pageMargin: p.pageMargin,
                       })
                     }
-                    className={`p-2 rounded-lg border text-center transition-colors cursor-pointer ${
-                      isActive
+                    className={`p-2 rounded-lg border text-center transition-colors cursor-pointer ${isActive
                         ? 'border-blue-600 bg-blue-50/70 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 font-bold'
                         : 'border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-300 font-medium'
-                    }`}
+                      }`}
                   >
                     <span className="block text-[11px] leading-tight">
                       {presetKey === 'compact'
@@ -258,11 +275,10 @@ export function DesignPanel({
                       key={mode.id}
                       type="button"
                       onClick={() => updateSpacingField({ pageMode: mode.id as any })}
-                      className={`p-2 rounded-lg border text-center transition-colors cursor-pointer ${
-                        isSelected
+                      className={`p-2 rounded-lg border text-center transition-colors cursor-pointer ${isSelected
                           ? 'border-blue-600 bg-blue-50/70 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 font-bold'
                           : 'border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-300 font-medium'
-                      }`}
+                        }`}
                     >
                       <span className="block text-[11px] leading-tight font-semibold">{mode.label}</span>
                       <span className="block text-[9.5px] text-zinc-500 font-normal mt-0.5">{mode.desc}</span>
@@ -370,36 +386,45 @@ export function DesignPanel({
 
           {/* 3. Profile Photo Controls */}
           <div className="space-y-3 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div>
-                <span className="font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider text-[11px] block">
+                <label
+                  htmlFor="design-show-photo-switch"
+                  className="font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider text-[11px] block cursor-pointer"
+                >
                   Profile Photo Avatar
-                </span>
-                <span className="text-[11px] text-zinc-500">
+                </label>
+                <span id="design-show-photo-desc" className="text-[11px] text-zinc-600 dark:text-zinc-400">
                   Display circular headshot on applicable templates
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => onShowPhotoChange(!showPhoto)}
-                className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
-                  showPhoto ? 'bg-blue-600' : 'bg-zinc-300 dark:bg-zinc-700'
-                }`}
-              >
-                <div
-                  className={`w-4 h-4 rounded-full bg-white absolute top-0.5 transition-transform ${
-                    showPhoto ? 'left-4.5' : 'left-0.5'
-                  }`}
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  id="design-show-photo-switch"
+                  type="checkbox"
+                  role="switch"
+                  checked={showPhoto}
+                  aria-describedby="design-show-photo-desc"
+                  onChange={(e) => onShowPhotoChange(e.target.checked)}
+                  className="sr-only peer"
                 />
-              </button>
+                <span
+                  aria-hidden="true"
+                  className="w-9 h-5 rounded-full bg-zinc-300 dark:bg-zinc-700 peer-checked:bg-blue-600 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-600 transition-colors relative block after:content-[''] after:w-4 after:h-4 after:rounded-full after:bg-white after:shadow-xs after:absolute after:top-0.5 after:left-0.5 after:transition-transform peer-checked:after:translate-x-4"
+                />
+              </label>
             </div>
 
             {showPhoto && (
               <div className="space-y-1.5 pt-1 animate-in fade-in">
-                <label className="text-[11px] font-medium text-zinc-700 dark:text-zinc-300">
+                <label
+                  htmlFor="design-photo-url"
+                  className="text-[11px] font-medium text-zinc-700 dark:text-zinc-300 block"
+                >
                   Photo URL or Image Link
                 </label>
                 <input
+                  id="design-photo-url"
                   type="text"
                   placeholder="https://example.com/avatar.jpg"
                   value={photoUrl}
@@ -412,28 +437,33 @@ export function DesignPanel({
 
           {/* 4. ATS Keyword Highlighting Toggle */}
           <div className="space-y-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div>
-                <span className="font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider text-[11px] block">
+                <label
+                  htmlFor="design-show-highlights-switch"
+                  className="font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider text-[11px] block cursor-pointer"
+                >
                   ATS Keyword Highlighting
-                </span>
-                <span className="text-[11px] text-zinc-500">
+                </label>
+                <span id="design-show-highlights-desc" className="text-[11px] text-zinc-600 dark:text-zinc-400">
                   Highlight verified skills & keywords with soft contrast
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => onShowHighlightsChange(!showHighlights)}
-                className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
-                  showHighlights ? 'bg-rose-500' : 'bg-zinc-300 dark:bg-zinc-700'
-                }`}
-              >
-                <div
-                  className={`w-4 h-4 rounded-full bg-white absolute top-0.5 transition-transform ${
-                    showHighlights ? 'left-4.5' : 'left-0.5'
-                  }`}
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  id="design-show-highlights-switch"
+                  type="checkbox"
+                  role="switch"
+                  checked={showHighlights}
+                  aria-describedby="design-show-highlights-desc"
+                  onChange={(e) => onShowHighlightsChange(e.target.checked)}
+                  className="sr-only peer"
                 />
-              </button>
+                <span
+                  aria-hidden="true"
+                  className="w-9 h-5 rounded-full bg-zinc-300 dark:bg-zinc-700 peer-checked:bg-rose-600 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-rose-600 transition-colors relative block after:content-[''] after:w-4 after:h-4 after:rounded-full after:bg-white after:shadow-xs after:absolute after:top-0.5 after:left-0.5 after:transition-transform peer-checked:after:translate-x-4"
+                />
+              </label>
             </div>
           </div>
         </div>
@@ -441,8 +471,9 @@ export function DesignPanel({
         {/* Footer */}
         <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
           <button
+            type="button"
             onClick={onClose}
-            className="w-full py-2.5 px-4 bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 text-white dark:text-zinc-900 text-xs font-bold rounded-lg transition-colors"
+            className="w-full py-2.5 px-4 bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 text-xs font-bold rounded-lg transition-colors cursor-pointer"
           >
             Apply Design
           </button>

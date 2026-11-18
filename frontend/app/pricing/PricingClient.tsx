@@ -90,7 +90,7 @@ const FALLBACK_PRO_PLANS: PricingPlan[] = [
   {
     id: 'pro_6month',
     name: 'HypeResume Pro — 6 Months',
-    tagline: 'Extended half-year job switch protection at ₹200/month effective rate.',
+    tagline: 'Extended half-year job switch protection with 50% savings vs monthly.',
     amountMinor: 120000,
     currency: 'INR',
     displayPrice: '₹1,200',
@@ -471,9 +471,9 @@ export function PricingClient() {
             <h2 className="text-xl sm:text-2xl font-extrabold">
               Pay {currency === 'INR' ? '₹999' : '$19'} once. Get Lifetime HypeResume Pro forever.
             </h2>
-            <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+            <p className="text-xs sm:text-sm text-zinc-200 leading-relaxed">
               {promo.bannerText ||
-                'To validate HypeResume with our earliest job seekers, our first 200 founding members unlock permanent Lifetime Pro access at ₹999 ($19). Live seat count verified directly from our database.'}
+                `To validate HypeResume with our earliest job seekers, our first ${promo.totalCap} founding members unlock permanent Lifetime Pro access at ${currency === 'INR' ? '₹999' : '$19'}. Live seat count verified directly from our database.`}
             </p>
           </div>
           <Button
@@ -534,7 +534,7 @@ export function PricingClient() {
                     <span className="text-4xl font-extrabold text-zinc-900 dark:text-zinc-50 font-mono">
                       {price.displayPrice}
                     </span>
-                    <span className="text-xs text-zinc-500 font-medium">
+                    <span className="text-xs text-zinc-600 dark:text-zinc-400 font-medium">
                       / {plan.cadenceLabel || (plan.isLifetime ? 'lifetime' : 'pass')}
                     </span>
                   </div>
@@ -551,7 +551,7 @@ export function PricingClient() {
                         AI Operations
                       </span>
                     </div>
-                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
                       Unlimited Pro
                     </span>
                   </div>
@@ -634,42 +634,42 @@ export function PricingClient() {
                   AI Bullet Rewrites & STAR Improvements
                 </td>
                 <td className="py-3 px-4 text-center">Up to 5 welcome credits</td>
-                <td className="py-3 px-4 text-center font-semibold text-emerald-600">Unlimited during active pass</td>
+                <td className="py-3 px-4 text-center font-semibold text-emerald-700 dark:text-emerald-400">Unlimited during active pass</td>
               </tr>
               <tr>
                 <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
                   Evidence-Quoted JD Matching & Tailoring
                 </td>
                 <td className="py-3 px-4 text-center">Uses welcome credits (1–2/run)</td>
-                <td className="py-3 px-4 text-center font-semibold text-emerald-600">Unlimited during active pass</td>
+                <td className="py-3 px-4 text-center font-semibold text-emerald-700 dark:text-emerald-400">Unlimited during active pass</td>
               </tr>
               <tr>
                 <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
                   AI Cover Letters & LinkedIn Optimizer
                 </td>
                 <td className="py-3 px-4 text-center">2 credits per generation</td>
-                <td className="py-3 px-4 text-center font-semibold text-emerald-600">Unlimited during active pass</td>
+                <td className="py-3 px-4 text-center font-semibold text-emerald-700 dark:text-emerald-400">Unlimited during active pass</td>
               </tr>
               <tr>
                 <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
                   Mock Interview Simulator & Weak-Area Drill
                 </td>
                 <td className="py-3 px-4 text-center">2 credits per session</td>
-                <td className="py-3 px-4 text-center font-semibold text-emerald-600">Unlimited during active pass</td>
+                <td className="py-3 px-4 text-center font-semibold text-emerald-700 dark:text-emerald-400">Unlimited during active pass</td>
               </tr>
               <tr>
                 <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
                   10 ATS Templates & Unwatermarked PDF/DOCX Export
                 </td>
-                <td className="py-3 px-4 text-center text-emerald-600 font-medium">Included Free</td>
-                <td className="py-3 px-4 text-center text-emerald-600 font-medium">Included</td>
+                <td className="py-3 px-4 text-center text-emerald-700 dark:text-emerald-400 font-medium">Included Free</td>
+                <td className="py-3 px-4 text-center text-emerald-700 dark:text-emerald-400 font-medium">Included</td>
               </tr>
               <tr>
                 <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
                   Forced Auto-Renewals
                 </td>
-                <td className="py-3 px-4 text-center text-zinc-400">None</td>
-                <td className="py-3 px-4 text-center text-emerald-600 font-semibold">
+                <td className="py-3 px-4 text-center text-zinc-600 dark:text-zinc-400">None</td>
+                <td className="py-3 px-4 text-center text-emerald-700 dark:text-emerald-400 font-semibold">
                   None (Transparent One-Time Passes)
                 </td>
               </tr>
@@ -723,13 +723,25 @@ export function PricingClient() {
         <div
           role="dialog"
           aria-modal="true"
+          aria-labelledby="checkout-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && checkoutStep !== 'processing') {
+              setIsCheckoutOpen(false);
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' && checkoutStep !== 'processing') {
+              setIsCheckoutOpen(false);
+            }
+          }}
           className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs"
         >
           <div className="relative w-full max-w-md max-h-[92vh] flex flex-col rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl p-5 sm:p-6 overflow-hidden">
             <button
+              type="button"
               onClick={() => setIsCheckoutOpen(false)}
               aria-label="Close checkout dialog"
-              className="absolute top-3 right-3 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-md cursor-pointer z-10"
+              className="absolute top-3 right-3 text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100 p-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-md cursor-pointer z-10"
             >
               <X className="w-5 h-5" />
             </button>
@@ -740,7 +752,7 @@ export function PricingClient() {
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <CreditCard className="w-5 h-5 text-blue-600" />
-                  <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
+                  <h3 id="checkout-modal-title" className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
                     Order Summary
                   </h3>
                 </div>
@@ -786,11 +798,13 @@ export function PricingClient() {
             {checkoutStep === 'processing' && (
               <div className="py-8 text-center flex flex-col items-center justify-center">
                 <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
-                <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">
-                  {orderData ? 'Redirecting to Dodo Payments...' : 'Verifying Payment with Dodo Gateway...'}
+                <h4 id="checkout-modal-title" className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">
+                  {orderData ? 'Redirecting to Dodo Payments...' : 'Preparing Secure Checkout Session...'}
                 </h4>
-                <p className="text-xs text-zinc-500 mt-1">
-                  Confirming cryptographic settlement directly with Dodo Payments. Do not close this window.
+                <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
+                  {orderData
+                    ? 'Opening encrypted Dodo Payments checkout. Please wait...'
+                    : 'Creating your order and verifying gateway status. Do not close this window.'}
                 </p>
               </div>
             )}
@@ -841,10 +855,11 @@ export function PricingClient() {
                   >
                     Close
                   </Button>
-                  <Link href="/app/resumes" className="flex-1">
-                    <Button variant="primary" size="md" className="w-full justify-center">
-                      Go to Resumes
-                    </Button>
+                  <Link
+                    href="/app/resumes"
+                    className="flex-1 inline-flex items-center justify-center rounded-lg bg-[#285FEA] hover:bg-[#1E4BC8] text-white text-sm font-semibold h-10 px-4 transition-colors"
+                  >
+                    Go to Resumes
                   </Link>
                 </div>
               </div>

@@ -34,13 +34,14 @@ export default function AdminOverviewPage() {
   const [analytics, setAnalytics] = useState<AdminAnalyticsOverview | null>(null);
   const [recentPayments, setRecentPayments] = useState<AdminPaymentOrder[]>([]);
   const [paymentSettings, setPaymentSettings] = useState<AdminPaymentSettings | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'behavior' | 'performance'>('overview');
-  const [chartPeriod, setChartPeriod] = useState<'daily' | 'monthly' | 'yearly'>('monthly');
   const [loading, setLoading] = useState(true);
   const [updatingMode, setUpdatingMode] = useState(false);
+  const [confirmLive, setConfirmLive] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const loadDashboardData = async () => {
     setLoading(true);
+    setErrorMessage(null);
     try {
       const [statsData, analyticsData, paymentsData, settingsData] = await Promise.all([
         apiClient.getAdminStats(),
@@ -54,6 +55,7 @@ export default function AdminOverviewPage() {
       setPaymentSettings(settingsData);
     } catch (err: unknown) {
       logger.error('Failed to load dashboard data', err);
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to load dashboard data.');
     } finally {
       setLoading(false);
     }
@@ -63,51 +65,45 @@ export default function AdminOverviewPage() {
     loadDashboardData();
   }, []);
 
-  const handleToggleMode = async (targetMode: 'test_mode' | 'live_mode') => {
+  const executeToggleMode = async (targetMode: 'test_mode' | 'live_mode') => {
     if (!paymentSettings || paymentSettings.mode === targetMode || updatingMode) return;
-    if (targetMode === 'live_mode') {
-      const confirmed = window.confirm(
-        '⚠️ Switch Payment Gateway to LIVE PRODUCTION?\n\nReal customer cards and UPI will be charged real money.',
-      );
-      if (!confirmed) return;
-    }
-
     setUpdatingMode(true);
+    setConfirmLive(false);
+    setErrorMessage(null);
     try {
       const updated = await apiClient.updateAdminPaymentMode(targetMode);
       setPaymentSettings(updated);
       const newStats = await apiClient.getAdminStats().catch(() => null);
       if (newStats) setStats(newStats);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to switch payment mode');
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to switch payment mode');
     } finally {
       setUpdatingMode(false);
     }
   };
 
+  const handleToggleMode = (targetMode: 'test_mode' | 'live_mode') => {
+    if (!paymentSettings || paymentSettings.mode === targetMode || updatingMode) return;
+    if (targetMode === 'live_mode') {
+      setConfirmLive(true);
+      return;
+    }
+    void executeToggleMode(targetMode);
+  };
+
   const isLive = paymentSettings?.mode === 'live_mode';
 
-  // SVG Chart rendering helper based on monthly data
-  const chartPoints = analytics?.chartData || [
-    { month: 'Jan', visitors: 280, pageViews: 650 },
-    { month: 'Feb', visitors: 340, pageViews: 780 },
-    { month: 'Mar', visitors: 410, pageViews: 820 },
-    { month: 'Apr', visitors: 480, pageViews: 900 },
-    { month: 'May', visitors: 520, pageViews: 950 },
-    { month: 'Jun', visitors: 490, pageViews: 880 },
-    { month: 'Jul', visitors: 530, pageViews: 920 },
-    { month: 'Aug', visitors: 610, pageViews: 1050 },
-    { month: 'Sep', visitors: 580, pageViews: 980 },
-    { month: 'Oct', visitors: 720, pageViews: 1180 },
-    { month: 'Nov', visitors: 890, pageViews: 1350 },
-    { month: 'Dec', visitors: 940, pageViews: 1420 },
-  ];
+  // Use real analytics chartData only (no fabricated fallback traffic numbers — FN-42)
+  const chartPoints = analytics?.chartData || [];
 
-  // Compute SVG polyline coords (width: 900, height: 260)
-  const maxVal = 1600;
+  // Dynamic Y-axis scaling instead of hardcoded 1600 (FN-42)
+  const maxVal = Math.max(
+    10,
+    ...chartPoints.flatMap((p) => [p.visitors || 0, p.pageViews || 0]),
+  ) * 1.15;
   const svgWidth = 900;
   const svgHeight = 240;
-  const stepX = svgWidth / (chartPoints.length - 1);
+  const stepX = chartPoints.length > 1 ? svgWidth / (chartPoints.length - 1) : svgWidth;
 
   const visitorPoints = chartPoints
     .map((p, i) => `${i * stepX},${svgHeight - (p.visitors / maxVal) * svgHeight}`)
@@ -117,55 +113,58 @@ export default function AdminOverviewPage() {
     .map((p, i) => `${i * stepX},${svgHeight - (p.pageViews / maxVal) * svgHeight}`)
     .join(' ');
 
-  const visitorArea = `0,${svgHeight} ${visitorPoints} ${(chartPoints.length - 1) * stepX},${svgHeight}`;
-  const pageViewArea = `0,${svgHeight} ${pageViewPoints} ${(chartPoints.length - 1) * stepX},${svgHeight}`;
+  const visitorArea = chartPoints.length > 0 ? `0,${svgHeight} ${visitorPoints} ${(chartPoints.length - 1) * stepX},${svgHeight}` : '';
+  const pageViewArea = chartPoints.length > 0 ? `0,${svgHeight} ${pageViewPoints} ${(chartPoints.length - 1) * stepX},${svgHeight}` : '';
 
   return (
     <div className="space-y-6">
-      {/* Top Tabs Bar matching screenshot */}
-      <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-        <div className="flex items-center gap-8 text-sm font-semibold">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`relative pb-3 transition ${
-              activeTab === 'overview'
-                ? 'text-[#285FEA] font-bold after:absolute after:bottom-[-13px] after:left-0 after:right-0 after:h-0.5 after:bg-[#285FEA]'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            Overview
-          </button>
-          <button
-            onClick={() => setActiveTab('behavior')}
-            className={`relative pb-3 transition ${
-              activeTab === 'behavior'
-                ? 'text-[#285FEA] font-bold after:absolute after:bottom-[-13px] after:left-0 after:right-0 after:h-0.5 after:bg-[#285FEA]'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            User Behavior
-          </button>
-          <button
-            onClick={() => setActiveTab('performance')}
-            className={`relative pb-3 transition ${
-              activeTab === 'performance'
-                ? 'text-[#285FEA] font-bold after:absolute after:bottom-[-13px] after:left-0 after:right-0 after:h-0.5 after:bg-[#285FEA]'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            Performance & CAPI
-          </button>
+      {/* Header Bar */}
+      <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-3">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-50 tracking-tight">Admin Overview</h1>
+          <p className="text-xs text-slate-500 dark:text-zinc-400">Live platform telemetry, payment conversions, and gateway control.</p>
         </div>
 
         <button
+          type="button"
           onClick={loadDashboardData}
           disabled={loading}
-          className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition shadow-2xs"
+          className="flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition shadow-2xs cursor-pointer"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
           <span>Refresh Data</span>
         </button>
       </div>
+
+      {errorMessage && (
+        <div role="alert" className="rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 p-3 text-xs text-rose-700 dark:text-rose-200">
+          {errorMessage}
+        </div>
+      )}
+
+      {confirmLive && (
+        <div className="rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <span className="font-semibold text-amber-900 dark:text-amber-200">
+            Switch Payment Gateway to LIVE PRODUCTION? Real customer cards and UPI accounts will be charged.
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void executeToggleMode('live_mode')}
+              className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700 cursor-pointer"
+            >
+              Confirm Live Mode
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmLive(false)}
+              className="px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 4 TOP KPI METRIC CARDS matching screenshot */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -293,37 +292,19 @@ export default function AdminOverviewPage() {
               </span>
             </div>
 
-            {/* Timeframe Selector */}
-            <div className="flex items-center rounded-xl bg-slate-100/80 p-1 text-xs font-semibold text-slate-600">
-              <button
-                onClick={() => setChartPeriod('daily')}
-                className={`rounded-lg px-2.5 py-1 transition ${
-                  chartPeriod === 'daily' ? 'bg-white text-slate-900 shadow-2xs' : 'hover:text-slate-900'
-                }`}
-              >
-                Daily
-              </button>
-              <button
-                onClick={() => setChartPeriod('monthly')}
-                className={`rounded-lg px-2.5 py-1 transition ${
-                  chartPeriod === 'monthly' ? 'bg-white text-slate-900 shadow-2xs' : 'hover:text-slate-900'
-                }`}
-              >
-                Monthly
-              </button>
-              <button
-                onClick={() => setChartPeriod('yearly')}
-                className={`rounded-lg px-2.5 py-1 transition ${
-                  chartPeriod === 'yearly' ? 'bg-white text-slate-900 shadow-2xs' : 'hover:text-slate-900'
-                }`}
-              >
-                Yearly
-              </button>
-            </div>
+            {/* Monthly Telemetry Badge */}
+            <span className="rounded-xl bg-slate-100 dark:bg-zinc-800 px-3 py-1 text-xs font-semibold text-slate-600 dark:text-zinc-300">
+              Monthly View
+            </span>
           </div>
         </div>
 
         {/* SVG Interactive Smooth Wave Chart */}
+        {chartPoints.length === 0 ? (
+          <div className="py-12 text-center text-xs text-slate-500 dark:text-zinc-400">
+            {loading ? 'Loading real-time traffic telemetry...' : 'No traffic telemetry recorded yet.'}
+          </div>
+        ) : (
         <div className="relative pt-4">
           <svg
             viewBox={`0 0 ${svgWidth} ${svgHeight}`}
@@ -377,17 +358,15 @@ export default function AdminOverviewPage() {
             ))}
           </div>
         </div>
+        )}
       </div>
 
       {/* BOTTOM SECTION: Referrers & Recent Payments */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Top Traffic & Sources Breakdown */}
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs space-y-4">
+        <div className="rounded-2xl border border-slate-200/90 dark:border-zinc-800 bg-white dark:bg-[#14171C] p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-bold text-slate-900">Top Sources</h4>
-            <span className="text-[11px] font-semibold text-[#285FEA] hover:underline cursor-pointer">
-              View Analytics
-            </span>
+            <h4 className="text-sm font-bold text-slate-900 dark:text-zinc-100">Top Sources</h4>
           </div>
 
           <div className="space-y-3 pt-1">
@@ -457,8 +436,8 @@ export default function AdminOverviewPage() {
                       <td className="px-4 py-3 text-slate-900 font-semibold">
                         {p.planName}
                       </td>
-                      <td className="px-4 py-3 text-slate-900 font-bold">
-                        ₹{(p.amountMinor / 100).toFixed(0)}
+                      <td className="px-4 py-3 text-slate-900 dark:text-zinc-100 font-bold">
+                        {p.currency === 'USD' ? `$${(p.amountMinor / 100).toFixed(2)}` : `₹${(p.amountMinor / 100).toFixed(0)}`}
                       </td>
                       <td className="px-4 py-3">
                         <span

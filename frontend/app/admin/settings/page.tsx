@@ -33,12 +33,15 @@ export default function AdminSettingsPage() {
   const [promoBannerText, setPromoBannerText] = useState('');
   const [savingPromo, setSavingPromo] = useState(false);
   const [promoSaveMsg, setPromoSaveMsg] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [confirmLive, setConfirmLive] = useState(false);
   const [loading, setLoading] = useState(true);
   const [updatingMode, setUpdatingMode] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const loadSettings = async () => {
     setLoading(true);
+    setErrorMessage(null);
     try {
       const [data, promo] = await Promise.all([
         apiClient.getAdminPaymentSettings(),
@@ -53,6 +56,7 @@ export default function AdminSettingsPage() {
       }
     } catch (err) {
       logger.error('Failed to load settings', err);
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to load settings.');
     } finally {
       setLoading(false);
     }
@@ -66,6 +70,7 @@ export default function AdminSettingsPage() {
     e.preventDefault();
     setSavingPromo(true);
     setPromoSaveMsg(null);
+    setErrorMessage(null);
     try {
       const updated = await apiClient.updateAdminPromoSettings({
         enabled: promoEnabled,
@@ -75,36 +80,41 @@ export default function AdminSettingsPage() {
       setPromoSettings(updated);
       setPromoSaveMsg('Founding Lifetime Promo settings saved to database.');
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to update promo settings');
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to update promo settings');
     } finally {
       setSavingPromo(false);
     }
   };
 
-  const handleToggleMode = async (targetMode: 'test_mode' | 'live_mode') => {
+  const executeToggleMode = async (targetMode: 'test_mode' | 'live_mode') => {
     if (!settings || settings.mode === targetMode || updatingMode) return;
-    if (targetMode === 'live_mode') {
-      const confirmed = window.confirm(
-        '⚠️ Switch Payment Gateway to LIVE PRODUCTION?\n\nReal customer credit cards and UPI accounts will be charged real money.',
-      );
-      if (!confirmed) return;
-    }
-
     setUpdatingMode(true);
+    setConfirmLive(false);
+    setErrorMessage(null);
     try {
       const updated = await apiClient.updateAdminPaymentMode(targetMode);
       setSettings(updated);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to switch payment mode');
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to switch payment mode');
     } finally {
       setUpdatingMode(false);
     }
   };
 
+  const handleToggleMode = (targetMode: 'test_mode' | 'live_mode') => {
+    if (!settings || settings.mode === targetMode || updatingMode) return;
+    if (targetMode === 'live_mode') {
+      setConfirmLive(true);
+      return;
+    }
+    void executeToggleMode(targetMode);
+  };
+
   const copyToClipboard = (text: string, key: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedKey(key);
-    setTimeout(() => setCopiedKey(null), 2000);
+    navigator.clipboard?.writeText(text).then(() => {
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(null), 2000);
+    }).catch(() => {});
   };
 
   const isLive = settings?.mode === 'live_mode';
@@ -121,14 +131,45 @@ export default function AdminSettingsPage() {
         </div>
 
         <button
+          type="button"
           onClick={loadSettings}
           disabled={loading}
-          className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition shadow-2xs self-start"
+          className="flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition shadow-2xs self-start cursor-pointer"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
           <span>Refresh</span>
         </button>
       </div>
+
+      {errorMessage && (
+        <div role="alert" className="rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 p-3 text-xs text-rose-700 dark:text-rose-200">
+          {errorMessage}
+        </div>
+      )}
+
+      {confirmLive && (
+        <div className="rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <span className="font-semibold text-amber-900 dark:text-amber-200">
+            Switch Payment Gateway to LIVE PRODUCTION? Real customer cards and UPI accounts will be charged.
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void executeToggleMode('live_mode')}
+              className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700 cursor-pointer"
+            >
+              Confirm Live Mode
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmLive(false)}
+              className="px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 1. DODO PAYMENTS GATEWAY CONFIGURATION */}
       <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-xs space-y-6">
@@ -362,29 +403,29 @@ export default function AdminSettingsPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="rounded-xl border border-slate-200 p-4 space-y-1">
-            <div className="text-xs text-slate-400 font-medium">Dataset / Pixel ID</div>
-            <div className="font-mono font-bold text-slate-800 text-sm">
-              {process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID || 'Configured in env'}
+          <div className="rounded-xl border border-slate-200 dark:border-zinc-800 p-4 space-y-1">
+            <div className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Dataset / Pixel ID</div>
+            <div className="font-mono font-bold text-slate-800 dark:text-zinc-100 text-sm">
+              {process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID || 'Not configured'}
             </div>
-            <div className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
-              <CheckCircle2 className="h-3 w-3" /> HypeResume Web Active
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-slate-200 p-4 space-y-1">
-            <div className="text-xs text-slate-400 font-medium">Server Conversions API (CAPI)</div>
-            <div className="font-semibold text-slate-800 text-sm">Graph API v21.0</div>
-            <div className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
-              <CheckCircle2 className="h-3 w-3" /> Token Verified & Receiving
+            <div className={`text-[11px] font-semibold flex items-center gap-1 ${process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+              <CheckCircle2 className="h-3 w-3" /> {process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID ? 'Pixel Configured' : 'Disabled in Environment'}
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200 p-4 space-y-1">
-            <div className="text-xs text-slate-400 font-medium">Event Deduplication</div>
-            <div className="font-semibold text-slate-800 text-sm">orderId matching</div>
-            <div className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
-              <CheckCircle2 className="h-3 w-3" /> Zero Double-Counting
+          <div className="rounded-xl border border-slate-200 dark:border-zinc-800 p-4 space-y-1">
+            <div className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Server Conversions API (CAPI)</div>
+            <div className="font-semibold text-slate-800 dark:text-zinc-100 text-sm">Graph API v21.0</div>
+            <div className="text-[11px] text-slate-500 dark:text-zinc-400 font-semibold">
+              Managed via server environment
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 dark:border-zinc-800 p-4 space-y-1">
+            <div className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Event Deduplication</div>
+            <div className="font-semibold text-slate-800 dark:text-zinc-100 text-sm">orderId matching</div>
+            <div className="text-[11px] text-slate-500 dark:text-zinc-400 font-semibold">
+              Deduplicated per orderId
             </div>
           </div>
         </div>

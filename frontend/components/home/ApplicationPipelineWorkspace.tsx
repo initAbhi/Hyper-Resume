@@ -12,7 +12,7 @@ export function ApplicationPipelineWorkspace() {
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto max-w-2xl text-center">
           <AnimatedContent distance={36} duration={0.75}>
-            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
               Application tracker
             </p>
             <h2 className="mt-3 font-rubik text-3xl font-semibold tracking-tight sm:text-4xl">

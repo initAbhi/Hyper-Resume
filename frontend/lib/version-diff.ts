@@ -16,6 +16,9 @@ export interface VersionDiffSummary {
   changedRoles: RoleDiffItem[];
   educationChanged: boolean;
   projectsChanged: boolean;
+  certificationsChanged: boolean;
+  customSectionsChanged: boolean;
+  layoutChanged: boolean;
   counts: {
     snapshotExperience: number;
     currentExperience: number;
@@ -54,6 +57,7 @@ export function computeVersionDiff(
       linkedinUrl: normalizeStr(current.contact?.linkedinUrl),
       githubUrl: normalizeStr(current.contact?.githubUrl),
       websiteUrl: normalizeStr(current.contact?.websiteUrl),
+      photoUrl: normalizeStr(current.contact?.photoUrl),
     }) !==
     JSON.stringify({
       fullName: normalizeStr(snapshot.contact?.fullName),
@@ -63,6 +67,7 @@ export function computeVersionDiff(
       linkedinUrl: normalizeStr(snapshot.contact?.linkedinUrl),
       githubUrl: normalizeStr(snapshot.contact?.githubUrl),
       websiteUrl: normalizeStr(snapshot.contact?.websiteUrl),
+      photoUrl: normalizeStr(snapshot.contact?.photoUrl),
     });
 
   const currentSkills = (current.skills ?? [])
@@ -102,12 +107,15 @@ export function computeVersionDiff(
         detail: `Restores ${snapRole.bullets?.length ?? 0} bullet(s) from this role`,
       });
     } else if (
-      serializeBullets(curRole.bullets) !== serializeBullets(snapRole.bullets)
+      serializeBullets(curRole.bullets) !== serializeBullets(snapRole.bullets) ||
+      normalizeStr(curRole.startDate) !== normalizeStr(snapRole.startDate) ||
+      normalizeStr(curRole.endDate) !== normalizeStr(snapRole.endDate) ||
+      Boolean(curRole.current) !== Boolean(snapRole.current)
     ) {
       changedRoles.push({
         label,
         status: 'modified_bullets',
-        detail: `Bullets differ (${snapRole.bullets?.length ?? 0} in snapshot vs ${curRole.bullets?.length ?? 0} in current)`,
+        detail: `Role details or bullets differ (${snapRole.bullets?.length ?? 0} in snapshot vs ${curRole.bullets?.length ?? 0} in current)`,
       });
     }
   }
@@ -133,6 +141,15 @@ export function computeVersionDiff(
   const projectsChanged =
     JSON.stringify(currentProj) !== JSON.stringify(snapshotProj);
 
+  const certificationsChanged =
+    JSON.stringify(current.certifications ?? []) !==
+    JSON.stringify(snapshot.certifications ?? []);
+  const customSectionsChanged =
+    JSON.stringify(current.customSections ?? []) !==
+    JSON.stringify(snapshot.customSections ?? []);
+  const layoutChanged =
+    JSON.stringify(current.layout ?? {}) !== JSON.stringify(snapshot.layout ?? {});
+
   const totalChanges = [
     headlineChanged,
     summaryChanged,
@@ -141,6 +158,9 @@ export function computeVersionDiff(
     changedRoles.length > 0,
     educationChanged,
     projectsChanged,
+    certificationsChanged,
+    customSectionsChanged,
+    layoutChanged,
   ].filter(Boolean).length;
 
   return {
@@ -153,6 +173,9 @@ export function computeVersionDiff(
     changedRoles,
     educationChanged,
     projectsChanged,
+    certificationsChanged,
+    customSectionsChanged,
+    layoutChanged,
     counts: {
       snapshotExperience: snapshotExp.length,
       currentExperience: currentExp.length,

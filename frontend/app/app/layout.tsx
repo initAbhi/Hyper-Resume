@@ -24,6 +24,9 @@ import { LinkedInIcon } from '@/components/linkedin/LinkedInIcon';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { Logo } from '@/components/ui/Logo';
 import { useAuth } from '@/lib/auth-context';
+import { GlobalAgentProvider } from '@/lib/global-agent-context';
+import { GlobalAgentButton } from '@/components/layout/GlobalAgentButton';
+import { GlobalAgentDrawer } from '@/components/layout/GlobalAgentDrawer';
 
 function AppLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -157,23 +160,6 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
     }
   }, [isLoading, isAuthenticated, router]);
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F7F8FA] dark:bg-[#0D0F12]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-7 w-7 rounded-md bg-[#285FEA] animate-pulse flex items-center justify-center text-white font-bold text-xs">
-            H
-          </div>
-          <p className="text-xs text-[#5A6270] dark:text-[#9EA7B4] font-medium">Loading workspace...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return null;
-  }
-
   const navItems = [
     { label: 'Overview', href: '/app', icon: LayoutDashboard },
     { label: 'My Resumes', href: '/app/resumes', icon: FileText },
@@ -192,6 +178,40 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
   const currentNav = navItems.find((item) =>
     item.href === '/app' ? pathname === '/app' : pathname.startsWith(item.href)
   );
+
+  // Dynamic per-page document title for authenticated workspace routes (UX-31)
+  useEffect(() => {
+    const sectionTitle =
+      pathname === '/app/settings' ? 'Settings' : currentNav?.label || 'Workspace';
+    document.title = `${sectionTitle} | HypeResume`;
+  }, [pathname, currentNav?.label]);
+
+  // Close mobile navigation drawer on Escape key (UX-34)
+  useEffect(() => {
+    if (!isMobileNavOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsMobileNavOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isMobileNavOpen]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F7F8FA] dark:bg-[#0D0F12]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-7 w-7 rounded-md bg-[#285FEA] animate-pulse flex items-center justify-center text-white font-bold text-xs">
+            H
+          </div>
+          <p className="text-xs text-[#5A6270] dark:text-[#9EA7B4] font-medium">Loading workspace...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#F7F8FA] dark:bg-[#0D0F12] text-[#1A1D23] dark:text-[#F0F2F5] print:h-auto print:overflow-visible print:bg-white print:block">
@@ -247,7 +267,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                 className={`p-1.5 rounded-md transition-colors ${
                   isPinned
                     ? 'text-[#285FEA] bg-[#285FEA]/10 hover:bg-[#285FEA]/20 dark:bg-[#285FEA]/20 dark:text-[#3B75F2]'
-                    : 'text-[#848D9A] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5] hover:bg-[#F1F3F5] dark:hover:bg-[#1D2128]'
+                    : 'text-[#525B68] dark:text-[#A3ACB9] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5] hover:bg-[#F1F3F5] dark:hover:bg-[#1D2128]'
                 }`}
                 title={isPinned ? 'Unpin sidebar (enable hover-to-expand)' : 'Pin sidebar (keep expanded)'}
                 aria-label={isPinned ? 'Unpin sidebar' : 'Pin sidebar'}
@@ -275,6 +295,8 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                 <div key={item.href} className="relative group">
                   <Link
                     href={item.href}
+                    aria-label={isExpanded ? undefined : item.label}
+                    aria-current={isActive ? 'page' : undefined}
                     className={`flex items-center ${
                       isExpanded ? 'gap-2.5 px-2.5' : 'justify-center px-0'
                     } py-2 rounded-md text-xs font-medium transition-colors ${
@@ -284,15 +306,16 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                     }`}
                   >
                     <IconComp
+                      aria-hidden="true"
                       className={`w-4 h-4 shrink-0 ${
                         isActive
                           ? 'text-[#285FEA]'
-                          : 'text-[#848D9A] dark:text-[#6C7584] group-hover:text-[#5A6270] dark:group-hover:text-[#9EA7B4]'
+                          : 'text-[#5A6270] dark:text-[#9EA7B4] group-hover:text-[#1A1D23] dark:group-hover:text-[#F0F2F5]'
                       }`}
                     />
                     {isExpanded && <span className="truncate whitespace-nowrap">{item.label}</span>}
                     {isExpanded && item.badge && (
-                      <span className="ml-auto text-[10px] font-medium px-1.5 py-0.2 rounded bg-[#F1F3F5] dark:bg-[#1D2128] text-[#848D9A] dark:text-[#6C7584] border border-[#E2E5E9] dark:border-[#252A33] shrink-0">
+                      <span className="ml-auto text-[10px] font-medium px-1.5 py-0.2 rounded bg-[#F1F3F5] dark:bg-[#1D2128] text-[#525B68] dark:text-[#A3ACB9] border border-[#E2E5E9] dark:border-[#252A33] shrink-0">
                         {item.badge}
                       </span>
                     )}
@@ -328,7 +351,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                     <p className="text-xs font-semibold truncate text-[#1A1D23] dark:text-[#F0F2F5]">
                       {user?.fullName || 'User'}
                     </p>
-                    <p className="text-[10px] truncate text-[#848D9A]">
+                    <p className="text-[10px] truncate text-[#525B68] dark:text-[#A3ACB9]">
                       {user?.email}
                     </p>
                   </div>
@@ -351,7 +374,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                 }`}
                 title="Workspace Settings"
               >
-                <Settings className="w-3.5 h-3.5 text-[#848D9A] shrink-0" />
+                <Settings className="w-3.5 h-3.5 text-[#525B68] dark:text-[#A3ACB9] shrink-0" />
                 <span className="truncate">Settings</span>
               </Link>
 
@@ -360,35 +383,40 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                 onClick={() => logout()}
                 className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-[#5A6270] dark:text-[#9EA7B4] hover:text-[#DC2626] dark:hover:text-[#EF4444] rounded-md hover:bg-[#F7F8FA] dark:hover:bg-[#1D2128] transition-colors cursor-pointer"
               >
-                <LogOut className="w-3.5 h-3.5 text-[#848D9A] shrink-0" />
+                <LogOut className="w-3.5 h-3.5 text-[#525B68] dark:text-[#A3ACB9] shrink-0" />
                 <span className="truncate">Sign Out</span>
               </button>
             </>
           ) : (
             <div className="flex flex-col items-center gap-1.5 py-1">
-              <div
-                className="w-7 h-7 rounded bg-[#E2E5E9] dark:bg-[#252A33] text-[#1A1D23] dark:text-[#F0F2F5] flex items-center justify-center text-xs font-semibold cursor-pointer"
+              <Link
+                href="/app/settings"
+                aria-label="Account Settings"
+                className="w-7 h-7 rounded bg-[#E2E5E9] dark:bg-[#252A33] text-[#1A1D23] dark:text-[#F0F2F5] flex items-center justify-center text-xs font-semibold hover:ring-2 hover:ring-[#285FEA] transition-all"
                 title={`${user?.fullName} (${creditBalance} credits)`}
               >
                 {user?.fullName?.charAt(0).toUpperCase() || 'U'}
-              </div>
+              </Link>
               <Link
                 href="/app/settings"
+                aria-label="Settings"
                 className={`p-1.5 rounded transition-colors ${
                   pathname === '/app/settings'
                     ? 'text-[#285FEA] bg-[#F1F3F5] dark:bg-[#1D2128]'
-                    : 'text-[#848D9A] hover:text-[#1A1D23] hover:bg-[#F1F3F5] dark:hover:bg-[#1D2128]'
+                    : 'text-[#525B68] dark:text-[#A3ACB9] hover:text-[#1A1D23] hover:bg-[#F1F3F5] dark:hover:bg-[#1D2128]'
                 }`}
                 title="Settings"
               >
-                <Settings className="w-4 h-4" />
+                <Settings className="w-4 h-4" aria-hidden="true" />
               </Link>
               <button
+                type="button"
+                aria-label="Sign Out"
                 onClick={() => logout()}
-                className="p-1.5 rounded text-[#848D9A] hover:text-[#DC2626] hover:bg-[#F1F3F5] dark:hover:bg-[#1D2128] transition-colors"
+                className="p-1.5 rounded text-[#525B68] dark:text-[#A3ACB9] hover:text-[#DC2626] hover:bg-[#F1F3F5] dark:hover:bg-[#1D2128] transition-colors cursor-pointer"
                 title="Sign Out"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
           )}
@@ -411,9 +439,12 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
             </button>
 
             {/* Breadcrumb Path */}
-            <span className="text-xs font-medium text-[#848D9A] hidden sm:inline">
+            <Link
+              href="/app"
+              className="text-xs font-medium text-[#525B68] dark:text-[#A3ACB9] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5] hidden sm:inline transition-colors"
+            >
               Workspace
-            </span>
+            </Link>
             <span className="text-xs text-[#CBD0D7] dark:text-[#333945] hidden sm:inline">/</span>
             <span className="text-sm font-semibold text-[#1A1D23] dark:text-[#F0F2F5]">
               {pathname === '/app/settings' ? 'Settings' : currentNav?.label || 'Overview'}
@@ -432,20 +463,27 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
 
             <Link
               href="/app/settings"
+              aria-label="Account Settings"
               className="p-1.5 rounded hover:bg-[#F1F3F5] dark:hover:bg-[#1D2128] text-[#5A6270] dark:text-[#9EA7B4]"
               title="Settings"
             >
-              <UserIcon className="w-4 h-4" />
+              <UserIcon className="w-4 h-4" aria-hidden="true" />
             </Link>
           </div>
         </header>
 
         {/* Mobile Navigation Drawer with Backdrop */}
         {isMobileNavOpen && (
-          <div className="md:hidden fixed inset-0 z-50 flex">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Mobile Navigation"
+            className="md:hidden fixed inset-0 z-50 flex"
+          >
             <div
               className="fixed inset-0 bg-[#0D0F12]/40 transition-opacity"
               onClick={() => setIsMobileNavOpen(false)}
+              aria-hidden="true"
             />
 
             <div className="relative w-4/5 max-w-xs bg-white dark:bg-[#14171C] border-r border-[#E2E5E9] dark:border-[#252A33] p-4 flex flex-col justify-between shadow-lg z-10 animate-fade-in">
@@ -455,10 +493,12 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                     <Logo variant="full" size="md" priority />
                   </div>
                   <button
+                    type="button"
+                    aria-label="Close navigation"
                     onClick={() => setIsMobileNavOpen(false)}
-                    className="p-1 rounded text-[#848D9A] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5]"
+                    className="p-1 rounded text-[#525B68] dark:text-[#A3ACB9] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5]"
                   >
-                    <X className="w-5 h-5" />
+                    <X className="w-5 h-5" aria-hidden="true" />
                   </button>
                 </div>
 
@@ -481,7 +521,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                             : 'text-[#5A6270] dark:text-[#9EA7B4] hover:bg-[#F7F8FA] dark:hover:bg-[#1D2128]'
                         }`}
                       >
-                        <IconComp className="w-4 h-4 shrink-0 text-[#848D9A]" />
+                        <IconComp className="w-4 h-4 shrink-0 text-[#525B68] dark:text-[#A3ACB9]" />
                         <span>{item.label}</span>
                       </Link>
                     );
@@ -491,7 +531,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
 
               <div className="pt-3 border-t border-[#E2E5E9] dark:border-[#252A33] space-y-2">
                 <div className="flex items-center justify-between text-xs px-1">
-                  <span className="text-[#848D9A]">Credits</span>
+                  <span className="text-[#525B68] dark:text-[#A3ACB9]">Credits</span>
                   <span className="font-semibold text-[#285FEA]">{creditBalance}</span>
                 </div>
                 <Link
@@ -519,6 +559,10 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+
+      {/* Phase 4: Persistent Global AI Career Assistant */}
+      <GlobalAgentButton />
+      <GlobalAgentDrawer />
     </div>
   );
 }
@@ -532,7 +576,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       }
     >
-      <AppLayoutInner>{children}</AppLayoutInner>
+      <GlobalAgentProvider>
+        <AppLayoutInner>{children}</AppLayoutInner>
+      </GlobalAgentProvider>
     </Suspense>
   );
 }

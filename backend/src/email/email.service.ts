@@ -205,9 +205,19 @@ export class EmailService {
     });
   }
 
+  private escapeHtml(value: string): string {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   async sendVerificationEmail(email: string, token: string, fullName: string) {
     const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'https://hype-resume.com');
     const verifyUrl = `${frontendUrl}/verify-email?token=${encodeURIComponent(token)}`;
+    const safeName = this.escapeHtml(fullName);
 
     return this.sendEmail({
       to: email,
@@ -218,7 +228,7 @@ export class EmailService {
           <div style="margin-bottom: 24px;">
             <span style="font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">Hype<span style="color: #285fea;">Resume</span></span>
           </div>
-          <h2 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0 0 16px 0;">Welcome to HypeResume, ${fullName}!</h2>
+          <h2 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0 0 16px 0;">Welcome to HypeResume, ${safeName}!</h2>
           <p style="font-size: 15px; line-height: 24px; color: #334155; margin: 0 0 20px 0;">
             Please verify your email address to unlock full access to your personalized resume workspace and ATS optimization tools.
           </p>
@@ -242,27 +252,35 @@ export class EmailService {
     amountFormatted: string,
     creditsAwarded: number,
   ) {
+    const safeOrderId = this.escapeHtml(orderId);
+    const safePlanName = this.escapeHtml(planName);
+    const safeAmount = this.escapeHtml(amountFormatted);
+    const hasCredits = Number(creditsAwarded) > 0;
+    const heading = hasCredits ? 'Payment Receipt & Credits Added' : 'Payment Receipt & Pro Pass Activated';
+    const entitlementLabel = hasCredits ? 'Credits Added' : 'Entitlement';
+    const entitlementValue = hasCredits ? `+${creditsAwarded} Credits` : 'Unlimited Pro AI Access Activated';
+
     return this.sendEmail({
       to: email,
       subject: `Receipt for your HypeResume purchase: ${planName}`,
-      text: `Thank you for your purchase!\n\nOrder ID: ${orderId}\nPlan: ${planName}\nAmount: ${amountFormatted}\nCredits Awarded: ${creditsAwarded}\n\nHappy job hunting!\nHypeResume Team`,
+      text: `Thank you for your purchase!\n\nOrder ID: ${orderId}\nPlan: ${planName}\nAmount: ${amountFormatted}\n${entitlementLabel}: ${entitlementValue}\n\nHappy job hunting!\nHypeResume Team`,
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 32px 24px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;">
           <div style="margin-bottom: 24px;">
             <span style="font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">Hype<span style="color: #285fea;">Resume</span></span>
           </div>
-          <h2 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0 0 16px 0;">Payment Receipt & Credits Added</h2>
+          <h2 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0 0 16px 0;">${heading}</h2>
           <p style="font-size: 15px; line-height: 24px; color: #334155; margin: 0 0 20px 0;">
-            Thank you for your purchase! Your account has been credited and is ready for use.
+            Thank you for your purchase! Your HypeResume account is updated and ready to use.
           </p>
           <table style="width: 100%; border-collapse: collapse; margin: 24px 0; background-color: #f8fafc; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0;">
-            <tr><td style="padding: 12px 16px; color: #64748b; font-size: 14px; border-bottom: 1px solid #e2e8f0;">Order Reference</td><td style="padding: 12px 16px; font-family: monospace; font-size: 13px; font-weight: 600; text-align: right; border-bottom: 1px solid #e2e8f0;">${orderId}</td></tr>
-            <tr><td style="padding: 12px 16px; color: #64748b; font-size: 14px; border-bottom: 1px solid #e2e8f0;">Package</td><td style="padding: 12px 16px; font-size: 14px; font-weight: 600; text-align: right; border-bottom: 1px solid #e2e8f0;">${planName}</td></tr>
-            <tr><td style="padding: 12px 16px; color: #64748b; font-size: 14px; border-bottom: 1px solid #e2e8f0;">Amount Paid</td><td style="padding: 12px 16px; font-size: 14px; font-weight: 700; text-align: right; border-bottom: 1px solid #e2e8f0; color: #0f172a;">${amountFormatted}</td></tr>
-            <tr><td style="padding: 12px 16px; color: #64748b; font-size: 14px;">Credits Added</td><td style="padding: 12px 16px; font-size: 14px; font-weight: 700; text-align: right; color: #285fea;">+${creditsAwarded} Credits</td></tr>
+            <tr><td style="padding: 12px 16px; color: #64748b; font-size: 14px; border-bottom: 1px solid #e2e8f0;">Order Reference</td><td style="padding: 12px 16px; font-family: monospace; font-size: 13px; font-weight: 600; text-align: right; border-bottom: 1px solid #e2e8f0;">${safeOrderId}</td></tr>
+            <tr><td style="padding: 12px 16px; color: #64748b; font-size: 14px; border-bottom: 1px solid #e2e8f0;">Package</td><td style="padding: 12px 16px; font-size: 14px; font-weight: 600; text-align: right; border-bottom: 1px solid #e2e8f0;">${safePlanName}</td></tr>
+            <tr><td style="padding: 12px 16px; color: #64748b; font-size: 14px; border-bottom: 1px solid #e2e8f0;">Amount Paid</td><td style="padding: 12px 16px; font-size: 14px; font-weight: 700; text-align: right; border-bottom: 1px solid #e2e8f0; color: #0f172a;">${safeAmount}</td></tr>
+            <tr><td style="padding: 12px 16px; color: #64748b; font-size: 14px;">${entitlementLabel}</td><td style="padding: 12px 16px; font-size: 14px; font-weight: 700; text-align: right; color: #285fea;">${entitlementValue}</td></tr>
           </table>
           <p style="font-size: 13px; color: #64748b; margin: 0;">
-            You can use your credits anytime to match your resume against any job description, run ATS diagnostics, and optimize bullets with evidence-based formulas.
+            You can match your resume against job descriptions, run ATS diagnostics, and use the Agentic AI Career Assistant anytime.
           </p>
         </div>
       `,

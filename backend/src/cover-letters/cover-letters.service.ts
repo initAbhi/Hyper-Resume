@@ -33,7 +33,7 @@ export class CoverLettersService {
     private readonly aiService: AiService,
     @Optional()
     private readonly creditsService?: CreditsService,
-  ) {}
+  ) { }
 
   async list(userId: string, resumeId?: string): Promise<CoverLetter[]> {
     return this.coverLetterRepo.find({
@@ -58,6 +58,7 @@ export class CoverLettersService {
   async generate(
     userId: string,
     dto: GenerateCoverLetterDto,
+    options?: { skipCreditCharge?: boolean },
   ): Promise<CoverLetter> {
     const resume = await this.resumeRepo.findOne({
       where: { id: dto.resumeId, userId, isArchived: false },
@@ -80,7 +81,7 @@ export class CoverLettersService {
     const tone = dto.tone || 'Executive';
     const chargeKey = `cover-letter:${userId}:${crypto.randomUUID()}`;
     let chargedCredits = false;
-    if (this.creditsService) {
+    if (!options?.skipCreditCharge && this.creditsService) {
       const access = await this.creditsService.consumeFeatureAccess(
         userId,
         CREDIT_COSTS.COVER_LETTER,

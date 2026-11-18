@@ -91,9 +91,10 @@ export function ApplicationDeepWorkspace({
   // Editable local state
   const [jobTitle, setJobTitle] = useState(currentApp.jobTitle);
   const [companyName, setCompanyName] = useState(currentApp.companyName);
+  const [applicationUrl, setApplicationUrl] = useState(currentApp.applicationUrl || '');
   const [salary, setSalary] = useState(initialMeta.salary || '');
   const [isEditingSalary, setIsEditingSalary] = useState(false);
-  const [location, setLocation] = useState(initialMeta.location || 'remote');
+  const [location, setLocation] = useState(initialMeta.location || '');
   const [excitement, setExcitement] = useState(initialMeta.excitement ?? 3);
   const [selectedResumeId, setSelectedResumeId] = useState(
     currentApp.resumeId || (resumes[0]?.id ?? ''),
@@ -110,18 +111,8 @@ export function ApplicationDeepWorkspace({
   );
   const [followUpDate, setFollowUpDate] = useState(initialMeta.followUpDate || '');
 
-  // Description & Keywords
-  const [jobDescription, setJobDescription] = useState(
-    initialMeta.jobDescription ||
-      `Job Responsibilities:
-• Lead technical design and implementation of distributed systems
-• Collaborate with cross-functional product and design teams
-• Optimize performance, scalability, and cloud infrastructure reliability
-
-Requirements:
-• Experience with modern microservices, CI/CD pipelines, and cloud APIs
-• Strong communication and architectural leadership skills`,
-  );
+  // Description & Keywords (no fake hardcoded SE template — FN-41)
+  const [jobDescription, setJobDescription] = useState(initialMeta.jobDescription || '');
   const [isEditingDesc, setIsEditingDesc] = useState(false);
 
   // Interviews state
@@ -166,6 +157,9 @@ Requirements:
   const [copiedTemplateIdx, setCopiedTemplateIdx] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [confirmDeleteJob, setConfirmDeleteJob] = useState(false);
+  const [newTaskText, setNewTaskText] = useState('');
+  const [isAddingTask, setIsAddingTask] = useState(false);
 
   // Guidance percentage based on checklist
   const completedCount = checklist.filter((c) => c.completed).length;
@@ -192,8 +186,12 @@ Requirements:
 
   const detectedKeywords = extractKeywords(jobDescription);
 
-  // Save changes back to DB
-  const handleSave = async (overrides?: Partial<JobApplication & { status: JobApplicationStatus }>) => {
+  // Save changes back to DB (accepts fresh metadata overrides to eliminate stale closure writes — FN-33)
+  const handleSave = async (
+    overrides?: Partial<JobApplication & { status: JobApplicationStatus }> & {
+      metaOverrides?: Partial<ApplicationRichMetadata>;
+    },
+  ) => {
     setIsSaving(true);
     try {
       const updatedMeta: ApplicationRichMetadata = {
@@ -210,7 +208,9 @@ Requirements:
         interviews,
         contacts,
         checklist,
-        closeReason: overrides?.metadata?.closeReason || initialMeta.closeReason,
+        ...(overrides?.metadata || {}),
+        ...(overrides?.metaOverrides || {}),
+        closeReason: overrides?.metadata?.closeReason || overrides?.metaOverrides?.closeReason || initialMeta.closeReason,
       };
 
       const serializedNotes = serializeApplicationMetadata(updatedMeta);
@@ -219,9 +219,10 @@ Requirements:
         ...currentApp,
         jobTitle,
         companyName,
+        applicationUrl: applicationUrl.trim() || undefined,
         status: overrides?.status || currentApp.status,
-        resumeId: selectedResumeId || undefined,
-        appliedDate: appliedDate || undefined,
+        resumeId: overrides?.resumeId !== undefined ? overrides.resumeId : (selectedResumeId || undefined),
+        appliedDate: overrides?.appliedDate !== undefined ? overrides.appliedDate : (appliedDate || undefined),
         notes: serializedNotes,
         metadata: updatedMeta,
       };
@@ -247,9 +248,12 @@ Requirements:
   };
 
   const handleCopyTemplate = (text: string, idx: number) => {
-    navigator.clipboard.writeText(text);
-    setCopiedTemplateIdx(idx);
-    setTimeout(() => setCopiedTemplateIdx(null), 2000);
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        setCopiedTemplateIdx(idx);
+        setTimeout(() => setCopiedTemplateIdx(null), 2000);
+      }).catch(() => {});
+    }
   };
 
   return (
@@ -342,9 +346,21 @@ Requirements:
                   {companyName}
                 </span>
                 <span>—</span>
-                <span>{location}</span>
+                <span>{location || 'Location not set'}</span>
                 <span>•</span>
                 <span>Saved {savedDate || 'recently'}</span>
+              </div>
+              <div className="flex items-center gap-1.5 pt-0.5">
+                <ExternalLink className="w-3 h-3 text-zinc-400 shrink-0" />
+                <input
+                  type="url"
+                  aria-label="Job posting URL"
+                  placeholder="Add job posting URL (https://...)"
+                  value={applicationUrl}
+                  onChange={(e) => setApplicationUrl(e.target.value)}
+                  onBlur={() => handleSave()}
+                  className="text-xs text-blue-600 dark:text-blue-400 bg-transparent border-b border-transparent hover:border-zinc-300 dark:hover:border-zinc-700 focus:border-blue-500 focus:outline-none w-full max-w-md placeholder:text-zinc-400"
+                />
               </div>
             </div>
 
@@ -388,7 +404,7 @@ Requirements:
                     type="button"
                     onClick={() => {
                       setExcitement(s);
-                      handleSave({ metadata: { ...initialMeta, excitement: s } });
+                      handleSave({ metaOverrides: { excitement: s } });
                     }}
                     className="p-0.5 text-zinc-300 dark:text-zinc-700 hover:text-amber-400 transition-colors"
                   >
@@ -495,19 +511,40 @@ Requirements:
                     </button>
                   </div>
                   <div className="pt-1">
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        setIsCloseMenuOpen(false);
-                        if (confirm('Permanently delete this job application?')) {
-                          await onDeleteApplication(currentApp.id);
-                        }
-                      }}
-                      className="w-full text-left px-3 py-1.5 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2 font-medium"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Delete Job</span>
-                    </button>
+                    {confirmDeleteJob ? (
+                      <div className="px-3 py-1.5 flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">Delete?</span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setConfirmDeleteJob(false);
+                              setIsCloseMenuOpen(false);
+                              await onDeleteApplication(currentApp.id);
+                            }}
+                            className="px-2 py-0.5 text-[11px] font-semibold rounded bg-rose-600 text-white hover:bg-rose-700"
+                          >
+                            Yes
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteJob(false)}
+                            className="px-2 py-0.5 text-[11px] rounded border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300"
+                          >
+                            No
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteJob(true)}
+                        className="w-full text-left px-3 py-1.5 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2 font-medium"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete Job</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -622,71 +659,81 @@ Requirements:
                 {isDatesOpen && (
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4 pt-3 border-t border-zinc-200/60 dark:border-zinc-800/60">
                     <div>
-                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                      <label htmlFor="app-posted-date" className="block text-[11px] font-medium text-zinc-500 mb-1">
                         Posted
                       </label>
                       <input
+                        id="app-posted-date"
                         type="date"
                         value={postedDate}
                         onChange={(e) => {
-                          setPostedDate(e.target.value);
-                          handleSave();
+                          const nextVal = e.target.value;
+                          setPostedDate(nextVal);
+                          handleSave({ metaOverrides: { postedDate: nextVal } });
                         }}
                         className="w-full text-xs p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                      <label htmlFor="app-saved-date" className="block text-[11px] font-medium text-zinc-500 mb-1">
                         Saved
                       </label>
                       <input
+                        id="app-saved-date"
                         type="date"
                         value={savedDate}
                         onChange={(e) => {
-                          setSavedDate(e.target.value);
-                          handleSave();
+                          const nextVal = e.target.value;
+                          setSavedDate(nextVal);
+                          handleSave({ metaOverrides: { savedDate: nextVal } });
                         }}
                         className="w-full text-xs p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                      <label htmlFor="app-deadline-date" className="block text-[11px] font-medium text-zinc-500 mb-1">
                         Deadline
                       </label>
                       <input
+                        id="app-deadline-date"
                         type="date"
                         value={deadline}
                         onChange={(e) => {
-                          setDeadline(e.target.value);
-                          handleSave();
+                          const nextVal = e.target.value;
+                          setDeadline(nextVal);
+                          handleSave({ metaOverrides: { deadline: nextVal } });
                         }}
                         className="w-full text-xs p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                      <label htmlFor="app-applied-date" className="block text-[11px] font-medium text-zinc-500 mb-1">
                         Applied
                       </label>
                       <input
+                        id="app-applied-date"
                         type="date"
                         value={appliedDate}
                         onChange={(e) => {
-                          setAppliedDate(e.target.value);
-                          handleSave();
+                          const nextVal = e.target.value;
+                          setAppliedDate(nextVal);
+                          handleSave({ appliedDate: nextVal || undefined });
                         }}
                         className="w-full text-xs p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                      <label htmlFor="app-followup-date" className="block text-[11px] font-medium text-zinc-500 mb-1">
                         Follow Up
                       </label>
                       <input
+                        id="app-followup-date"
                         type="date"
                         value={followUpDate}
                         onChange={(e) => {
-                          setFollowUpDate(e.target.value);
-                          handleSave();
+                          const nextVal = e.target.value;
+                          setFollowUpDate(nextVal);
+                          handleSave({ metaOverrides: { followUpDate: nextVal } });
                         }}
                         className="w-full text-xs p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200"
                       />
@@ -733,7 +780,7 @@ Requirements:
                               const updated = interviews.filter((_, i) => i !== idx);
                               setInterviews(updated);
                               setActiveRoundIdx(0);
-                              handleSave();
+                              handleSave({ metaOverrides: { interviews: updated } });
                             }}
                             className="text-zinc-400 hover:text-rose-500 p-0.5"
                           >
@@ -756,9 +803,10 @@ Requirements:
                           format: 'Video Call',
                           interviewers: [{ name: '', title: '' }],
                         };
-                        setInterviews([...interviews, newRound]);
+                        const updated = [...interviews, newRound];
+                        setInterviews(updated);
                         setActiveRoundIdx(interviews.length);
-                        handleSave();
+                        handleSave({ metaOverrides: { interviews: updated } });
                       }}
                       className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 flex items-center gap-1"
                     >
@@ -779,10 +827,11 @@ Requirements:
                             type="datetime-local"
                             value={interviews[activeRoundIdx].date || ''}
                             onChange={(e) => {
-                              const updated = [...interviews];
-                              updated[activeRoundIdx].date = e.target.value;
+                              const updated = interviews.map((r, i) =>
+                                i === activeRoundIdx ? { ...r, date: e.target.value } : r,
+                              );
                               setInterviews(updated);
-                              handleSave();
+                              handleSave({ metaOverrides: { interviews: updated } });
                             }}
                             className="w-full text-xs p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200"
                           />
@@ -794,10 +843,11 @@ Requirements:
                           <select
                             value={interviews[activeRoundIdx].type || 'Phone Screen'}
                             onChange={(e) => {
-                              const updated = [...interviews];
-                              updated[activeRoundIdx].type = e.target.value;
+                              const updated = interviews.map((r, i) =>
+                                i === activeRoundIdx ? { ...r, type: e.target.value } : r,
+                              );
                               setInterviews(updated);
-                              handleSave();
+                              handleSave({ metaOverrides: { interviews: updated } });
                             }}
                             className="w-full text-xs p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200"
                           >
@@ -816,10 +866,11 @@ Requirements:
                           <select
                             value={interviews[activeRoundIdx].format || 'Video Call'}
                             onChange={(e) => {
-                              const updated = [...interviews];
-                              updated[activeRoundIdx].format = e.target.value;
+                              const updated = interviews.map((r, i) =>
+                                i === activeRoundIdx ? { ...r, format: e.target.value } : r,
+                              );
                               setInterviews(updated);
-                              handleSave();
+                              handleSave({ metaOverrides: { interviews: updated } });
                             }}
                             className="w-full text-xs p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200"
                           >
@@ -839,12 +890,13 @@ Requirements:
                           <button
                             type="button"
                             onClick={() => {
-                              const updated = [...interviews];
-                              const list = updated[activeRoundIdx].interviewers || [];
-                              list.push({ name: '', title: '' });
-                              updated[activeRoundIdx].interviewers = list;
+                              const updated = interviews.map((r, i) =>
+                                i === activeRoundIdx
+                                  ? { ...r, interviewers: [...(r.interviewers || []), { name: '', title: '' }] }
+                                  : r,
+                              );
                               setInterviews(updated);
-                              handleSave();
+                              handleSave({ metaOverrides: { interviews: updated } });
                             }}
                             className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline font-medium flex items-center gap-1"
                           >
@@ -882,12 +934,13 @@ Requirements:
                             <button
                               type="button"
                               onClick={() => {
-                                const updated = [...interviews];
-                                updated[activeRoundIdx].interviewers = updated[
-                                  activeRoundIdx
-                                ].interviewers!.filter((_, idx2) => idx2 !== i);
+                                const updated = interviews.map((r, idxRound) =>
+                                  idxRound === activeRoundIdx
+                                    ? { ...r, interviewers: (r.interviewers || []).filter((_, idx2) => idx2 !== i) }
+                                    : r,
+                                );
                                 setInterviews(updated);
-                                handleSave();
+                                handleSave({ metaOverrides: { interviews: updated } });
                               }}
                               className="text-zinc-400 hover:text-rose-500 p-1"
                             >
@@ -1048,10 +1101,12 @@ Requirements:
               ) : (
                 <div className="space-y-3">
                   <select
+                    aria-label="Linked resume variant"
                     value={selectedResumeId}
                     onChange={(e) => {
-                      setSelectedResumeId(e.target.value);
-                      handleSave();
+                      const nextId = e.target.value;
+                      setSelectedResumeId(nextId);
+                      handleSave({ resumeId: nextId || undefined });
                     }}
                     className="w-full text-xs p-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-medium"
                   >
@@ -1112,8 +1167,9 @@ Requirements:
                       email: '',
                       linkedin: '',
                     };
-                    setContacts([...contacts, newContact]);
-                    handleSave();
+                    const updated = [...contacts, newContact];
+                    setContacts(updated);
+                    handleSave({ metaOverrides: { contacts: updated } });
                   }}
                   className="gap-1"
                 >
@@ -1138,7 +1194,7 @@ Requirements:
                         onClick={() => {
                           const updated = contacts.filter((_, i) => i !== idx);
                           setContacts(updated);
-                          handleSave();
+                          handleSave({ metaOverrides: { contacts: updated } });
                         }}
                         className="absolute top-3 right-3 text-zinc-400 hover:text-rose-500 p-1"
                       >
@@ -1296,27 +1352,60 @@ Requirements:
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    const text = prompt('Enter new checklist task:');
-                    if (text && text.trim()) {
-                      const updated = [
-                        ...checklist,
-                        {
-                          id: `task-${Date.now()}`,
-                          text: text.trim(),
-                          completed: false,
-                        },
-                      ];
-                      setChecklist(updated);
-                      handleSave();
-                    }
-                  }}
+                  onClick={() => setIsAddingTask((v) => !v)}
                   className="gap-1 text-xs"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Add Task</span>
                 </Button>
               </div>
+
+              {isAddingTask && (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const trimmed = newTaskText.trim();
+                    if (!trimmed) return;
+                    const updated = [
+                      ...checklist,
+                      {
+                        id: `task-${Date.now()}`,
+                        text: trimmed,
+                        completed: false,
+                      },
+                    ];
+                    setChecklist(updated);
+                    setNewTaskText('');
+                    setIsAddingTask(false);
+                    handleSave({ metaOverrides: { checklist: updated } });
+                  }}
+                  className="flex items-center gap-2 p-2.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/40 dark:bg-blue-950/20"
+                >
+                  <input
+                    type="text"
+                    aria-label="New checklist task"
+                    value={newTaskText}
+                    onChange={(e) => setNewTaskText(e.target.value)}
+                    placeholder="Enter checklist task (e.g. Research hiring manager)..."
+                    autoFocus
+                    className="flex-1 text-xs p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  <Button type="submit" variant="primary" size="sm" disabled={!newTaskText.trim()}>
+                    Add
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setIsAddingTask(false);
+                      setNewTaskText('');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </form>
+              )}
 
               <div className="space-y-2">
                 {checklist.map((item, idx) => (
@@ -1329,10 +1418,11 @@ Requirements:
                         type="checkbox"
                         checked={item.completed}
                         onChange={() => {
-                          const updated = [...checklist];
-                          updated[idx].completed = !updated[idx].completed;
+                          const updated = checklist.map((c, i) =>
+                            i === idx ? { ...c, completed: !c.completed } : c,
+                          );
                           setChecklist(updated);
-                          handleSave();
+                          handleSave({ metaOverrides: { checklist: updated } });
                         }}
                         className="rounded border-zinc-300 dark:border-zinc-700 text-blue-600 focus:ring-blue-500 cursor-pointer w-4 h-4"
                       />
@@ -1349,10 +1439,11 @@ Requirements:
 
                     <button
                       type="button"
+                      aria-label={`Delete task ${item.text}`}
                       onClick={() => {
                         const updated = checklist.filter((_, i) => i !== idx);
                         setChecklist(updated);
-                        handleSave();
+                        handleSave({ metaOverrides: { checklist: updated } });
                       }}
                       className="text-zinc-400 hover:text-rose-500 p-1 opacity-60 group-hover:opacity-100 transition-opacity"
                     >

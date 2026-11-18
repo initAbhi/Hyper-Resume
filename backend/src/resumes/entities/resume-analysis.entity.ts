@@ -123,6 +123,22 @@ export interface AtsJobDescriptionMatch {
     failedQueries: string[];
     readinessSummary: string;
   };
+  hardSkillsMatch?: {
+    matched: number;
+    total: number;
+    percentage: number;
+  };
+  softSkillsMatch?: {
+    matched: number;
+    total: number;
+    percentage: number;
+  };
+  titleAlignment?: {
+    targetTitle?: string;
+    detectedTitle?: string;
+    score: number;
+    status: 'strong' | 'moderate' | 'weak';
+  };
 }
 
 export interface AtsSystemSimulations {
@@ -161,6 +177,9 @@ export interface AtsActionVerbAnalysis {
 }
 
 export interface ResumeAuditFindings {
+  atsScore?: number;
+  matchScore?: number;
+  compositeScore?: number;
   actionVerbsCount: number;
   metricsCount: number;
   missingSections: string[];

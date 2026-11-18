@@ -22,6 +22,9 @@ import type { ResumeAuditFindings } from '@/lib/api-client';
 
 interface AtsAuditBreakdownProps {
   score?: number;
+  atsScore?: number;
+  matchScore?: number;
+  compositeScore?: number;
   findings: ResumeAuditFindings;
   recommendations: string[];
   compact?: boolean;
@@ -45,6 +48,9 @@ function getStatusBadgeVariant(
 
 export function AtsAuditBreakdown({
   score,
+  atsScore,
+  matchScore,
+  compositeScore,
   findings,
   recommendations,
   compact = false,
@@ -67,6 +73,29 @@ export function AtsAuditBreakdown({
   const parsedPreview = findings.parsedPreview;
   const verbAnalysis = findings.actionVerbAnalysis;
 
+  const effectiveAtsScore =
+    typeof atsScore === 'number'
+      ? atsScore
+      : typeof findings.atsScore === 'number'
+        ? findings.atsScore
+        : score;
+
+  const effectiveMatchScore =
+    typeof matchScore === 'number'
+      ? matchScore
+      : typeof findings.matchScore === 'number'
+        ? findings.matchScore
+        : jdMatch?.matchRate;
+
+  const effectiveCompositeScore =
+    typeof compositeScore === 'number'
+      ? compositeScore
+      : typeof findings.compositeScore === 'number'
+        ? findings.compositeScore
+        : typeof effectiveMatchScore === 'number' && typeof effectiveAtsScore === 'number'
+          ? Math.round(effectiveAtsScore * 0.4 + effectiveMatchScore * 0.6)
+          : effectiveAtsScore;
+
   const filteredBullets = bullets.filter((b) => {
     if (bulletFilter === 'needs_work') return !b.hasActionVerb || !b.hasMetric || b.lengthStatus !== 'ideal';
     if (bulletFilter === 'xyz_met') return b.xyzFormulaMet;
@@ -76,60 +105,129 @@ export function AtsAuditBreakdown({
   return (
     <div className="space-y-4" data-testid="ats-audit-breakdown">
       {/* Optional Progress Ring Summary */}
-      {showScoreRing && typeof score === 'number' && (
-        <div className="flex items-center gap-4 p-3.5 rounded-xl bg-zinc-50/80 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/70 shadow-sm">
-          <div className="hr-progress-ring-wrapper shrink-0">
-            <progress
-              value={score}
-              max={100}
-              aria-label="Overall ATS Compatibility Score"
-              aria-valuetext={`${score} out of 100`}
-              className="hr-progress-ring"
-              style={
-                {
-                  '--value': score,
-                  '--size': '84px',
-                  '--thickness': '8px',
-                  '--fill-color': getScoreStrokeColor(score),
-                } as React.CSSProperties
-              }
-            />
-            <div className="hr-progress-ring-content" aria-hidden="true">
-              <span className="text-xl font-black text-zinc-900 dark:text-zinc-50 leading-none">
-                {score}
-              </span>
-              <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mt-0.5">
-                / 100
-              </span>
-            </div>
-          </div>
+      {showScoreRing && typeof effectiveAtsScore === 'number' && (
+        <div className="space-y-2">
+          {effectiveMatchScore !== undefined ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-xl bg-zinc-50/90 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/70 shadow-sm">
+              {/* ATS Resume Quality Card */}
+              <div className="flex items-center gap-3 p-2.5 rounded-lg bg-white dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800">
+                <div className="hr-progress-ring-wrapper shrink-0">
+                  <progress
+                    value={effectiveAtsScore}
+                    max={100}
+                    aria-label="ATS Resume Quality Score"
+                    className="hr-progress-ring"
+                    style={{
+                      '--value': effectiveAtsScore,
+                      '--size': '64px',
+                      '--thickness': '6px',
+                      '--fill-color': getScoreStrokeColor(effectiveAtsScore),
+                    } as React.CSSProperties}
+                  />
+                  <div className="hr-progress-ring-content" aria-hidden="true">
+                    <span className="text-base font-black text-zinc-900 dark:text-zinc-50 leading-none">
+                      {effectiveAtsScore}
+                    </span>
+                  </div>
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                    ATS Resume Score
+                  </div>
+                  <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                    {effectiveAtsScore >= 80 ? 'Strong ATS Quality' : effectiveAtsScore >= 55 ? 'Moderate Quality' : 'Needs Optimization'}
+                  </div>
+                  <div className="text-[10px] text-zinc-500">
+                    Structure &bull; Formatting &bull; Metrics
+                  </div>
+                </div>
+              </div>
 
-          <div className="min-w-0 space-y-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                {score >= 80
-                  ? 'Strong ATS Readiness'
-                  : score >= 55
-                    ? 'Moderate ATS Readiness'
-                    : 'Needs Structural Tuning'}
-              </span>
-              <Badge
-                variant={
-                  score >= 80 ? 'success' : score >= 55 ? 'warning' : 'destructive'
-                }
-              >
-                5-Dimension Audit
-              </Badge>
-              {jdMatch && (
-                <Badge variant="info" className="text-[10px]">
-                  Jobscan Match: {jdMatch.matchRate}%
-                </Badge>
-              )}
+              {/* Target Job Match Card */}
+              <div className="flex items-center gap-3 p-2.5 rounded-lg bg-blue-50/50 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-900/60">
+                <div className="hr-progress-ring-wrapper shrink-0">
+                  <progress
+                    value={effectiveMatchScore}
+                    max={100}
+                    aria-label="Job Description Match Score"
+                    className="hr-progress-ring"
+                    style={{
+                      '--value': effectiveMatchScore,
+                      '--size': '64px',
+                      '--thickness': '6px',
+                      '--fill-color': '#2563eb',
+                    } as React.CSSProperties}
+                  />
+                  <div className="hr-progress-ring-content" aria-hidden="true">
+                    <span className="text-base font-black text-blue-600 dark:text-blue-400 leading-none">
+                      {effectiveMatchScore}%
+                    </span>
+                  </div>
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                    Target Job Match
+                  </div>
+                  <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                    {effectiveMatchScore >= 80 ? 'High Job Alignment' : effectiveMatchScore >= 60 ? 'Moderate Match' : 'Missing Target Skills'}
+                  </div>
+                  <div className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                    Keywords &bull; Skills &bull; Recruiter Boolean
+                  </div>
+                </div>
+              </div>
             </div>
-            <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              Tested against Workday, Taleo &amp; Greenhouse parsing algorithms and recruiter search heuristics.
-            </p>
-          </div>
+          ) : (
+            <div className="flex items-center gap-4 p-3.5 rounded-xl bg-zinc-50/80 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/70 shadow-sm">
+              <div className="hr-progress-ring-wrapper shrink-0">
+                <progress
+                  value={effectiveAtsScore}
+                  max={100}
+                  aria-label="Overall ATS Compatibility Score"
+                  aria-valuetext={`${effectiveAtsScore} out of 100`}
+                  className="hr-progress-ring"
+                  style={
+                    {
+                      '--value': effectiveAtsScore,
+                      '--size': '84px',
+                      '--thickness': '8px',
+                      '--fill-color': getScoreStrokeColor(effectiveAtsScore),
+                    } as React.CSSProperties
+                  }
+                />
+                <div className="hr-progress-ring-content" aria-hidden="true">
+                  <span className="text-xl font-black text-zinc-900 dark:text-zinc-50 leading-none">
+                    {effectiveAtsScore}
+                  </span>
+                  <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mt-0.5">
+                    / 100
+                  </span>
+                </div>
+              </div>
+
+              <div className="min-w-0 space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                    {effectiveAtsScore >= 80
+                      ? 'Strong ATS Readiness'
+                      : effectiveAtsScore >= 55
+                        ? 'Moderate ATS Readiness'
+                        : 'Needs Structural Tuning'}
+                  </span>
+                  <Badge
+                    variant={
+                      effectiveAtsScore >= 80 ? 'success' : effectiveAtsScore >= 55 ? 'warning' : 'destructive'
+                    }
+                  >
+                    5-Dimension Audit
+                  </Badge>
+                </div>
+                <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                  Tested against Workday, Taleo &amp; Greenhouse parsing algorithms and recruiter search heuristics.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -450,6 +548,105 @@ export function AtsAuditBreakdown({
               {jdMatch.recruiterSearchSimulation.readinessSummary}
             </p>
           </div>
+
+          {/* Hard vs Soft Skills Breakdown */}
+          {(jdMatch.hardSkillsMatch || jdMatch.softSkillsMatch) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {jdMatch.hardSkillsMatch && (
+                <div className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                      Hard Technical Skills
+                    </span>
+                    <Badge
+                      variant={
+                        jdMatch.hardSkillsMatch.percentage >= 75 ? 'success' : 'warning'
+                      }
+                      className="text-[10px] font-mono"
+                    >
+                      {jdMatch.hardSkillsMatch.matched}/{jdMatch.hardSkillsMatch.total} (
+                      {jdMatch.hardSkillsMatch.percentage}%)
+                    </Badge>
+                  </div>
+                  <progress
+                    value={jdMatch.hardSkillsMatch.percentage}
+                    max={100}
+                    className="hr-score-progress"
+                    style={
+                      {
+                        '--progress-bar-fill': getScoreStrokeColor(
+                          jdMatch.hardSkillsMatch.percentage,
+                        ),
+                      } as React.CSSProperties
+                    }
+                  />
+                </div>
+              )}
+              {jdMatch.softSkillsMatch && (
+                <div className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                      Soft &amp; Leadership Skills
+                    </span>
+                    <Badge
+                      variant={
+                        jdMatch.softSkillsMatch.percentage >= 70 ? 'success' : 'warning'
+                      }
+                      className="text-[10px] font-mono"
+                    >
+                      {jdMatch.softSkillsMatch.matched}/{jdMatch.softSkillsMatch.total} (
+                      {jdMatch.softSkillsMatch.percentage}%)
+                    </Badge>
+                  </div>
+                  <progress
+                    value={jdMatch.softSkillsMatch.percentage}
+                    max={100}
+                    className="hr-score-progress"
+                    style={
+                      {
+                        '--progress-bar-fill': getScoreStrokeColor(
+                          jdMatch.softSkillsMatch.percentage,
+                        ),
+                      } as React.CSSProperties
+                    }
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Role Title Alignment */}
+          {jdMatch.titleAlignment && (
+            <div className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+                  Target Role Title Alignment
+                </span>
+                <Badge
+                  variant={
+                    jdMatch.titleAlignment.status === 'strong'
+                      ? 'success'
+                      : jdMatch.titleAlignment.status === 'moderate'
+                        ? 'warning'
+                        : 'destructive'
+                  }
+                  className="text-[10px]"
+                >
+                  {jdMatch.titleAlignment.score}% Alignment
+                </Badge>
+              </div>
+              <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                Target:{' '}
+                <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                  {jdMatch.titleAlignment.targetTitle || 'Not specified'}
+                </span>{' '}
+                · Detected Resume Title:{' '}
+                <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                  {jdMatch.titleAlignment.detectedTitle || 'No headline detected'}
+                </span>
+              </p>
+            </div>
+          )}
 
           {/* Recruiter Boolean Search Simulation */}
           <div className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 space-y-2">

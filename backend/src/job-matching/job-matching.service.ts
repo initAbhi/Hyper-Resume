@@ -38,9 +38,13 @@ export class JobMatchingService {
     private readonly aiService: AiService,
     @Optional() private readonly resumesService?: ResumesService,
     @Optional() private readonly creditsService?: CreditsService,
-  ) {}
+  ) { }
 
-  async createJobMatch(userId: string, dto: CreateJobMatchDto): Promise<JobMatch> {
+  async createJobMatch(
+    userId: string,
+    dto: CreateJobMatchDto,
+    options?: { skipCreditCharge?: boolean },
+  ): Promise<JobMatch> {
     this.logger.log(`Initiating job match analysis for user ${userId}, resume ${dto.resumeId}, job ${dto.jobDescriptionId}`);
 
     // 1. Verify Resume ownership
@@ -59,30 +63,32 @@ export class JobMatchingService {
       throw new NotFoundException('Job description not found or access denied');
     }
 
-    // 3. Enforce Pro Pass or 1-credit entitlement BEFORE calling AI
+    // 3. Enforce Pro Pass or 1-credit entitlement BEFORE calling AI (skipped when pre-reserved by AgentExecutorService)
     const chargeKey = `match:${userId}:${crypto.randomUUID()}`;
     let chargedViaCredits = false;
-    if (this.creditsService) {
-      const access = await this.creditsService.consumeFeatureAccess(
-        userId,
-        CREDIT_COSTS.JOB_MATCH,
-        'resume_analysis',
-        chargeKey,
-        `Job match analysis: ${job.title}`,
-        { resumeId: resume.id, jobDescriptionId: job.id },
-      );
-      chargedViaCredits = access.accessGrantedVia === 'credits';
-    } else {
-      const { sum } = await this.creditLedgerRepository
-        .createQueryBuilder('ledger')
-        .select('COALESCE(SUM(ledger.amount), 0)', 'sum')
-        .where('ledger.user_id = :userId', { userId })
-        .getRawOne();
-
-      if (Number(sum) < 1) {
-        throw new ForbiddenException(
-          'Insufficient credits (0 available, 1 required). Please upgrade to Pro or recharge credits.',
+    if (!options?.skipCreditCharge) {
+      if (this.creditsService) {
+        const access = await this.creditsService.consumeFeatureAccess(
+          userId,
+          CREDIT_COSTS.JOB_MATCH,
+          'resume_analysis',
+          chargeKey,
+          `Job match analysis: ${job.title}`,
+          { resumeId: resume.id, jobDescriptionId: job.id },
         );
+        chargedViaCredits = access.accessGrantedVia === 'credits';
+      } else {
+        const { sum } = await this.creditLedgerRepository
+          .createQueryBuilder('ledger')
+          .select('COALESCE(SUM(ledger.amount), 0)', 'sum')
+          .where('ledger.user_id = :userId', { userId })
+          .getRawOne();
+
+        if (Number(sum) < 1) {
+          throw new ForbiddenException(
+            'Insufficient credits (0 available, 1 required). Please upgrade to Pro or recharge credits.',
+          );
+        }
       }
     }
 
@@ -210,10 +216,10 @@ export class JobMatchingService {
 
     const overallScore = Math.round(
       scoreComponents.requiredSkillsScore * 0.35 +
-        scoreComponents.experienceScore * 0.25 +
-        scoreComponents.preferredSkillsScore * 0.15 +
-        scoreComponents.responsibilityScore * 0.15 +
-        scoreComponents.formattingScore * 0.1,
+      scoreComponents.experienceScore * 0.25 +
+      scoreComponents.preferredSkillsScore * 0.15 +
+      scoreComponents.responsibilityScore * 0.15 +
+      scoreComponents.formattingScore * 0.1,
     );
 
     const recommendations = this.generateRecommendations(requirementsAnalysis);
@@ -481,8 +487,8 @@ export class JobMatchingService {
           Array.isArray(item.keywords) && item.keywords.length > 0
             ? item.keywords
             : Array.isArray(src?.keywords)
-            ? src.keywords
-            : [],
+              ? src.keywords
+              : [],
       };
     });
   }

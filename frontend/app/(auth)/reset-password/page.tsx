@@ -3,7 +3,7 @@
 import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, CheckCircle2, KeyRound } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,7 @@ function ResetPasswordForm() {
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -57,10 +58,11 @@ function ResetPasswordForm() {
         <Alert variant="destructive" className="text-xs">
           Missing or invalid password reset token. Please verify the URL or request a new password reset link.
         </Alert>
-        <Link href="/forgot-password">
-          <Button variant="primary" className="w-full h-10 rounded-xl bg-[#285FEA] text-white text-xs">
-            Request New Reset Link
-          </Button>
+        <Link
+          href="/forgot-password"
+          className="w-full h-10 rounded-xl bg-[#285FEA] hover:bg-[#1E4BC8] text-white font-medium text-xs inline-flex items-center justify-center transition-colors"
+        >
+          Request New Reset Link
         </Link>
       </CardContent>
     );
@@ -79,13 +81,11 @@ function ResetPasswordForm() {
           </p>
         </div>
         <div className="pt-2">
-          <Link href="/login">
-            <Button
-              variant="primary"
-              className="w-full h-10 rounded-xl bg-[#285FEA] hover:bg-[#1E4BC8] text-white font-medium text-xs shadow-xs"
-            >
-              Sign In Now
-            </Button>
+          <Link
+            href="/login"
+            className="w-full h-10 rounded-xl bg-[#285FEA] hover:bg-[#1E4BC8] text-white font-medium text-xs shadow-xs inline-flex items-center justify-center transition-colors"
+          >
+            Sign In Now
           </Link>
         </div>
       </CardContent>
@@ -100,25 +100,37 @@ function ResetPasswordForm() {
             {errorMessage}
           </Alert>
         )}
-        <Input
-          id="new-password"
-          label="New Password"
-          type="password"
-          placeholder="At least 8 characters"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          helperText="Must be at least 8 characters."
-          className="text-xs"
-        />
+        <div className="relative">
+          <Input
+            id="new-password"
+            label="New Password"
+            type={showPassword ? 'text' : 'password'}
+            placeholder="At least 8 characters"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            autoComplete="new-password"
+            helperText="Must be at least 8 characters."
+            className="text-xs pr-9"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((prev) => !prev)}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            className="absolute right-2.5 top-[30px] text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-100 cursor-pointer p-0.5 rounded"
+          >
+            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
         <Input
           id="confirm-password"
           label="Confirm New Password"
-          type="password"
+          type={showPassword ? 'text' : 'password'}
           placeholder="Re-enter password"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           required
+          autoComplete="new-password"
           className="text-xs"
         />
       </CardContent>
@@ -156,9 +168,9 @@ export default function ResetPasswordPage() {
       </Link>
       <Card className="w-full max-w-md shadow-lg border-slate-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden">
         <CardHeader className="text-center pb-4 pt-6">
-          <CardTitle className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             Set New Password
-          </CardTitle>
+          </h1>
           <CardDescription className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Create a strong, new password for your account
           </CardDescription>

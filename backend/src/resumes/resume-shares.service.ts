@@ -450,6 +450,8 @@ export class ResumeSharesService {
       ...cloned.contact,
       email: '',
       phone: undefined,
+      location: undefined,
+      photoUrl: undefined,
     };
     return cloned;
   }
@@ -561,20 +563,47 @@ export class ResumeSharesService {
     await this.eventRepository.save(event);
 
     const now = new Date();
-    if (eventType === 'view') {
-      share.viewCount = (share.viewCount || 0) + 1;
-      if (isNewUniqueVisitor) {
-        share.uniqueVisitorCount = (share.uniqueVisitorCount || 0) + 1;
+    if (typeof this.shareRepository.createQueryBuilder === 'function') {
+      if (eventType === 'view') {
+        const qb = this.shareRepository
+          .createQueryBuilder()
+          .update(ResumeShare)
+          .set({
+            viewCount: () => 'COALESCE(view_count, 0) + 1',
+            ...(isNewUniqueVisitor
+              ? { uniqueVisitorCount: () => 'COALESCE(unique_visitor_count, 0) + 1' }
+              : {}),
+            lastViewedAt: now,
+          })
+          .where('id = :id', { id: share.id });
+        await qb.execute();
+      } else if (
+        eventType === 'download_pdf' ||
+        eventType === 'download_docx'
+      ) {
+        await this.shareRepository
+          .createQueryBuilder()
+          .update(ResumeShare)
+          .set({
+            downloadCount: () => 'COALESCE(download_count, 0) + 1',
+            lastViewedAt: now,
+          })
+          .where('id = :id', { id: share.id })
+          .execute();
       }
-      share.lastViewedAt = now;
-      await this.shareRepository.save(share);
-    } else if (
-      eventType === 'download_pdf' ||
-      eventType === 'download_docx'
-    ) {
-      share.downloadCount = (share.downloadCount || 0) + 1;
-      share.lastViewedAt = now;
-      await this.shareRepository.save(share);
+    } else {
+      if (eventType === 'view') {
+        share.viewCount = (share.viewCount || 0) + 1;
+        if (isNewUniqueVisitor) {
+          share.uniqueVisitorCount = (share.uniqueVisitorCount || 0) + 1;
+        }
+        share.lastViewedAt = now;
+        await this.shareRepository.save(share);
+      } else if (eventType === 'download_pdf' || eventType === 'download_docx') {
+        share.downloadCount = (share.downloadCount || 0) + 1;
+        share.lastViewedAt = now;
+        await this.shareRepository.save(share);
+      }
     }
   }
 

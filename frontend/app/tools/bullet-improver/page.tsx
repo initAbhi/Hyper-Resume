@@ -63,11 +63,14 @@ export default function BulletImproverPage() {
     setIsProcessing(true);
     setErrorMessage(null);
     try {
-      const res = await apiClient.improveBullet({
-        bulletText: bullet.trim(),
-        targetRole: targetRole.trim() || undefined,
-        metricHint: metricHint.trim() || undefined,
-      });
+      const res = await apiClient.improveBullet(
+        {
+          bulletText: bullet.trim(),
+          targetRole: targetRole.trim() || undefined,
+          metricHint: metricHint.trim() || undefined,
+        },
+        { forcePublic: true },
+      );
 
       setVariants(
         res.variants && res.variants.length > 0
@@ -100,10 +103,13 @@ export default function BulletImproverPage() {
     setIsProcessing(true);
     setErrorMessage(null);
     try {
-      const res = await apiClient.generateBullets({
-        roleTitle: roleTitle.trim(),
-        focusArea: focusArea.trim() || undefined,
-      });
+      const res = await apiClient.generateBullets(
+        {
+          roleTitle: roleTitle.trim(),
+          focusArea: focusArea.trim() || undefined,
+        },
+        { forcePublic: true },
+      );
 
       setVariants(res.bullets || []);
       setVerificationNotes(res.factualVerificationNotes);
@@ -118,9 +124,17 @@ export default function BulletImproverPage() {
   };
 
   const handleCopy = (text: string, idx: number) => {
-    navigator.clipboard.writeText(text);
-    setCopiedIdx(idx);
-    setTimeout(() => setCopiedIdx(null), 2000);
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      navigator.clipboard
+        .writeText(text)
+        .then(() => {
+          setCopiedIdx(idx);
+          setTimeout(() => setCopiedIdx(null), 2000);
+        })
+        .catch(() => {
+          setErrorMessage('Clipboard access was blocked by your browser.');
+        });
+    }
   };
 
   const applyExample = (ex: (typeof EXAMPLES)[number]) => {

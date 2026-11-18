@@ -38,10 +38,14 @@ export default function ResumesListPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [resumes, setResumes] = useState<Resume[]>([]);
+  const [archivedResumes, setArchivedResumes] = useState<Resume[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'master' | 'tailored'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'master' | 'tailored' | 'archived'>('all');
+  const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [confirmArchiveId, setConfirmArchiveId] = useState<string | null>(null);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [shareSummaries, setShareSummaries] = useState<Record<string, ResumeShareSummaryItem>>({});
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [duplicateToast, setDuplicateToast] = useState<{
@@ -108,14 +112,16 @@ export default function ResumesListPage() {
     let isMounted = true;
     Promise.all([
       apiClient.listResumes(),
+      apiClient.listResumes({ archived: true }).catch(() => [] as Resume[]),
       apiClient.listSharesSummary().catch(() => [] as ResumeShareSummaryItem[]),
     ])
-      .then(([data, shares]) => {
+      .then(([data, archived, shares]) => {
         if (isMounted) {
           const safeResumes = Array.isArray(data)
             ? data
             : ((data as unknown) as { items: Resume[] })?.items || [];
           setResumes(safeResumes);
+          setArchivedResumes(Array.isArray(archived) ? archived : []);
           const map: Record<string, ResumeShareSummaryItem> = {};
           for (const s of shares) {
             map[s.resumeId] = s;
@@ -193,10 +199,7 @@ export default function ResumesListPage() {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const processUploadedFile = async (file: File) => {
     setUploadFile(file);
     setIsUploading(true);
     setUploadError(null);
@@ -216,6 +219,25 @@ export default function ResumesListPage() {
       setIsUploading(false);
     }
   };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    await processUploadedFile(file);
+  };
+
+  useEffect(() => {
+    if (!isCreateModalOpen && !isUploadModalOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsCreateModalOpen(false);
+        setIsUploadModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isCreateModalOpen, isUploadModalOpen]);
 
   const handleConfirmImport = async (destination: 'editor' | 'linkedin' = 'editor') => {
     if (!parsedDraft) return;
@@ -252,6 +274,22 @@ export default function ResumesListPage() {
         })),
         projects: parsedDraft.projects || [],
         certifications: parsedDraft.certifications || [],
+        ...(parsedDraft.languages && parsedDraft.languages.length > 0
+          ? {
+              customSections: [
+                {
+                  id: 'imported-languages',
+                  title: 'Languages',
+                  kind: 'languages' as const,
+                  entries: parsedDraft.languages.map((lang, idx) => ({
+                    id: `lang-${idx}`,
+                    heading: lang,
+                    bullets: [],
+                  })),
+                },
+              ],
+            }
+          : {}),
       };
 
       const resume = await apiClient.createResume({
@@ -316,16 +354,34 @@ export default function ResumesListPage() {
   };
 
   const handleArchiveResume = async (resumeId: string) => {
-    if (!confirm('Are you sure you want to archive this resume?')) return;
+    setConfirmArchiveId(null);
     try {
       await apiClient.archiveResume(resumeId);
+      const target = resumes.find((r) => r.id === resumeId);
       setResumes((prev) => prev.filter((r) => r.id !== resumeId));
+      if (target) {
+        setArchivedResumes((prev) => [{ ...target, isArchived: true }, ...prev]);
+      }
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to archive resume');
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to archive resume');
     }
   };
 
-  const filteredResumes = resumes.filter((r) => {
+  const handleRestoreResume = async (resumeId: string) => {
+    setRestoringId(resumeId);
+    try {
+      const restored = await apiClient.restoreResume(resumeId);
+      setArchivedResumes((prev) => prev.filter((r) => r.id !== resumeId));
+      setResumes((prev) => [restored, ...prev]);
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to restore resume');
+    } finally {
+      setRestoringId(null);
+    }
+  };
+
+  const sourceList = filterType === 'archived' ? archivedResumes : resumes;
+  const filteredResumes = sourceList.filter((r) => {
     if (filterType === 'master' && !r.isMaster) return false;
     if (filterType === 'tailored' && r.isMaster) return false;
     if (searchQuery.trim()) {
@@ -396,50 +452,65 @@ export default function ResumesListPage() {
       )}
 
       {/* Search & Filter Bar */}
-      {resumes.length > 0 && (
+      {(resumes.length > 0 || archivedResumes.length > 0) && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="relative flex-1 max-w-xs">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#848D9A]" />
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#525B68] dark:text-[#A3ACB9]" />
             <input
               type="text"
+              aria-label="Search resumes"
               placeholder="Search resumes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8 pl-8 pr-3 text-xs rounded-md border border-[#E2E5E9] dark:border-[#252A33] bg-white dark:bg-[#14171C] text-[#1A1D23] dark:text-[#F0F2F5] placeholder:text-[#848D9A] focus:outline-none focus:ring-1 focus:ring-[#285FEA] w-full"
+              className="h-8 pl-8 pr-3 text-xs rounded-md border border-[#E2E5E9] dark:border-[#252A33] bg-white dark:bg-[#14171C] text-[#1A1D23] dark:text-[#F0F2F5] placeholder:text-[#525B68] dark:placeholder:text-[#A3ACB9] focus:outline-none focus:ring-1 focus:ring-[#285FEA] w-full"
             />
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs text-[#5A6270] dark:text-[#9EA7B4]">
-            <span className="text-[11px] font-medium text-[#848D9A]">Filter:</span>
+          <div className="flex items-center gap-1.5 text-xs text-[#5A6270] dark:text-[#9EA7B4] flex-wrap">
+            <span className="text-[11px] font-medium text-[#525B68] dark:text-[#A3ACB9]">Filter:</span>
             <button
+              type="button"
               onClick={() => setFilterType('all')}
-              className={`px-2.5 py-1 rounded text-xs transition-colors ${
+              className={`px-2.5 py-1 rounded text-xs transition-colors cursor-pointer ${
                 filterType === 'all'
                   ? 'bg-[#F1F3F5] dark:bg-[#1D2128] text-[#1A1D23] dark:text-[#F0F2F5] font-semibold'
-                  : 'text-[#5A6270] hover:text-[#1A1D23]'
+                  : 'text-[#5A6270] dark:text-[#9EA7B4] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5]'
               }`}
             >
               All ({resumes.length})
             </button>
             <button
+              type="button"
               onClick={() => setFilterType('master')}
-              className={`px-2.5 py-1 rounded text-xs transition-colors ${
+              className={`px-2.5 py-1 rounded text-xs transition-colors cursor-pointer ${
                 filterType === 'master'
                   ? 'bg-[#F1F3F5] dark:bg-[#1D2128] text-[#1A1D23] dark:text-[#F0F2F5] font-semibold'
-                  : 'text-[#5A6270] hover:text-[#1A1D23]'
+                  : 'text-[#5A6270] dark:text-[#9EA7B4] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5]'
               }`}
             >
               Master ({resumes.filter((r) => r.isMaster).length})
             </button>
             <button
+              type="button"
               onClick={() => setFilterType('tailored')}
-              className={`px-2.5 py-1 rounded text-xs transition-colors ${
+              className={`px-2.5 py-1 rounded text-xs transition-colors cursor-pointer ${
                 filterType === 'tailored'
                   ? 'bg-[#F1F3F5] dark:bg-[#1D2128] text-[#1A1D23] dark:text-[#F0F2F5] font-semibold'
-                  : 'text-[#5A6270] hover:text-[#1A1D23]'
+                  : 'text-[#5A6270] dark:text-[#9EA7B4] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5]'
               }`}
             >
               Tailored ({resumes.filter((r) => !r.isMaster).length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterType('archived')}
+              className={`px-2.5 py-1 rounded text-xs transition-colors cursor-pointer ${
+                filterType === 'archived'
+                  ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-200 font-semibold border border-amber-200 dark:border-amber-800'
+                  : 'text-[#5A6270] dark:text-[#9EA7B4] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5]'
+              }`}
+            >
+              Trash ({archivedResumes.length})
             </button>
           </div>
         </div>
@@ -447,7 +518,7 @@ export default function ResumesListPage() {
 
       {/* Resumes Grid */}
       {isLoading ? (
-        <div className="p-12 text-center text-xs text-[#848D9A] border border-[#E2E5E9] dark:border-[#252A33] rounded-lg bg-white dark:bg-[#14171C]">
+        <div className="p-12 text-center text-xs text-[#525B68] dark:text-[#A3ACB9] border border-[#E2E5E9] dark:border-[#252A33] rounded-lg bg-white dark:bg-[#14171C]">
           Loading your resumes...
         </div>
       ) : filteredResumes.length === 0 ? (
@@ -515,7 +586,7 @@ export default function ResumesListPage() {
                           {resume.name}
                         </Link>
                       </h2>
-                      <p className="text-[11px] text-[#848D9A]">
+                      <p className="text-[11px] text-[#525B68] dark:text-[#A3ACB9]">
                         Updated{' '}
                         {new Date(resume.updatedAt).toLocaleDateString([], {
                           month: 'short',
@@ -563,7 +634,7 @@ export default function ResumesListPage() {
 
                 <div className="mt-3 pt-3 border-t border-[#F1F3F5] dark:border-[#1D2128] grid grid-cols-3 gap-2 text-center">
                   <div className="p-1.5 rounded bg-[#F7F8FA] dark:bg-[#1D2128]/50">
-                    <div className="text-[10px] text-[#848D9A]">Target Role</div>
+                    <div className="text-[10px] text-[#525B68] dark:text-[#A3ACB9]">Target Role</div>
                     <div
                       className="text-xs font-medium text-[#1A1D23] dark:text-[#F0F2F5] truncate mt-0.5"
                       title={resolvedRole}
@@ -572,13 +643,13 @@ export default function ResumesListPage() {
                     </div>
                   </div>
                   <div className="p-1.5 rounded bg-[#F7F8FA] dark:bg-[#1D2128]/50">
-                    <div className="text-[10px] text-[#848D9A]">Experience</div>
+                    <div className="text-[10px] text-[#525B68] dark:text-[#A3ACB9]">Experience</div>
                     <div className="text-xs font-medium text-[#1A1D23] dark:text-[#F0F2F5] mt-0.5">
                       {(resume.content?.experience || []).length} Roles
                     </div>
                   </div>
                   <div className="p-1.5 rounded bg-[#F7F8FA] dark:bg-[#1D2128]/50">
-                    <div className="text-[10px] text-[#848D9A]">Skills</div>
+                    <div className="text-[10px] text-[#525B68] dark:text-[#A3ACB9]">Skills</div>
                     <div className="text-xs font-medium text-[#285FEA] mt-0.5">
                       {(resume.content?.skills || []).length} Verified
                     </div>
@@ -586,48 +657,85 @@ export default function ResumesListPage() {
                 </div>
 
                 <footer className="mt-4 pt-3 border-t border-[#F1F3F5] dark:border-[#1D2128] flex items-center justify-between gap-2">
-                  <Link
-                    href={`/app/resumes/${resume.id}`}
-                    className="text-xs font-semibold text-[#285FEA] hover:underline inline-flex items-center gap-1"
-                  >
-                    Open Editor &rarr;
-                  </Link>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      data-testid={`duplicate-resume-btn-${resume.id}`}
-                      disabled={isDuplicatingThis || duplicatingId !== null}
-                      onClick={() => handleDuplicateResume(resume.id)}
-                      className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded border border-[#E2E5E9] dark:border-[#252A33] hover:bg-[#F7F8FA] dark:hover:bg-[#1D2128] text-[#5A6270] dark:text-[#9EA7B4] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5] transition-colors cursor-pointer disabled:opacity-50"
-                      title="Duplicate resume as a new draft"
-                    >
-                      {isDuplicatingThis ? (
-                        <progress
-                          aria-label="Duplicating resume"
-                          className="hr-loading-spinner"
-                          style={{ '--size': '12px' } as React.CSSProperties}
-                        />
-                      ) : (
-                        <Copy className="w-3 h-3" />
-                      )}
-                      <span>{isDuplicatingThis ? 'Cloning...' : 'Duplicate'}</span>
-                    </button>
-                    <Link
-                      href={`/app/match?resumeId=${resume.id}`}
-                      className="px-2 py-1 text-xs rounded border border-[#E2E5E9] dark:border-[#252A33] hover:bg-[#F7F8FA] dark:hover:bg-[#1D2128] text-[#5A6270] dark:text-[#9EA7B4] transition-colors"
-                    >
-                      Match JD
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => handleArchiveResume(resume.id)}
-                      className="p-1 rounded text-[#848D9A] hover:text-[#DC2626] transition-colors cursor-pointer"
-                      aria-label={`Archive ${resume.name}`}
-                      title="Archive resume"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  {filterType === 'archived' ? (
+                    <>
+                      <span className="text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                        Archived in Trash
+                      </span>
+                      <button
+                        type="button"
+                        disabled={restoringId === resume.id}
+                        onClick={() => handleRestoreResume(resume.id)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md bg-emerald-600 hover:bg-emerald-700 text-white transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        {restoringId === resume.id ? 'Restoring...' : 'Restore Resume'}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        href={`/app/resumes/${resume.id}`}
+                        className="text-xs font-semibold text-[#285FEA] hover:underline inline-flex items-center gap-1"
+                      >
+                        Open Editor &rarr;
+                      </Link>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          data-testid={`duplicate-resume-btn-${resume.id}`}
+                          disabled={isDuplicatingThis || duplicatingId !== null}
+                          onClick={() => handleDuplicateResume(resume.id)}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded border border-[#E2E5E9] dark:border-[#252A33] hover:bg-[#F7F8FA] dark:hover:bg-[#1D2128] text-[#5A6270] dark:text-[#9EA7B4] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5] transition-colors cursor-pointer disabled:opacity-50"
+                          title="Duplicate resume as a new draft"
+                        >
+                          {isDuplicatingThis ? (
+                            <progress
+                              aria-label="Duplicating resume"
+                              className="hr-loading-spinner"
+                              style={{ '--size': '12px' } as React.CSSProperties}
+                            />
+                          ) : (
+                            <Copy className="w-3 h-3" />
+                          )}
+                          <span>{isDuplicatingThis ? 'Cloning...' : 'Duplicate'}</span>
+                        </button>
+                        <Link
+                          href={`/app/match?resumeId=${resume.id}`}
+                          className="px-2 py-1 text-xs rounded border border-[#E2E5E9] dark:border-[#252A33] hover:bg-[#F7F8FA] dark:hover:bg-[#1D2128] text-[#5A6270] dark:text-[#9EA7B4] transition-colors"
+                        >
+                          Match JD
+                        </Link>
+                        {confirmArchiveId === resume.id ? (
+                          <div className="inline-flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleArchiveResume(resume.id)}
+                              className="px-2 py-0.5 text-[11px] font-semibold rounded bg-rose-600 text-white hover:bg-rose-700 cursor-pointer"
+                            >
+                              Archive
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmArchiveId(null)}
+                              className="px-1.5 py-0.5 text-[11px] rounded border border-[#E2E5E9] dark:border-[#252A33] text-[#5A6270] dark:text-[#9EA7B4] cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmArchiveId(resume.id)}
+                            className="p-1 rounded text-[#525B68] dark:text-[#A3ACB9] hover:text-[#DC2626] transition-colors cursor-pointer"
+                            aria-label={`Archive ${resume.name}`}
+                            title="Archive resume"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </footer>
               </article>
             );
@@ -637,16 +745,26 @@ export default function ResumesListPage() {
 
       {/* Modal: Create from Scratch */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="create-resume-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsCreateModalOpen(false);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+        >
           <Card className="w-full max-w-md shadow-lg bg-white dark:bg-[#14171C]">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
-                <CardTitle className="text-base">Create New Resume</CardTitle>
+                <CardTitle id="create-resume-modal-title" className="text-base">Create New Resume</CardTitle>
                 <CardDescription>Start with a structured single-column ATS profile.</CardDescription>
               </div>
               <button
+                type="button"
+                aria-label="Close create resume dialog"
                 onClick={() => setIsCreateModalOpen(false)}
-                className="text-[#848D9A] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5]"
+                className="text-[#525B68] dark:text-[#A3ACB9] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5]"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -702,18 +820,28 @@ export default function ResumesListPage() {
 
       {/* Modal: Import PDF / DOCX */}
       {isUploadModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="import-resume-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsUploadModalOpen(false);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+        >
           <Card className="w-full max-w-lg shadow-lg bg-white dark:bg-[#14171C]">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
-                <CardTitle className="text-base">Import Resume or LinkedIn PDF</CardTitle>
+                <CardTitle id="import-resume-modal-title" className="text-base">Import Resume or LinkedIn PDF</CardTitle>
                 <CardDescription>
                   Upload your LinkedIn &ldquo;Save to PDF&rdquo; export, PDF resume, or DOCX file to extract verified career facts.
                 </CardDescription>
               </div>
               <button
+                type="button"
+                aria-label="Close import resume dialog"
                 onClick={() => setIsUploadModalOpen(false)}
-                className="text-[#848D9A] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5]"
+                className="text-[#525B68] dark:text-[#A3ACB9] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5]"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -734,7 +862,24 @@ export default function ResumesListPage() {
                   </div>
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="p-8 border border-dashed border-[#CBD0D7] dark:border-[#333945] hover:border-[#285FEA] rounded-lg flex flex-col items-center justify-center text-center cursor-pointer transition-colors bg-[#F7F8FA] dark:bg-[#1D2128]/40"
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDraggingFile(true);
+                    }}
+                    onDragLeave={() => setIsDraggingFile(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDraggingFile(false);
+                      const dropped = e.dataTransfer.files?.[0];
+                      if (dropped) {
+                        void processUploadedFile(dropped);
+                      }
+                    }}
+                    className={`p-8 border border-dashed rounded-lg flex flex-col items-center justify-center text-center cursor-pointer transition-colors ${
+                      isDraggingFile
+                        ? 'border-[#285FEA] bg-blue-50/70 dark:bg-blue-950/40'
+                        : 'border-[#CBD0D7] dark:border-[#333945] hover:border-[#285FEA] bg-[#F7F8FA] dark:bg-[#1D2128]/40'
+                    }`}
                   >
                     <input
                       ref={fileInputRef}
@@ -749,7 +894,7 @@ export default function ResumesListPage() {
                     <p className="text-xs font-semibold text-[#1A1D23] dark:text-[#F0F2F5]">
                       {uploadFile ? uploadFile.name : 'Select or drag a LinkedIn PDF / Resume PDF / DOCX'}
                     </p>
-                    <p className="text-[11px] text-[#848D9A] mt-0.5">
+                    <p className="text-[11px] text-[#525B68] dark:text-[#A3ACB9] mt-0.5">
                       Up to 10MB · Preserves verified career history cleanly
                     </p>
                     {isUploading && (
@@ -902,7 +1047,7 @@ export default function ResumesListPage() {
                 type="button"
                 aria-label="Close duplicate confirmation notification"
                 onClick={dismissToast}
-                className="p-1 rounded text-[#848D9A] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5] cursor-pointer shrink-0"
+                className="p-1 rounded text-[#525B68] dark:text-[#A3ACB9] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5] cursor-pointer shrink-0"
               >
                 <X className="w-3.5 h-3.5" />
               </button>

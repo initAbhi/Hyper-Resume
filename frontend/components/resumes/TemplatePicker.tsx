@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { X, Check, Info } from 'lucide-react';
+import { X, Check, Info, RotateCcw, Search, Sparkles } from 'lucide-react';
 import { AVAILABLE_TEMPLATES, ResumeTemplateRenderer } from './templates';
 import type { ResumeContent } from '@/lib/api-client';
 
@@ -112,9 +112,9 @@ function getSafePreviewContent(content?: ResumeContent | null): ResumeContent {
     experience:
       content.experience && content.experience.length > 0
         ? content.experience.slice(0, 2).map((exp) => ({
-            ...exp,
-            bullets: (exp.bullets || []).slice(0, 3),
-          }))
+          ...exp,
+          bullets: (exp.bullets || []).slice(0, 3),
+        }))
         : DEFAULT_SAMPLE_CONTENT.experience,
     education:
       content.education && content.education.length > 0
@@ -209,12 +209,90 @@ export function TemplatePicker({
   photoUrl,
 }: TemplatePickerProps) {
   const [selectedSize, setSelectedSize] = useState<'A4' | 'US Letter'>(pageSize);
-  const [language, setLanguage] = useState('English (US)');
+  const [language, setLanguage] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.localStorage.getItem('hr_resume_language') || 'English (US)';
+    }
+    return 'English (US)';
+  });
   const [activeCategory, setActiveCategory] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleLanguageChange = (nextLang: string) => {
+    setLanguage(nextLang);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('hr_resume_language', nextLang);
+      const langMap: Record<string, string> = {
+        'English (US)': 'en-US',
+        'English (UK)': 'en-GB',
+        German: 'de',
+        French: 'fr',
+        Spanish: 'es',
+      };
+      const printEl = document.getElementById('resume-document-print');
+      if (printEl) {
+        printEl.setAttribute('lang', langMap[nextLang] || 'en-US');
+      }
+    }
+  };
+
+  // Keep track of the initial template when the picker was opened, allowing 1-click revert
+  const initialTemplateKeyRef = useRef(currentTemplateKey);
+  useEffect(() => {
+    if (isOpen) {
+      initialTemplateKeyRef.current = currentTemplateKey;
+    }
+  }, [isOpen]);
+
+  // Sync selectedSize with prop
+  useEffect(() => {
+    if (pageSize) {
+      setSelectedSize(pageSize);
+    }
+  }, [pageSize]);
+
+  // Close on Escape key press
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   const previewContent = useMemo(() => {
     return getSafePreviewContent(content);
   }, [content]);
+
+  const categories = ['All', 'Classic', 'Modern', 'Two-Column'];
+
+  const filteredTemplates = useMemo(() => {
+    return AVAILABLE_TEMPLATES.filter((tpl) => {
+      const matchesCategory = activeCategory === 'All' || tpl.category === activeCategory;
+      const q = searchQuery.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        tpl.name.toLowerCase().includes(q) ||
+        tpl.description.toLowerCase().includes(q) ||
+        (tpl.badge && tpl.badge.toLowerCase().includes(q));
+      return matchesCategory && matchesSearch;
+    });
+  }, [activeCategory, searchQuery]);
+
+  const activeTemplate = useMemo(() => {
+    return (
+      AVAILABLE_TEMPLATES.find((tpl) => tpl.key === currentTemplateKey) ||
+      AVAILABLE_TEMPLATES.find((tpl) => tpl.key === 'double-column') ||
+      AVAILABLE_TEMPLATES[0]
+    );
+  }, [currentTemplateKey]);
+
+  const initialTemplate = useMemo(() => {
+    return AVAILABLE_TEMPLATES.find((tpl) => tpl.key === initialTemplateKeyRef.current);
+  }, [currentTemplateKey]);
 
   if (!isOpen) return null;
 
@@ -223,59 +301,85 @@ export function TemplatePicker({
     if (onPageSizeChange) onPageSizeChange(size);
   };
 
-  const categories = ['All', 'Classic', 'Modern', 'Two-Column'];
-
-  const filteredTemplates = AVAILABLE_TEMPLATES.filter((tpl) => {
-    if (activeCategory === 'All') return true;
-    return tpl.category === activeCategory;
-  });
-
   return (
-    <div className="fixed inset-0 z-50 flex">
-      {/* Backdrop */}
+    <>
+      {/* Mobile-only subtle backdrop: dismiss on tap, NO BLUR */}
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity animate-in fade-in"
+        className="fixed inset-0 bg-black/25 z-30 lg:hidden transition-opacity animate-in fade-in"
         onClick={onClose}
+        aria-hidden="true"
       />
 
-      {/* Slide-in Left Drawer */}
-      <div className="relative w-full max-w-[460px] bg-white dark:bg-zinc-900 h-full shadow-2xl border-r border-zinc-200 dark:border-zinc-800 flex flex-col z-10 animate-in slide-in-from-left duration-200">
-        {/* Header */}
-        <div className="px-5 py-3.5 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
+      {/* Slide-in Left Drawer: Fixed on the left, does NOT block or blur the resume on desktop */}
+      <aside
+        data-export-exclude="true"
+        aria-label="Resume Templates Panel"
+        className="fixed inset-y-0 left-0 z-40 w-full sm:w-[420px] lg:w-[440px] bg-white dark:bg-zinc-900 shadow-2xl border-r border-zinc-200 dark:border-zinc-800 flex flex-col pointer-events-auto animate-in slide-in-from-left duration-200 ease-out"
+      >
+        {/* Drawer Header */}
+        <div className="px-5 py-3.5 border-b border-zinc-200 dark:border-zinc-800 shrink-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xs">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                <span>Select a template</span>
-                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+              <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                <span>Select a Template</span>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                   {AVAILABLE_TEMPLATES.length} Styles
                 </span>
               </h2>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                Previewed live with your resume details
-              </p>
+              <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span>Live previewing right on your resume</span>
+              </div>
             </div>
+
             <button
+              type="button"
               onClick={onClose}
-              className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              className="p-2 min-w-[34px] min-h-[34px] flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
               aria-label="Close template picker"
+              title="Close (Esc)"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
+          {/* Quick Search */}
+          <div className="relative mt-3">
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search templates (e.g. ATS, Modern, Jake)..."
+              className="w-full pl-8 pr-7 py-1.5 text-xs bg-zinc-50 dark:bg-zinc-800/70 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
           {/* Category Filter Pills */}
-          <div className="flex items-center gap-1.5 mt-3 overflow-x-auto pb-0.5 scrollbar-none">
+          <div className="flex items-center gap-1.5 mt-2.5 overflow-x-auto pb-0.5 scrollbar-none">
             {categories.map((cat) => {
               const isActive = activeCategory === cat;
               return (
                 <button
                   key={cat}
+                  type="button"
                   onClick={() => setActiveCategory(cat)}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all shrink-0 ${
-                    isActive
+                  className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all shrink-0 cursor-pointer ${isActive
                       ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs'
                       : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700'
-                  }`}
+                    }`}
                 >
                   {cat}
                 </button>
@@ -284,119 +388,152 @@ export function TemplatePicker({
           </div>
         </div>
 
+        {/* Revert Banner (shown if user changed template during this session) */}
+        {initialTemplateKeyRef.current &&
+          currentTemplateKey !== initialTemplateKeyRef.current && (
+            <div className="px-4 py-2 bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200/80 dark:border-amber-900/60 flex items-center justify-between text-xs shrink-0 animate-in fade-in">
+              <span className="text-amber-800 dark:text-amber-200 truncate text-[11px]">
+                Testing styles · Originally was <strong>{initialTemplate?.name || initialTemplateKeyRef.current}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => onSelectTemplate(initialTemplateKeyRef.current)}
+                className="text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 font-bold flex items-center gap-1 shrink-0 ml-2 transition-colors cursor-pointer text-[11px] underline underline-offset-2"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Revert</span>
+              </button>
+            </div>
+          )}
+
         {/* Templates Grid (Scrollable) */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
-          <div className="grid grid-cols-2 gap-3.5 sm:gap-4">
-            {filteredTemplates.map((tpl) => {
-              const isSelected =
-                currentTemplateKey === tpl.key ||
-                (!currentTemplateKey && tpl.key === 'double-column') ||
-                (currentTemplateKey === 'default' && tpl.key === 'double-column');
+          {filteredTemplates.length === 0 ? (
+            <div className="py-12 text-center text-xs text-zinc-500">
+              No templates match &ldquo;{searchQuery}&rdquo;
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3.5 sm:gap-4">
+              {filteredTemplates.map((tpl) => {
+                const isSelected =
+                  currentTemplateKey === tpl.key ||
+                  (!currentTemplateKey && tpl.key === 'double-column') ||
+                  (currentTemplateKey === 'default' && tpl.key === 'double-column');
 
-              return (
-                <div
-                  key={tpl.key}
-                  onClick={() => onSelectTemplate(tpl.key)}
-                  className="group cursor-pointer flex flex-col text-left space-y-1.5"
-                >
-                  {/* Miniature Visual Resume Preview Card */}
+                return (
                   <div
-                    className={`relative aspect-[794/1123] w-full rounded-lg border-2 overflow-hidden bg-white shadow-xs transition-all duration-200 group-hover:-translate-y-0.5 group-hover:shadow-md ${
-                      isSelected
-                        ? 'border-emerald-600 ring-2 ring-emerald-600/30 shadow-md'
-                        : 'border-zinc-200 dark:border-zinc-700 hover:border-emerald-400 dark:hover:border-emerald-500'
-                    }`}
+                    key={tpl.key}
+                    data-template-key={tpl.key}
+                    onClick={() => onSelectTemplate(tpl.key)}
+                    className="group cursor-pointer flex flex-col text-left space-y-1.5 focus:outline-none"
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onSelectTemplate(tpl.key);
+                      }
+                    }}
                   >
-                    <TemplateThumbnail
-                      templateKey={tpl.key}
-                      content={previewContent}
-                      accentColor={accentColor}
-                      fontFamily={fontFamily}
-                      showPhoto={showPhoto}
-                      photoUrl={photoUrl}
-                    />
-
-                    {/* Corner Checkmark Pill */}
-                    {isSelected && (
-                      <div className="absolute top-2 right-2 flex items-center gap-1 bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md animate-in zoom-in-75 z-10">
-                        <Check className="w-3 h-3 stroke-[3]" />
-                        <span>Active</span>
-                      </div>
-                    )}
-
-                    {/* Hover Click to Apply Overlay */}
-                    {!isSelected && (
-                      <div className="absolute inset-0 bg-emerald-950/5 dark:bg-emerald-400/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <span className="bg-zinc-900/85 text-white text-[10.5px] font-semibold px-2.5 py-1 rounded-full shadow-md backdrop-blur-xs">
-                          Click to apply
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Label & Optional Badge */}
-                  <div className="pt-0.5 px-0.5 space-y-0.5">
-                    <div className="flex items-center justify-between gap-1">
-                      <span
-                        className={`text-xs font-bold truncate ${
-                          isSelected
-                            ? 'text-emerald-700 dark:text-emerald-400'
-                            : 'text-zinc-900 dark:text-zinc-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors'
+                    {/* Miniature Visual Resume Preview Card */}
+                    <div
+                      aria-hidden="true"
+                      inert={true}
+                      className={`relative aspect-[794/1123] w-full rounded-lg border-2 overflow-hidden bg-white shadow-xs transition-all duration-200 group-hover:-translate-y-0.5 group-hover:shadow-md ${isSelected
+                          ? 'border-emerald-700 ring-2 ring-emerald-700/30 shadow-md'
+                          : 'border-zinc-200 dark:border-zinc-700 hover:border-emerald-500 dark:hover:border-emerald-500'
                         }`}
-                      >
-                        {tpl.name}
-                      </span>
-                      {tpl.badge && (
-                        <span className="shrink-0 px-1.5 py-0.2 bg-emerald-600 text-white text-[8.5px] font-bold rounded uppercase tracking-wider">
-                          {tpl.badge}
-                        </span>
+                    >
+                      <TemplateThumbnail
+                        templateKey={tpl.key}
+                        content={previewContent}
+                        accentColor={accentColor}
+                        fontFamily={fontFamily}
+                        showPhoto={showPhoto}
+                        photoUrl={photoUrl}
+                      />
+
+                      {/* Corner Checkmark Pill */}
+                      {isSelected && (
+                        <div className="absolute top-2 right-2 flex items-center gap-1 bg-emerald-700 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md animate-in zoom-in-75 z-10">
+                          <Check className="w-3 h-3 stroke-[3]" />
+                          <span>Active</span>
+                        </div>
+                      )}
+
+                      {/* Hover Overlay */}
+                      {!isSelected && (
+                        <div className="absolute inset-0 bg-emerald-950/10 dark:bg-emerald-400/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2 text-center">
+                          <span className="bg-zinc-900/90 text-white text-[10.5px] font-semibold px-2.5 py-1 rounded-full shadow-md backdrop-blur-xs">
+                            Preview live
+                          </span>
+                        </div>
                       )}
                     </div>
-                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 line-clamp-1 leading-tight">
-                      {tpl.description}
-                    </p>
+
+                    {/* Label & Optional Badge */}
+                    <div className="pt-0.5 px-0.5 space-y-0.5">
+                      <div className="flex items-center justify-between gap-1">
+                        <span
+                          className={`text-xs font-bold truncate ${isSelected
+                              ? 'text-emerald-700 dark:text-emerald-400'
+                              : 'text-zinc-900 dark:text-zinc-100 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors'
+                            }`}
+                        >
+                          {tpl.name}
+                        </span>
+                        {tpl.badge && (
+                          <span className="shrink-0 px-1.5 py-0.2 bg-emerald-700 text-white text-[8.5px] font-bold rounded uppercase tracking-wider">
+                            {tpl.badge}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-zinc-600 dark:text-zinc-400 line-clamp-1 leading-tight">
+                        {tpl.description}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Bottom Fixed Controls Bar */}
         <div className="p-4 sm:p-5 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 space-y-3.5 shrink-0">
           {/* Continue Editing Button */}
           <button
+            type="button"
             onClick={onClose}
-            className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white text-xs font-bold rounded-lg shadow-sm transition-all flex items-center justify-center gap-2"
+            className="w-full py-2.5 px-4 bg-emerald-700 hover:bg-emerald-800 active:scale-[0.99] text-white text-xs font-bold rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
-            <span>Continue Editing</span>
+            <Check className="w-3.5 h-3.5" />
+            <span>Continue Editing ({activeTemplate.name})</span>
           </button>
 
           {/* Document Size Selector */}
           <div className="flex items-center justify-between text-xs">
-            <span className="font-medium text-zinc-600 dark:text-zinc-400">
+            <span className="font-medium text-zinc-700 dark:text-zinc-300">
               Document size:
             </span>
             <div className="inline-flex rounded-lg border border-zinc-300 dark:border-zinc-700 p-0.5 bg-white dark:bg-zinc-900">
               <button
                 type="button"
                 onClick={() => handleSizeClick('A4')}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                  selectedSize === 'A4'
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${selectedSize === 'A4'
                     ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-bold'
-                    : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
-                }`}
+                    : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
+                  }`}
               >
                 A4
               </button>
               <button
                 type="button"
                 onClick={() => handleSizeClick('US Letter')}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                  selectedSize === 'US Letter'
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${selectedSize === 'US Letter'
                     ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-bold'
-                    : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
-                }`}
+                    : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
+                  }`}
               >
                 US Letter
               </button>
@@ -405,14 +542,19 @@ export function TemplatePicker({
 
           {/* Resume Language Dropdown */}
           <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400 font-medium">
-              <Info className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+            <label
+              htmlFor="template-picker-language"
+              className="flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300 font-medium"
+            >
+              <Info className="w-3.5 h-3.5 text-zinc-500 shrink-0" aria-hidden="true" />
               <span>Resume language:</span>
-            </div>
+            </label>
             <select
+              id="template-picker-language"
+              aria-label="Resume language"
               value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              className="text-xs py-1 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 font-medium focus:ring-1 focus:ring-emerald-600"
+              onChange={(e) => handleLanguageChange(e.target.value)}
+              className="text-xs py-1 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 font-medium focus:ring-1 focus:ring-emerald-700 cursor-pointer"
             >
               <option value="English (US)">English (US)</option>
               <option value="English (UK)">English (UK)</option>
@@ -422,7 +564,7 @@ export function TemplatePicker({
             </select>
           </div>
         </div>
-      </div>
-    </div>
+      </aside>
+    </>
   );
 }

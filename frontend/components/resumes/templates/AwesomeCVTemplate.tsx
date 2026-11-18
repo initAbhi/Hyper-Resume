@@ -1,18 +1,22 @@
 'use client';
 
 import React from 'react';
+import { MapPin, Mail, Phone, Globe } from 'lucide-react';
 import {
-  MapPin,
-  Mail,
-  Phone,
-  Globe,
-  Calendar,
-  Briefcase,
-  GraduationCap,
-  Sparkles,
-  Code2,
-} from 'lucide-react';
-import { TemplateProps, renderHighlightedText, LinkedinIcon, GithubIcon } from './types';
+  TemplateProps,
+  getTemplateFontClass,
+  LinkedinIcon,
+  GithubIcon,
+  EditableField,
+  EditableBulletList,
+  EditableContactLink,
+  EditableDateRange,
+  CanvasSectionAddButton,
+  CanvasSectionMoveButtons,
+  CanvasEntryDeleteButton,
+  useCanvasEdit,
+} from './types';
+import { CertificationsBlock } from './CertificationsBlock';
 import { CustomSectionsBlock } from './CustomSectionsBlock';
 
 /**
@@ -23,7 +27,7 @@ import { CustomSectionsBlock } from './CustomSectionsBlock';
  */
 export function AwesomeCVTemplate({
   content,
-  accentColor = '#dc2626', // Classic Awesome Red default, customizable
+  accentColor = '#dc2626',
   fontFamily = 'sans',
   showPhoto = false,
   photoUrl,
@@ -32,17 +36,21 @@ export function AwesomeCVTemplate({
   className = '',
 }: TemplateProps) {
   const { contact, headline, summary, experience = [], education = [], skills = [], projects = [] } = content;
-
-  // Split name for Awesome-CV two-tone effect (e.g. "Claud D." + "PARK")
-  const nameParts = (contact.fullName || 'Candidate Name').trim().split(' ');
-  const firstName = nameParts.slice(0, -1).join(' ') || nameParts[0] || '';
-  const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+  const {
+    isEditable,
+    onAddExperience,
+    onAddProject,
+    onAddEducation,
+    onAddSkill,
+    onDeleteExperience,
+    onDeleteProject,
+    onDeleteEducation,
+    onDeleteSkill,
+  } = useCanvasEdit();
 
   return (
     <div
-      className={`resume-page-a4 resume-paper-canvas bg-white text-zinc-900 p-8 sm:p-11 rounded-sm shadow-md border border-zinc-200/80 w-full max-w-[820px] mx-auto text-left leading-relaxed ${
-        fontFamily === 'serif' ? 'font-serif' : fontFamily === 'mono' ? 'font-mono' : 'font-sans'
-      } ${className}`}
+      className={`resume-page-a4 resume-paper-canvas bg-white text-zinc-900 p-8 sm:p-11 rounded-sm shadow-md border border-zinc-200/80 w-full max-w-[820px] mx-auto text-left leading-relaxed ${getTemplateFontClass(fontFamily)} ${className}`}
       style={{ boxSizing: 'border-box' }}
     >
       {/* Awesome CV Header */}
@@ -57,79 +65,71 @@ export function AwesomeCVTemplate({
             />
           )}
 
-          {/* Two-tone Name */}
-          <h1 className="text-3xl sm:text-4xl tracking-tight text-zinc-900">
-            <span className="font-light text-zinc-700">{firstName} </span>
-            <span
-              className="font-extrabold uppercase"
-              style={{
-                color: accentColor,
-                WebkitPrintColorAdjust: 'exact',
-                printColorAdjust: 'exact',
-              }}
-            >
-              {lastName || firstName}
-            </span>
-          </h1>
+          <EditableField
+            as="h1"
+            fieldPath="contact.fullName"
+            value={contact.fullName}
+            placeholder="Candidate Name"
+            className="text-3xl sm:text-4xl tracking-tight text-zinc-900 font-extrabold uppercase block"
+            style={{
+              color: accentColor,
+              WebkitPrintColorAdjust: 'exact',
+              printColorAdjust: 'exact',
+            }}
+          />
 
-          {/* Subtitle / Headline */}
-          {headline && (
-            <p
-              className="text-xs sm:text-[13px] font-semibold tracking-wider uppercase mt-1"
+          {(isEditable || headline) && (
+            <EditableField
+              as="p"
+              fieldPath="headline"
+              value={headline || ''}
+              placeholder="Professional Headline"
+              className="text-xs sm:text-[13px] font-semibold tracking-wider uppercase mt-1 block"
               style={{
                 color: accentColor,
                 WebkitPrintColorAdjust: 'exact',
                 printColorAdjust: 'exact',
               }}
-            >
-              {headline}
-            </p>
+            />
           )}
 
           {/* Vector Icon Contact Bar */}
           <div className="flex flex-wrap items-center justify-center gap-x-3.5 gap-y-1 text-[10.5px] text-zinc-600 mt-2.5">
-            {contact.phone && (
+            {(isEditable || contact.phone) && (
               <span className="inline-flex items-center gap-1">
                 <Phone className="w-3 h-3 text-zinc-400 shrink-0" />
-                <span>{contact.phone}</span>
+                <EditableContactLink fieldPath="contact.phone" value={contact.phone} placeholder="Phone" />
               </span>
             )}
-            {contact.email && (
-              <a
-                href={`mailto:${contact.email}`}
-                className="inline-flex items-center gap-1 hover:text-zinc-900 transition-colors"
-              >
+            {(isEditable || contact.email) && (
+              <span className="inline-flex items-center gap-1">
                 <Mail className="w-3 h-3 text-zinc-400 shrink-0" />
-                <span>{contact.email}</span>
-              </a>
+                <EditableContactLink fieldPath="contact.email" value={contact.email} placeholder="email@example.com" />
+              </span>
             )}
-            {contact.location && (
+            {(isEditable || contact.location) && (
               <span className="inline-flex items-center gap-1">
                 <MapPin className="w-3 h-3 text-zinc-400 shrink-0" />
-                <span>{contact.location}</span>
+                <EditableContactLink fieldPath="contact.location" value={contact.location} placeholder="City, State" />
               </span>
             )}
-            {contact.linkedinUrl && (
-              <a
-                href={contact.linkedinUrl.startsWith('http') ? contact.linkedinUrl : `https://${contact.linkedinUrl}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 hover:text-zinc-900 transition-colors"
-              >
+            {(isEditable || contact.linkedinUrl) && (
+              <span className="inline-flex items-center gap-1">
                 <LinkedinIcon className="w-3 h-3 text-zinc-400 shrink-0" />
-                <span>{contact.linkedinUrl.replace(/^https?:\/\/(www\.)?/, '')}</span>
-              </a>
+                <EditableContactLink fieldPath="contact.linkedinUrl" value={contact.linkedinUrl} placeholder="linkedin.com/in/you" isUrl={true} />
+              </span>
             )}
-            {contact.githubUrl && (
-              <a
-                href={contact.githubUrl.startsWith('http') ? contact.githubUrl : `https://${contact.githubUrl}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 hover:text-zinc-900 transition-colors"
-              >
+            {(isEditable || contact.githubUrl) && (
+              <span className="inline-flex items-center gap-1">
                 <GithubIcon className="w-3 h-3 text-zinc-400 shrink-0" />
-                <span>{contact.githubUrl.replace(/^https?:\/\/(www\.)?/, '')}</span>
-              </a>
+                <EditableContactLink fieldPath="contact.githubUrl" value={contact.githubUrl} placeholder="github.com/you" isUrl={true} />
+              </span>
+            )}
+            {(isEditable || contact.websiteUrl) && (
+              <span className="inline-flex items-center gap-1">
+                <Globe className="w-3 h-3 text-zinc-400 shrink-0" />
+                <EditableContactLink fieldPath="contact.websiteUrl" value={contact.websiteUrl} placeholder="portfolio.dev" isUrl={true} />
+              </span>
             )}
           </div>
         </div>
@@ -138,76 +138,107 @@ export function AwesomeCVTemplate({
       {/* Sections Container */}
       <div className="space-y-4 pt-1">
         {/* Profile Summary */}
-        {summary && (
-          <section className="resume-section">
-            <h2
-              className="text-xs font-bold uppercase tracking-wider text-zinc-900 pb-0.5 mb-1.5 flex items-center justify-between border-b-2"
+        {(isEditable || summary) && (
+          <section data-resume-section="summary" className="resume-section">
+            <div
+              className="pb-0.5 mb-1.5 flex items-center justify-between border-b-2"
               style={{
                 borderBottomColor: accentColor,
                 WebkitPrintColorAdjust: 'exact',
                 printColorAdjust: 'exact',
               }}
             >
-              <span>Profile</span>
-            </h2>
-            <p className="text-[10.5px] text-zinc-700 leading-relaxed">
-              {renderHighlightedText(summary, highlightKeywords, showHighlights)}
-            </p>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-900">
+                Profile
+              </h2>
+              <CanvasSectionMoveButtons sectionKey="summary" label="Profile" />
+            </div>
+            <EditableField
+              as="p"
+              id="summary-textarea"
+              fieldPath="summary"
+              value={summary || ''}
+              placeholder="Profile summary..."
+              className="text-[10.5px] text-zinc-700 leading-relaxed block"
+              highlightKeywords={highlightKeywords}
+              showHighlights={showHighlights}
+            />
           </section>
         )}
 
         {/* Experience */}
         {experience.length > 0 && (
-          <section className="resume-section">
-            <h2
-              className="text-xs font-bold uppercase tracking-wider text-zinc-900 pb-0.5 mb-2.5 flex items-center justify-between border-b-2"
+          <section data-resume-section="experience" className="resume-section">
+            <div
+              className="pb-0.5 mb-2.5 flex items-center justify-between border-b-2"
               style={{
                 borderBottomColor: accentColor,
                 WebkitPrintColorAdjust: 'exact',
                 printColorAdjust: 'exact',
               }}
             >
-              <span>Work Experience</span>
-            </h2>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-900">
+                Work Experience
+              </h2>
+              <div className="flex items-center gap-1">
+                <CanvasSectionMoveButtons sectionKey="experience" label="Experience" />
+                <CanvasSectionAddButton label="Role" onClick={onAddExperience} />
+              </div>
+            </div>
 
             <div className="space-y-3.5">
               {experience.map((exp, idx) => (
-                <div key={exp.id || idx} className="resume-entry space-y-1">
-                  {/* Row 1: Title & Location */}
-                  <div className="flex justify-between items-baseline text-[11.5px]">
-                    <span className="font-bold text-zinc-950">{exp.title}</span>
-                    <span className="text-[10.5px] text-zinc-500 font-medium">
-                      {exp.location || ''}
-                    </span>
+                <div key={exp.id || idx} className="resume-entry group/entry relative space-y-1">
+                  <CanvasEntryDeleteButton onClick={() => onDeleteExperience?.(idx)} label="Delete role" />
+                  <div className="flex justify-between items-baseline text-[11.5px] gap-2">
+                    <EditableField
+                      as="span"
+                      fieldPath={`experience[${idx}].title`}
+                      value={exp.title}
+                      placeholder="Title"
+                      className="font-bold text-zinc-950"
+                    />
+                    <EditableField
+                      as="span"
+                      fieldPath={`experience[${idx}].location`}
+                      value={exp.location || ''}
+                      placeholder="Location"
+                      className="text-[10.5px] text-zinc-500 font-medium"
+                    />
                   </div>
 
-                  {/* Row 2: Company in Accent & Dates */}
-                  <div className="flex justify-between items-baseline text-[10.5px]">
-                    <span
+                  <div className="flex justify-between items-baseline text-[10.5px] gap-2">
+                    <EditableField
+                      as="span"
+                      fieldPath={`experience[${idx}].company`}
+                      value={exp.company}
+                      placeholder="Company"
                       className="font-semibold text-xs"
                       style={{
                         color: accentColor,
                         WebkitPrintColorAdjust: 'exact',
                         printColorAdjust: 'exact',
                       }}
-                    >
-                      {exp.company}
-                    </span>
-                    <span className="text-zinc-500 font-medium">
-                      {exp.startDate} – {exp.current ? 'Present' : exp.endDate || 'Present'}
-                    </span>
+                    />
+                    <EditableDateRange
+                      startDate={exp.startDate}
+                      endDate={exp.endDate}
+                      current={exp.current}
+                      startFieldPath={`experience[${idx}].startDate`}
+                      endFieldPath={`experience[${idx}].endDate`}
+                      className="text-zinc-500 font-medium text-[10.5px]"
+                    />
                   </div>
 
-                  {/* Bullets */}
-                  {exp.bullets && exp.bullets.length > 0 && (
-                    <ul className="list-disc list-outside ml-4 space-y-0.5 pt-0.5 text-[10.5px] text-zinc-800 leading-relaxed">
-                      {exp.bullets.map((bullet, bIdx) => (
-                        <li key={bIdx} className="pl-0.5">
-                          {renderHighlightedText(bullet, highlightKeywords, showHighlights)}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  <EditableBulletList
+                    bullets={exp.bullets || []}
+                    section="experience"
+                    expIdx={idx}
+                    highlightKeywords={highlightKeywords}
+                    showHighlights={showHighlights}
+                    className="list-disc list-outside ml-4 space-y-0.5 pt-0.5 text-[10.5px] text-zinc-800 leading-relaxed"
+                    liClassName="pl-0.5"
+                  />
                 </div>
               ))}
             </div>
@@ -216,45 +247,66 @@ export function AwesomeCVTemplate({
 
         {/* Projects */}
         {projects && projects.length > 0 && (
-          <section className="resume-section">
-            <h2
-              className="text-xs font-bold uppercase tracking-wider text-zinc-900 pb-0.5 mb-2 flex items-center justify-between border-b-2"
+          <section data-resume-section="projects" className="resume-section">
+            <div
+              className="pb-0.5 mb-2 flex items-center justify-between border-b-2"
               style={{
                 borderBottomColor: accentColor,
                 WebkitPrintColorAdjust: 'exact',
                 printColorAdjust: 'exact',
               }}
             >
-              <span>Projects</span>
-            </h2>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-900">
+                Projects
+              </h2>
+              <div className="flex items-center gap-1">
+                <CanvasSectionMoveButtons sectionKey="projects" label="Projects" />
+                <CanvasSectionAddButton label="Project" onClick={onAddProject} />
+              </div>
+            </div>
 
             <div className="space-y-2.5">
               {projects.map((proj, idx) => (
-                <div key={proj.id || idx} className="resume-entry space-y-0.5">
-                  <div className="flex justify-between items-baseline text-[11px]">
-                    <div className="font-bold text-zinc-950 flex items-center gap-1.5">
-                      <span>{proj.name}</span>
-                      {proj.url && (
+                <div key={proj.id || idx} className="resume-entry group/entry relative space-y-0.5">
+                  <CanvasEntryDeleteButton onClick={() => onDeleteProject?.(idx)} label="Delete project" />
+                  <div className="flex justify-between items-baseline text-[11px] gap-2">
+                    <div className="font-bold text-zinc-950 flex flex-wrap items-center gap-1.5">
+                      <EditableField
+                        as="span"
+                        fieldPath={`projects[${idx}].name`}
+                        value={proj.name}
+                        placeholder="Project Name"
+                      />
+                      {(isEditable || proj.url) && (
                         <span className="text-[10px] text-zinc-500 font-normal underline">
-                          ({proj.url.replace(/^https?:\/\/(www\.)?/, '')})
+                          <EditableContactLink
+                            fieldPath={`projects[${idx}].url`}
+                            value={proj.url}
+                            placeholder="project-url.com"
+                            isUrl={true}
+                          />
                         </span>
                       )}
                     </div>
                   </div>
-                  {proj.description && (
-                    <p className="text-[10.5px] text-zinc-700 leading-normal">
-                      {renderHighlightedText(proj.description, highlightKeywords, showHighlights)}
-                    </p>
+                  {(isEditable || proj.description) && (
+                    <EditableField
+                      as="p"
+                      fieldPath={`projects[${idx}].description`}
+                      value={proj.description || ''}
+                      placeholder="Project description..."
+                      className="text-[10.5px] text-zinc-700 leading-normal block"
+                    />
                   )}
-                  {proj.highlights && proj.highlights.length > 0 && (
-                    <ul className="list-disc list-outside ml-4 space-y-0.5 text-[10.5px] text-zinc-800 leading-relaxed">
-                      {proj.highlights.map((h, hIdx) => (
-                        <li key={hIdx} className="pl-0.5">
-                          {renderHighlightedText(h, highlightKeywords, showHighlights)}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  <EditableBulletList
+                    bullets={proj.highlights || []}
+                    section="projects"
+                    projIdx={idx}
+                    highlightKeywords={highlightKeywords}
+                    showHighlights={showHighlights}
+                    className="list-disc list-outside ml-4 space-y-0.5 text-[10.5px] text-zinc-800 leading-relaxed"
+                    liClassName="pl-0.5"
+                  />
                 </div>
               ))}
             </div>
@@ -263,29 +315,41 @@ export function AwesomeCVTemplate({
 
         {/* Skills */}
         {skills.length > 0 && (
-          <section className="resume-section">
-            <h2
-              className="text-xs font-bold uppercase tracking-wider text-zinc-900 pb-0.5 mb-2 flex items-center justify-between border-b-2"
+          <section data-resume-section="skills" className="resume-section">
+            <div
+              className="pb-0.5 mb-2 flex items-center justify-between border-b-2"
               style={{
                 borderBottomColor: accentColor,
                 WebkitPrintColorAdjust: 'exact',
                 printColorAdjust: 'exact',
               }}
             >
-              <span>Skills & Competencies</span>
-            </h2>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-900">
+                Skills & Competencies
+              </h2>
+              <div className="flex items-center gap-1">
+                <CanvasSectionMoveButtons sectionKey="skills" label="Skills" />
+                <CanvasSectionAddButton label="Skill" onClick={() => onAddSkill && onAddSkill()} />
+              </div>
+            </div>
 
             <div className="flex flex-wrap gap-1.5 pt-0.5">
               {skills.map((skill, idx) => (
                 <span
                   key={idx}
-                  className="px-2 py-0.5 rounded text-[10px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200/60 dark:border-zinc-700/60"
+                  className="group/skill inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-medium bg-zinc-100 text-zinc-800 border border-zinc-200/80"
                   style={{
                     WebkitPrintColorAdjust: 'exact',
                     printColorAdjust: 'exact',
                   }}
                 >
-                  {skill.name}
+                  <EditableField
+                    as="span"
+                    fieldPath={`skills[${idx}].name`}
+                    value={skill.name}
+                    placeholder="Skill"
+                  />
+                  <CanvasEntryDeleteButton variant="chip" onClick={() => onDeleteSkill?.(idx)} label="Remove skill" />
                 </span>
               ))}
             </div>
@@ -294,47 +358,90 @@ export function AwesomeCVTemplate({
 
         {/* Education */}
         {education.length > 0 && (
-          <section className="resume-section">
-            <h2
-              className="text-xs font-bold uppercase tracking-wider text-zinc-900 pb-0.5 mb-2 flex items-center justify-between border-b-2"
+          <section data-resume-section="education" className="resume-section">
+            <div
+              className="pb-0.5 mb-2 flex items-center justify-between border-b-2"
               style={{
                 borderBottomColor: accentColor,
                 WebkitPrintColorAdjust: 'exact',
                 printColorAdjust: 'exact',
               }}
             >
-              <span>Education</span>
-            </h2>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-900">
+                Education
+              </h2>
+              <div className="flex items-center gap-1">
+                <CanvasSectionMoveButtons sectionKey="education" label="Education" />
+                <CanvasSectionAddButton label="Degree" onClick={onAddEducation} />
+              </div>
+            </div>
 
             <div className="space-y-2">
               {education.map((edu, idx) => (
-                <div key={edu.id || idx} className="resume-entry text-[11px]">
-                  <div className="flex justify-between items-baseline font-bold text-zinc-950">
-                    <span>{edu.school}</span>
-                    <span className="font-normal text-zinc-500 text-[10.5px]">
-                      {edu.location || ''}
-                    </span>
+                <div key={edu.id || idx} className="resume-entry group/entry relative text-[11px]">
+                  <CanvasEntryDeleteButton onClick={() => onDeleteEducation?.(idx)} label="Delete degree" />
+                  <div className="flex justify-between items-baseline font-bold text-zinc-950 gap-2">
+                    <EditableField
+                      as="span"
+                      fieldPath={`education[${idx}].school`}
+                      value={edu.school}
+                      placeholder="School / University"
+                    />
+                    <EditableField
+                      as="span"
+                      fieldPath={`education[${idx}].location`}
+                      value={edu.location || ''}
+                      placeholder="Location"
+                      className="font-normal text-zinc-500 text-[10.5px]"
+                    />
                   </div>
-                  <div className="flex justify-between items-baseline text-zinc-700 text-[10.5px]">
-                    <span
-                      className="font-medium"
-                      style={{
-                        color: accentColor,
-                        WebkitPrintColorAdjust: 'exact',
-                        printColorAdjust: 'exact',
-                      }}
-                    >
-                      {edu.degree} in {edu.field}
-                    </span>
-                    <span className="text-zinc-500 font-normal">
-                      {edu.graduationDate || ''}
-                    </span>
+                  <div className="flex justify-between items-baseline text-zinc-700 text-[10.5px] gap-2">
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <EditableField
+                        as="span"
+                        fieldPath={`education[${idx}].degree`}
+                        value={edu.degree}
+                        placeholder="Degree"
+                        className="font-medium"
+                        style={{
+                          color: accentColor,
+                          WebkitPrintColorAdjust: 'exact',
+                          printColorAdjust: 'exact',
+                        }}
+                      />
+                      {(isEditable || edu.field) && (
+                        <>
+                          <span className="text-zinc-500">in</span>
+                          <EditableField
+                            as="span"
+                            fieldPath={`education[${idx}].field`}
+                            value={edu.field || ''}
+                            placeholder="Field"
+                            className="font-medium"
+                            style={{
+                              color: accentColor,
+                              WebkitPrintColorAdjust: 'exact',
+                              printColorAdjust: 'exact',
+                            }}
+                          />
+                        </>
+                      )}
+                    </div>
+                    <EditableField
+                      as="span"
+                      fieldPath={`education[${idx}].graduationDate`}
+                      value={edu.graduationDate || ''}
+                      placeholder="Date"
+                      className="text-zinc-500 font-normal"
+                    />
                   </div>
                 </div>
               ))}
             </div>
           </section>
         )}
+
+        <CertificationsBlock content={content} accentColor={accentColor} />
 
         <CustomSectionsBlock
           content={content}
@@ -346,4 +453,3 @@ export function AwesomeCVTemplate({
     </div>
   );
 }
-

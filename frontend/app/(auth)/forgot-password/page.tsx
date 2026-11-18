@@ -49,9 +49,9 @@ export default function ForgotPasswordPage() {
       </Link>
       <Card className="w-full max-w-md shadow-lg border-slate-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden">
         <CardHeader className="text-center pb-4 pt-6">
-          <CardTitle className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             {isSubmitted ? 'Check Your Inbox' : 'Reset Password'}
-          </CardTitle>
+          </h1>
           <CardDescription className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto">
             {isSubmitted
               ? `We have dispatched a password reset link to ${email}.`
@@ -83,13 +83,11 @@ export default function ForgotPasswordPage() {
               >
                 Send to a different email
               </Button>
-              <Link href="/login">
-                <Button
-                  variant="primary"
-                  className="w-full h-10 rounded-xl bg-[#285FEA] hover:bg-[#1E4BC8] text-white font-medium text-xs shadow-xs"
-                >
-                  Return to Sign In
-                </Button>
+              <Link
+                href="/login"
+                className="w-full h-10 rounded-xl bg-[#285FEA] hover:bg-[#1E4BC8] text-white font-medium text-xs shadow-xs inline-flex items-center justify-center transition-colors"
+              >
+                Return to Sign In
               </Link>
             </div>
           </CardContent>

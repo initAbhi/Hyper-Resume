@@ -17,8 +17,7 @@ export interface ApiResponse<T> {
 
 @Injectable()
 export class TransformResponseInterceptor<T>
-  implements NestInterceptor<T, ApiResponse<T> | T>
-{
+  implements NestInterceptor<T, ApiResponse<T> | T> {
   intercept(
     context: ExecutionContext,
     next: CallHandler,
@@ -26,11 +25,14 @@ export class TransformResponseInterceptor<T>
     const httpCtx = context.switchToHttp();
     const request = httpCtx.getRequest<Request>();
 
-    // Skip transformation for health endpoints or OpenAPI json/raw endpoints
+    // Skip transformation for health endpoints, OpenAPI json/raw endpoints, and SSE streams (but NOT /stream-ticket)
+    const pathname = request.url?.split('?')[0] || '';
     if (
-      request.url?.includes('/health') ||
-      request.url?.includes('/docs') ||
-      request.url?.includes('/api-json')
+      pathname.includes('/health') ||
+      pathname.includes('/docs') ||
+      pathname.includes('/api-json') ||
+      pathname.endsWith('/stream') ||
+      request.headers.accept?.includes('text/event-stream')
     ) {
       return next.handle();
     }

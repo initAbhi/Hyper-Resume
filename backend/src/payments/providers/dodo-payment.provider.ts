@@ -308,15 +308,31 @@ export class DodoPaymentProvider implements PaymentProvider {
     const client = this.getClientForMode(environmentMode);
 
     try {
-      let dodoPaymentId = providerPaymentId?.trim() || undefined;
+      let dodoPaymentId: string | undefined;
       let sessionStatus: string | null | undefined;
 
-      if (!dodoPaymentId && providerOrderId.startsWith('cks_')) {
+      if (providerOrderId.startsWith('cks_')) {
         const session = await client.checkoutSessions.retrieve(providerOrderId);
         dodoPaymentId = session.payment_id || undefined;
         sessionStatus = session.payment_status;
-      } else if (!dodoPaymentId && providerOrderId.startsWith('pay_')) {
+        // Reject caller-supplied paymentId if it does not match the authoritative checkout session
+        if (
+          providerPaymentId?.trim() &&
+          dodoPaymentId &&
+          providerPaymentId.trim() !== dodoPaymentId
+        ) {
+          this.logger.warn(
+            `Dodo payment ID mismatch for session ${providerOrderId}: expected ${dodoPaymentId}, got ${providerPaymentId}`,
+          );
+          return {
+            verified: false,
+            status: 'payment_id_mismatch',
+          };
+        }
+      } else if (providerOrderId.startsWith('pay_')) {
         dodoPaymentId = providerOrderId;
+      } else {
+        dodoPaymentId = providerPaymentId?.trim() || undefined;
       }
 
       if (!dodoPaymentId) {
@@ -356,12 +372,12 @@ export class DodoPaymentProvider implements PaymentProvider {
   ): boolean {
     if (!signature) return false;
 
-    const candidateSecrets = [
-      secret,
-      this.getActiveWebhookSecret(),
-      this.liveWebhookSecret,
-      this.testWebhookSecret,
-    ]
+    const isLive = this.mode === 'live_mode';
+    const candidateSecrets = (
+      isLive
+        ? [secret, this.liveWebhookSecret]
+        : [secret, this.getActiveWebhookSecret(), this.testWebhookSecret]
+    )
       .filter((s): s is string => Boolean(s && s.trim().length > 0))
       .filter((val, idx, arr) => arr.indexOf(val) === idx);
 

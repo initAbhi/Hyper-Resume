@@ -12,6 +12,8 @@ interface DisplayTier {
   priceInr: string;
   priceUsd: string;
   cadence: string;
+  cadenceInr?: string;
+  cadenceUsd?: string;
   description: string;
   badge: string | null;
   ctaLabel: string;
@@ -80,7 +82,9 @@ const PRO_OPTIONS: DisplayTier[] = [
     name: 'Pro · 6 Months',
     priceInr: '₹1,200',
     priceUsd: '$29',
-    cadence: '180 days (₹200/mo)',
+    cadenceInr: '180 days (₹200/mo)',
+    cadenceUsd: '180 days ($4.83/mo)',
+    cadence: '180 days',
     description: 'Half-year job switch coverage at 50% savings compared to monthly.',
     badge: 'Best Value · Save 50%',
     ctaLabel: 'Get 6-Month Pro',
@@ -132,7 +136,7 @@ export function PricingSection() {
 
       <div className="relative z-10 mx-auto max-w-6xl space-y-10">
         <div className="mx-auto max-w-2xl space-y-4 text-center">
-          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
             Pricing
           </p>
           <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl lg:text-[2.75rem]">
@@ -184,8 +188,8 @@ export function PricingSection() {
               <h3 className="text-lg font-semibold tracking-tight text-white sm:text-xl">
                 Lifetime HypeResume Pro for {currency === 'INR' ? '₹999' : '$19'} one-time
               </h3>
-              <p className="mx-auto max-w-xl text-xs leading-relaxed text-zinc-400 sm:mx-0 sm:text-sm">
-                Early validation special for our first 200 customers. Pay once, keep Pro permanently
+              <p className="mx-auto max-w-xl text-xs leading-relaxed text-zinc-300 sm:mx-0 sm:text-sm">
+                Early validation special for our first {promo?.totalCap ?? 200} customers. Pay once, keep Pro permanently
                 across every future update.
               </p>
             </div>
@@ -234,7 +238,7 @@ export function PricingSection() {
                       {currency === 'INR' ? p.priceInr : p.priceUsd}
                     </span>
                     <span className="text-xs font-medium text-zinc-400 sm:text-sm">
-                      / {p.cadence}
+                      / {currency === 'INR' ? ((p as { cadenceInr?: string }).cadenceInr ?? p.cadence) : ((p as { cadenceUsd?: string }).cadenceUsd ?? p.cadence)}
                     </span>
                   </div>
 
@@ -249,13 +253,11 @@ export function PricingSection() {
                 </div>
 
                 <div className="mt-auto pt-8">
-                  <Link href={`/pricing?plan=${p.id}&currency=${currency}`} className="block w-full">
-                    <button
-                      type="button"
-                      className={`w-full cursor-pointer rounded-full px-6 py-3.5 text-sm font-semibold transition-all duration-200 ${p.buttonStyle}`}
-                    >
-                      {p.ctaLabel}
-                    </button>
+                  <Link
+                    href={`/pricing?plan=${p.id}&currency=${currency}`}
+                    className={`block w-full text-center cursor-pointer rounded-full px-6 py-3.5 text-sm font-semibold transition-all duration-200 ${p.buttonStyle}`}
+                  >
+                    {p.ctaLabel}
                   </Link>
                 </div>
               </div>
@@ -270,7 +272,7 @@ export function PricingSection() {
               <p className="text-sm font-semibold text-white">
                 Want to explore first? Start with Free Starter ({currency === 'INR' ? '₹0' : '$0'})
               </p>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-zinc-400">
                 Includes 5 welcome AI credits, full ATS resume builder, and unlimited unwatermarked
                 PDF exports.
               </p>

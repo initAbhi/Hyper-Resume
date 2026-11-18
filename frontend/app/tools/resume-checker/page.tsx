@@ -203,11 +203,32 @@ Required Qualifications:
     }, 1200);
 
     try {
-      const result = await apiClient.compressAndParseResume(pendingFile);
+      const result = await apiClient.publicCompressAndParsePdf(pendingFile);
       clearTimeout(verifyTimer);
-      setCompressionMeta(result);
+      const originalSize = result.compression?.originalSize ?? pendingFile.size;
+      const compressedSize = result.compression?.compressedSize ?? pendingFile.size;
+      const reductionPercentage = result.compression?.savingsPercent ?? 0;
+      const withinLimit = compressedSize <= MAX_UPLOAD_LIMIT_BYTES;
+      setCompressionMeta({
+        success: Boolean(result.draft),
+        originalSize,
+        compressedSize,
+        reductionPercentage,
+        withinUploadLimit: withinLimit,
+        status:
+          (result.compression?.status as
+            | 'COMPRESSED'
+            | 'SIZE_LIMIT_NOT_REACHED'
+            | 'ALREADY_OPTIMIZED'
+            | 'VERIFICATION_FAILED') || 'COMPRESSED',
+        verification: {
+          validPdf: true,
+          pageCountPreserved: true,
+          textExtractionPassed: Boolean(result.extractedText?.trim()),
+        },
+      });
 
-      if (!result.success || !result.withinUploadLimit || !result.parsed) {
+      if (!result.draft || !withinLimit) {
         setCheckerState('COMPRESSION_FAILED');
         return;
       }
@@ -218,9 +239,44 @@ Required Qualifications:
         fileFormat: 'pdf',
       });
 
-      const bullets = (result.parsed.draft.experience || []).flatMap((exp) => exp.bullets || []);
-      const skills = (result.parsed.draft.skills || []).map((s) => s.name).join(', ');
-      const reconstructed = `${result.parsed.draft.headline || 'Software Engineer'}\n\nSUMMARY\n${result.parsed.draft.summary || ''}\n\nEXPERIENCE\n${bullets.map((b) => `• ${b}`).join('\n')}\n\nSKILLS\n${skills}`;
+      const draft = result.draft;
+      const contactLine = [
+        draft.contact?.fullName,
+        draft.contact?.email,
+        draft.contact?.phone,
+        draft.contact?.location,
+      ]
+        .filter(Boolean)
+        .join(' | ');
+      const expBlock = (draft.experience || [])
+        .map((exp) => {
+          const header = [
+            exp.title,
+            exp.company,
+            exp.startDate && `${exp.startDate} - ${exp.current ? 'Present' : exp.endDate || ''}`,
+          ]
+            .filter(Boolean)
+            .join(' | ');
+          const lines = (exp.bullets || []).map((b) => `• ${b}`).join('\n');
+          return header ? `${header}\n${lines}` : lines;
+        })
+        .join('\n\n');
+      const eduBlock = (draft.education || [])
+        .map((e) => [e.degree, e.field, e.school, e.graduationDate].filter(Boolean).join(' — '))
+        .join('\n');
+      const skills = (draft.skills || []).map((s) => s.name).join(', ');
+      const reconstructed =
+        result.extractedText?.trim() ||
+        [
+          contactLine,
+          draft.headline || 'Professional Profile',
+          draft.summary ? `SUMMARY\n${draft.summary}` : '',
+          expBlock ? `EXPERIENCE\n${expBlock}` : '',
+          eduBlock ? `EDUCATION\n${eduBlock}` : '',
+          skills ? `SKILLS\n${skills}` : '',
+        ]
+          .filter(Boolean)
+          .join('\n\n');
 
       setResumeText(reconstructed);
       await runServerAudit(reconstructed, 'compressed_pdf_upload');
@@ -394,12 +450,12 @@ Required Qualifications:
 
           {/* Main Input Card */}
           <Card>
-            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+            <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <CardTitle className="text-base">Paste Resume Text or Upload File</CardTitle>
                 <CardDescription>Single-column extraction with Workday &amp; Taleo OCR simulation.</CardDescription>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -434,7 +490,7 @@ Required Qualifications:
             </CardHeader>
             <CardContent className="space-y-3">
               {uploadError && checkerState !== 'COMPRESSION_FAILED' && (
-                <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs">
+                <div role="alert" className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs">
                   {uploadError}
                 </div>
               )}
@@ -449,6 +505,7 @@ Required Qualifications:
               )}
 
               <textarea
+                aria-label="Resume plain text"
                 rows={12}
                 className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-3.5 text-xs sm:text-sm font-mono text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-600 resize-y"
                 placeholder="Paste your plain resume text here, or click 'Upload File' above..."
@@ -525,6 +582,9 @@ Required Qualifications:
               <CardContent className="space-y-4">
                 <AtsAuditBreakdown
                   score={results.score}
+                  atsScore={results.atsScore}
+                  matchScore={results.matchScore}
+                  compositeScore={results.compositeScore}
                   findings={results.findings}
                   recommendations={results.recommendations}
                   showScoreRing

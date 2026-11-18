@@ -124,6 +124,25 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   GOOGLE_CLIENT_SECRET?: string;
+
+  @IsNumber()
+  @Min(1)
+  @IsOptional()
+  AGENT_MAX_TASK_CREDITS?: number = 6;
+
+  @IsNumber()
+  @Min(5)
+  @IsOptional()
+  AGENT_LEASE_TTL_SECONDS?: number = 60;
+
+  @IsNumber()
+  @Min(500)
+  @IsOptional()
+  AGENT_HEARTBEAT_INTERVAL_MS?: number = 5000;
+
+  @IsString()
+  @IsOptional()
+  AGENT_APPROVAL_SECRET?: string;
 }
 
 

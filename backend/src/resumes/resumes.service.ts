@@ -113,9 +113,10 @@ export class ResumesService {
   async listResumes(
     userId: string,
     pagination: PaginationQueryDto,
+    archived = false,
   ): Promise<{ items: Resume[]; total: number; page: number; limit: number }> {
     const [items, total] = await this.resumeRepository.findAndCount({
-      where: { userId, isArchived: false },
+      where: { userId, isArchived: archived },
       order: { updatedAt: 'DESC' },
       skip: pagination.skip,
       take: pagination.limit,
@@ -127,6 +128,19 @@ export class ResumesService {
       page: pagination.page,
       limit: pagination.limit,
     };
+  }
+
+  async restoreResume(userId: string, resumeId: string): Promise<Resume> {
+    const resume = await this.resumeRepository.findOne({
+      where: { id: resumeId, userId, isArchived: true },
+    });
+    if (!resume) {
+      throw new NotFoundException('Archived resume not found or access denied');
+    }
+    resume.isArchived = false;
+    const saved = await this.resumeRepository.save(resume);
+    this.logger.log(`Restored archived resume ${resumeId} for user ${userId}`);
+    return saved;
   }
 
   async getResume(userId: string, resumeId: string): Promise<Resume> {
@@ -312,11 +326,14 @@ export class ResumesService {
   ): Promise<ResumeAnalysis> {
     const resume = await this.getResume(userId, resumeId);
 
-    // Run 5-dimension structural ATS & parser risk audit
+    const effectiveTargetRole = dto.targetRole || resume.content?.meta?.targetRole;
+
+    // Run 5-dimension structural ATS & parser risk audit with optional Job Description matching
     const { score, findings, recommendations } = evaluateStructuredResumeAts(
       resume.content,
       undefined,
-      resume.content?.meta?.targetRole,
+      effectiveTargetRole,
+      dto.jobDescriptionText,
     );
 
     const analysis = this.analysisRepository.create({
@@ -609,12 +626,38 @@ export class ResumesService {
 
     const templateKeyToUse = dto.templateKey || sourceResume.templateKey;
 
-    // Check customFinalContent if provided from modal
+    // Check customFinalContent if provided from modal (while still enforcing explicit reject decisions!)
     if (dto.customFinalContent) {
       // Validate locked sections
       const finalContact = { ...sourceResume.content.contact };
       const finalEducation = sourceResume.content.education || [];
       const finalCertifications = sourceResume.content.certifications || [];
+
+      const finalHeadline =
+        dto.summaryDecision === 'reject'
+          ? sourceResume.content.headline
+          : dto.customFinalContent.headline ?? sourceResume.content.headline;
+      const finalSummary =
+        dto.summaryDecision === 'reject'
+          ? sourceResume.content.summary
+          : dto.customFinalContent.summary ?? sourceResume.content.summary;
+
+      const customExperience = dto.customFinalContent.experience || sourceResume.content.experience || [];
+      const enforcedExperience = (sourceResume.content.experience || []).map((origExp, expIdx) => {
+        const customExp = customExperience[expIdx];
+        const mergedBullets = (origExp.bullets || []).map((origBullet, bulletIdx) => {
+          const decision = dto.bulletDecisions?.[String(expIdx)]?.[String(bulletIdx)];
+          if (decision === 'reject') {
+            return origBullet;
+          }
+          return customExp?.bullets?.[bulletIdx] ?? origBullet;
+        });
+        return {
+          ...origExp,
+          ...(customExp || {}),
+          bullets: mergedBullets,
+        };
+      });
 
       const finalLayout = {
         ...(sourceResume.content.layout || {}),
@@ -624,6 +667,9 @@ export class ResumesService {
 
       const cleanContent: ResumeContent = {
         ...dto.customFinalContent,
+        headline: finalHeadline,
+        summary: finalSummary,
+        experience: enforcedExperience,
         contact: finalContact,
         education: finalEducation,
         certifications: finalCertifications,

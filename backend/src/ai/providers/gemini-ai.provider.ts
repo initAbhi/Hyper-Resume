@@ -36,6 +36,39 @@ import {
 } from '../utils/linkedin-optimizer.util.js';
 import { sanitizeSectionRewriteResult } from '../utils/section-rewriter.util.js';
 
+export interface GeminiContentPart {
+  text?: string;
+  functionCall?: {
+    name: string;
+    args: Record<string, any>;
+  };
+  functionResponse?: {
+    name: string;
+    response: Record<string, any>;
+  };
+}
+
+export interface GeminiMessageContent {
+  role: 'user' | 'model' | 'function' | 'system';
+  parts: GeminiContentPart[];
+}
+
+export interface GeminiFunctionCallingResponse {
+  text?: string;
+  functionCalls?: Array<{
+    name: string;
+    args: Record<string, any>;
+  }>;
+  telemetry: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    costUsd: number;
+    modelId: string;
+    pricingVersion: string;
+  };
+}
+
 @Injectable()
 export class GeminiAiProvider implements AiProvider {
   public readonly name = 'gemini';
@@ -45,10 +78,10 @@ export class GeminiAiProvider implements AiProvider {
 
   constructor(private readonly configService: ConfigService) {
     this.apiKey = this.configService.get<string>('AI_API_KEY') || this.configService.get<string>('GEMINI_API_KEY');
-    const rawModel = this.configService.get<string>('AI_MODEL', 'gemini-3.1-flash-lite');
-    this.model = (!rawModel || rawModel.includes('1.5') || rawModel.includes('2.0') || rawModel.includes('2.5'))
-      ? 'gemini-3.1-flash-lite'
-      : rawModel;
+    const rawModel = this.configService.get<string>('AI_MODEL', 'gemini-2.5-flash');
+    this.model = (!rawModel || rawModel.includes('1.5'))
+      ? 'gemini-2.5-flash'
+      : rawModel.trim();
 
     // Safeguard 1: Verify model pricing exists on initialization
     getModelPricing(this.model);
@@ -290,30 +323,30 @@ CRITICAL INVARIANTS AND FACTUAL INTEGRITY SAFEGUARDS:
 
 Candidate Source Profile:
 ${JSON.stringify({
-  headline: sourceResume.headline,
-  summary: sourceResume.summary,
-  experience: (sourceResume.experience || []).map((e) => ({
-    company: e.company,
-    title: e.title,
-    bullets: e.bullets,
-  })),
-  projects: (sourceResume.projects || []).map((p) => ({
-    name: p.name,
-    description: p.description,
-    highlights: p.highlights,
-  })),
-}, null, 2)}
+      headline: sourceResume.headline,
+      summary: sourceResume.summary,
+      experience: (sourceResume.experience || []).map((e) => ({
+        company: e.company,
+        title: e.title,
+        bullets: e.bullets,
+      })),
+      projects: (sourceResume.projects || []).map((p) => ({
+        name: p.name,
+        description: p.description,
+        highlights: p.highlights,
+      })),
+    }, null, 2)}
 
 Benchmark Sample (Style & Structure Reference):
 ${JSON.stringify({
-  headline: benchmarkSample.headline,
-  summary: benchmarkSample.summary,
-  skills: benchmarkSample.skills,
-  experience: (benchmarkSample.experience || []).map((e) => ({
-    title: e.title,
-    bullets: e.bullets,
-  })),
-}, null, 2)}
+      headline: benchmarkSample.headline,
+      summary: benchmarkSample.summary,
+      skills: benchmarkSample.skills,
+      experience: (benchmarkSample.experience || []).map((e) => ({
+        title: e.title,
+        bullets: e.bullets,
+      })),
+    }, null, 2)}
 
 Return JSON conforming strictly to this format:
 {
@@ -507,23 +540,23 @@ Return STRICT JSON matching this schema:
     const allowedTones = ['Executive', 'Impact & Metrics', 'Technical & Concise'] as const;
     const headlineSuggestions = Array.isArray(data?.headlineSuggestions)
       ? data.headlineSuggestions
-          .filter((h) => h && typeof h.headline === 'string' && h.headline.trim().length > 0)
-          .slice(0, 3)
-          .map((h, i) => ({
-            style: h.style?.trim() || ['Role + Core Stack', 'Domain & Scale', 'Executive Impact'][i] || 'Suggested Headline',
-            headline: h.headline.trim(),
-          }))
+        .filter((h) => h && typeof h.headline === 'string' && h.headline.trim().length > 0)
+        .slice(0, 3)
+        .map((h, i) => ({
+          style: h.style?.trim() || ['Role + Core Stack', 'Domain & Scale', 'Executive Impact'][i] || 'Suggested Headline',
+          headline: h.headline.trim(),
+        }))
       : [];
 
     const summaryOptions = Array.isArray(data?.summaryOptions)
       ? data.summaryOptions
-          .filter((s) => s && typeof s.summary === 'string' && s.summary.trim().length > 0)
-          .slice(0, 3)
-          .map((s, i) => ({
-            tone: allowedTones.includes(s.tone) ? s.tone : allowedTones[i] || 'Executive',
-            summary: s.summary.trim(),
-            focus: s.focus?.trim() || 'Grounded in verified experience and skills',
-          }))
+        .filter((s) => s && typeof s.summary === 'string' && s.summary.trim().length > 0)
+        .slice(0, 3)
+        .map((s, i) => ({
+          tone: allowedTones.includes(s.tone) ? s.tone : allowedTones[i] || 'Executive',
+          summary: s.summary.trim(),
+          focus: s.focus?.trim() || 'Grounded in verified experience and skills',
+        }))
       : [];
 
     if (headlineSuggestions.length === 0 || summaryOptions.length === 0) {
@@ -634,9 +667,9 @@ Return STRICT JSON matching this exact schema:
 
     const bodyParagraphs = Array.isArray(data?.bodyParagraphs)
       ? data.bodyParagraphs
-          .map((p) => (typeof p === 'string' ? p.trim() : ''))
-          .filter(Boolean)
-          .slice(0, 3)
+        .map((p) => (typeof p === 'string' ? p.trim() : ''))
+        .filter(Boolean)
+        .slice(0, 3)
       : [];
 
     if (!data?.openingParagraph?.trim() || bodyParagraphs.length === 0 || !data?.closingParagraph?.trim()) {
@@ -653,9 +686,9 @@ Return STRICT JSON matching this exact schema:
       signOff: data.signOff?.trim() || 'Sincerely,',
       highlightedKeywords: Array.isArray(data.highlightedKeywords)
         ? data.highlightedKeywords
-            .map((k) => (typeof k === 'string' ? k.trim() : ''))
-            .filter(Boolean)
-            .slice(0, 12)
+          .map((k) => (typeof k === 'string' ? k.trim() : ''))
+          .filter(Boolean)
+          .slice(0, 12)
         : [],
       factualVerificationNotes:
         data.factualVerificationNotes?.trim() ||
@@ -952,35 +985,35 @@ Return STRICT JSON matching this shape:
     const headlineSuggestions =
       Array.isArray(data?.headlineSuggestions) && data.headlineSuggestions.length >= 2
         ? data.headlineSuggestions.slice(0, 5).map((h, idx) => {
-            const clamped = clampHeadline(h?.headline || baseline.headlineSuggestions[idx]?.headline || input.targetRole);
-            return {
-              id: h?.id || `hl-${idx + 1}`,
-              style: h?.style || baseline.headlineSuggestions[idx]?.style || 'LinkedIn Headline',
-              headline: clamped,
-              charCount: clamped.length,
-              keywordsIncluded: Array.isArray(h?.keywordsIncluded) ? h.keywordsIncluded : [],
-              whyItWorks:
-                h?.whyItWorks?.trim() ||
-                'Balanced recruiter search keyword density and role positioning.',
-            };
-          })
+          const clamped = clampHeadline(h?.headline || baseline.headlineSuggestions[idx]?.headline || input.targetRole);
+          return {
+            id: h?.id || `hl-${idx + 1}`,
+            style: h?.style || baseline.headlineSuggestions[idx]?.style || 'LinkedIn Headline',
+            headline: clamped,
+            charCount: clamped.length,
+            keywordsIncluded: Array.isArray(h?.keywordsIncluded) ? h.keywordsIncluded : [],
+            whyItWorks:
+              h?.whyItWorks?.trim() ||
+              'Balanced recruiter search keyword density and role positioning.',
+          };
+        })
         : baseline.headlineSuggestions;
 
     const aboutOptions =
       Array.isArray(data?.aboutOptions) && data.aboutOptions.length >= 1
         ? data.aboutOptions.slice(0, 3).map((a, idx) => {
-            const cleaned = (a?.about || baseline.aboutOptions[idx]?.about || '')
-              .trim()
-              .slice(0, LINKEDIN_ABOUT_MAX_CHARS);
-            return {
-              id: a?.id || `about-${idx + 1}`,
-              tone: a?.tone || baseline.aboutOptions[idx]?.tone || 'Impact & Metrics',
-              about: cleaned,
-              previewHook: extractFoldPreview(cleaned),
-              charCount: cleaned.length,
-              keywordsIncluded: Array.isArray(a?.keywordsIncluded) ? a.keywordsIncluded : [],
-            };
-          })
+          const cleaned = (a?.about || baseline.aboutOptions[idx]?.about || '')
+            .trim()
+            .slice(0, LINKEDIN_ABOUT_MAX_CHARS);
+          return {
+            id: a?.id || `about-${idx + 1}`,
+            tone: a?.tone || baseline.aboutOptions[idx]?.tone || 'Impact & Metrics',
+            about: cleaned,
+            previewHook: extractFoldPreview(cleaned),
+            charCount: cleaned.length,
+            keywordsIncluded: Array.isArray(a?.keywordsIncluded) ? a.keywordsIncluded : [],
+          };
+        })
         : baseline.aboutOptions;
 
     const experienceOptimizations =
@@ -990,30 +1023,30 @@ Return STRICT JSON matching this shape:
 
     const skillsStrategy = data?.skillsStrategy
       ? {
-          top3PinnedSkills:
-            Array.isArray(data.skillsStrategy.top3PinnedSkills) &&
+        top3PinnedSkills:
+          Array.isArray(data.skillsStrategy.top3PinnedSkills) &&
             data.skillsStrategy.top3PinnedSkills.length > 0
-              ? data.skillsStrategy.top3PinnedSkills.slice(0, 3)
-              : baseline.skillsStrategy.top3PinnedSkills,
-          evidencedSkillsToAdd: Array.isArray(data.skillsStrategy.evidencedSkillsToAdd)
-            ? data.skillsStrategy.evidencedSkillsToAdd
-            : baseline.skillsStrategy.evidencedSkillsToAdd,
-          targetRoleKeywordsToConfirm: Array.isArray(
-            data.skillsStrategy.targetRoleKeywordsToConfirm,
-          )
-            ? data.skillsStrategy.targetRoleKeywordsToConfirm
-            : baseline.skillsStrategy.targetRoleKeywordsToConfirm,
-        }
+            ? data.skillsStrategy.top3PinnedSkills.slice(0, 3)
+            : baseline.skillsStrategy.top3PinnedSkills,
+        evidencedSkillsToAdd: Array.isArray(data.skillsStrategy.evidencedSkillsToAdd)
+          ? data.skillsStrategy.evidencedSkillsToAdd
+          : baseline.skillsStrategy.evidencedSkillsToAdd,
+        targetRoleKeywordsToConfirm: Array.isArray(
+          data.skillsStrategy.targetRoleKeywordsToConfirm,
+        )
+          ? data.skillsStrategy.targetRoleKeywordsToConfirm
+          : baseline.skillsStrategy.targetRoleKeywordsToConfirm,
+      }
       : baseline.skillsStrategy;
 
     const featuredSuggestions =
       Array.isArray(data?.featuredSuggestions) && data.featuredSuggestions.length > 0
         ? data.featuredSuggestions.map((f, idx) => ({
-            title: f.title,
-            itemType: f.itemType || 'Project',
-            suggestedUrl: f.suggestedUrl || (idx === 0 ? input.publicShareUrl : undefined),
-            description: f.description,
-          }))
+          title: f.title,
+          itemType: f.itemType || 'Project',
+          suggestedUrl: f.suggestedUrl || (idx === 0 ? input.publicShareUrl : undefined),
+          description: f.description,
+        }))
         : baseline.featuredSuggestions;
 
     return {
@@ -1147,7 +1180,7 @@ ${schemaBlock}`;
       );
     }
 
-    const fallbackCandidates = ['gemini-3.1-flash-lite', 'gemini-3.6-flash', 'gemini-3.5-flash-lite'];
+    const fallbackCandidates = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite'];
     const modelsToTry = [this.model, ...fallbackCandidates].filter(
       (m, idx, arr) => m && arr.indexOf(m) === idx,
     );
@@ -1225,6 +1258,137 @@ ${schemaBlock}`;
           clearTimeout(timeoutId);
           this.logger.warn(
             `Gemini API invocation exception (model: ${modelToUse}, attempt ${attempt}): ${err.message}`,
+          );
+          lastError = err;
+          if (attempt < 2) {
+            await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+          }
+        }
+      }
+    }
+
+    throw lastError || new Error('All AI models failed to generate content');
+  }
+
+  async callGeminiWithFunctions(
+    contents: GeminiMessageContent[],
+    tools?: any[],
+    options?: {
+      systemInstruction?: string;
+      temperature?: number;
+      model?: string;
+    },
+  ): Promise<GeminiFunctionCallingResponse> {
+    if (!this.apiKey) {
+      throw new Error(
+        'Gemini API key is not configured. Set AI_API_KEY in backend .env to enable real Gemini inference.',
+      );
+    }
+
+    const fallbackCandidates = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite'];
+    const preferredModel = options?.model || this.model;
+    const modelsToTry = [preferredModel, ...fallbackCandidates].filter(
+      (m, idx, arr) => m && arr.indexOf(m) === idx,
+    );
+
+    let lastError: Error | null = null;
+
+    for (const modelToUse of modelsToTry) {
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${this.apiKey}`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+        try {
+          const bodyPayload: Record<string, any> = {
+            contents,
+            generationConfig: {
+              temperature: options?.temperature ?? 0.2,
+            },
+          };
+
+          if (options?.systemInstruction) {
+            bodyPayload.systemInstruction = {
+              parts: [{ text: options.systemInstruction }],
+            };
+          }
+
+          if (tools && tools.length > 0) {
+            bodyPayload.tools = [
+              {
+                functionDeclarations: tools,
+              },
+            ];
+          }
+
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body: JSON.stringify(bodyPayload),
+          });
+
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            this.logger.warn(
+              `Gemini Function Calling warning (model: ${modelToUse}, attempt ${attempt}): status ${response.status} - ${errorText.substring(0, 150)}`,
+            );
+
+            lastError = new Error(`AI Provider model ${modelToUse} failed with status ${response.status}`);
+
+            if (response.status === 503 || response.status === 429 || response.status === 500) {
+              await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+              continue;
+            }
+
+            break;
+          }
+
+          const data = await response.json();
+          const candidateParts = data.candidates?.[0]?.content?.parts || [];
+
+          let textOutput = '';
+          const functionCalls: Array<{ name: string; args: Record<string, any> }> = [];
+
+          for (const part of candidateParts) {
+            if (part.text) {
+              textOutput += part.text;
+            }
+            if (part.functionCall) {
+              functionCalls.push({
+                name: part.functionCall.name,
+                args: part.functionCall.args || {},
+              });
+            }
+          }
+
+          const usage = data.usageMetadata || {};
+          const promptTokens = usage.promptTokenCount || 0;
+          const completionTokens = usage.candidatesTokenCount || 0;
+          const totalTokens = usage.totalTokenCount || (promptTokens + completionTokens);
+
+          const costInfo = calculateUsageCost(modelToUse, promptTokens, completionTokens);
+
+          const telemetry = {
+            promptTokens,
+            completionTokens,
+            totalTokens,
+            costUsd: costInfo.costUsd,
+            modelId: costInfo.modelId,
+            pricingVersion: costInfo.pricingVersion,
+          };
+
+          return {
+            text: textOutput || undefined,
+            functionCalls: functionCalls.length > 0 ? functionCalls : undefined,
+            telemetry,
+          };
+        } catch (err: any) {
+          clearTimeout(timeoutId);
+          this.logger.warn(
+            `Gemini Function Calling exception (model: ${modelToUse}, attempt ${attempt}): ${err.message}`,
           );
           lastError = err;
           if (attempt < 2) {

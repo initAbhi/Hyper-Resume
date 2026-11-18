@@ -21,6 +21,12 @@ import { ResumeShare } from '../resumes/entities/resume-share.entity.js';
 import { ResumeShareEvent } from '../resumes/entities/resume-share-event.entity.js';
 import { LinkedInAudit } from '../linkedin/entities/linkedin-audit.entity.js';
 import { AnalyticsEvent } from '../analytics/analytics-event.entity.js';
+import { AgentConversation } from '../agent/entities/agent-conversation.entity.js';
+import { AgentMessage } from '../agent/entities/agent-message.entity.js';
+import { AgentTask } from '../agent/entities/agent-task.entity.js';
+import { AgentToolExecution } from '../agent/entities/agent-tool-execution.entity.js';
+import { AgentTaskEvent } from '../agent/entities/agent-task-event.entity.js';
+import { AgentStreamTicket } from '../agent/entities/agent-stream-ticket.entity.js';
 
 export const ALL_ENTITIES = [
   User,
@@ -46,4 +52,10 @@ export const ALL_ENTITIES = [
   ResumeShareEvent,
   LinkedInAudit,
   AnalyticsEvent,
+  AgentConversation,
+  AgentMessage,
+  AgentTask,
+  AgentToolExecution,
+  AgentTaskEvent,
+  AgentStreamTicket,
 ];

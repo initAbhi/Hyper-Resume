@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   JobApplication,
   JobApplicationStatus,
@@ -18,6 +18,7 @@ import {
   Star,
   Clock,
   Sparkles,
+  ArrowUpDown,
 } from 'lucide-react';
 
 interface ApplicationTableViewProps {
@@ -109,6 +110,8 @@ const STATUS_CONFIG: Record<
   },
 };
 
+type SortKey = 'jobTitle' | 'companyName' | 'status' | 'savedDate' | 'appliedDate' | 'excitement';
+
 export function ApplicationTableView({
   applications,
   selectedIds,
@@ -119,6 +122,35 @@ export function ApplicationTableView({
   onUpdateExcitement,
   onDelete,
 }: ApplicationTableViewProps) {
+  const [sortKey, setSortKey] = useState<SortKey>('savedDate');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir(key === 'excitement' || key === 'savedDate' || key === 'appliedDate' ? 'desc' : 'asc');
+    }
+  };
+
+  const sortedApplications = useMemo(() => {
+    const copy = [...applications];
+    copy.sort((a, b) => {
+      const metaA = a.metadata || parseApplicationMetadata(a.notes);
+      const metaB = b.metadata || parseApplicationMetadata(b.notes);
+      let cmp = 0;
+      if (sortKey === 'jobTitle') cmp = a.jobTitle.localeCompare(b.jobTitle);
+      else if (sortKey === 'companyName') cmp = a.companyName.localeCompare(b.companyName);
+      else if (sortKey === 'status') cmp = a.status.localeCompare(b.status);
+      else if (sortKey === 'excitement') cmp = (metaA.excitement ?? 0) - (metaB.excitement ?? 0);
+      else if (sortKey === 'appliedDate') cmp = (a.appliedDate || '').localeCompare(b.appliedDate || '');
+      else cmp = (metaA.savedDate || a.createdAt || '').localeCompare(metaB.savedDate || b.createdAt || '');
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return copy;
+  }, [applications, sortKey, sortDir]);
+
   const isAllSelected =
     applications.length > 0 && selectedIds.length === applications.length;
 
@@ -152,21 +184,45 @@ export function ApplicationTableView({
                   className="rounded border-zinc-300 dark:border-zinc-700 text-blue-600 focus:ring-blue-500 cursor-pointer"
                 />
               </th>
-              <th className="py-3 px-3 min-w-[200px]">Job Position</th>
-              <th className="py-3 px-3 min-w-[140px]">Company</th>
+              <th className="py-3 px-3 min-w-[200px]">
+                <button type="button" onClick={() => toggleSort('jobTitle')} className="inline-flex items-center gap-1 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer uppercase">
+                  <span>Job Position</span><ArrowUpDown className="w-3 h-3" />
+                </button>
+              </th>
+              <th className="py-3 px-3 min-w-[140px]">
+                <button type="button" onClick={() => toggleSort('companyName')} className="inline-flex items-center gap-1 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer uppercase">
+                  <span>Company</span><ArrowUpDown className="w-3 h-3" />
+                </button>
+              </th>
               <th className="py-3 px-3 min-w-[110px]">Max. Salary</th>
               <th className="py-3 px-3 min-w-[110px]">Location</th>
-              <th className="py-3 px-3 min-w-[130px]">Status</th>
-              <th className="py-3 px-3 min-w-[95px]">Date Saved</th>
+              <th className="py-3 px-3 min-w-[130px]">
+                <button type="button" onClick={() => toggleSort('status')} className="inline-flex items-center gap-1 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer uppercase">
+                  <span>Status</span><ArrowUpDown className="w-3 h-3" />
+                </button>
+              </th>
+              <th className="py-3 px-3 min-w-[95px]">
+                <button type="button" onClick={() => toggleSort('savedDate')} className="inline-flex items-center gap-1 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer uppercase">
+                  <span>Date Saved</span><ArrowUpDown className="w-3 h-3" />
+                </button>
+              </th>
               <th className="py-3 px-3 min-w-[95px]">Deadline</th>
-              <th className="py-3 px-3 min-w-[95px]">Date Applied</th>
+              <th className="py-3 px-3 min-w-[95px]">
+                <button type="button" onClick={() => toggleSort('appliedDate')} className="inline-flex items-center gap-1 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer uppercase">
+                  <span>Date Applied</span><ArrowUpDown className="w-3 h-3" />
+                </button>
+              </th>
               <th className="py-3 px-3 min-w-[95px]">Follow Up</th>
-              <th className="py-3 px-3 min-w-[110px]">Excitement</th>
+              <th className="py-3 px-3 min-w-[110px]">
+                <button type="button" onClick={() => toggleSort('excitement')} className="inline-flex items-center gap-1 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer uppercase">
+                  <span>Excitement</span><ArrowUpDown className="w-3 h-3" />
+                </button>
+              </th>
               <th className="py-3 px-3 w-16 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/70">
-            {applications.map((app) => {
+            {sortedApplications.map((app) => {
               const meta: ApplicationRichMetadata =
                 app.metadata || parseApplicationMetadata(app.notes);
               const isSelected = selectedIds.includes(app.id);
@@ -238,17 +294,18 @@ export function ApplicationTableView({
 
                   {/* Max Salary */}
                   <td className="py-3.5 px-3 text-zinc-600 dark:text-zinc-300 font-mono text-[11px]">
-                    {meta.salary || 'US$0'}
+                    {meta.salary || '—'}
                   </td>
 
                   {/* Location */}
                   <td className="py-3.5 px-3 text-zinc-500 dark:text-zinc-400 max-w-[120px] truncate">
-                    {meta.location || 'remote'}
+                    {meta.location || '—'}
                   </td>
 
                   {/* Status Dropdown */}
                   <td className="py-3.5 px-3">
                     <select
+                      aria-label={`Status for ${app.jobTitle} at ${app.companyName}`}
                       value={app.status}
                       onChange={(e) =>
                         onUpdateStatus(app.id, e.target.value as JobApplicationStatus)

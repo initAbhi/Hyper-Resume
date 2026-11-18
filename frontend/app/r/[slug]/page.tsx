@@ -41,6 +41,7 @@ export default function RecruiterPublicViewPage({
   } | null>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [isExportingDocx, setIsExportingDocx] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const canvasContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -79,22 +80,39 @@ export default function RecruiterPublicViewPage({
 
   useLayoutEffect(() => {
     if (!canvasContainerRef.current || !payload) return;
-    applyResumeLayoutToDom(canvasContainerRef.current, payload.content.layout);
+    applyResumeLayoutToDom(
+      canvasContainerRef.current,
+      payload.content.layout,
+      payload.content.customSections,
+    );
   }, [payload]);
+
+  useEffect(() => {
+    if (!payload) return;
+    const name = payload.content.contact?.fullName?.trim() || payload.resumeTitle;
+    document.title = `${name} — Resume | HypeResume`;
+  }, [payload]);
+
+  const pageSize = payload?.content.layout?.pageSize || 'A4';
 
   const handleDownloadPdf = async () => {
     if (!payload || !payload.allowPdfDownload || isExportingPdf) return;
     setIsExportingPdf(true);
+    setExportError(null);
     try {
       const pdfPayload = buildVectorPdfPayload(
         'recruiter-resume-print',
         `${payload.content.contact?.fullName || payload.resumeTitle}.pdf`,
-        'A4',
+        pageSize,
       );
       const res = await apiClient.exportPublicResumePdf(slug, pdfPayload);
       downloadExportBlob(res.blob, res.fileName, '.pdf');
     } catch (err) {
-      console.error('Public PDF export failed:', err);
+      setExportError(
+        err instanceof Error
+          ? `${err.message} Opening print dialog as fallback.`
+          : 'PDF download failed. Opening print dialog as fallback.',
+      );
       window.print();
     } finally {
       setIsExportingPdf(false);
@@ -104,11 +122,16 @@ export default function RecruiterPublicViewPage({
   const handleDownloadDocx = async () => {
     if (!payload || !payload.allowDocxDownload || isExportingDocx) return;
     setIsExportingDocx(true);
+    setExportError(null);
     try {
-      const res = await apiClient.exportPublicResumeDocx(slug, 'A4');
+      const res = await apiClient.exportPublicResumeDocx(slug, pageSize);
       downloadExportBlob(res.blob, res.fileName, '.docx');
     } catch (err) {
-      console.error('Public DOCX export failed:', err);
+      setExportError(
+        err instanceof Error
+          ? `DOCX export failed: ${err.message}`
+          : 'Unable to export DOCX right now. Please try again.',
+      );
     } finally {
       setIsExportingDocx(false);
     }
@@ -236,7 +259,22 @@ export default function RecruiterPublicViewPage({
       </header>
 
       {/* Main Document Presentation Area */}
-      <main className="max-w-4xl mx-auto px-3 sm:px-6 py-6 sm:py-8 space-y-4 print:p-0 print:max-w-none">
+      <div className="max-w-4xl mx-auto px-3 sm:px-6 py-6 sm:py-8 space-y-4 print:p-0 print:max-w-none">
+        {exportError && (
+          <div
+            role="alert"
+            className="print:hidden rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 px-4 py-2.5 text-xs text-rose-800 dark:text-rose-200 flex items-center justify-between gap-2"
+          >
+            <span>{exportError}</span>
+            <button
+              type="button"
+              onClick={() => setExportError(null)}
+              className="font-semibold underline cursor-pointer shrink-0"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
         {payload.recruiterNote && (
           <aside className="print:hidden p-3.5 rounded-xl border border-blue-200 dark:border-blue-900/70 bg-blue-50/70 dark:bg-blue-950/30 text-xs text-blue-900 dark:text-blue-200 flex items-start gap-2.5">
             <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
@@ -258,7 +296,10 @@ export default function RecruiterPublicViewPage({
               content={payload.content}
               accentColor={accentColor}
               fontFamily={fontFamily}
-              showPhoto={Boolean(payload.content.contact?.photoUrl)}
+              showPhoto={
+                payload.content.layout?.showPhoto !== false &&
+                Boolean(payload.content.contact?.photoUrl)
+              }
               photoUrl={payload.content.contact?.photoUrl}
               showHighlights={false}
             />
@@ -275,7 +316,7 @@ export default function RecruiterPublicViewPage({
           </Link>{' '}
           · Clean ATS Vector Format
         </footer>
-      </main>
+      </div>
     </div>
   );
 }

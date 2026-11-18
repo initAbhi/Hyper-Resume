@@ -25,46 +25,46 @@ export default function AppDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
-    async function loadDashboardData() {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const [resumesData, appsData] = await Promise.all([
-          apiClient.listResumes(),
-          apiClient.listApplications(),
-        ]);
-        if (isMounted) {
-          const safeResumes = Array.isArray(resumesData)
-            ? resumesData
-            : ((resumesData as unknown) as { items: Resume[] })?.items || [];
-          const safeApps = Array.isArray(appsData)
-            ? appsData
-            : ((appsData as unknown) as { items: JobApplication[] })?.items || [];
-          setResumes(safeResumes);
-          setApplications(safeApps);
-        }
-      } catch (err: unknown) {
-        if (isMounted) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : 'Failed to load workspace data. Please check your connection.',
-          );
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+  const loadDashboardData = React.useCallback(async (isMountedRef?: { current: boolean }) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [resumesData, appsData] = await Promise.all([
+        apiClient.listResumes(),
+        apiClient.listApplications(),
+      ]);
+      if (!isMountedRef || isMountedRef.current) {
+        const safeResumes = Array.isArray(resumesData)
+          ? resumesData
+          : ((resumesData as unknown) as { items: Resume[] })?.items || [];
+        const safeApps = Array.isArray(appsData)
+          ? appsData
+          : ((appsData as unknown) as { items: JobApplication[] })?.items || [];
+        setResumes(safeResumes);
+        setApplications(safeApps);
+      }
+    } catch (err: unknown) {
+      if (!isMountedRef || isMountedRef.current) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'Failed to load workspace data. Please check your connection.',
+        );
+      }
+    } finally {
+      if (!isMountedRef || isMountedRef.current) {
+        setIsLoading(false);
       }
     }
-
-    loadDashboardData();
-    return () => {
-      isMounted = false;
-    };
   }, []);
+
+  useEffect(() => {
+    const isMountedRef = { current: true };
+    void loadDashboardData(isMountedRef);
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [loadDashboardData]);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -99,19 +99,25 @@ export default function AppDashboardPage() {
         <div className="p-3.5 rounded-lg border border-[#E2E5E9] dark:border-[#252A33] bg-white dark:bg-[#14171C]">
           <span className="text-xs font-medium text-[#5A6270] dark:text-[#9EA7B4] block">Resumes</span>
           <div className="text-xl font-bold text-[#1A1D23] dark:text-[#F0F2F5] mt-0.5">
-            {resumes.length}
+            {isLoading ? '—' : resumes.length}
           </div>
-          <span className="text-[11px] text-[#848D9A] mt-0.5 block">
-            {resumes.some((r) => r.isMaster) ? 'Master profile active' : 'Draft created'}
+          <span className="text-[11px] text-[#5A6270] dark:text-[#9EA7B4] mt-0.5 block">
+            {isLoading
+              ? 'Loading workspace...'
+              : resumes.length === 0
+              ? 'No resumes yet'
+              : resumes.some((r) => r.isMaster)
+              ? 'Master profile active'
+              : `${resumes.length} draft${resumes.length === 1 ? '' : 's'} created`}
           </span>
         </div>
 
         <div className="p-3.5 rounded-lg border border-[#E2E5E9] dark:border-[#252A33] bg-white dark:bg-[#14171C]">
           <span className="text-xs font-medium text-[#5A6270] dark:text-[#9EA7B4] block">Applications</span>
           <div className="text-xl font-bold text-[#1A1D23] dark:text-[#F0F2F5] mt-0.5">
-            {applications.length}
+            {isLoading ? '—' : applications.length}
           </div>
-          <span className="text-[11px] text-[#848D9A] mt-0.5 block">
+          <span className="text-[11px] text-[#5A6270] dark:text-[#9EA7B4] mt-0.5 block">
             {applications.filter((a) => a.status === 'interviewing').length} interviewing
           </span>
         </div>
@@ -128,11 +134,11 @@ export default function AppDashboardPage() {
 
         <div className="p-3.5 rounded-lg border border-[#E2E5E9] dark:border-[#252A33] bg-white dark:bg-[#14171C]">
           <span className="text-xs font-medium text-[#5A6270] dark:text-[#9EA7B4] block">Matching Model</span>
-          <div className="text-xs font-semibold text-[#059669] mt-1.5 flex items-center gap-1.5">
+          <div className="text-xs font-semibold text-[#047857] dark:text-[#34D399] mt-1.5 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#059669]" />
             <span>Factual Grounding</span>
           </div>
-          <span className="text-[11px] text-[#848D9A] mt-0.5 block">
+          <span className="text-[11px] text-[#5A6270] dark:text-[#9EA7B4] mt-0.5 block">
             Zero hallucination guard
           </span>
         </div>
@@ -148,7 +154,7 @@ export default function AppDashboardPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.location.reload()}
+            onClick={() => void loadDashboardData()}
             className="text-xs h-7"
           >
             Retry
@@ -255,8 +261,10 @@ export default function AppDashboardPage() {
         </div>
 
         {isLoading ? (
-          <div className="p-8 text-center text-xs text-[#848D9A] border border-[#E2E5E9] dark:border-[#252A33] rounded-lg bg-white dark:bg-[#14171C]">
-            Loading resumes...
+          <div className="p-5 space-y-2.5 border border-[#E2E5E9] dark:border-[#252A33] rounded-lg bg-white dark:bg-[#14171C]">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-9 rounded bg-[#F1F3F5] dark:bg-[#1D2128] animate-pulse" />
+            ))}
           </div>
         ) : resumes.length === 0 ? (
           <div className="p-8 text-center border border-dashed border-[#CBD0D7] dark:border-[#333945] rounded-lg bg-white dark:bg-[#14171C] space-y-3">
@@ -308,7 +316,7 @@ export default function AppDashboardPage() {
                       <td className="py-2.5 px-3.5 text-[#5A6270] dark:text-[#9EA7B4] hidden sm:table-cell">
                         {r.targetRole || 'General'}
                       </td>
-                      <td className="py-2.5 px-3.5 text-[#848D9A] hidden md:table-cell">
+                      <td className="py-2.5 px-3.5 text-[#5A6270] dark:text-[#9EA7B4] hidden md:table-cell">
                         {new Date(r.updatedAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
                       </td>
                       <td className="py-2.5 px-3.5 text-right">

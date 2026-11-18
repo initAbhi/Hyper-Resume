@@ -64,6 +64,12 @@ export default function ApplicationsPage() {
         if (!isMounted) return;
         setApplications(appsData);
         setResumes(resumesData);
+        if (typeof window !== 'undefined') {
+          const jobParam = new URLSearchParams(window.location.search).get('jobId');
+          if (jobParam && appsData.some((a) => a.id === jobParam)) {
+            setActiveJobId(jobParam);
+          }
+        }
       })
       .catch((err: unknown) => {
         if (!isMounted) return;
@@ -156,7 +162,7 @@ export default function ApplicationsPage() {
         prev.map((app) => (app.id === appId ? { ...app, status: updated.status } : app)),
       );
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to update application status');
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to update application status');
     }
   };
 
@@ -180,13 +186,12 @@ export default function ApplicationsPage() {
         ),
       );
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to update excitement rating');
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to update excitement rating');
     }
   };
 
   // Delete application
   const handleDeleteApplication = async (appId: string) => {
-    if (!confirm('Are you sure you want to delete this job application?')) return;
     try {
       await apiClient.deleteApplication(appId);
       setApplications((prev) => prev.filter((app) => app.id !== appId));
@@ -195,20 +200,12 @@ export default function ApplicationsPage() {
         setActiveJobId(null);
       }
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to delete application');
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to delete application');
     }
   };
 
   // Batch delete
   const handleBatchDelete = async () => {
-    if (
-      !confirm(
-        `Are you sure you want to delete ${selectedIds.length} selected application(s)?`,
-      )
-    ) {
-      return;
-    }
-
     try {
       for (const id of selectedIds) {
         await apiClient.deleteApplication(id);
@@ -219,7 +216,7 @@ export default function ApplicationsPage() {
       }
       setSelectedIds([]);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to delete selected applications');
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to delete selected applications');
     }
   };
 
@@ -236,7 +233,7 @@ export default function ApplicationsPage() {
       );
       setSelectedIds([]);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to move selected applications');
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to move selected applications');
     }
   };
 
@@ -248,6 +245,7 @@ export default function ApplicationsPage() {
         jobTitle: updatedApp.jobTitle,
         status: updatedApp.status,
         resumeId: updatedApp.resumeId,
+        applicationUrl: updatedApp.applicationUrl,
         appliedDate: updatedApp.appliedDate,
         notes: updatedApp.notes,
       });
@@ -256,7 +254,7 @@ export default function ApplicationsPage() {
         prev.map((app) => (app.id === updatedApp.id ? { ...app, ...updatedApp, status: saved.status } : app)),
       );
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to save application changes');
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to save application changes');
     }
   };
 
@@ -430,9 +428,10 @@ Requirements:
         counts={stageCounts}
       />
 
-      {/* 3. Deep Workspace Drilldown View (Images 2-5) */}
+      {/* 3. Deep Workspace Drilldown View (key={activeJobId} resets state cleanly on job switch — FN-32) */}
       {activeJobId ? (
         <ApplicationDeepWorkspace
+          key={activeJobId}
           applications={applications}
           activeAppId={activeJobId}
           resumes={resumes}

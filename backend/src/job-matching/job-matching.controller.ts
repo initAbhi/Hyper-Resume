@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Post,
   Query,
   Req,
@@ -59,7 +60,7 @@ export class JobMatchingController {
   @UseGuards(JwtAuthGuard)
   async getJobMatch(
     @CurrentUser() user: User,
-    @Param('matchId') matchId: string,
+    @Param('matchId', ParseUUIDPipe) matchId: string,
   ) {
     return this.jobMatchingService.getJobMatch(user.id, matchId);
   }
@@ -69,7 +70,7 @@ export class JobMatchingController {
   @HttpCode(HttpStatus.OK)
   async generateTailoringSuggestions(
     @CurrentUser() user: User,
-    @Param('matchId') matchId: string,
+    @Param('matchId', ParseUUIDPipe) matchId: string,
   ) {
     return this.jobMatchingService.generateTailoringSuggestions(user.id, matchId);
   }
@@ -79,7 +80,7 @@ export class JobMatchingController {
   @HttpCode(HttpStatus.CREATED)
   async createTailoredResumeFromMatch(
     @CurrentUser() user: User,
-    @Param('matchId') matchId: string,
+    @Param('matchId', ParseUUIDPipe) matchId: string,
     @Body() dto: CreateTailoredResumeDto,
   ) {
     return this.jobMatchingService.createTailoredResumeFromMatch(

@@ -115,6 +115,9 @@ export interface ResumeLayoutSettings {
   accentColor?: string;
   fontFamily?: 'sans' | 'serif' | 'mono';
   pageMode?: 'auto' | 'single' | 'multi';
+  showPhoto?: boolean;
+  showHighlights?: boolean;
+  pageSize?: 'A4' | 'US Letter';
 }
 
 export interface ResumeContentMeta {
@@ -327,10 +330,10 @@ export interface WritingIssueItem {
   category: WritingCheckCategory;
   severity: WritingCheckSeverity;
   locationType:
-    | 'headline'
-    | 'summary'
-    | 'experience_bullet'
-    | 'project_description';
+  | 'headline'
+  | 'summary'
+  | 'experience_bullet'
+  | 'project_description';
   locationLabel: string;
   expIdx?: number;
   bulletIdx?: number;
@@ -480,6 +483,22 @@ export interface AtsJobDescriptionMatch {
     failedQueries: string[];
     readinessSummary: string;
   };
+  hardSkillsMatch?: {
+    matched: number;
+    total: number;
+    percentage: number;
+  };
+  softSkillsMatch?: {
+    matched: number;
+    total: number;
+    percentage: number;
+  };
+  titleAlignment?: {
+    targetTitle?: string;
+    detectedTitle?: string;
+    score: number;
+    status: 'strong' | 'moderate' | 'weak';
+  };
 }
 
 export interface AtsSystemSimulations {
@@ -518,6 +537,9 @@ export interface AtsActionVerbAnalysis {
 }
 
 export interface ResumeAuditFindings {
+  atsScore?: number;
+  matchScore?: number;
+  compositeScore?: number;
   actionVerbsCount: number;
   metricsCount: number;
   missingSections: string[];
@@ -550,6 +572,9 @@ export interface ResumeAuditFindings {
 
 export interface PlainTextAtsAuditResponse {
   score: number;
+  atsScore?: number;
+  matchScore?: number;
+  compositeScore?: number;
   findings: ResumeAuditFindings;
   recommendations: string[];
   writingAudit: WritingCheckResponse;
@@ -990,6 +1015,14 @@ export interface Template {
     headerStyle: string;
     columns: number;
   };
+}
+
+export interface UserSessionItem {
+  id: string;
+  userAgent: string;
+  ipAddress: string;
+  createdAt: string;
+  expiresAt: string;
 }
 
 export interface CreditLedgerItem {
@@ -1597,7 +1630,7 @@ export class ApiClient {
     const url = `${this.getBaseUrl()}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
     const requestId =
       (options.headers as Record<string, string>)?.[
-        'x-request-id'
+      'x-request-id'
       ] || this.generateRequestId();
 
     const headers: Record<string, string> = {
@@ -1696,10 +1729,12 @@ export class ApiClient {
         !isRetry &&
         !endpoint.includes('/auth/login') &&
         !endpoint.includes('/auth/signup') &&
+        !endpoint.includes('/auth/logout') &&
         !endpoint.includes('/auth/refresh') &&
         !endpoint.includes('/auth/google') &&
         !endpoint.includes('/auth/reset-password') &&
-        !endpoint.includes('/auth/forgot-password')
+        !endpoint.includes('/auth/forgot-password') &&
+        !endpoint.includes('/auth/verify-email')
       ) {
         apiLogger.debug('Access token expired on 401, attempting silent token refresh', { endpoint });
         const newToken = await this.tryRefreshToken();
@@ -1831,6 +1866,85 @@ export class ApiClient {
     return res.data;
   }
 
+  async updateCurrentUser(dto: { fullName?: string }) {
+    const res = await this.request<{ user: User }>('/auth/me', {
+      method: 'PATCH',
+      body: JSON.stringify(dto),
+    });
+    return res.data;
+  }
+
+  async listSessions() {
+    const res = await this.request<{
+      sessions: Array<{
+        id: string;
+        userAgent: string;
+        ipAddress: string;
+        createdAt: string;
+        expiresAt: string;
+      }>;
+    }>('/auth/sessions', { method: 'GET' });
+    return res.data.sessions || [];
+  }
+
+  async revokeSession(sessionId: string) {
+    const res = await this.request<{ revoked: boolean }>(`/auth/sessions/${encodeURIComponent(sessionId)}`, {
+      method: 'DELETE',
+    });
+    return res.data;
+  }
+
+  async logoutAllSessions() {
+    const res = await this.request<{ revokedAll: boolean }>('/auth/logout-all', {
+      method: 'POST',
+    });
+    this.setTokens(null, null);
+    return res.data;
+  }
+
+  async verifyEmail(token: string) {
+    const res = await this.request<{ verified: boolean; user: User }>('/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+    return res.data;
+  }
+
+  async resendVerificationEmail() {
+    const res = await this.request<{ sent: boolean; message: string }>('/auth/resend-verification', {
+      method: 'POST',
+    });
+    return res.data;
+  }
+
+  async publicCompressAndParsePdf(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await this.request<{
+      compression: { originalSize: number; compressedSize: number; savingsPercent: number; status: string };
+      extractedText: string;
+      draft: ParsedProfileDraft;
+    }>('/resume-parsing/public/compress-and-parse', {
+      method: 'POST',
+      body: formData,
+    });
+    return res.data;
+  }
+
+  async abandonInterviewSession(sessionId: string) {
+    const res = await this.request<any>(`/interviews/${encodeURIComponent(sessionId)}/abandon`, {
+      method: 'POST',
+    });
+    return res.data;
+  }
+
+  async deleteInterviewSession(sessionId: string) {
+    const res = await this.request<{ deleted: boolean }>(`/interviews/${encodeURIComponent(sessionId)}`, {
+      method: 'DELETE',
+    });
+    return res.data;
+  }
+
   async changePassword(dto: { currentPassword: string; newPassword: string }) {
     const res = await this.request<{ message: string }>('/auth/change-password', {
       method: 'POST',
@@ -1848,16 +1962,24 @@ export class ApiClient {
   }
 
   // --- Resumes Endpoints ---
-  async listResumes(pagination?: { page?: number; limit?: number }) {
+  async listResumes(pagination?: { page?: number; limit?: number; archived?: boolean }) {
     const query = new URLSearchParams();
     if (pagination?.page) query.set('page', String(pagination.page));
     if (pagination?.limit) query.set('limit', String(pagination.limit));
+    if (pagination?.archived) query.set('archived', 'true');
     const endpoint = `/resumes${query.toString() ? `?${query.toString()}` : ''}`;
     const res = await this.request<{ items: Resume[]; total: number } | Resume[]>(endpoint);
     if (res.data && typeof res.data === 'object' && 'items' in (res.data as Record<string, unknown>)) {
       return ((res.data as unknown) as { items: Resume[] }).items || [];
     }
     return (Array.isArray(res.data) ? res.data : []) as Resume[];
+  }
+
+  async restoreResume(resumeId: string) {
+    const res = await this.request<Resume>(`/resumes/${encodeURIComponent(resumeId)}/restore`, {
+      method: 'POST',
+    });
+    return res.data;
   }
 
   async getResume(resumeId: string) {
@@ -1948,7 +2070,12 @@ export class ApiClient {
 
   async runAnalysis(
     resumeId: string,
-    dto: { analysisType: 'ats_check' | 'ats_audit' | 'comprehensive_audit' | 'job_match' | 'bullet_improve'; jobDescriptionId?: string },
+    dto: {
+      analysisType: 'ats_check' | 'ats_audit' | 'comprehensive_audit' | 'job_match' | 'bullet_improve';
+      jobDescriptionId?: string;
+      jobDescriptionText?: string;
+      targetRole?: string;
+    },
   ) {
     const res = await this.request<ResumeAnalysis>(`/resumes/${resumeId}/analyses`, {
       method: 'POST',
@@ -2065,9 +2192,9 @@ export class ApiClient {
     const pageCount = Number(response.headers.get('X-PDF-Page-Count') || '1');
     const sizeBytes = Number(
       response.headers.get('X-DOCX-Size-Bytes') ||
-        response.headers.get('X-PDF-Size-Bytes') ||
-        blob.size ||
-        '0',
+      response.headers.get('X-PDF-Size-Bytes') ||
+      blob.size ||
+      '0',
     );
 
     let fileName =
@@ -2230,12 +2357,18 @@ export class ApiClient {
   }
 
   // --- AI Bullet Optimization & Generation Endpoints ---
-  async improveBullet(dto: {
-    bulletText: string;
-    targetRole?: string;
-    metricHint?: string;
-  }) {
-    const endpoint = this.token ? '/ai/bullet-improve' : '/ai/public/bullet-improve';
+  async improveBullet(
+    dto: {
+      bulletText: string;
+      targetRole?: string;
+      metricHint?: string;
+    },
+    options?: { forcePublic?: boolean },
+  ) {
+    const endpoint =
+      options?.forcePublic || !this.token
+        ? '/ai/public/bullet-improve'
+        : '/ai/bullet-improve';
     const res = await this.request<BulletImproveResponse>(endpoint, {
       method: 'POST',
       body: JSON.stringify(dto),
@@ -2243,14 +2376,20 @@ export class ApiClient {
     return res.data;
   }
 
-  async generateBullets(dto: {
-    roleTitle: string;
-    companyName?: string;
-    focusArea?: string;
-    existingBullets?: string[];
-    targetRole?: string;
-  }) {
-    const endpoint = this.token ? '/ai/bullet-generate' : '/ai/public/bullet-generate';
+  async generateBullets(
+    dto: {
+      roleTitle: string;
+      companyName?: string;
+      focusArea?: string;
+      existingBullets?: string[];
+      targetRole?: string;
+    },
+    options?: { forcePublic?: boolean },
+  ) {
+    const endpoint =
+      options?.forcePublic || !this.token
+        ? '/ai/public/bullet-generate'
+        : '/ai/bullet-generate';
     const res = await this.request<BulletGenerateResponse>(endpoint, {
       method: 'POST',
       body: JSON.stringify(dto),
@@ -2414,7 +2553,7 @@ export class ApiClient {
   private normalizeJobMatch(data: any): JobMatch {
     if (!data) return data;
     const score = Number(data.score ?? data.overallScore ?? 0);
-    
+
     // Check if already in frontend analysis format
     if (data.analysis && data.analysis.matchedRequirements) {
       return {
@@ -2426,8 +2565,8 @@ export class ApiClient {
     const rawReqs = Array.isArray(data.requirementsAnalysis)
       ? data.requirementsAnalysis
       : Array.isArray(data.analysis?.matchedRequirements)
-      ? data.analysis.matchedRequirements
-      : [];
+        ? data.analysis.matchedRequirements
+        : [];
 
     const matchedRequirements = rawReqs.map((r: any) => ({
       requirementId: r.requirementId || r.id || 'req',

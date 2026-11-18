@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -46,7 +47,7 @@ export class CoverLettersController {
   }
 
   @Get(':id')
-  async getOne(@CurrentUser() user: User, @Param('id') id: string) {
+  async getOne(@CurrentUser() user: User, @Param('id', ParseUUIDPipe) id: string) {
     return this.coverLettersService.getOne(user.id, id);
   }
 
@@ -63,7 +64,7 @@ export class CoverLettersController {
   @HttpCode(HttpStatus.OK)
   async regenerate(
     @CurrentUser() user: User,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: RegenerateCoverLetterDto,
   ) {
     return this.coverLettersService.regenerate(user.id, id, dto);
@@ -72,14 +73,14 @@ export class CoverLettersController {
   @Patch(':id')
   async update(
     @CurrentUser() user: User,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateCoverLetterDto,
   ) {
     return this.coverLettersService.update(user.id, id, dto);
   }
 
   @Delete(':id')
-  async remove(@CurrentUser() user: User, @Param('id') id: string) {
+  async remove(@CurrentUser() user: User, @Param('id', ParseUUIDPipe) id: string) {
     return this.coverLettersService.remove(user.id, id);
   }
 
@@ -87,7 +88,7 @@ export class CoverLettersController {
   @HttpCode(HttpStatus.OK)
   async exportPdf(
     @CurrentUser() user: User,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ExportPdfDto,
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
@@ -115,7 +116,7 @@ export class CoverLettersController {
   @HttpCode(HttpStatus.OK)
   async exportDocx(
     @CurrentUser() user: User,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ExportDocxDto,
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {

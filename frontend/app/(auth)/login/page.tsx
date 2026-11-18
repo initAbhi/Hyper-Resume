@@ -14,12 +14,14 @@ function buildPostLoginTarget(searchParams: ReturnType<typeof useSearchParams>):
   const plan = searchParams?.get('plan');
   const currency = searchParams?.get('currency');
   const template = searchParams?.get('template');
+  const action = searchParams?.get('action');
 
   if (redirect && redirect.startsWith('/') && !redirect.startsWith('//')) {
     const params = new URLSearchParams();
     if (plan) params.set('plan', plan);
     if (currency) params.set('currency', currency);
     if (template) params.set('template', template);
+    if (action) params.set('action', action);
     const qs = params.toString();
     if (!qs) return redirect;
     return redirect.includes('?') ? `${redirect}&${qs}` : `${redirect}?${qs}`;
@@ -145,15 +147,15 @@ function LoginFormContent() {
   };
 
   const inputClass =
-    'flex h-11 w-full rounded-lg border border-white/10 bg-zinc-950 px-3 text-sm text-white shadow-[0px_0px_1px_1px_rgba(255,255,255,0.06)] transition placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/60';
+    'flex h-11 w-full rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-zinc-950 px-3 text-sm text-slate-900 dark:text-white shadow-xs dark:shadow-[0px_0px_1px_1px_rgba(255,255,255,0.06)] transition placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#285FEA]/60';
 
   return (
-    <div className="relative flex min-h-[calc(100vh-4rem)] flex-1 flex-col items-center justify-center overflow-hidden bg-[#050505] px-4 py-16">
+    <div className="relative flex min-h-[calc(100vh-4rem)] flex-1 flex-col items-center justify-center overflow-hidden bg-slate-50/70 dark:bg-[#050505] px-4 py-16">
       <div
-        className="pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute inset-0 hidden dark:block"
         style={{
           background:
-            'radial-gradient(ellipse 70% 50% at 50% -10%, rgba(85,37,245,0.28), transparent 55%)',
+            'radial-gradient(ellipse 70% 50% at 50% -10%, rgba(40,95,234,0.25), transparent 55%)',
         }}
         aria-hidden
       />
@@ -161,31 +163,31 @@ function LoginFormContent() {
       <div className="relative z-10 w-full max-w-md">
         <Link
           href="/"
-          className="mb-8 flex justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 rounded-lg"
+          className="mb-8 flex justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#285FEA] rounded-lg"
           aria-label="HypeResume Home"
         >
-          <Logo variant="full" size="lg" theme="dark" priority />
+          <Logo variant="full" size="lg" priority />
         </Link>
 
-        <div className="rounded-2xl border border-white/10 bg-[#0c0c0e]/90 p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_24px_80px_rgba(0,0,0,0.55)] backdrop-blur-xl sm:p-8">
+        <div className="rounded-2xl border border-slate-200/90 dark:border-white/10 bg-white dark:bg-[#0c0c0e]/90 p-6 shadow-lg dark:shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_24px_80px_rgba(0,0,0,0.55)] backdrop-blur-xl sm:p-8">
           <div className="text-center">
-            <h1 className="font-rubik text-2xl font-semibold tracking-tight text-white">
+            <h1 className="font-rubik text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
               Welcome back
             </h1>
-            <p className="mt-1.5 text-sm text-zinc-400">
+            <p className="mt-1.5 text-sm text-slate-600 dark:text-zinc-400">
               Sign in to continue building evidence-backed applications
             </p>
           </div>
 
           {errorMessage ? (
-            <div className="mt-5 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2.5 text-xs text-red-200">
+            <div className="mt-5 rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-3 py-2.5 text-xs text-red-700 dark:text-red-200">
               {errorMessage}
             </div>
           ) : null}
 
           {isGoogleLoading ? (
-            <div className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-violet-400/30 bg-violet-500/10 px-4 py-2.5 text-xs font-medium text-violet-200">
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-violet-300 border-t-transparent" />
+            <div className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-blue-200 dark:border-blue-400/30 bg-blue-50 dark:bg-blue-500/10 px-4 py-2.5 text-xs font-medium text-blue-700 dark:text-blue-200">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 dark:border-blue-300 border-t-transparent" />
               Signing you in with Google...
             </div>
           ) : null}
@@ -196,16 +198,16 @@ function LoginFormContent() {
                 <div id="google-btn-rendered" className="min-h-[44px] w-full max-w-[360px]" />
               </div>
               {!isGoogleReady ? (
-                <div className="mt-2 flex h-11 w-full animate-pulse items-center justify-center rounded-xl bg-white/[0.06] text-xs text-zinc-500">
+                <div className="mt-2 flex h-11 w-full animate-pulse items-center justify-center rounded-xl bg-slate-100 dark:bg-white/[0.06] text-xs text-slate-500 dark:text-zinc-400">
                   Loading Google Sign-In...
                 </div>
               ) : null}
               <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-white/10" />
+                  <div className="w-full border-t border-slate-200 dark:border-white/10" />
                 </div>
                 <div className="relative flex justify-center text-[11px] uppercase">
-                  <span className="bg-[#0c0c0e] px-3 font-semibold tracking-wider text-zinc-500">
+                  <span className="bg-white dark:bg-[#0c0c0e] px-3 font-semibold tracking-wider text-slate-500 dark:text-zinc-400">
                     Or continue with email
                   </span>
                 </div>
@@ -215,31 +217,32 @@ function LoginFormContent() {
             <div className="mt-6" />
           )}
 
-          <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <LabelInputContainer>
-              <label htmlFor="login-email" className="text-xs font-medium text-zinc-300">
+              <label htmlFor="login-email" className="text-xs font-medium text-slate-700 dark:text-zinc-300">
                 Email Address
               </label>
               <input
                 id="login-email"
+                name="email"
                 type="email"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                autoComplete="off"
+                autoComplete="email"
                 className={inputClass}
               />
             </LabelInputContainer>
 
             <LabelInputContainer>
               <div className="flex items-center justify-between">
-                <label htmlFor="login-password" className="text-xs font-medium text-zinc-300">
+                <label htmlFor="login-password" className="text-xs font-medium text-slate-700 dark:text-zinc-300">
                   Password
                 </label>
                 <Link
                   href="/forgot-password"
-                  className="text-xs font-medium text-violet-300 transition hover:text-violet-200"
+                  className="text-xs font-medium text-[#285FEA] dark:text-blue-400 transition hover:underline"
                 >
                   Forgot password?
                 </Link>
@@ -247,6 +250,7 @@ function LoginFormContent() {
               <div className="relative">
                 <input
                   id="login-password"
+                  name="password"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   value={password}
@@ -258,9 +262,8 @@ function LoginFormContent() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 focus:outline-none focus-visible:text-white transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-100 focus-visible:outline-2 focus-visible:outline-[#285FEA] rounded transition-colors cursor-pointer"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  tabIndex={-1}
                 >
                   {showPassword ? (
                     <EyeOff className="w-4 h-4" />
@@ -275,18 +278,18 @@ function LoginFormContent() {
               id="login-submit-button"
               type="submit"
               disabled={isLoading}
-              className="group/btn relative mt-2 flex h-11 w-full items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-[#5525F5] text-sm font-semibold text-white shadow-[0px_1px_0px_0px_rgba(255,255,255,0.2)_inset] transition disabled:opacity-60"
+              className="group/btn relative mt-2 flex h-11 w-full items-center justify-center rounded-lg bg-[#285FEA] hover:bg-[#1E4BC8] text-sm font-semibold text-white shadow-xs transition disabled:opacity-60 cursor-pointer"
             >
               {isLoading ? 'Signing in…' : 'Sign in to workspace'}
               <BottomGradient />
             </button>
           </form>
 
-          <p className="mt-6 text-center text-xs text-zinc-500">
+          <p className="mt-6 text-center text-xs text-slate-600 dark:text-zinc-400">
             Don&apos;t have an account?{' '}
             <Link
               href={`/register${querySuffix}`}
-              className="font-semibold text-violet-300 transition hover:text-violet-200"
+              className="font-semibold text-[#285FEA] dark:text-blue-400 transition hover:underline"
             >
               Create account
             </Link>

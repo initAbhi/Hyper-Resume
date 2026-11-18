@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { JobApplication } from './entities/job-application.entity.js';
 import { Resume } from '../resumes/entities/resume.entity.js';
 import { ResumeVersion } from '../resumes/entities/resume-version.entity.js';
+import { JobDescription } from '../jobs/entities/job-description.entity.js';
 import { CreateApplicationDto } from './dto/create-application.dto.js';
 import { UpdateApplicationDto } from './dto/update-application.dto.js';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
@@ -19,7 +20,23 @@ export class ApplicationsService {
     private readonly resumeRepository: Repository<Resume>,
     @InjectRepository(ResumeVersion)
     private readonly versionRepository: Repository<ResumeVersion>,
+    @InjectRepository(JobDescription)
+    private readonly jobDescriptionRepository: Repository<JobDescription>,
   ) {}
+
+  private async resolveOwnedJobDescriptionId(
+    userId: string,
+    jobDescriptionId?: string,
+  ): Promise<string | undefined> {
+    if (!jobDescriptionId) return undefined;
+    const jd = await this.jobDescriptionRepository.findOne({
+      where: { id: jobDescriptionId, userId },
+    });
+    if (!jd) {
+      throw new NotFoundException('Job description not found or access denied');
+    }
+    return jd.id;
+  }
 
   private async resolveResumeVersionId(
     userId: string,
@@ -76,6 +93,10 @@ export class ApplicationsService {
       userId,
       dto.resumeVersionId || dto.resumeId,
     );
+    const jobDescriptionId = await this.resolveOwnedJobDescriptionId(
+      userId,
+      dto.jobDescriptionId,
+    );
 
     const company = (dto.company || dto.companyName || '').trim();
     const role = (dto.role || dto.jobTitle || '').trim();
@@ -85,7 +106,7 @@ export class ApplicationsService {
       company,
       role,
       resumeVersionId,
-      jobDescriptionId: dto.jobDescriptionId,
+      jobDescriptionId,
       jobUrl: (dto.jobUrl || dto.applicationUrl)?.trim(),
       status: dto.status || 'draft',
       appliedDate: dto.appliedDate ? new Date(dto.appliedDate) : undefined,
@@ -150,7 +171,10 @@ export class ApplicationsService {
       );
     }
     if (dto.jobDescriptionId !== undefined) {
-      app.jobDescriptionId = dto.jobDescriptionId;
+      app.jobDescriptionId = await this.resolveOwnedJobDescriptionId(
+        userId,
+        dto.jobDescriptionId,
+      );
     }
     if (dto.jobUrl !== undefined || dto.applicationUrl !== undefined) {
       app.jobUrl = (dto.jobUrl || dto.applicationUrl)?.trim();

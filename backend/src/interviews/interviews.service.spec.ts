@@ -37,7 +37,8 @@ describe('InterviewsService', () => {
     mockDataSource = {
       transaction: vi.fn(async (cb) => {
         const mockManager = {
-          findOne: vi.fn(),
+          query: vi.fn(async () => []),
+          findOne: vi.fn((_entity, options) => mockSessionRepo.findOne(options)),
           create: vi.fn((_entity, data) => ({ ...data, id: 'sess-generated-id' })),
           save: vi.fn(async (_entityOrData, data) => data || _entityOrData),
         };

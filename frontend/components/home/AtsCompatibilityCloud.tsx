@@ -6,9 +6,9 @@ export function AtsCompatibilityCloud() {
   const atsEngines = [
     {
       name: 'Ashby',
-      color: '#6366F1',
+      color: '#818CF8',
       render: () => (
-        <span className="font-extrabold text-base tracking-tight text-[#4F46E5] dark:text-[#818CF8]">
+        <span className="font-extrabold text-base tracking-tight text-[#818CF8]">
           Ashby
         </span>
       ),
@@ -24,7 +24,7 @@ export function AtsCompatibilityCloud() {
     },
     {
       name: 'workday.',
-      color: '#005CB9',
+      color: '#38BDF8',
       render: () => (
         <div className="flex items-center">
           <span className="font-black text-base tracking-tighter text-[#38BDF8]">
@@ -46,37 +46,37 @@ export function AtsCompatibilityCloud() {
     },
     {
       name: 'LEVER',
-      color: '#0052CC',
+      color: '#60A5FA',
       render: () => (
-        <span className="font-black text-base tracking-widest text-[#0052CC] dark:text-[#60A5FA]">
+        <span className="font-black text-base tracking-widest text-[#60A5FA]">
           LEVER
         </span>
       ),
     },
     {
       name: 'JazzHR',
-      color: '#7B2CBF',
+      color: '#C084FC',
       render: () => (
-        <span className="font-extrabold text-base tracking-tight text-[#7B2CBF] dark:text-[#C084FC]">
+        <span className="font-extrabold text-base tracking-tight text-[#C084FC]">
           Jazz<span className="font-black">HR</span>
         </span>
       ),
     },
     {
       name: 'paycom',
-      color: '#00875A',
+      color: '#34D399',
       render: () => (
-        <div className="flex items-center gap-1 font-bold text-sm text-[#00875A] dark:text-[#34D399]">
-          <span className="w-3 h-3 rounded bg-[#00875A] inline-block" />
+        <div className="flex items-center gap-1 font-bold text-sm text-[#34D399]">
+          <span className="w-3 h-3 rounded bg-[#34D399] inline-block" />
           <span>paycom</span>
         </div>
       ),
     },
     {
       name: 'JOBVITE',
-      color: '#0070BA',
+      color: '#38BDF8',
       render: () => (
-        <span className="font-black text-sm tracking-wider text-[#0070BA] dark:text-[#38BDF8]">
+        <span className="font-black text-sm tracking-wider text-[#38BDF8]">
           JOBVITE
         </span>
       ),
@@ -85,7 +85,7 @@ export function AtsCompatibilityCloud() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-10 text-center sm:px-6 sm:py-14 lg:px-8">
-      <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+      <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
         Built for real ATS parsers
       </p>
       <h3 className="mt-3 font-rubik text-2xl font-semibold tracking-tight text-white sm:text-3xl">

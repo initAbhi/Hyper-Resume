@@ -1,10 +1,14 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
   HttpCode,
   HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Patch,
   Post,
   Req,
   Res,
@@ -22,14 +26,25 @@ import { ResetPasswordDto } from './dto/reset-password.dto.js';
 import { GoogleAuthDto } from './dto/google-auth.dto.js';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
+import { createPublicRateLimiter } from '../common/utils/public-rate-limit.util.js';
 import type { User } from '../users/entities/user.entity.js';
 
 @Controller('auth')
 export class AuthController {
+  private readonly enforceSignupLimit = createPublicRateLimiter(10, 15 * 60 * 1000);
+  private readonly enforceLoginLimit = createPublicRateLimiter(20, 15 * 60 * 1000);
+  private readonly enforceForgotLimit = createPublicRateLimiter(5, 15 * 60 * 1000);
+  private readonly enforceResetLimit = createPublicRateLimiter(10, 15 * 60 * 1000);
+  private readonly enforceVerifyLimit = createPublicRateLimiter(10, 15 * 60 * 1000);
+
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
   ) {}
+
+  private shouldApplyRateLimit(): boolean {
+    return this.configService.get<string>('NODE_ENV') !== 'test' && process.env.NODE_ENV !== 'test';
+  }
 
   @Post('signup')
   @HttpCode(HttpStatus.CREATED)
@@ -38,6 +53,9 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
+    if (this.shouldApplyRateLimit()) {
+      this.enforceSignupLimit(req);
+    }
     const userAgent = req.headers['user-agent'];
     const ip = req.ip;
 
@@ -54,6 +72,9 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
+    if (this.shouldApplyRateLimit()) {
+      this.enforceLoginLimit(req);
+    }
     const userAgent = req.headers['user-agent'];
     const ip = req.ip;
 
@@ -102,14 +123,42 @@ export class AuthController {
 
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
-  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+  async forgotPassword(@Body() dto: ForgotPasswordDto, @Req() req: Request) {
+    if (this.shouldApplyRateLimit()) {
+      this.enforceForgotLimit(req);
+    }
     return this.authService.requestPasswordReset(dto.email);
   }
 
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
-  async resetPassword(@Body() dto: ResetPasswordDto) {
+  async resetPassword(@Body() dto: ResetPasswordDto, @Req() req: Request) {
+    if (this.shouldApplyRateLimit()) {
+      this.enforceResetLimit(req);
+    }
     return this.authService.resetPassword(dto.token, dto.newPassword);
+  }
+
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  async verifyEmail(@Body() body: { token?: string }, @Req() req: Request) {
+    if (this.shouldApplyRateLimit()) {
+      this.enforceVerifyLimit(req);
+    }
+    if (!body?.token || typeof body.token !== 'string') {
+      throw new BadRequestException('Verification token is required');
+    }
+    return this.authService.verifyEmail(body.token);
+  }
+
+  @Post('resend-verification')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async resendVerification(@CurrentUser() user: User, @Req() req: Request) {
+    if (this.shouldApplyRateLimit()) {
+      this.enforceVerifyLimit(req);
+    }
+    return this.authService.resendVerificationEmail(user.id);
   }
 
   @Post('google')
@@ -134,16 +183,63 @@ export class AuthController {
     return this.authService.getCurrentUser(user.id);
   }
 
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async updateCurrentUser(
+    @CurrentUser() user: User,
+    @Body() body: { fullName?: string },
+  ) {
+    if (body?.fullName !== undefined && typeof body.fullName !== 'string') {
+      throw new BadRequestException('fullName must be a string');
+    }
+    return this.authService.updateCurrentUser(user.id, { fullName: body?.fullName });
+  }
+
+  @Get('sessions')
+  @UseGuards(JwtAuthGuard)
+  async listSessions(@CurrentUser() user: User) {
+    return { sessions: await this.authService.listSessions(user.id) };
+  }
+
+  @Delete('sessions/:sessionId')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async revokeSession(
+    @CurrentUser() user: User,
+    @Param('sessionId', ParseUUIDPipe) sessionId: string,
+  ) {
+    return this.authService.revokeSession(user.id, sessionId);
+  }
+
+  @Post('logout-all')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async logoutAll(
+    @CurrentUser() user: User,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.revokeAllSessions(user.id);
+    this.clearAuthCookies(res);
+    return result;
+  }
+
   @Post('change-password')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   async changePassword(
     @CurrentUser() user: User,
-    @Body() body: { currentPassword?: string; newPassword: string },
+    @Body() body: { currentPassword?: string; newPassword?: string },
   ) {
+    if (typeof body?.currentPassword !== 'string' || !body.currentPassword.trim()) {
+      throw new BadRequestException('Current password is required');
+    }
+    if (typeof body?.newPassword !== 'string' || body.newPassword.length < 8 || body.newPassword.length > 128) {
+      throw new BadRequestException('New password must be between 8 and 128 characters');
+    }
     return this.authService.changePassword(
       user.id,
-      body.currentPassword || '',
+      body.currentPassword,
       body.newPassword,
     );
   }

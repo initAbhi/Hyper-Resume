@@ -265,6 +265,16 @@ function matchCase(source: string, target: string): string {
 }
 
 function replaceFirstOccurrence(text: string, matched: string, replacement: string): string {
+  if (!matched) return text;
+  const escaped = matched.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const startsWord = /^\w/.test(matched);
+  const endsWord = /\w$/.test(matched);
+  if (startsWord || endsWord) {
+    const boundaryRe = new RegExp(`${startsWord ? '\\b' : ''}${escaped}${endsWord ? '\\b' : ''}`);
+    if (boundaryRe.test(text)) {
+      return text.replace(boundaryRe, () => replacement);
+    }
+  }
   const idx = text.indexOf(matched);
   if (idx === -1) return text;
   return `${text.slice(0, idx)}${replacement}${text.slice(idx + matched.length)}`;

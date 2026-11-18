@@ -32,7 +32,7 @@ export function DifferentiatorSection() {
     <section className="relative w-full bg-[#0a0a0a] px-4 py-16 text-white sm:px-6 sm:py-24 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
             Why HypeResume
           </p>
           <h2 className="mt-3 font-rubik text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -45,7 +45,7 @@ export function DifferentiatorSection() {
         </div>
 
         <div className="mt-10 space-y-2">
-          <div className="hidden grid-cols-2 gap-8 px-5 pb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-600 sm:grid sm:px-6">
+          <div className="hidden grid-cols-2 gap-8 px-5 pb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 sm:grid sm:px-6">
             <span>The usual trap</span>
             <span>What we ship instead</span>
           </div>
@@ -53,9 +53,9 @@ export function DifferentiatorSection() {
             <FadeContent key={row.pain} delay={i * 0.04} threshold={0.1}>
               <div className="grid gap-4 rounded-2xl bg-white/[0.035] px-5 py-5 sm:grid-cols-2 sm:gap-8 sm:px-6">
                 <div className="flex gap-3">
-                  <Ban className="mt-0.5 h-4 w-4 shrink-0 text-zinc-600" />
+                  <Ban className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
                   <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-600 sm:hidden">
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-400 sm:hidden">
                       The usual trap
                     </p>
                     <p className="text-sm leading-relaxed text-zinc-400">{row.pain}</p>

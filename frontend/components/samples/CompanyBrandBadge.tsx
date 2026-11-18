@@ -13,15 +13,15 @@ export function CompanyBrandBadge({ companyKey, companyName, className = '' }: C
     case 'technova':
       return (
         <span className={`inline-flex items-center font-bold tracking-tight text-base font-sans ${className}`}>
-          <span className="text-[#285FEA] font-extrabold">Tech</span>
+          <span className="text-[#1D4ED8] dark:text-[#93C5FD] font-extrabold">Tech</span>
           <span className="text-zinc-900 dark:text-zinc-100 font-bold">Nova</span>
         </span>
       );
 
     case 'chime':
       return (
-        <span className={`inline-flex items-center font-bold tracking-tight text-[#25C974] text-lg font-sans ${className}`}>
-          chime<span className="text-[#25C974] text-xs align-super ml-0.5">•</span>
+        <span className={`inline-flex items-center font-bold tracking-tight text-[#047857] dark:text-[#34D399] text-lg font-sans ${className}`}>
+          chime<span className="text-[#047857] dark:text-[#34D399] text-xs align-super ml-0.5">•</span>
         </span>
       );
 
@@ -55,14 +55,14 @@ export function CompanyBrandBadge({ companyKey, companyName, className = '' }: C
     case 'accenture':
       return (
         <span className={`inline-flex items-center font-bold text-zinc-900 dark:text-white text-base tracking-tight ${className}`}>
-          accent<span className="text-[#A100FF] font-black text-lg mx-0.5">&gt;</span>ure
+          accent<span className="text-[#7E22CE] dark:text-[#C084FC] font-black text-lg mx-0.5">&gt;</span>ure
         </span>
       );
 
     case 'deloitte':
       return (
         <span className={`inline-flex items-center font-bold text-zinc-900 dark:text-white text-base tracking-tight ${className}`}>
-          Deloitte<span className="text-[#86BC25] font-black text-xl leading-none">.</span>
+          Deloitte<span className="text-[#3F6212] dark:text-[#A3E635] font-black text-xl leading-none">.</span>
         </span>
       );
 
@@ -72,14 +72,14 @@ export function CompanyBrandBadge({ companyKey, companyName, className = '' }: C
           <span className="bg-[#CC0000] text-white font-black text-[10px] px-1 py-0.5 rounded-sm tracking-wider">
             NC STATE
           </span>
-          <span className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400 tracking-wider">UNIVERSITY</span>
+          <span className="text-[10px] font-bold text-zinc-600 dark:text-zinc-600 dark:text-zinc-400 tracking-wider">UNIVERSITY</span>
         </span>
       );
 
     case 'meta':
     case 'facebook':
       return (
-        <span className={`inline-flex items-center font-bold text-[#1877F2] text-base tracking-tight font-sans ${className}`}>
+        <span className={`inline-flex items-center font-bold text-[#1D4ED8] dark:text-[#60A5FA] text-base tracking-tight font-sans ${className}`}>
           facebook
         </span>
       );
@@ -87,12 +87,12 @@ export function CompanyBrandBadge({ companyKey, companyName, className = '' }: C
     case 'google':
       return (
         <span className={`inline-flex items-center font-semibold text-base tracking-tight font-sans ${className}`}>
-          <span className="text-[#4285F4]">G</span>
-          <span className="text-[#EA4335]">o</span>
-          <span className="text-[#FBBC05]">o</span>
-          <span className="text-[#4285F4]">g</span>
-          <span className="text-[#34A853]">l</span>
-          <span className="text-[#EA4335]">e</span>
+          <span className="text-[#1D4ED8] dark:text-[#60A5FA]">G</span>
+          <span className="text-[#B91C1C] dark:text-[#F87171]">o</span>
+          <span className="text-[#B45309] dark:text-[#FBBF24]">o</span>
+          <span className="text-[#1D4ED8] dark:text-[#60A5FA]">g</span>
+          <span className="text-[#15803D] dark:text-[#4ADE80]">l</span>
+          <span className="text-[#B91C1C] dark:text-[#F87171]">e</span>
         </span>
       );
 
@@ -111,7 +111,7 @@ export function CompanyBrandBadge({ companyKey, companyName, className = '' }: C
       return (
         <span className={`inline-flex items-center gap-1 font-bold text-zinc-900 dark:text-white text-base tracking-tight ${className}`}>
           <span className="tracking-tighter">amazon</span>
-          <span className="text-[#FF9900] text-xs font-black tracking-normal px-1 py-0.2 rounded bg-[#FF9900]/20 ml-1">
+          <span className="text-[#9A3412] dark:text-[#FDBA74] text-xs font-black tracking-normal px-1 py-0.2 rounded bg-[#FF9900]/20 ml-1">
             AWS
           </span>
         </span>
@@ -133,14 +133,14 @@ export function CompanyBrandBadge({ companyKey, companyName, className = '' }: C
 
     case 'netflix':
       return (
-        <span className={`inline-flex items-center font-black tracking-wider text-[#E50914] text-base font-sans ${className}`}>
+        <span className={`inline-flex items-center font-black tracking-wider text-[#B91C1C] dark:text-[#F87171] text-base font-sans ${className}`}>
           NETFLIX
         </span>
       );
 
     case 'tesla':
       return (
-        <span className={`inline-flex items-center font-sans font-bold tracking-[0.25em] text-[#E82127] text-base ${className}`}>
+        <span className={`inline-flex items-center font-sans font-bold tracking-[0.25em] text-[#B91C1C] dark:text-[#F87171] text-base ${className}`}>
           TESLA
         </span>
       );
@@ -155,7 +155,7 @@ export function CompanyBrandBadge({ companyKey, companyName, className = '' }: C
 
     case 'stripe':
       return (
-        <span className={`inline-flex items-center font-black text-[#635BFF] text-lg tracking-tight font-sans ${className}`}>
+        <span className={`inline-flex items-center font-black text-[#4338CA] dark:text-[#A5B4FC] text-lg tracking-tight font-sans ${className}`}>
           stripe
         </span>
       );
@@ -170,7 +170,7 @@ export function CompanyBrandBadge({ companyKey, companyName, className = '' }: C
     case 'goldman':
     case 'goldman-sachs':
       return (
-        <span className={`inline-flex items-center font-serif font-bold text-[#7399C6] text-sm tracking-wide ${className}`}>
+        <span className={`inline-flex items-center font-serif font-bold text-[#1E40AF] dark:text-[#93C5FD] text-sm tracking-wide ${className}`}>
           Goldman Sachs
         </span>
       );
@@ -229,34 +229,34 @@ export function CompanyBrandBadge({ companyKey, companyName, className = '' }: C
         <span className={`inline-flex items-center gap-1.5 font-sans font-black text-zinc-900 dark:text-white text-base tracking-tight ${className}`}>
           <span className="w-2.5 h-2.5 rounded-sm bg-[#00F2FE] shadow-[2px_2px_0px_0px_#FE2C55] shrink-0" />
           <span>TikTok</span>
-          <span className="text-xs text-zinc-400 font-normal">/ ByteDance</span>
+          <span className="text-xs text-zinc-600 dark:text-zinc-400 font-normal">/ ByteDance</span>
         </span>
       );
 
     case 'snowflake':
       return (
         <span className={`inline-flex items-center gap-1.5 font-bold text-zinc-900 dark:text-white text-base tracking-tight ${className}`}>
-          <svg className="w-4 h-4 text-[#29B5E8] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <svg className="w-4 h-4 text-[#0369A1] dark:text-[#38BDF8] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
             <line x1="12" y1="2" x2="12" y2="22" />
             <line x1="2" y1="12" x2="22" y2="12" />
             <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
             <line x1="4.93" y1="19.07" x2="19.07" y2="4.93" />
           </svg>
-          <span className="text-sm font-bold text-[#29B5E8]">snowflake</span>
+          <span className="text-sm font-bold text-[#0369A1] dark:text-[#38BDF8]">snowflake</span>
         </span>
       );
 
     case 'airbnb':
       return (
-        <span className={`inline-flex items-center gap-1 font-bold text-[#FF5A5F] text-base tracking-tight ${className}`}>
+        <span className={`inline-flex items-center gap-1 font-bold text-[#BE123C] dark:text-[#FB7185] text-base tracking-tight ${className}`}>
           <span>airbnb</span>
         </span>
       );
 
     case 'spotify':
       return (
-        <span className={`inline-flex items-center gap-1.5 font-bold text-[#1ED760] text-base tracking-tight ${className}`}>
-          <svg className="w-4 h-4 fill-current text-[#1ED760] shrink-0" viewBox="0 0 24 24">
+        <span className={`inline-flex items-center gap-1.5 font-bold text-[#15803D] dark:text-[#4ADE80] text-base tracking-tight ${className}`}>
+          <svg className="w-4 h-4 fill-current text-[#15803D] dark:text-[#4ADE80] shrink-0" viewBox="0 0 24 24">
             <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
           </svg>
           <span className="text-zinc-900 dark:text-white text-sm">Spotify</span>

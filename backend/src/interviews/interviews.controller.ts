@@ -1,8 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Post,
@@ -64,6 +67,24 @@ export class InterviewsController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.interviewsService.finishSession(user.id, id);
+  }
+
+  @Post(':id/abandon')
+  @HttpCode(HttpStatus.OK)
+  async abandonSession(
+    @CurrentUser() user: User,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.interviewsService.abandonSession(user.id, id);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  async deleteSession(
+    @CurrentUser() user: User,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.interviewsService.deleteSession(user.id, id);
   }
 
   @Get(':id/report')

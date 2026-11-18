@@ -20,10 +20,14 @@ import {
   extractSkillsFromCorpus,
   normalizeExtractedText,
   simulateAtsPlatforms,
+  SKILL_ALIASES,
 } from './ats-taxonomy.js';
 
 export interface AtsAuditEvaluation {
   score: number;
+  atsScore: number;
+  matchScore?: number;
+  compositeScore?: number;
   findings: ResumeAuditFindings;
   recommendations: string[];
   writingAudit: WritingCheckResult;
@@ -49,11 +53,43 @@ const PASSIVE_OPENER_REGEX =
 /**
  * Matches measurable impact across global currencies, Indian numbering (Lakhs, Crores),
  * percentages, throughput, latency, multipliers, thousands formatting, and technical KPIs.
+ * Accurately ignores bare tenure durations like "Worked for 3 years" or "in 6 months".
  */
-const METRIC_REGEX =
-  /(?:[\$€£₹]|Rs\.?|INR|EUR|GBP|USD)\s*\d+(?:[.,]\d+)?(?:\s*(?:k|m|b|cr|crores?|lakhs?|lac|l)\b|\+)?|\d+(?:[.,]\d+)?\s*(?:%|percentage points)|\b\d+(?:[.,]\d+)?\s*(?:x|fold)\b|\b\d{1,3}(?:,\d{3})+\+?|\b\d+(?:\.\d+)?\s*(?:ms|s|sec|seconds?|mins?|minutes?|hrs?|hours?|days?|weeks?|mos?|months?|yrs?|years?|users?|clients?|customers?|merchants?|events?|requests?|queries?|endpoints?|teams?|engineers?|developers?|microservices?|pipelines?|qps|rps|tps|req\/s|gb|tb|pb|mb)\+?|\b(?:slashed|cut|decreased|increased|boosted|amplified|grew|scaled|saved)\s+by\s+\d+/i;
+const METRIC_PATTERNS = [
+  // 1. Currency ($120K, ₹50L, INR 10M, €50,000)
+  /(?:[\$€£₹]|Rs\.?|INR|EUR|GBP|USD)\s*\d+(?:[.,]\d+)?(?:\s*(?:k|m|b|cr|crores?|lakhs?|lac|l)\b|\+)?/i,
+  // 2. Percentages (35%, 99.98%, 20 percentage points)
+  /\d+(?:[.,]\d+)?\s*(?:%|percentage points(?:\b|$))/i,
+  // 3. Multipliers (2x, 10-fold)
+  /\b\d+(?:[.,]\d+)?\s*(?:x|fold)\b/i,
+  // 4. Formatted thousands (25,000+, 1,200,000)
+  /\b\d{1,3}(?:,\d{3})+\+?/,
+  // 5. Volume with scale suffix (1.2M daily transactions, 180K active merchants)
+  /\b\d+(?:\.\d+)?\s*(?:k|m|b|cr|crores?|lakhs?)\b(?:\s+(?:daily|monthly|weekly|annual|annually|active|concurrent|registered))?\s+(?:users?|clients?|customers?|merchants?|events?|requests?|queries?|endpoints?|records?|transactions?|visits?|downloads?|visitors?|subscribers?|members?|accounts?|sessions?)\b/i,
+  // 6. Direct technical metrics (50,000 QPS, 50 microservices, 120 endpoints, 10 teams)
+  /\b\d+(?:\.\d+)?\s*(?:users?|clients?|customers?|merchants?|events?|requests?|queries?|endpoints?|records?|transactions?|microservices?|pipelines?|qps|rps|tps|req\/s|gb|tb|pb|mb)\b/i,
+  // 7. Latency (sub-10ms, 450ms, 250 milliseconds)
+  /\b\d+(?:\.\d+)?\s*(?:ms|milliseconds?|microseconds?|µs)\b/i,
+  // 8. Quantified speedups / time reduction (shrinking build duration from 14 to 4 minutes)
+  /\b(?:slashed|cut|decreased|reduced|shrunk|shrinking|shortened|accelerated|improved)\b[^\n.]{0,60}\b\d+(?:\.\d+)?\s*(?:mins?|minutes?|hrs?|hours?|days?|weeks?|seconds?|s)\b/i,
+  // 9. Quantified impact verbs with numbers (increased by 25, saved 100K)
+  /\b(?:slashed|cut|decreased|increased|boosted|amplified|grew|scaled|saved|eliminated|automated|optimized)\s+by\s+\d+(?:[.,]\d+)?/i,
+];
+
+export const METRIC_REGEX = new RegExp(METRIC_PATTERNS.map((p) => p.source).join('|'), 'i');
 
 const NON_ASCII_DECORATIVE_GLYPH_REGEX = /[★✦❖➜✔✓❌☑⭐●◆◇■□▲▼]/g;
+
+export const DATE_SPAN_REGEX =
+  /((?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{4}|\d{1,2}\/\d{2,4}|\d{4}-\d{1,2}|\b(?:19|20)\d{2}\b))\s*(?:[-–—to~]+)\s*(Present|Current|Ongoing|(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{4}|\d{1,2}\/\d{2,4}|\d{4}-\d{1,2}|\b(?:19|20)\d{2}\b))/i;
+
+export const TITLE_KEYWORDS_REGEX =
+  /\b(?:engineer|developer|manager|lead|architect|analyst|designer|consultant|director|intern|specialist|associate|officer|executive|head|vp|vice\s+president|coordinator|technician|administrator|scientist|programmer|qa|tester|devops|sre|founder|co-founder|cto|ceo|cpo|trainee)\b/i;
+
+export const DEGREE_REGEX =
+  /\b(?:B\.?Tech|B\.?E\.?|B\.?S\.?|B\.?A\.?|M\.?S\.?|M\.?Tech|M\.?E\.?|MBA|MCA|BCA|BBA|Bachelor(?:'s)?(?:\s+of\s+[A-Za-z\s&]+)?|Master(?:'s)?(?:\s+of\s+[A-Za-z\s&]+)?|Ph\.?D|Doctorate|Diploma|Associate(?:'s)?)\b/i;
+
+export const GRAD_YEAR_REGEX = /\b(?:19|20)\d{2}(?:\s*[-–—to~]+\s*(?:(?:19|20)\d{2}|present))?\b/i;
 
 const CANONICAL_HEADINGS: Array<{
   key: 'summary' | 'experience' | 'skills' | 'education' | 'projects' | 'certifications';
@@ -88,8 +124,15 @@ const CANONICAL_HEADINGS: Array<{
   },
 ];
 
-function stripBulletPrefix(text: string): string {
-  return text.replace(/^[•●▪◦\-*➤→►■]+\s*/, '').trim();
+export function isBulletLine(text: string): boolean {
+  const trimmed = text.trim();
+  if (/^[•●▪◦\-*➤→►■]\s*/.test(trimmed)) return true;
+  if (/^\d+[\.)]\s+/.test(trimmed)) return true;
+  return false;
+}
+
+export function stripBulletPrefix(text: string): string {
+  return text.replace(/^(?:[•●▪◦\-*➤→►■]|\d+[\.)])\s*/, '').trim();
 }
 
 function countWords(text: string): number {
@@ -130,6 +173,7 @@ function evaluateXyzFormula(bullet: string): {
   actionVerb: string | null;
   metric: string | null;
   scope: boolean;
+  isPassiveOpener?: boolean;
   feedback?: string;
   suggestedRewrite?: string;
 } {
@@ -137,17 +181,22 @@ function evaluateXyzFormula(bullet: string): {
   const verbMatch = clean.match(ACTION_VERB_REGEX);
   const actionVerb = verbMatch ? verbMatch[1] : null;
 
+  const isPassive = PASSIVE_OPENER_REGEX.test(clean);
+
   const metricMatch = clean.match(METRIC_REGEX);
   const metric = metricMatch ? metricMatch[0] : null;
 
   const words = countWords(clean);
-  const hasScope = words >= 10;
+  const hasScope = words >= 7;
   const isMet = Boolean(actionVerb && metric && hasScope);
 
   let feedback: string | undefined;
   let suggestedRewrite: string | undefined;
 
-  if (!actionVerb && !metric) {
+  if (isPassive) {
+    feedback = 'Passive or weak opener detected. Replace with a decisive power action verb.';
+    suggestedRewrite = `Spearheaded ${clean.replace(/^(?:responsible for|assisted with|helped with|worked on|duties included|tasked with|participated in|handled)\s*/i, '')}`;
+  } else if (!actionVerb && !metric) {
     feedback = 'Missing both an opening action verb and a quantifiable result.';
     suggestedRewrite = `Engineered [specific system/feature], improving performance by 25% through [methodology/tool].`;
   } else if (!actionVerb) {
@@ -157,10 +206,10 @@ function evaluateXyzFormula(bullet: string): {
     feedback = 'Quantify the outcome (add %, $, latency reduction, or scale metrics).';
     suggestedRewrite = `${clean}, delivering 20%+ improvement in throughput.`;
   } else if (!hasScope) {
-    feedback = 'Expand with technical scope or tool context (aim for 12–30 words).';
+    feedback = 'Expand with technical scope or tool context (aim for 8–30 words).';
   }
 
-  return { isMet, actionVerb, metric, scope: hasScope, feedback, suggestedRewrite };
+  return { isMet, actionVerb, metric, scope: hasScope, isPassiveOpener: isPassive, feedback, suggestedRewrite };
 }
 
 function categorizeActionVerb(verb: string): string {
@@ -199,6 +248,282 @@ function computeTotalWordsFromContent(content: ResumeContent): number {
 }
 
 /**
+ * Robustly parses work history entries from unstructured line sequences,
+ * handling 1-line, 2-line, and 3-line role headers (Title, Company, DateSpan, Location),
+ * and accurately grouping bullets without creating phantom jobs.
+ */
+export function parseExperienceSection(
+  lines: string[],
+  targetRole?: string,
+): ResumeContent['experience'] {
+  const experienceBlocks: ResumeContent['experience'] = [];
+  let currentExp: ResumeContent['experience'][number] | null = null;
+  let pendingHeaderLines: string[] = [];
+
+  const flushPendingHeader = () => {
+    if (pendingHeaderLines.length === 0) return;
+
+    let detectedCompany = '';
+    let detectedTitle = '';
+    let detectedStartDate = '';
+    let detectedEndDate: string | undefined = undefined;
+    let detectedCurrent = false;
+    let detectedLocation: string | undefined = undefined;
+
+    // 1. Search for date span across pending header lines
+    for (let i = 0; i < pendingHeaderLines.length; i++) {
+      const line = pendingHeaderLines[i];
+      const match = line.match(DATE_SPAN_REGEX);
+      if (match) {
+        detectedStartDate = match[1].trim();
+        const endRaw = match[2].trim();
+        if (/present|current|ongoing/i.test(endRaw)) {
+          detectedCurrent = true;
+        } else {
+          detectedEndDate = endRaw;
+        }
+        pendingHeaderLines[i] = line.replace(DATE_SPAN_REGEX, '').replace(/\([^)]*\)/g, '').trim();
+        break;
+      }
+    }
+
+    // 2. Search for explicit Location (must NOT contain title keywords or company indicators)
+    for (let i = 0; i < pendingHeaderLines.length; i++) {
+      const line = pendingHeaderLines[i];
+      if (/\bremote\b/i.test(line)) {
+        detectedLocation = 'Remote';
+        pendingHeaderLines[i] = line.replace(/\bremote\b/gi, '').trim();
+      } else {
+        const locMatch = line.match(
+          /\b([A-Z][a-zA-Z\s]{1,20},\s*(?:[A-Z]{2}|[A-Z][a-zA-Z\s]{2,15}))\b/,
+        );
+        if (
+          locMatch &&
+          !TITLE_KEYWORDS_REGEX.test(locMatch[0]) &&
+          !/(?:corp|inc|ltd|technologies|solutions|labs|systems)/i.test(locMatch[0])
+        ) {
+          detectedLocation = locMatch[0].trim();
+          pendingHeaderLines[i] = line.replace(locMatch[0], '').trim();
+        }
+      }
+    }
+
+    // 3. Clean remaining text fragments
+    const cleanedFragments = pendingHeaderLines
+      .flatMap((l) => l.split(/\s*[-–—|]\s*/))
+      .map((p) => p.replace(/^[–—\-,|:]+|[–—\-,|:]+$/g, '').trim())
+      .filter((p) => Boolean(p) && p.length >= 2);
+
+    if (cleanedFragments.length >= 2) {
+      const firstHasTitle = TITLE_KEYWORDS_REGEX.test(cleanedFragments[0]);
+      const secondHasTitle = TITLE_KEYWORDS_REGEX.test(cleanedFragments[1]);
+
+      if (firstHasTitle && !secondHasTitle) {
+        detectedTitle = cleanedFragments[0];
+        detectedCompany = cleanedFragments[1];
+      } else if (secondHasTitle && !firstHasTitle) {
+        detectedCompany = cleanedFragments[0];
+        detectedTitle = cleanedFragments[1];
+      } else {
+        const fullLine = pendingHeaderLines.join(' ');
+        const atMatch = fullLine.match(/(.*?)\s+at\s+(.*)/i);
+        if (atMatch) {
+          detectedTitle = atMatch[1].trim();
+          detectedCompany = atMatch[2].trim();
+        } else {
+          detectedCompany = cleanedFragments[0];
+          detectedTitle = cleanedFragments[1];
+        }
+      }
+    } else if (cleanedFragments.length === 1) {
+      const frag = cleanedFragments[0];
+      const atMatch = frag.match(/(.*?)\s+at\s+(.*)/i);
+      const commaMatch = frag.match(/(.*?)\s*,\s*(.*)/);
+      if (atMatch) {
+        detectedTitle = atMatch[1].trim();
+        detectedCompany = atMatch[2].trim();
+      } else if (
+        commaMatch &&
+        (TITLE_KEYWORDS_REGEX.test(commaMatch[1]) || TITLE_KEYWORDS_REGEX.test(commaMatch[2]))
+      ) {
+        if (TITLE_KEYWORDS_REGEX.test(commaMatch[1])) {
+          detectedTitle = commaMatch[1].trim();
+          detectedCompany = commaMatch[2].trim();
+        } else {
+          detectedCompany = commaMatch[1].trim();
+          detectedTitle = commaMatch[2].trim();
+        }
+      } else if (TITLE_KEYWORDS_REGEX.test(frag)) {
+        detectedTitle = frag;
+        detectedCompany = 'Organization';
+      } else {
+        detectedCompany = frag;
+        detectedTitle = targetRole || 'Role';
+      }
+    } else {
+      detectedCompany = 'Work Experience';
+      detectedTitle = targetRole || 'Role';
+    }
+
+    currentExp = {
+      company: detectedCompany || 'Work Experience',
+      title: detectedTitle || targetRole || 'Role',
+      startDate: detectedStartDate,
+      endDate: detectedEndDate,
+      current: detectedCurrent,
+      location: detectedLocation,
+      bullets: [],
+    };
+    experienceBlocks.push(currentExp);
+    pendingHeaderLines = [];
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i];
+    const cleaned = stripBulletPrefix(rawLine);
+    if (!cleaned) continue;
+
+    const isBullet = isBulletLine(rawLine);
+
+    if (isBullet) {
+      if (pendingHeaderLines.length > 0) {
+        flushPendingHeader();
+      }
+      if (!currentExp) {
+        currentExp = {
+          company: 'Work Experience',
+          title: targetRole || 'Role',
+          startDate: '',
+          current: true,
+          bullets: [],
+        };
+        experienceBlocks.push(currentExp);
+      }
+      currentExp.bullets.push(cleaned);
+    } else {
+      // Check if line is continuation of existing bullet
+      if (
+        currentExp &&
+        pendingHeaderLines.length === 0 &&
+        currentExp.bullets.length > 0 &&
+        !rawLine.match(DATE_SPAN_REGEX) &&
+        !TITLE_KEYWORDS_REGEX.test(rawLine) &&
+        !/\bat\b/i.test(rawLine) &&
+        !/^[A-Z][a-zA-Z0-9\s&—–|-]{3,50}$/.test(rawLine)
+      ) {
+        const lastIdx = currentExp.bullets.length - 1;
+        currentExp.bullets[lastIdx] = `${currentExp.bullets[lastIdx]} ${cleaned}`.trim();
+        continue;
+      }
+
+      // If we already had bullets in currentExp, this non-bullet line starts a NEW role header
+      if (currentExp && currentExp.bullets.length > 0) {
+        currentExp = null;
+      }
+
+      pendingHeaderLines.push(rawLine.trim());
+
+      const hasDate = pendingHeaderLines.some((l) => DATE_SPAN_REGEX.test(l));
+      if (hasDate && pendingHeaderLines.length >= 2) {
+        flushPendingHeader();
+      }
+    }
+  }
+
+  if (pendingHeaderLines.length > 0) {
+    flushPendingHeader();
+  }
+
+  return experienceBlocks;
+}
+
+/**
+ * Robustly parses education entries, grouping degree lines, school lines, and graduation dates
+ * into coherent unified blocks.
+ */
+export function parseEducationSection(lines: string[]): ResumeContent['education'] {
+  const educationBlocks: ResumeContent['education'] = [];
+  const cleanLines = lines.map((l) => l.trim()).filter((l) => l.length > 2);
+
+  let currentGroup: string[] = [];
+
+  for (const line of cleanLines) {
+    const hasDegree = DEGREE_REGEX.test(line);
+    const hasYear = GRAD_YEAR_REGEX.test(line);
+    const hasSchool = /(?:university|college|institute|school|academy|polytechnic|campus|iit|nit|bits|vtu|mit|stanford|harvard|berkeley)/i.test(
+      line,
+    );
+
+    if (currentGroup.length > 0 && hasDegree && currentGroup.some((l) => DEGREE_REGEX.test(l))) {
+      flushEducationGroup(currentGroup, educationBlocks);
+      currentGroup = [line];
+    } else {
+      currentGroup.push(line);
+      if (currentGroup.length >= 2 && currentGroup.some((l) => hasYear || hasSchool)) {
+        flushEducationGroup(currentGroup, educationBlocks);
+        currentGroup = [];
+      }
+    }
+  }
+
+  if (currentGroup.length > 0) {
+    flushEducationGroup(currentGroup, educationBlocks);
+  }
+
+  return educationBlocks;
+}
+
+function flushEducationGroup(groupLines: string[], outBlocks: ResumeContent['education']) {
+  if (groupLines.length === 0) return;
+  const fullText = groupLines.join(' — ');
+
+  const yearMatch = fullText.match(GRAD_YEAR_REGEX);
+  const gradYear = yearMatch ? yearMatch[0].trim() : undefined;
+
+  const degreeMatch = fullText.match(DEGREE_REGEX);
+  const degree = degreeMatch ? degreeMatch[0].trim() : 'Degree';
+
+  let field = '';
+  const fieldMatch = fullText.match(/(?:in|of)\s+([A-Za-z\s&]{3,35}?)(?:[-–—|,(\n]|$)/i);
+  if (
+    fieldMatch &&
+    !/(?:arts|science|engineering|business|technology|applied)/i.test(fieldMatch[1].trim())
+  ) {
+    field = fieldMatch[1].trim();
+  }
+
+  let school = '';
+  for (const line of groupLines) {
+    const withoutDates = line.replace(GRAD_YEAR_REGEX, '').replace(/\([^)]*\)/g, '').trim();
+    if (
+      /(?:university|college|institute|school|academy|polytechnic|campus|iit|nit|bits|vtu|mit|stanford|harvard|berkeley)/i.test(
+        withoutDates,
+      ) ||
+      (!DEGREE_REGEX.test(withoutDates) && withoutDates.length >= 3)
+    ) {
+      school = withoutDates.replace(/^[–—\-,|:]+|[–—\-,|:]+$/g, '').trim();
+      break;
+    }
+  }
+
+  if (!school) {
+    school = fullText
+      .replace(DEGREE_REGEX, '')
+      .replace(GRAD_YEAR_REGEX, '')
+      .replace(/\([^)]*\)/g, '')
+      .replace(/^[–—\-,|:]+|[–—\-,|:]+$/g, '')
+      .trim();
+  }
+
+  outBlocks.push({
+    school: school || 'Institution',
+    degree,
+    field,
+    graduationDate: gradYear,
+  });
+}
+
+/**
  * Extracts structured ResumeContent from raw text (supports plain text, PDF extraction, DOCX)
  * with robust multi-section parsing, date detection, skill tokenization, and contact extraction.
  */
@@ -224,17 +549,35 @@ export function extractStructuredContentFromText(
   );
 
   // Location heuristics (City, State / Country or Remote)
-  const locationLine = nonEmptyLines.slice(0, 6).find((l) =>
-    /(?:bengaluru|bangalore|hyderabad|pune|mumbai|delhi|noida|gurugram|chennai|san francisco|seattle|new york|austin|chicago|london|berlin|toronto|vancouver|remote|california|ca|ny|tx|wa|india|usa|uk|germany|canada)/i.test(
-      l,
-    ),
-  );
   let parsedLocation: string | undefined;
-  if (locationLine) {
-    const locMatch = locationLine.match(
-      /(?:[A-Z][a-zA-Z\s]+,\s*(?:[A-Z]{2}|[A-Za-z\s]+)|Remote)/i,
+  for (const line of nonEmptyLines.slice(0, 8)) {
+    if (/\bremote\b/i.test(line)) {
+      parsedLocation = 'Remote';
+      break;
+    }
+    const locMatch = line.match(
+      /\b([A-Z][a-zA-Z\s]{1,25},\s*(?:[A-Z]{2}|[A-Z][a-zA-Z\s]{1,20}))\b/,
     );
-    parsedLocation = locMatch ? locMatch[0].trim() : locationLine.slice(0, 50).trim();
+    if (
+      locMatch &&
+      !/@|https?:|\.com|\.in|\.org/i.test(locMatch[0]) &&
+      !TITLE_KEYWORDS_REGEX.test(locMatch[0]) &&
+      !/(?:resume|curriculum|cv|summary|experience|developer|engineer|analyst)/i.test(locMatch[0])
+    ) {
+      parsedLocation = locMatch[0].trim();
+      break;
+    }
+    if (
+      /(?:bengaluru|bangalore|hyderabad|pune|mumbai|delhi|noida|gurugram|chennai|kolkata|jaipur|chandigarh|san francisco|seattle|new york|austin|chicago|boston|london|berlin|toronto|vancouver|singapore|sydney|dubai|tokyo|paris|india|usa|uk|germany|canada)/i.test(
+        line,
+      )
+    ) {
+      const match = line.match(/(?:[A-Z][a-zA-Z\s]+,\s*(?:[A-Z]{2}|[A-Za-z\s]+)|[A-Za-z\s]{3,30})/i);
+      if (match && !/@|https?:/i.test(match[0])) {
+        parsedLocation = match[0].replace(/^[|,•·\s]+|[|,•·\s]+$/g, '').trim();
+        break;
+      }
+    }
   }
 
   // Name extraction (first valid non-metadata header line)
@@ -311,78 +654,10 @@ export function extractStructuredContentFromText(
   const summaryText = buckets.summary.join(' ').trim();
 
   // 3. Parse Experience Entries
-  const experienceBlocks: ResumeContent['experience'] = [];
-  let currentExp: ResumeContent['experience'][number] | null = null;
-
-  const dateSpanRegex =
-    /((?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{4}|\d{1,2}\/\d{2,4}|\d{4}-\d{1,2}|\b(?:19|20)\d{2}\b))\s*(?:[-–—to~]+)\s*(Present|Current|Ongoing|(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{4}|\d{1,2}\/\d{2,4}|\d{4}-\d{1,2}|\b(?:19|20)\d{2}\b))/i;
-
-  for (let i = 0; i < buckets.experience.length; i++) {
-    const line = buckets.experience[i];
-    const isBullet = /^[•●▪◦\-*➤→►■]\s+/.test(line);
-    const cleaned = stripBulletPrefix(line);
-    if (!cleaned) continue;
-
-    if (isBullet) {
-      if (!currentExp) {
-        currentExp = {
-          company: 'Work Experience',
-          title: targetRole || 'Role',
-          startDate: rawDateMatches[0] || '',
-          current: true,
-          bullets: [],
-        };
-        experienceBlocks.push(currentExp);
-      }
-      currentExp.bullets.push(cleaned);
-    } else {
-      const matchDateSpan = line.match(dateSpanRegex);
-      const hasDateOrSeparator = matchDateSpan || /[—–|-]/.test(line) || /(?:20\d{2}|19\d{2}|present)/i.test(line);
-
-      if (hasDateOrSeparator && line.length <= 140) {
-        const startDate = matchDateSpan ? matchDateSpan[1].trim() : '';
-        const endDate = matchDateSpan && !/present|current/i.test(matchDateSpan[2]) ? matchDateSpan[2].trim() : undefined;
-        const isCurrent = Boolean(matchDateSpan && /present|current/i.test(matchDateSpan[2]));
-
-        const textWithoutDates = line.replace(dateSpanRegex, '').replace(/\([^)]*\)/g, '').trim();
-        const parts = textWithoutDates.split(/\s*[-–—|,]\s*/).map((p) => p.trim()).filter(Boolean);
-
-        let company = parts[0] || 'Organization';
-        let title = parts[1] || targetRole || 'Specialist';
-
-        if (parts.length >= 2 && /(?:engineer|developer|manager|lead|architect|analyst|designer|consultant|director|intern)\b/i.test(parts[0])) {
-          title = parts[0];
-          company = parts[1];
-        }
-
-        currentExp = {
-          company,
-          title,
-          startDate,
-          endDate,
-          current: isCurrent,
-          bullets: [],
-        };
-        experienceBlocks.push(currentExp);
-      } else if (currentExp) {
-        if (currentExp.bullets.length > 0 && !/^[A-Z]/.test(cleaned)) {
-          const lastIdx = currentExp.bullets.length - 1;
-          currentExp.bullets[lastIdx] = `${currentExp.bullets[lastIdx]} ${cleaned}`.trim();
-        } else {
-          currentExp.bullets.push(cleaned);
-        }
-      } else {
-        currentExp = {
-          company: cleaned.slice(0, 60),
-          title: targetRole || 'Role',
-          startDate: '',
-          current: true,
-          bullets: [],
-        };
-        experienceBlocks.push(currentExp);
-      }
-    }
-  }
+  const experienceBlocks: ResumeContent['experience'] = parseExperienceSection(
+    buckets.experience,
+    targetRole,
+  );
 
   // 4. Parse Skills (explicit block + corpus enrichment)
   const skillsSet = new Set<string>();
@@ -410,19 +685,7 @@ export function extractStructuredContentFromText(
   const uniqueSkills = Array.from(skillsSet).map((name) => ({ name }));
 
   // 5. Parse Education
-  const educationBlocks: ResumeContent['education'] = buckets.education
-    .filter((l) => l.length > 3)
-    .slice(0, 5)
-    .map((l) => {
-      const gradYear = /(?:19|20)\d{2}/.exec(l)?.[0];
-      const degreeMatch = /(?:b\.?tech|b\.?e\.?|b\.?s\.?|m\.?s\.?|m\.?tech|mba|bachelor|master|ph\.?d|diploma)/i.exec(l)?.[0] || 'Degree';
-      return {
-        school: l.replace(/\([^)]*\)/g, '').replace(/\b(?:19|20)\d{2}\b/g, '').trim() || l,
-        degree: degreeMatch,
-        field: '',
-        graduationDate: gradYear,
-      };
-    });
+  const educationBlocks: ResumeContent['education'] = parseEducationSection(buckets.education);
 
   // 6. Parse Projects
   const projectsBlocks: NonNullable<ResumeContent['projects']> = [];
@@ -452,11 +715,25 @@ export function extractStructuredContentFromText(
     }
   }
 
+  // 3. Experience date format styles (scoped strictly to work history)
+  const experienceDateFamilies = new Set<string>();
+  for (const exp of experienceBlocks) {
+    if (exp.startDate) {
+      const fam = detectDateFormatFamily(exp.startDate);
+      if (fam) experienceDateFamilies.add(fam);
+    }
+    if (exp.endDate) {
+      const fam = detectDateFormatFamily(exp.endDate);
+      if (fam) experienceDateFamilies.add(fam);
+    }
+  }
+
   const content: ResumeContent = {
     contact: {
       fullName: detectedName,
       email: emailMatch?.[0] || '',
       phone: phoneMatch?.[0]?.trim(),
+      location: parsedLocation,
       linkedinUrl: linkedinMatch ? `https://linkedin.com/in/${linkedinMatch[1]}` : undefined,
       githubUrl: githubMatch ? `https://github.com/${githubMatch[1]}` : undefined,
       websiteUrl: portfolioMatch,
@@ -474,7 +751,7 @@ export function extractStructuredContentFromText(
     rawDiagnostics: {
       pipeTableLines,
       fancyGlyphCount: fancyGlyphMatches.length,
-      dateStylesCount: dateFamilies.size,
+      dateStylesCount: experienceDateFamilies.size,
       wordCountOverride: countWords(normalized),
       rawNormalizedText: normalized,
     },
@@ -584,7 +861,8 @@ export function evaluateStructuredResumeAts(
     }
   }
 
-  const effectiveDateStyleCount = Math.max(dateFamilies.size, rawDiagnostics?.dateStylesCount || 0);
+  const effectiveDateStyleCount =
+    dateFamilies.size > 0 ? dateFamilies.size : rawDiagnostics?.dateStylesCount || 0;
   if (missingDateEntries > 0) {
     parserRisks.push({
       id: 'dates-missing',
@@ -634,6 +912,7 @@ export function evaluateStructuredResumeAts(
   let shortBulletsCount = 0;
   let longBulletsCount = 0;
   let idealBulletCount = 0;
+  let passiveOpenersCount = 0;
   const verbFrequency: Record<string, number> = {};
   const bulletQuality: AtsBulletQualityItem[] = [];
 
@@ -654,6 +933,10 @@ export function evaluateStructuredResumeAts(
       verbFrequency[lowerV] = (verbFrequency[lowerV] || 0) + 1;
     }
 
+    if (xyz.isPassiveOpener) {
+      passiveOpenersCount += 1;
+    }
+
     if (xyz.metric) {
       metricsCount += 1;
     }
@@ -663,7 +946,7 @@ export function evaluateStructuredResumeAts(
     }
 
     const lengthStatus: 'short' | 'ideal' | 'long' =
-      words < 10 ? 'short' : words > 38 ? 'long' : 'ideal';
+      words < 7 ? 'short' : words > 38 ? 'long' : 'ideal';
 
     if (lengthStatus === 'short') shortBulletsCount += 1;
     else if (lengthStatus === 'long') longBulletsCount += 1;
@@ -754,11 +1037,17 @@ export function evaluateStructuredResumeAts(
   const corroboratedSkills: string[] = [];
   const unreferencedSkills: string[] = [];
   for (const skill of declaredSkills) {
-    const pattern = new RegExp(
-      `(?:^|[^a-z0-9+#])${escapeRegexLiteral(skill.toLowerCase())}(?:$|[^a-z0-9+#])`,
-      'i',
-    );
-    if (pattern.test(evidenceCorpus) || evidenceCorpus.includes(skill.toLowerCase())) {
+    const sLower = skill.toLowerCase();
+    const aliases = SKILL_ALIASES[sLower] || [sLower];
+    const isCorroborated = aliases.some((token) => {
+      const pattern = new RegExp(
+        `(?:^|[^a-z0-9+#])${escapeRegexLiteral(token)}(?:$|[^a-z0-9+#])`,
+        'i',
+      );
+      return pattern.test(evidenceCorpus) || evidenceCorpus.includes(token);
+    });
+
+    if (isCorroborated) {
       corroboratedSkills.push(skill);
     } else {
       unreferencedSkills.push(skill);
@@ -856,23 +1145,53 @@ export function evaluateStructuredResumeAts(
   const totalBullets = bulletQuality.length;
   const metricRatio = totalBullets > 0 ? metricsCount / totalBullets : 0;
   const xyzRatio = totalBullets > 0 ? xyzFormulaBulletsCount / totalBullets : 0;
-  const metricsDimScore =
-    totalBullets === 0
-      ? 15
-      : clampScore(
-          metricRatio >= 0.5
-            ? 85 + Math.min(15, metricsCount * 2 + xyzRatio * 10)
-            : metricRatio >= 0.3
-              ? 70 + (metricRatio - 0.3) * 75
-              : 30 + metricRatio * 130,
-        );
+
+  let metricsDimScore: number;
+  if (totalBullets === 0) {
+    metricsDimScore = 35;
+  } else if (metricRatio >= 0.5) {
+    // High density (50%+ bullets quantified): 88 to 100
+    metricsDimScore = 88 + Math.min(12, metricsCount * 2 + xyzRatio * 8);
+  } else if (metricRatio >= 0.25) {
+    // Moderate density (25% - 49% bullets quantified): 72 to 87
+    metricsDimScore = 72 + (metricRatio - 0.25) * 60 + xyzRatio * 6;
+  } else if (metricRatio > 0) {
+    // Emerging metrics (1% - 24% bullets quantified): 55 to 71
+    metricsDimScore = 55 + (metricRatio / 0.25) * 16 + xyzRatio * 4;
+  } else {
+    // Unquantified (pure responsibilities / tasks): 42
+    metricsDimScore = 42;
+  }
+  metricsDimScore = clampScore(metricsDimScore);
 
   // Dimension 3: Action Verb Dominance (20%)
-  const verbRatio = totalBullets > 0 ? actionVerbsCount / totalBullets : 0;
+  // Graded on power verbs (1.0), standard execution verbs (0.8), and passive openers (0.4)
+  let totalVerbPoints = 0;
+  for (const b of bulletQuality) {
+    if (b.actionVerbCategory && b.actionVerbCategory !== 'execution') {
+      totalVerbPoints += 1.0;
+    } else if (b.hasActionVerb) {
+      totalVerbPoints += 0.8;
+    } else if (PASSIVE_OPENER_REGEX.test(b.bullet)) {
+      totalVerbPoints += 0.4;
+    } else {
+      totalVerbPoints += 0.15;
+    }
+  }
+
+  const verbIndex = totalBullets > 0 ? totalVerbPoints / totalBullets : 0;
   let verbsDimScore =
     totalBullets === 0
-      ? 20
-      : clampScore(verbRatio * 96 + (verbRatio >= 0.75 ? 4 : 0) - repeatedVerbs.length * 5 - pronounsCount * 3);
+      ? 30
+      : clampScore(
+          verbIndex >= 0.8
+            ? 88 + Math.min(12, (verbIndex - 0.8) * 60)
+            : verbIndex >= 0.5
+              ? 70 + (verbIndex - 0.5) * 60
+              : 35 + verbIndex * 70,
+        );
+  verbsDimScore -= repeatedVerbs.length * 4;
+  verbsDimScore -= pronounsCount * 3;
   verbsDimScore = clampScore(verbsDimScore);
 
   // Dimension 4: Technical Depth & Stack Alignment (15%)
@@ -886,13 +1205,16 @@ export function evaluateStructuredResumeAts(
 
   // Dimension 5: Brevity & Information Density (15%)
   let brevityDimScore = writingAudit.overallWritingScore;
-  if (wordCount < 180) brevityDimScore -= 20;
-  else if (wordCount > 1000) brevityDimScore -= 12;
+  if (wordCount < 140) brevityDimScore -= 18;
+  else if (wordCount < 200) brevityDimScore -= 8;
+  else if (wordCount > 1000) brevityDimScore -= 10;
+  else if (wordCount > 1300) brevityDimScore -= 18;
+
   if (totalBullets > 0) {
     const outlierRatio = (shortBulletsCount + longBulletsCount) / totalBullets;
-    brevityDimScore -= Math.round(outlierRatio * 22);
+    brevityDimScore -= Math.round(outlierRatio * 15);
   } else {
-    brevityDimScore -= 20;
+    brevityDimScore -= 15;
   }
   brevityDimScore = clampScore(brevityDimScore);
 
@@ -942,7 +1264,7 @@ export function evaluateStructuredResumeAts(
     },
   ];
 
-  const overallScore = clampScore(
+  const overallAtsScore = clampScore(
     formattingDimScore * 0.25 +
       metricsDimScore * 0.25 +
       verbsDimScore * 0.2 +
@@ -970,6 +1292,11 @@ export function evaluateStructuredResumeAts(
       `Vary your action verbs: "${repeatedVerbs[0].verb}" is used ${repeatedVerbs[0].count} times. Try alternatives: ${repeatedVerbs[0].suggestedAlternatives.slice(0, 3).join(', ')}.`,
     );
   }
+  if (passiveOpenersCount > 0) {
+    recommendations.push(
+      `Replace ${passiveOpenersCount} passive opener(s) (e.g. "Responsible for", "Worked on") with decisive power verbs (e.g. Spearheaded, Engineered, Optimized) to boost recruiter impression.`,
+    );
+  }
   if (pronounsCount > 0) {
     recommendations.push(
       `Remove ${pronounsCount} first-person pronoun(s) (I, my, we) — resumes should always use omitted-subject telegraphic phrasing.`,
@@ -982,7 +1309,7 @@ export function evaluateStructuredResumeAts(
   }
   if (shortBulletsCount > 0 || longBulletsCount > 0) {
     recommendations.push(
-      `Rebalance bullet length: ${shortBulletsCount} bullet(s) are under 10 words and ${longBulletsCount} exceed 38 words.`,
+      `Rebalance bullet length: ${shortBulletsCount} bullet(s) are under 7 words and ${longBulletsCount} exceed 38 words.`,
     );
   }
   if (formattingFlags.length > 0) {
@@ -1002,10 +1329,41 @@ export function evaluateStructuredResumeAts(
   // 9. Job Description Matching (Jobscan-style simulation)
   let jobDescriptionMatch: AtsJobDescriptionMatch | undefined;
   if (jobDescriptionText && jobDescriptionText.trim().length >= 25) {
+    const detectedResumeTitle = content.headline || content.experience?.[0]?.title;
     jobDescriptionMatch = analyzeJobDescriptionMatch(
       rawDiagnostics?.rawNormalizedText || computeCorpusFromContent(content),
       jobDescriptionText,
+      targetRole,
+      detectedResumeTitle,
     );
+  }
+
+  const atsScore = overallAtsScore;
+  const matchScore = jobDescriptionMatch ? jobDescriptionMatch.matchRate : undefined;
+  const compositeScore =
+    matchScore !== undefined
+      ? clampScore(atsScore * 0.4 + matchScore * 0.6)
+      : undefined;
+  const overallScore = compositeScore !== undefined ? compositeScore : atsScore;
+
+  if (jobDescriptionMatch) {
+    if (jobDescriptionMatch.missingKeywords.length > 0) {
+      const topMissing = jobDescriptionMatch.missingKeywords
+        .slice(0, 4)
+        .map((k) => k.keyword)
+        .join(', ');
+      recommendations.unshift(
+        `Job Match: Back up missing target skill(s) (${topMissing}) in your experience bullets to increase recruiter keyword matching.`,
+      );
+    }
+    if (
+      jobDescriptionMatch.titleAlignment &&
+      jobDescriptionMatch.titleAlignment.status === 'weak'
+    ) {
+      recommendations.unshift(
+        `Align your resume headline ("${jobDescriptionMatch.titleAlignment.detectedTitle || 'Current'}") closer to target role "${jobDescriptionMatch.titleAlignment.targetTitle}" to pass initial recruiter screening.`,
+      );
+    }
   }
 
   // 10. ATS System Simulations (Workday, Taleo, Greenhouse)
@@ -1063,6 +1421,9 @@ export function evaluateStructuredResumeAts(
   };
 
   const findings: ResumeAuditFindings = {
+    atsScore,
+    matchScore,
+    compositeScore,
     actionVerbsCount,
     metricsCount,
     xyzFormulaBulletsCount,
@@ -1095,6 +1456,9 @@ export function evaluateStructuredResumeAts(
 
   return {
     score: overallScore,
+    atsScore,
+    matchScore,
+    compositeScore,
     findings,
     recommendations,
     writingAudit,

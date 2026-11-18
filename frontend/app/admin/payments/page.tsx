@@ -38,18 +38,23 @@ export default function AdminPaymentsPage() {
   const [testCurrency, setTestCurrency] = useState<SupportedCurrency>('INR');
   const [testCheckoutUrl, setTestCheckoutUrl] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [limit, setLimit] = useState(50);
+  const [confirmLive, setConfirmLive] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const loadData = async () => {
+  const loadData = async (limitOverride?: number) => {
     setLoading(true);
+    setErrorMessage(null);
     try {
       const [settingsData, paymentsData] = await Promise.all([
         apiClient.getAdminPaymentSettings(),
-        apiClient.getAdminPayments(search, statusFilter, modeFilter, 50),
+        apiClient.getAdminPayments(search, statusFilter, modeFilter, limitOverride ?? limit),
       ]);
       setSettings(settingsData);
       setPayments(paymentsData);
     } catch (err) {
       logger.error('Failed to load payments', err);
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to load payments.');
     } finally {
       setLoading(false);
     }
@@ -64,51 +69,60 @@ export default function AdminPaymentsPage() {
     loadData();
   };
 
-  const handleToggleMode = async (targetMode: 'test_mode' | 'live_mode') => {
+  const executeToggleMode = async (targetMode: 'test_mode' | 'live_mode') => {
     if (!settings || settings.mode === targetMode || updatingMode) return;
-    if (targetMode === 'live_mode') {
-      const confirmed = window.confirm(
-        '⚠️ Switch Payment Gateway to LIVE PRODUCTION?\n\nReal customer credit cards and UPI accounts will be charged real money.',
-      );
-      if (!confirmed) return;
-    }
-
     setUpdatingMode(true);
+    setConfirmLive(false);
+    setErrorMessage(null);
     try {
       const updated = await apiClient.updateAdminPaymentMode(targetMode);
       setSettings(updated);
       await loadData();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to switch payment mode');
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to switch payment mode');
     } finally {
       setUpdatingMode(false);
     }
   };
 
+  const handleToggleMode = (targetMode: 'test_mode' | 'live_mode') => {
+    if (!settings || settings.mode === targetMode || updatingMode) return;
+    if (targetMode === 'live_mode') {
+      setConfirmLive(true);
+      return;
+    }
+    void executeToggleMode(targetMode);
+  };
+
   const handleTestCheckout = async (planId = testPlanId, currency: SupportedCurrency = testCurrency) => {
     setGeneratingLink(true);
     setTestCheckoutUrl(null);
+    setErrorMessage(null);
     try {
       const res = await apiClient.testAdminCheckout(planId, currency);
       setTestCheckoutUrl(res.checkoutUrl);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to generate checkout link');
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to generate checkout link');
     } finally {
       setGeneratingLink(false);
     }
   };
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(text);
-    setTimeout(() => setCopiedId(null), 2000);
+    navigator.clipboard?.writeText(text).then(() => {
+      setCopiedId(text);
+      setTimeout(() => setCopiedId(null), 2000);
+    }).catch(() => {});
   };
 
   const isLive = settings?.mode === 'live_mode';
 
-  // Derived metrics
-  const totalVolume = payments
-    .filter((p) => p.status === 'succeeded')
+  // Separate INR and USD settled totals instead of mixing currencies (FN-42)
+  const settledInr = payments
+    .filter((p) => p.status === 'succeeded' && (p.currency || 'INR').toUpperCase() === 'INR')
+    .reduce((acc, curr) => acc + (curr.amountMinor || 0), 0);
+  const settledUsd = payments
+    .filter((p) => p.status === 'succeeded' && (p.currency || '').toUpperCase() === 'USD')
     .reduce((acc, curr) => acc + (curr.amountMinor || 0), 0);
 
   return (
@@ -123,7 +137,8 @@ export default function AdminPaymentsPage() {
         </div>
 
         <button
-          onClick={loadData}
+          type="button"
+          onClick={() => void loadData()}
           disabled={loading}
           className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition shadow-2xs self-start"
         >
@@ -316,13 +331,48 @@ export default function AdminPaymentsPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs">
-          <div className="text-xs text-slate-400 font-medium">Settled Volume</div>
-          <div className="mt-1 text-2xl font-extrabold text-slate-900">
-            ₹{(totalVolume / 100).toLocaleString('en-IN')}
+        <div className="rounded-2xl border border-slate-200/90 dark:border-zinc-800 bg-white dark:bg-[#14171C] p-4 shadow-xs">
+          <div className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Settled Volume (Loaded)</div>
+          <div className="mt-1 text-xl font-extrabold text-slate-900 dark:text-zinc-100">
+            ₹{(settledInr / 100).toLocaleString('en-IN')}
+            {settledUsd > 0 && (
+              <span className="ml-2 text-sm text-emerald-600 dark:text-emerald-400">
+                + ${(settledUsd / 100).toFixed(2)}
+              </span>
+            )}
           </div>
         </div>
       </div>
+
+      {errorMessage && (
+        <div role="alert" className="rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 p-3 text-xs text-rose-700 dark:text-rose-200">
+          {errorMessage}
+        </div>
+      )}
+
+      {confirmLive && (
+        <div className="rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <span className="font-semibold text-amber-900 dark:text-amber-200">
+            Switch Payment Gateway to LIVE PRODUCTION? Real customer cards and UPI accounts will be charged.
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void executeToggleMode('live_mode')}
+              className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700 cursor-pointer"
+            >
+              Confirm Live Mode
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmLive(false)}
+              className="px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* FILTER & SEARCH TOOLBAR */}
       <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs">
@@ -386,10 +436,18 @@ export default function AdminPaymentsPage() {
                 <th className="px-5 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {payments.length === 0 ? (
+            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+              {loading ? (
+                [1, 2, 3, 4].map((n) => (
+                  <tr key={n}>
+                    <td colSpan={8} className="px-5 py-4">
+                      <div className="h-5 rounded bg-slate-100 dark:bg-zinc-800 animate-pulse" />
+                    </td>
+                  </tr>
+                ))
+              ) : payments.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-12 text-center text-slate-400">
+                  <td colSpan={8} className="px-5 py-12 text-center text-slate-500 dark:text-zinc-400">
                     No payment orders matched your query.
                   </td>
                 </tr>
@@ -483,6 +541,22 @@ export default function AdminPaymentsPage() {
           </table>
         </div>
       </div>
+
+      {payments.length >= limit && (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={() => {
+              const nextLimit = limit + 50;
+              setLimit(nextLimit);
+              void loadData(nextLimit);
+            }}
+            className="rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-800 transition cursor-pointer"
+          >
+            Load More Orders ({payments.length} loaded)
+          </button>
+        </div>
+      )}
     </div>
   );
 }

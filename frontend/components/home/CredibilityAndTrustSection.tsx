@@ -37,7 +37,7 @@ export function CredibilityAndTrustSection() {
     <section className="relative w-full bg-[#0a0a0a] px-4 py-16 text-white sm:px-6 sm:py-24 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
             Principles
           </p>
           <h2 className="mt-3 font-rubik text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -58,7 +58,7 @@ export function CredibilityAndTrustSection() {
                     <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.05] text-zinc-300">
                       <Icon className="h-5 w-5" />
                     </span>
-                    <span className="text-[11px] uppercase tracking-wider text-zinc-500">{p.label}</span>
+                    <span className="text-[11px] uppercase tracking-wider text-zinc-400">{p.label}</span>
                   </div>
                   <h3 className="mt-4 text-lg font-semibold text-white">{p.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-zinc-400">{p.desc}</p>

@@ -123,6 +123,20 @@ export class AuthService {
 
     const tokens = await this.generateTokensAndSession(savedUser, userAgent, ipAddress);
 
+    // Dispatch verification email asynchronously so signup latency is unaffected
+    try {
+      const verificationToken = this.createEmailVerificationToken(savedUser);
+      await this.emailService.sendVerificationEmail(
+        savedUser.email,
+        verificationToken,
+        savedUser.fullName,
+      );
+    } catch (err) {
+      this.logger.warn(
+        `Failed to send verification email to ${savedUser.email}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
     return {
       user: this.sanitizeUser(savedUser),
       tokens,
@@ -406,9 +420,14 @@ export class AuthService {
         audience: clientId ? [clientId] : undefined,
       });
       const payload = ticket.getPayload();
-      if (payload && payload.email) {
-        email = payload.email.toLowerCase().trim();
-        name = payload.name;
+      if (payload) {
+        if (payload.email_verified !== true) {
+          throw new UnauthorizedException('Google account email is not verified');
+        }
+        if (payload.email) {
+          email = payload.email.toLowerCase().trim();
+          name = payload.name;
+        }
       }
     } catch (err: unknown) {
       this.logger.warn(`Google verifyIdToken failed, attempting direct tokeninfo fallback: ${err instanceof Error ? err.message : String(err)}`);
@@ -539,7 +558,132 @@ export class AuthService {
     user.passwordHash = await bcrypt.hash(newPassword, salt);
     await this.userRepository.save(user);
 
+    // Revoke all active sessions after password change to invalidate potentially compromised tokens
+    await this.sessionRepository.update(
+      { userId, isRevoked: false },
+      { isRevoked: true },
+    );
+
     return { message: 'Password updated successfully' };
+  }
+
+  public async listSessions(userId: string) {
+    const sessions = await this.sessionRepository.find({
+      where: { userId, isRevoked: false },
+      order: { createdAt: 'DESC' },
+      take: 25,
+    });
+    const now = Date.now();
+    return sessions
+      .filter((s) => !s.expiresAt || new Date(s.expiresAt).getTime() > now)
+      .map((s) => ({
+        id: s.id,
+        userAgent: s.userAgent || 'Unknown Device',
+        ipAddress: s.ipAddress || 'Unknown IP',
+        createdAt: s.createdAt,
+        expiresAt: s.expiresAt,
+      }));
+  }
+
+  public async revokeSession(userId: string, sessionId: string): Promise<{ revoked: true }> {
+    const session = await this.sessionRepository.findOne({
+      where: { id: sessionId, userId },
+    });
+    if (!session) {
+      throw new NotFoundException('Session not found');
+    }
+    session.isRevoked = true;
+    await this.sessionRepository.save(session);
+    return { revoked: true };
+  }
+
+  public async revokeAllSessions(userId: string): Promise<{ revokedAll: true }> {
+    await this.sessionRepository.update(
+      { userId, isRevoked: false },
+      { isRevoked: true },
+    );
+    return { revokedAll: true };
+  }
+
+  public async updateCurrentUser(
+    userId: string,
+    updates: { fullName?: string },
+  ) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    if (typeof updates.fullName === 'string') {
+      const trimmed = updates.fullName.trim();
+      if (trimmed.length < 2 || trimmed.length > 120) {
+        throw new BadRequestException('Full name must be between 2 and 120 characters');
+      }
+      user.fullName = trimmed;
+      await this.userRepository.save(user);
+    }
+    return { user: this.sanitizeUser(user) };
+  }
+
+  public createEmailVerificationToken(user: Pick<User, 'id' | 'email'>): string {
+    return this.jwtService.sign(
+      {
+        sub: user.id,
+        email: user.email,
+        purpose: 'email_verification',
+      },
+      { expiresIn: '24h' },
+    );
+  }
+
+  public async verifyEmail(token: string): Promise<{ verified: true; user: SanitizedUser }> {
+    if (!token || typeof token !== 'string') {
+      throw new BadRequestException('Verification token is required');
+    }
+
+    let payload: { sub?: string; email?: string; purpose?: string };
+    try {
+      payload = this.jwtService.verify(token);
+    } catch {
+      throw new BadRequestException('Verification link is invalid or has expired');
+    }
+
+    if (payload.purpose !== 'email_verification' || !payload.sub || !payload.email) {
+      throw new BadRequestException('Invalid verification token');
+    }
+
+    const user = await this.userRepository.findOne({ where: { id: payload.sub } });
+    if (!user || user.email.toLowerCase() !== payload.email.toLowerCase()) {
+      throw new NotFoundException('User account not found for this verification link');
+    }
+
+    if (!user.isEmailVerified) {
+      user.isEmailVerified = true;
+      await this.userRepository.save(user);
+    }
+
+    return {
+      verified: true,
+      user: this.sanitizeUser(user),
+    };
+  }
+
+  public async resendVerificationEmail(userId: string): Promise<{ sent: boolean; message: string }> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.isEmailVerified) {
+      return { sent: false, message: 'Email address is already verified.' };
+    }
+
+    const token = this.createEmailVerificationToken(user);
+    await this.emailService.sendVerificationEmail(user.email, token, user.fullName);
+
+    return {
+      sent: true,
+      message: 'Verification email sent. Please check your inbox.',
+    };
   }
 
   public async deleteAccount(userId: string): Promise<{ deleted: true; message: string }> {

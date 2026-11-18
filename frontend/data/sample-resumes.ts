@@ -113,14 +113,34 @@ export function getSampleTemplateKey(resume: { companyKey?: string; resumeStyle?
 
   const key = (resume.companyKey || '').toLowerCase();
 
+  // Signature Awesome CV LaTeX engineering profiles
+  if (['google', 'meta', 'microsoft', 'cloudflare', 'vercel'].includes(key)) {
+    return 'awesome-cv';
+  }
+
+  // Signature Deedy dense 2-column CS / AI profiles
+  if (['amazon', 'datadog', 'palantir', 'snowflake', 'nvidia', 'openai', 'anthropic'].includes(key)) {
+    return 'deedy';
+  }
+
+  // Signature Crest bold banner header profiles
+  if (['adobe', 'canva', 'hubspot', 'salesforce', 'shopify', 'atlassian'].includes(key)) {
+    return 'crest';
+  }
+
+  // Netflix streaming SRE role & Modern Technical resumes
+  if (key === 'netflix' || resume.resumeStyle === 'Modern Technical') {
+    return 'clean-modern';
+  }
+
   // Signature modern split & creative two-column
   if (['spotify', 'airbnb', 'figma', 'bytedance', 'uber', 'apple', 'pinterest', 'snapchat', 'discord', 'roblox', 'twitter', 'x'].includes(key)) {
     return 'double-column';
   }
 
-  // Signature navy accent left sidebar (Kickresume / Enhancv elegant style)
-  if (['netflix', 'stripe', 'sony', 'disney', 'tesla', 'coinbase', 'databricks', 'openai', 'anthropic', 'nvidia'].includes(key)) {
-    return 'sidebar';
+  // Signature navy accent left sidebar (canonical key: elegant)
+  if (['stripe', 'sony', 'disney', 'tesla', 'coinbase', 'databricks'].includes(key)) {
+    return 'elegant';
   }
 
   // Ivy League serif (Harvard / Yale academic & leadership style)
@@ -129,9 +149,6 @@ export function getSampleTemplateKey(resume: { companyKey?: string; resumeStyle?
   }
 
   // Resume style mapping
-  if (resume.resumeStyle === 'Modern Technical') {
-    return 'clean-modern';
-  }
   if (resume.resumeStyle === 'Executive Clean') {
     return 'executive';
   }

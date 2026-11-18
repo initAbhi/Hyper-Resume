@@ -208,17 +208,15 @@ function NavbarInner() {
                     {creditBalance} credits
                   </span>
                 )}
-                <Link href="/app">
-                  <button
-                    type="button"
-                    className={`text-xs sm:text-[13px] font-semibold h-9 px-4 rounded-lg shadow-sm cursor-pointer transition-colors ${
-                      isLightSurface
-                        ? 'bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-950'
-                        : 'bg-white hover:bg-zinc-100 text-zinc-950'
-                    }`}
-                  >
-                    Dashboard
-                  </button>
+                <Link
+                  href="/app"
+                  className={`inline-flex items-center justify-center text-xs sm:text-[13px] font-semibold h-9 px-4 rounded-lg shadow-sm cursor-pointer transition-colors ${
+                    isLightSurface
+                      ? 'bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-950'
+                      : 'bg-white hover:bg-zinc-100 text-zinc-950'
+                  }`}
+                >
+                  Dashboard
                 </Link>
               </>
             ) : (
@@ -233,17 +231,15 @@ function NavbarInner() {
                 >
                   Log in
                 </Link>
-                <Link href="/register">
-                  <button
-                    type="button"
-                    className={`text-xs sm:text-[13px] font-semibold h-9 px-4 rounded-lg shadow-sm cursor-pointer transition-colors flex items-center gap-1.5 ${
-                      isLightSurface
-                        ? 'bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-950'
-                        : 'bg-white hover:bg-zinc-100 text-zinc-950'
-                    }`}
-                  >
-                    <span>Get Started</span>
-                  </button>
+                <Link
+                  href="/register"
+                  className={`inline-flex items-center justify-center gap-1.5 text-xs sm:text-[13px] font-semibold h-9 px-4 rounded-lg shadow-sm cursor-pointer transition-colors ${
+                    isLightSurface
+                      ? 'bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-950'
+                      : 'bg-white hover:bg-zinc-100 text-zinc-950'
+                  }`}
+                >
+                  <span>Get Started</span>
                 </Link>
               </>
             )}
@@ -252,30 +248,26 @@ function NavbarInner() {
         {/* Mobile Header Right */}
         <div className="flex items-center gap-2 md:hidden">
           {isAuthenticated ? (
-            <Link href="/app">
-              <button
-                type="button"
-                className={`rounded-lg font-semibold text-xs px-3.5 py-1.5 h-9 min-h-[36px] shadow-xs cursor-pointer ${
-                  isLightSurface
-                    ? 'bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950'
-                    : 'bg-white hover:bg-zinc-100 text-zinc-950'
-                }`}
-              >
-                Dashboard
-              </button>
+            <Link
+              href="/app"
+              className={`inline-flex items-center justify-center rounded-lg font-semibold text-xs px-3.5 py-1.5 h-9 min-h-[36px] shadow-xs cursor-pointer ${
+                isLightSurface
+                  ? 'bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950'
+                  : 'bg-white hover:bg-zinc-100 text-zinc-950'
+              }`}
+            >
+              Dashboard
             </Link>
           ) : (
-            <Link href="/register">
-              <button
-                type="button"
-                className={`rounded-lg font-semibold text-xs px-3.5 py-1.5 h-9 min-h-[36px] shadow-xs cursor-pointer ${
-                  isLightSurface
-                    ? 'bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950'
-                    : 'bg-white hover:bg-zinc-100 text-zinc-950'
-                }`}
-              >
-                Get Started
-              </button>
+            <Link
+              href="/register"
+              className={`inline-flex items-center justify-center rounded-lg font-semibold text-xs px-3.5 py-1.5 h-9 min-h-[36px] shadow-xs cursor-pointer ${
+                isLightSurface
+                  ? 'bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950'
+                  : 'bg-white hover:bg-zinc-100 text-zinc-950'
+              }`}
+            >
+              Get Started
             </Link>
           )}
           {/* Mobile Menu Button */}
@@ -350,22 +342,40 @@ function NavbarInner() {
                 <div className="h-px bg-white/[0.04] my-3" />
 
                 <div className="flex flex-col gap-2 px-3 pt-1 pb-2">
-                  <Link href="/register" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
-                    <button
-                      type="button"
-                      className="w-full inline-flex items-center justify-center rounded-lg text-sm font-semibold h-10 px-4 bg-white text-zinc-950 hover:bg-zinc-100 transition-all cursor-pointer"
-                    >
-                      Get Started
-                    </button>
-                  </Link>
-                  <Link href="/login" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
-                    <button
-                      type="button"
-                      className="w-full inline-flex items-center justify-center rounded-lg text-sm font-semibold h-10 px-4 bg-white/[0.06] hover:bg-white/[0.12] text-white transition-all cursor-pointer"
-                    >
-                      Log in
-                    </button>
-                  </Link>
+                  {isAuthenticated ? (
+                    <>
+                      <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/[0.06] text-xs text-zinc-200">
+                        <span>{hasActivePro ? 'Pro Membership' : 'Available Credits'}</span>
+                        <span className="font-semibold text-white">
+                          {hasActivePro ? 'Pro Active' : `${creditBalance} credits`}
+                        </span>
+                      </div>
+                      <Link
+                        href="/app"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="w-full inline-flex items-center justify-center rounded-lg text-sm font-semibold h-10 px-4 bg-white text-zinc-950 hover:bg-zinc-100 transition-all"
+                      >
+                        Go to Dashboard
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        href="/register"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="w-full inline-flex items-center justify-center rounded-lg text-sm font-semibold h-10 px-4 bg-white text-zinc-950 hover:bg-zinc-100 transition-all"
+                      >
+                        Get Started
+                      </Link>
+                      <Link
+                        href="/login"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="w-full inline-flex items-center justify-center rounded-lg text-sm font-semibold h-10 px-4 bg-white/[0.06] hover:bg-white/[0.12] text-white transition-all"
+                      >
+                        Log in
+                      </Link>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

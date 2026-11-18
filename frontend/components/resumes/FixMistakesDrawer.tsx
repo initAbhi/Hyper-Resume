@@ -99,7 +99,11 @@ function renderDiffSegment(issue: WritingIssueItem) {
       <span className="text-zinc-700 dark:text-zinc-300">{originalText}</span>
     );
   }
-  const idx = originalText.toLowerCase().indexOf(matchedText.toLowerCase());
+  const escaped = matchedText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const wordBoundaryMatch = new RegExp(`\\b${escaped}\\b`, 'i').exec(originalText);
+  const idx = wordBoundaryMatch
+    ? wordBoundaryMatch.index
+    : originalText.toLowerCase().indexOf(matchedText.toLowerCase());
   if (idx === -1) {
     return (
       <span className="text-zinc-700 dark:text-zinc-300">{originalText}</span>
@@ -244,8 +248,8 @@ export function FixMistakesDrawer({
     activeReport.overallWritingScore >= 90
       ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800'
       : activeReport.overallWritingScore >= 70
-      ? 'text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-800'
-      : 'text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/50 border-rose-200 dark:border-rose-800';
+        ? 'text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-800'
+        : 'text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/50 border-rose-200 dark:border-rose-800';
 
   const isPointerOutsideDialog = (e: React.PointerEvent<HTMLDialogElement>) => {
     const dialog = dialogRef.current;
@@ -338,9 +342,8 @@ export function FixMistakesDrawer({
                 <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
                   {visibleIssues.length === 0
                     ? 'No Writing Mistakes Detected'
-                    : `${visibleIssues.length} Flagged Writing Item${
-                        visibleIssues.length === 1 ? '' : 's'
-                      }`}
+                    : `${visibleIssues.length} Flagged Writing Item${visibleIssues.length === 1 ? '' : 's'
+                    }`}
                 </p>
                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
                   {counts.spelling} spelling · {counts.grammar} grammar ·{' '}
@@ -408,19 +411,17 @@ export function FixMistakesDrawer({
                   aria-selected={selected}
                   onClick={() => setActiveTab(tab.id)}
                   onKeyDown={(e) => handleTabKeyDown(e, idx)}
-                  className={`relative flex items-center gap-1 px-2 py-1.5 rounded-md text-[11px] font-semibold whitespace-nowrap flex-none transition-colors ${
-                    selected
+                  className={`relative flex items-center gap-1 px-2 py-1.5 rounded-md text-[11px] font-semibold whitespace-nowrap flex-none transition-colors ${selected
                       ? 'text-blue-700 dark:text-blue-300 bg-blue-50/80 dark:bg-blue-950/50 border-b-2 border-blue-600 dark:border-blue-400'
                       : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                  }`}
+                    }`}
                 >
                   <span>{tab.label}</span>
                   <span
-                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-                      selected
+                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${selected
                         ? 'bg-blue-600 text-white'
                         : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
-                    }`}
+                      }`}
                   >
                     {tabCount}
                   </span>

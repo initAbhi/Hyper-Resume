@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Sparkles, Target, Briefcase, CheckCircle2, ChevronRight } from 'lucide-react';
+import { Sparkles, Target, Briefcase, CheckCircle2, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -34,12 +34,14 @@ function buildPostAuthTarget(searchParams: ReturnType<typeof useSearchParams>): 
   const plan = searchParams?.get('plan');
   const currency = searchParams?.get('currency');
   const template = searchParams?.get('template');
+  const action = searchParams?.get('action');
 
   if (redirect && redirect.startsWith('/') && !redirect.startsWith('//')) {
     const params = new URLSearchParams();
     if (plan) params.set('plan', plan);
     if (currency) params.set('currency', currency);
     if (template) params.set('template', template);
+    if (action) params.set('action', action);
     const qs = params.toString();
     if (!qs) return redirect;
     return redirect.includes('?') ? `${redirect}&${qs}` : `${redirect}?${qs}`;
@@ -56,8 +58,13 @@ function RegisterFormContent() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [targetRole, setTargetRole] = useState('');
   const [targetGoal, setTargetGoal] = useState('ats');
+  const targetRoleRef = useRef(targetRole);
+  const targetGoalRef = useRef(targetGoal);
+  targetRoleRef.current = targetRole;
+  targetGoalRef.current = targetGoal;
   const [showPersonalization, setShowPersonalization] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -72,15 +79,11 @@ function RegisterFormContent() {
   const postAuthTarget = buildPostAuthTarget(searchParams);
   const querySuffix = searchParams?.toString() ? `?${searchParams.toString()}` : '';
 
-  // Load Google Identity Services script if client ID is configured
+  // Load Google Identity Services script once (do NOT reload on targetRole/targetGoal keystrokes — FN-38)
   useEffect(() => {
     if (!googleClientId) return;
 
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
+    const initGoogleButton = () => {
       if (window.google?.accounts?.id) {
         window.google.accounts.id.initialize({
           client_id: googleClientId,
@@ -90,8 +93,8 @@ function RegisterFormContent() {
               try {
                 await googleLogin({
                   credential: response.credential,
-                  targetRole: targetRole.trim() || undefined,
-                  targetGoal,
+                  targetRole: targetRoleRef.current.trim() || undefined,
+                  targetGoal: targetGoalRef.current,
                 });
                 analytics.track('signup_completed', { source: 'google_oauth' });
                 router.push(buildPostAuthTarget(searchParams));
@@ -106,6 +109,7 @@ function RegisterFormContent() {
 
         const btnContainer = document.getElementById('google-btn-rendered-register');
         if (btnContainer) {
+          btnContainer.innerHTML = '';
           window.google.accounts.id.renderButton(btnContainer, {
             theme: 'outline',
             size: 'large',
@@ -119,6 +123,18 @@ function RegisterFormContent() {
         }
       }
     };
+
+    const existing = document.querySelector<HTMLScriptElement>('script[src="https://accounts.google.com/gsi/client"]');
+    if (existing && window.google?.accounts?.id) {
+      initGoogleButton();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = initGoogleButton;
     script.onerror = () => {
       setIsGoogleReady(true);
     };
@@ -129,7 +145,7 @@ function RegisterFormContent() {
         document.body.removeChild(script);
       }
     };
-  }, [googleClientId, googleLogin, router, searchParams, targetRole, targetGoal]);
+  }, [googleClientId, googleLogin, router, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,9 +211,9 @@ function RegisterFormContent() {
             <Sparkles className="w-3 h-3" />
             <span>Includes 5 Free AI Audit Credits</span>
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             Create Your Account
-          </CardTitle>
+          </h1>
           <CardDescription className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Build ATS-compliant, recruiter-grade resumes tailored to your target job
           </CardDescription>
@@ -235,17 +251,18 @@ function RegisterFormContent() {
               <div className="w-full border-t border-slate-200 dark:border-zinc-800" />
             </div>
             <div className="relative flex justify-center text-[11px] uppercase">
-              <span className="bg-white dark:bg-zinc-900 px-3 text-slate-400 font-semibold tracking-wider">
+              <span className="bg-white dark:bg-zinc-900 px-3 text-slate-600 dark:text-slate-300 font-semibold tracking-wider">
                 Or register with email
               </span>
             </div>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} autoComplete="off">
+        <form onSubmit={handleSubmit}>
           <CardContent className="space-y-3.5 px-6 pt-0">
             <Input
               id="register-fullname"
+              name="name"
               label="Full Name"
               type="text"
               placeholder="e.g. Alex Morgan"
@@ -257,27 +274,55 @@ function RegisterFormContent() {
             />
             <Input
               id="register-email"
+              name="email"
               label="Email Address"
               type="email"
               placeholder="alex@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              autoComplete="off"
+              autoComplete="email"
               className="text-xs"
             />
-            <Input
-              id="register-password"
-              label="Password"
-              type="password"
-              placeholder="At least 8 characters"
-              helperText="Must contain at least 8 characters."
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="new-password"
-              className="text-xs"
-            />
+            <div className="space-y-1">
+              <div className="relative">
+                <Input
+                  id="register-password"
+                  name="password"
+                  label="Password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="At least 8 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                  className="text-xs pr-9"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-2.5 top-[30px] text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-100 cursor-pointer p-0.5 rounded"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {password.length > 0 && (() => {
+                const score =
+                  (password.length >= 8 ? 1 : 0) +
+                  (/[A-Z]/.test(password) && /[a-z]/.test(password) ? 1 : 0) +
+                  (/\d/.test(password) ? 1 : 0) +
+                  (/[^A-Za-z0-9]/.test(password) ? 1 : 0);
+                const label = score <= 1 ? 'Weak' : score === 2 ? 'Fair' : score === 3 ? 'Good' : 'Strong';
+                const color =
+                  score <= 1 ? 'text-rose-600' : score === 2 ? 'text-amber-600' : score === 3 ? 'text-blue-600' : 'text-emerald-600';
+                return (
+                  <p className={`text-[11px] font-medium ${color}`}>
+                    Password strength: {label} {password.length < 8 ? '(min 8 chars)' : ''}
+                  </p>
+                );
+              })()}
+            </div>
 
             {/* Professional Personalization Toggle / Section */}
             <div className="pt-1">

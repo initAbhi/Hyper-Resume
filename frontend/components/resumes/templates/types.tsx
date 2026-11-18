@@ -1,5 +1,7 @@
 import React from 'react';
 import type { ResumeContent } from '@/lib/api-client';
+import { useCanvasEdit } from './CanvasEditContext';
+import { EditableField } from './EditableField';
 
 export interface TemplateProps {
   content: ResumeContent;
@@ -38,6 +40,23 @@ export const DEFAULT_KEYWORDS = [
   'Database optimization',
 ];
 
+export function getTemplateFontClass(fontFamily?: 'sans' | 'serif' | 'mono'): string {
+  if (fontFamily === 'serif') return 'font-serif';
+  if (fontFamily === 'mono') return 'font-mono';
+  return 'font-sans';
+}
+
+export function normalizeExternalUrl(raw?: string): string {
+  const trimmed = (raw || '').trim();
+  if (!trimmed) return '';
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
+export function displayCompactUrl(raw?: string): string {
+  return (raw || '').trim().replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
+}
+
 export function LinkedinIcon({ className = 'w-3 h-3 text-zinc-400 shrink-0' }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -55,6 +74,118 @@ export function GithubIcon({ className = 'w-3 h-3 text-zinc-400 shrink-0' }: { c
 }
 
 /**
+ * Editable contact/link value: inline-editable without <a> click hijacking in
+ * Visual Canvas mode, and clean clickable link / text in Print & Export mode.
+ */
+export function EditableContactLink({
+  value,
+  fieldPath,
+  placeholder,
+  isUrl = false,
+  className = '',
+  darkSurface = false,
+}: {
+  value?: string;
+  fieldPath: string;
+  placeholder: string;
+  isUrl?: boolean;
+  className?: string;
+  darkSurface?: boolean;
+}) {
+  const { isEditable } = useCanvasEdit();
+  const safeVal = (value || '').trim();
+
+  if (isEditable) {
+    return (
+      <EditableField
+        as="span"
+        fieldPath={fieldPath}
+        value={value || ''}
+        placeholder={placeholder}
+        darkSurface={darkSurface}
+        className={className}
+      />
+    );
+  }
+
+  if (!safeVal) return null;
+
+  if (isUrl) {
+    return (
+      <a
+        href={normalizeExternalUrl(safeVal)}
+        target="_blank"
+        rel="noreferrer"
+        className={className}
+      >
+        {displayCompactUrl(safeVal)}
+      </a>
+    );
+  }
+
+  return <span className={className}>{safeVal}</span>;
+}
+
+/**
+ * Inline-editable date range (`startDate` – `endDate` / `Present`).
+ */
+export function EditableDateRange({
+  startDate,
+  endDate,
+  current,
+  startFieldPath,
+  endFieldPath,
+  className = 'text-[10.5px] text-zinc-500 whitespace-nowrap',
+  separator = ' – ',
+  darkSurface = false,
+}: {
+  startDate?: string;
+  endDate?: string;
+  current?: boolean;
+  startFieldPath: string;
+  endFieldPath: string;
+  className?: string;
+  separator?: string;
+  darkSurface?: boolean;
+}) {
+  const { isEditable } = useCanvasEdit();
+  const displayEnd = current ? 'Present' : (endDate || '');
+
+  if (!isEditable) {
+    const start = (startDate || '').trim();
+    const end = (displayEnd || '').trim();
+    if (!start && !end) return null;
+    return (
+      <span className={className}>
+        {start}
+        {start && end ? separator : ''}
+        {end}
+      </span>
+    );
+  }
+
+  return (
+    <span className={`inline-flex items-center gap-0.5 ${className}`}>
+      <EditableField
+        as="span"
+        fieldPath={startFieldPath}
+        value={startDate || ''}
+        placeholder="Start"
+        darkSurface={darkSurface}
+      />
+      <span className="opacity-70">{separator}</span>
+      <EditableField
+        as="span"
+        fieldPath={endFieldPath}
+        value={displayEnd}
+        placeholder="Present"
+        darkSurface={darkSurface}
+      />
+    </span>
+  );
+}
+
+/**
  * Highlights ATS matching keywords with a soft competitor-style marker
  */
 export function renderHighlightedText(
@@ -66,7 +197,6 @@ export function renderHighlightedText(
     return text;
   }
 
-  // Create regex pattern from keywords, sorted by longest first to avoid partial overlap
   const sortedKeywords = [...keywords].sort((a, b) => b.length - a.length);
   const escaped = sortedKeywords
     .map((k) => k.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'))
@@ -85,7 +215,7 @@ export function renderHighlightedText(
       return (
         <mark
           key={i}
-          className="ats-keyword-highlight bg-rose-100/90 dark:bg-rose-950/40 text-rose-950 dark:text-rose-200 px-1 py-0.5 rounded-[3px] border border-rose-200/60 dark:border-rose-800/40 transition-colors font-medium inline-block"
+          className="ats-keyword-highlight bg-rose-100/90 text-rose-950 px-1 py-0.5 rounded-[3px] border border-rose-200/60 transition-colors font-medium inline-block"
           style={{ lineHeight: 'inherit' }}
         >
           {part}
@@ -96,3 +226,5 @@ export function renderHighlightedText(
   });
 }
 
+export * from './CanvasEditContext';
+export * from './EditableField';

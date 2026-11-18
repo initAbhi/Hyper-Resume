@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -60,7 +61,7 @@ export class ApplicationsController {
   @Get(':id')
   async getOne(
     @CurrentUser() user: User,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
   ) {
     const app = await this.applicationsService.getApplication(user.id, id);
     return this.mapApplication(app);
@@ -69,7 +70,7 @@ export class ApplicationsController {
   @Patch(':id')
   async update(
     @CurrentUser() user: User,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateApplicationDto,
   ) {
     const updated = await this.applicationsService.updateApplication(user.id, id, dto);
@@ -80,7 +81,7 @@ export class ApplicationsController {
   @HttpCode(HttpStatus.OK)
   async delete(
     @CurrentUser() user: User,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.applicationsService.deleteApplication(user.id, id);
   }

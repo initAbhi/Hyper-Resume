@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -70,10 +71,13 @@ export class PaymentsController {
     @Body() body: { orderId: string; providerPaymentId?: string },
     @Req() req: Request,
   ) {
+    if (!body?.orderId || typeof body.orderId !== 'string' || !body.orderId.trim()) {
+      throw new BadRequestException('A valid orderId is required.');
+    }
     return this.paymentsService.verifyPayment(
       user.id,
-      body.orderId,
-      body.providerPaymentId,
+      body.orderId.trim(),
+      typeof body.providerPaymentId === 'string' ? body.providerPaymentId.trim() : undefined,
       this.extractRequestContext(req),
     );
   }

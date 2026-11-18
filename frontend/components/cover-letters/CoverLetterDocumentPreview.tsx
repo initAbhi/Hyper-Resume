@@ -29,9 +29,9 @@ export default function CoverLetterDocumentPreview({
         <div className="space-y-5">
           {/* Classic Centered Formal Header */}
           <header className="text-center pb-3.5 border-b border-zinc-300 space-y-1">
-            <h1 className="text-2xl font-bold tracking-wide text-zinc-900 uppercase">
+            <h2 className="text-2xl font-bold tracking-wide text-zinc-900 uppercase">
               {letter.senderName}
-            </h1>
+            </h2>
             {contactItems.length > 0 && (
               <p className="text-xs text-zinc-600">
                 {contactItems.join('  •  ')}
@@ -87,9 +87,9 @@ export default function CoverLetterDocumentPreview({
             {/* Modern Header */}
             <header className="space-y-1.5 pb-3.5 border-b border-zinc-200">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h1 className="text-[24px] sm:text-[26px] font-extrabold tracking-tight text-zinc-900">
+                <h2 className="text-[24px] sm:text-[26px] font-extrabold tracking-tight text-zinc-900">
                   {letter.senderName}
-                </h1>
+                </h2>
                 <span
                   className="text-[11px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full"
                   style={{
@@ -155,9 +155,9 @@ export default function CoverLetterDocumentPreview({
           style={{ borderColor: accent }}
         >
           <div className="space-y-0.5 min-w-0 flex-1 pr-2">
-            <h1 className="text-[24px] sm:text-[26px] font-bold tracking-tight text-zinc-900 leading-tight">
+            <h2 className="text-[24px] sm:text-[26px] font-bold tracking-tight text-zinc-900 leading-tight">
               {letter.senderName}
-            </h1>
+            </h2>
             <p className="text-xs font-semibold uppercase tracking-wider leading-snug" style={{ color: accent }}>
               Candidate — {letter.targetRole}
             </p>

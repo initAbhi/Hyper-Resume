@@ -42,7 +42,7 @@ export function ProductWorkflowStorytelling() {
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <AnimatedContent distance={36} duration={0.75} className="max-w-xl">
-            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
               How it works
             </p>
             <h2 className="mt-3 font-rubik text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -103,7 +103,7 @@ export function ProductWorkflowStorytelling() {
               <p className="mt-5 flex-1 text-[15px] leading-relaxed text-zinc-300">
                 {showAfter ? AFTER : BEFORE}
               </p>
-              <div className="mt-6 border-t border-white/[0.05] pt-4 text-xs text-zinc-500">
+              <div className="mt-6 border-t border-white/[0.05] pt-4 text-xs text-zinc-400">
                 {showAfter
                   ? 'Metrics come from your input — never invented by the model.'
                   : 'Vague ownership language. Weak for ATS and recruiters.'}

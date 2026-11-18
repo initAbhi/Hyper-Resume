@@ -116,6 +116,15 @@ export function CheckAndTailorDrawer({
   const [appliedSummary, setAppliedSummary] = useState(false);
   const [appliedBullets, setAppliedBullets] = useState<number[]>([]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
+
   // Load saved job matches & job descriptions when drawer opens
   useEffect(() => {
     if (!isOpen || !resumeId) return;
@@ -349,14 +358,26 @@ export function CheckAndTailorDrawer({
   };
 
   const handleApplyTailoredBullet = (originalBullet: string, tailoredBullet: string, idx: number) => {
+    let didMatch = false;
     onUpdateContent((prev) => {
+      const normalizedTarget = originalBullet.trim().toLowerCase();
       const expList = (prev.experience || []).map((exp) => ({
         ...exp,
-        bullets: (exp.bullets || []).map((b) => (b.trim() === originalBullet.trim() ? tailoredBullet : b)),
+        bullets: (exp.bullets || []).map((b) => {
+          if (!didMatch && b.trim().toLowerCase() === normalizedTarget) {
+            didMatch = true;
+            return tailoredBullet;
+          }
+          return b;
+        }),
       }));
-      return { ...prev, experience: expList };
+      return didMatch ? { ...prev, experience: expList } : prev;
     });
-    setAppliedBullets((prev) => (prev.includes(idx) ? prev : [...prev, idx]));
+    if (didMatch) {
+      setAppliedBullets((prev) => (prev.includes(idx) ? prev : [...prev, idx]));
+    } else {
+      setErrorMessage('That original bullet has already been edited or removed from your resume.');
+    }
   };
 
   if (!isOpen) return null;
@@ -613,13 +634,12 @@ export function CheckAndTailorDrawer({
                   <div className="flex items-baseline gap-2">
                     <span
                       id="drawer-live-match-score"
-                      className={`text-3xl font-extrabold font-mono ${
-                        displayScore >= 80
+                      className={`text-3xl font-extrabold font-mono ${displayScore >= 80
                           ? 'text-emerald-600'
                           : displayScore >= 60
-                          ? 'text-amber-600'
-                          : 'text-rose-600'
-                      }`}
+                            ? 'text-amber-600'
+                            : 'text-rose-600'
+                        }`}
                     >
                       {displayScore}%
                     </span>
@@ -643,13 +663,12 @@ export function CheckAndTailorDrawer({
                 {/* Progress Bar with 85% Benchmark Line */}
                 <div className="relative w-full h-2.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      displayScore >= 80
+                    className={`h-full rounded-full transition-all duration-500 ${displayScore >= 80
                         ? 'bg-emerald-600'
                         : displayScore >= 60
-                        ? 'bg-amber-500'
-                        : 'bg-rose-500'
-                    }`}
+                          ? 'bg-amber-500'
+                          : 'bg-rose-500'
+                      }`}
                     style={{ width: `${Math.min(100, displayScore)}%` }}
                   />
                   <div
@@ -731,8 +750,8 @@ export function CheckAndTailorDrawer({
                     {isTailoring
                       ? 'Generating Grounded Edits...'
                       : tailorPlan
-                      ? 'Regenerate AI Tailoring Plan'
-                      : 'Generate AI Tailoring Plan'}
+                        ? 'Regenerate AI Tailoring Plan'
+                        : 'Generate AI Tailoring Plan'}
                   </span>
                 </button>
 
@@ -838,14 +857,12 @@ export function CheckAndTailorDrawer({
                 <button
                   type="button"
                   onClick={() => onToggleHighlights?.(!isHighlightsEnabled)}
-                  className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
-                    isHighlightsEnabled ? 'bg-rose-500' : 'bg-zinc-300 dark:bg-zinc-700'
-                  }`}
+                  className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${isHighlightsEnabled ? 'bg-rose-500' : 'bg-zinc-300 dark:bg-zinc-700'
+                    }`}
                 >
                   <div
-                    className={`w-4 h-4 rounded-full bg-white absolute top-0.5 transition-transform ${
-                      isHighlightsEnabled ? 'left-4.5' : 'left-0.5'
-                    }`}
+                    className={`w-4 h-4 rounded-full bg-white absolute top-0.5 transition-transform ${isHighlightsEnabled ? 'left-4.5' : 'left-0.5'
+                      }`}
                   />
                 </button>
               </div>
@@ -909,13 +926,12 @@ export function CheckAndTailorDrawer({
                                 </button>
                               )}
                               <span
-                                className={`w-14 text-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
-                                  kw.priority === 'High'
+                                className={`w-14 text-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${kw.priority === 'High'
                                     ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200/60'
                                     : kw.priority === 'Medium'
-                                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200/60'
-                                    : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
-                                }`}
+                                      ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200/60'
+                                      : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                                  }`}
                               >
                                 {kw.priority}
                               </span>
@@ -956,19 +972,18 @@ export function CheckAndTailorDrawer({
                               {req.text || req.explanation}
                             </span>
                             <span
-                              className={`px-1.5 py-0.5 rounded text-[10px] font-semibold shrink-0 ${
-                                req.status === 'supported'
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-semibold shrink-0 ${req.status === 'supported'
                                   ? 'bg-emerald-100 text-emerald-700'
                                   : req.status === 'needs_confirmation'
-                                  ? 'bg-amber-100 text-amber-700'
-                                  : 'bg-rose-100 text-rose-700'
-                              }`}
+                                    ? 'bg-amber-100 text-amber-700'
+                                    : 'bg-rose-100 text-rose-700'
+                                }`}
                             >
                               {req.status === 'supported'
                                 ? 'Verified'
                                 : req.status === 'needs_confirmation'
-                                ? 'Confirm'
-                                : 'Gap'}
+                                  ? 'Confirm'
+                                  : 'Gap'}
                             </span>
                           </div>
                           {req.suggestedAction && (

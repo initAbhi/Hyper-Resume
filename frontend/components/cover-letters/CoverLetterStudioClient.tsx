@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation';
 import {
   AlertCircle,
+  Bot,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -38,6 +39,8 @@ import {
   serializeCoverLetterDocumentHtml,
 } from '@/lib/cover-letter-utils';
 import CoverLetterDocumentPreview from '@/components/cover-letters/CoverLetterDocumentPreview';
+import { useOptionalGlobalAgent } from '@/lib/global-agent-context';
+import { useAuth } from '@/lib/auth-context';
 
 const TONE_OPTIONS: Array<{
   value: CoverLetterTone;
@@ -82,8 +85,10 @@ const ACCENT_COLORS = [
 
 export default function CoverLetterStudioClient() {
   const searchParams = useSearchParams();
+  const { refreshUser } = useAuth();
   const queryResumeId = searchParams.get('resumeId') || '';
   const queryMatchId = searchParams.get('matchId') || '';
+  const queryCoverLetterId = searchParams.get('coverLetterId') || '';
 
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [matches, setMatches] = useState<JobMatch[]>([]);
@@ -117,8 +122,37 @@ export default function CoverLetterStudioClient() {
   const [jobDescription, setJobDescription] = useState('');
   const [selectedTone, setSelectedTone] = useState<CoverLetterTone>('Executive');
   const [customFocus, setCustomFocus] = useState('');
+  const [agentPromptInput, setAgentPromptInput] = useState('');
+  const globalAgent = useOptionalGlobalAgent();
+  const hydratedFromGlobalRef = useRef(false);
 
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingSaveRef = useRef<{ letterId: string; patch: Partial<CoverLetter> } | null>(null);
+
+  // Hydrate target job fields from Global Agent context once when navigating from Job Search / Match
+  useEffect(() => {
+    if (!globalAgent || hydratedFromGlobalRef.current || isLoading) return;
+    const ctx = globalAgent.pageContext;
+    if (!targetRole && ctx.jobTitle) setTargetRole(ctx.jobTitle);
+    if (!companyName && ctx.companyName) setCompanyName(ctx.companyName);
+    if (!jobDescription && ctx.jobDescriptionText) setJobDescription(ctx.jobDescriptionText);
+    if (!selectedResumeId && ctx.activeResumeId) setSelectedResumeId(ctx.activeResumeId);
+    hydratedFromGlobalRef.current = true;
+  }, [globalAgent, isLoading, targetRole, companyName, jobDescription, selectedResumeId]);
+
+  // Sync studio selection into Global Agent context
+  useEffect(() => {
+    if (!globalAgent) return;
+    const resObj = resumes.find((r) => r.id === selectedResumeId);
+    globalAgent.updateContext({
+      activeResumeId: selectedResumeId || undefined,
+      activeResumeName: resObj?.name,
+      jobTitle: targetRole || undefined,
+      companyName: companyName || undefined,
+      jobDescriptionText: jobDescription || undefined,
+      tone: selectedTone,
+    });
+  }, [globalAgent, resumes, selectedResumeId, targetRole, companyName, jobDescription, selectedTone]);
 
   const activeLetter = useMemo(
     () => letters.find((l) => l.id === activeLetterId) || null,
@@ -189,7 +223,10 @@ export default function CoverLetterStudioClient() {
         if (lettersRes.status === 'fulfilled') {
           const loadedLetters = lettersRes.value || [];
           setLetters(loadedLetters);
-          if (loadedLetters.length > 0 && !queryMatchId) {
+          if (queryCoverLetterId && loadedLetters.some((l) => l.id === queryCoverLetterId)) {
+            setActiveLetterId(queryCoverLetterId);
+            setLeftTab('edit');
+          } else if (loadedLetters.length > 0 && !queryMatchId) {
             setActiveLetterId(loadedLetters[0].id);
             setLeftTab('edit');
           } else {
@@ -212,9 +249,17 @@ export default function CoverLetterStudioClient() {
     loadStudioData();
     return () => {
       mounted = false;
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+      const pending = pendingSaveRef.current;
+      if (pending) {
+        pendingSaveRef.current = null;
+        void apiClient.updateCoverLetter(pending.letterId, buildCoverLetterPatch(pending.patch)).catch(() => {});
+      }
     };
-  }, [queryResumeId, queryMatchId]);
+  }, [queryResumeId, queryMatchId, queryCoverLetterId]);
 
   const buildCoverLetterPatch = useCallback((patch: Partial<CoverLetter>) => ({
     title: patch.title,
@@ -236,24 +281,36 @@ export default function CoverLetterStudioClient() {
     signOff: patch.signOff,
   }), []);
 
+  const flushPendingSave = useCallback(async () => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    const pending = pendingSaveRef.current;
+    if (!pending) return;
+    pendingSaveRef.current = null;
+    setSaveStatus('saving');
+    try {
+      await apiClient.updateCoverLetter(
+        pending.letterId,
+        buildCoverLetterPatch(pending.patch),
+      );
+      setSaveStatus('saved');
+    } catch {
+      setSaveStatus('unsaved');
+    }
+  }, [buildCoverLetterPatch]);
+
   const scheduleAutosave = useCallback(
     (letterId: string, patch: Partial<CoverLetter>) => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      pendingSaveRef.current = { letterId, patch };
       setSaveStatus('unsaved');
-      saveTimerRef.current = setTimeout(async () => {
-        setSaveStatus('saving');
-        try {
-          await apiClient.updateCoverLetter(
-            letterId,
-            buildCoverLetterPatch(patch),
-          );
-          setSaveStatus('saved');
-        } catch {
-          setSaveStatus('unsaved');
-        }
+      saveTimerRef.current = setTimeout(() => {
+        void flushPendingSave();
       }, 650);
     },
-    [buildCoverLetterPatch],
+    [flushPendingSave],
   );
 
   const updateActiveLetterField = (updater: (prev: CoverLetter) => CoverLetter) => {
@@ -309,7 +366,13 @@ export default function CoverLetterStudioClient() {
       setActiveLetterId(created.id);
       setLeftTab('edit');
       setSaveStatus('saved');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      void refreshUser().catch(() => {});
+      const mainEl = document.querySelector('main');
+      if (mainEl) {
+        mainEl.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     } catch (err) {
       setErrorBanner(
         err instanceof Error
@@ -341,6 +404,7 @@ export default function CoverLetterStudioClient() {
         prev.map((item) => (item.id === updated.id ? updated : item)),
       );
       setSaveStatus('saved');
+      void refreshUser().catch(() => {});
     } catch (err) {
       setErrorBanner(
         err instanceof Error
@@ -412,6 +476,7 @@ export default function CoverLetterStudioClient() {
 
   const handleDownloadPdf = async () => {
     if (!activeLetter) return;
+    await flushPendingSave();
     setIsExportingPdf(true);
     setErrorBanner(null);
     setPdfMetaNotice(null);
@@ -620,6 +685,93 @@ export default function CoverLetterStudioClient() {
         </div>
       </div>
 
+      {/* Phase 4: Contextual AI Agent Prompt Bar for Cover Letter Studio */}
+      {globalAgent && (
+        <div
+          data-testid="cover-letter-agent-bar"
+          className="rounded-xl border border-blue-200/80 dark:border-blue-900/60 bg-blue-50/40 dark:bg-blue-950/20 p-3 flex flex-col lg:flex-row lg:items-center gap-3"
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const prompt =
+                agentPromptInput.trim() ||
+                `Draft a ${selectedTone} cover letter for ${targetRole || 'my target role'} at ${companyName || 'the target company'} grounded in my resume.`;
+              globalAgent.launchPrompt({
+                prompt,
+                autoSubmit: true,
+                context: {
+                  activeResumeId: selectedResumeId || undefined,
+                  activeResumeName: selectedResume?.name,
+                  jobTitle: targetRole || undefined,
+                  companyName: companyName || undefined,
+                  jobDescriptionText: jobDescription || undefined,
+                  tone: selectedTone,
+                },
+              });
+              setAgentPromptInput('');
+            }}
+            className="flex-1 flex items-center gap-2 min-w-0"
+          >
+            <Bot className="w-4 h-4 text-[#285FEA] shrink-0" aria-hidden="true" />
+            <label htmlFor="cl-agent-prompt-input" className="sr-only">
+              Ask AI Agent to draft or refine your cover letter
+            </label>
+            <input
+              id="cl-agent-prompt-input"
+              type="text"
+              value={agentPromptInput}
+              onChange={(e) => setAgentPromptInput(e.target.value)}
+              placeholder={`Ask Agent: "Draft a ${selectedTone} cover letter for ${companyName || 'Stripe'} aligned with my resume…"`}
+              className="flex-1 min-w-0 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-1.5 text-xs text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+            />
+            <Button type="submit" size="sm" className="gap-1.5 text-xs shrink-0">
+              <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+              Ask Agent
+            </Button>
+          </form>
+
+          <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+            {[
+              {
+                label: 'Draft Letter',
+                prompt: `Generate a ${selectedTone} cover letter for ${targetRole || 'my target role'} at ${companyName || 'Target Company'} grounded strictly in my resume.`,
+              },
+              {
+                label: 'Stronger Opening',
+                prompt: `Draft a ${selectedTone} cover letter for ${targetRole || 'my target role'} at ${companyName || 'Target Company'} with a sharper, achievement-led opening paragraph.`,
+              },
+              {
+                label: 'Concise Tone',
+                prompt: `Generate a Concise cover letter under 220 words for ${targetRole || 'my target role'} at ${companyName || 'Target Company'}.`,
+              },
+            ].map((chip) => (
+              <button
+                key={chip.label}
+                type="button"
+                onClick={() =>
+                  globalAgent.launchPrompt({
+                    prompt: chip.prompt,
+                    autoSubmit: true,
+                    context: {
+                      activeResumeId: selectedResumeId || undefined,
+                      activeResumeName: selectedResume?.name,
+                      jobTitle: targetRole || undefined,
+                      companyName: companyName || undefined,
+                      jobDescriptionText: jobDescription || undefined,
+                      tone: chip.label === 'Concise Tone' ? 'Concise' : selectedTone,
+                    },
+                  })
+                }
+                className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-white dark:bg-zinc-900 border border-blue-200/80 dark:border-blue-800/70 text-[#285FEA] dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/50 transition-colors cursor-pointer"
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Saved Cover Letters Library Switcher */}
       {letters.length > 0 && (
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
@@ -634,6 +786,7 @@ export default function CoverLetterStudioClient() {
                 type="button"
                 data-testid={`cl-library-item-${letter.id}`}
                 onClick={() => {
+                  void flushPendingSave();
                   setActiveLetterId(letter.id);
                   setLeftTab('edit');
                   setConfirmDeleteId(null);
@@ -1433,7 +1586,7 @@ export default function CoverLetterStudioClient() {
 
           {/* Live Paper Document Preview */}
           <div className="bg-zinc-200/70 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-6 overflow-x-auto">
-            {!activeLetter && (
+            {(!activeLetter || leftTab === 'generate') && (
               <div className="mb-3 flex items-center justify-between text-[11px] text-zinc-600 dark:text-zinc-400 px-1">
                 <span className="font-semibold">
                   Interactive Blueprint Preview
@@ -1444,7 +1597,7 @@ export default function CoverLetterStudioClient() {
               </div>
             )}
             <CoverLetterDocumentPreview
-              letter={activeLetter || blueprintLetter}
+              letter={leftTab === 'generate' || !activeLetter ? blueprintLetter : activeLetter}
             />
           </div>
         </div>

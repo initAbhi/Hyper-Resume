@@ -36,7 +36,7 @@ export class CreditsService {
     @Optional()
     @InjectRepository(User)
     private readonly userRepository?: Repository<User>,
-  ) {}
+  ) { }
 
   private getRepo(manager?: EntityManager): Repository<CreditLedger> {
     return manager ? manager.getRepository(CreditLedger) : this.ledgerRepository;
@@ -85,7 +85,7 @@ export class CreditsService {
     });
     const hasActivePro = Boolean(
       user?.isLifetimePro ||
-        (user?.proExpiresAt && new Date(user.proExpiresAt).getTime() > Date.now()),
+      (user?.proExpiresAt && new Date(user.proExpiresAt).getTime() > Date.now()),
     );
 
     return {
@@ -170,50 +170,52 @@ export class CreditsService {
     metadata?: Record<string, unknown>,
     manager?: EntityManager,
   ): Promise<CreditLedger> {
-    const repo = this.getRepo(manager);
+    return this.runWithUserCreditLock(userId, manager, async (txManager) => {
+      const repo = this.getRepo(txManager);
 
-    // 1. Idempotency Check: if this exact operation was already executed, return it
-    const existing = await repo.findOne({
-      where: { idempotencyKey },
-    });
-    if (existing) {
-      this.logger.debug(`Idempotent credit deduction hit for key: ${idempotencyKey}`);
-      return existing;
-    }
+      // 1. Idempotency Check: if this exact operation was already executed, return it
+      const existing = await repo.findOne({
+        where: { idempotencyKey },
+      });
+      if (existing) {
+        this.logger.debug(`Idempotent credit deduction hit for key: ${idempotencyKey}`);
+        return existing;
+      }
 
-    // 2. Strict Balance Check
-    const currentBalance = await this.getBalance(userId, manager);
-    const requiredAmount = Math.abs(amount);
+      // 2. Strict Balance Check (serialized under per-user advisory lock)
+      const currentBalance = await this.getBalance(userId, txManager);
+      const requiredAmount = Math.abs(amount);
 
-    if (currentBalance < requiredAmount) {
-      this.logger.warn(
-        `Insufficient credit balance for user ${userId}. Available: ${currentBalance}, Required: ${requiredAmount}`,
+      if (currentBalance < requiredAmount) {
+        this.logger.warn(
+          `Insufficient credit balance for user ${userId}. Available: ${currentBalance}, Required: ${requiredAmount}`,
+        );
+        throw new ForbiddenException(
+          `Insufficient credit balance (${currentBalance} available, ${requiredAmount} required). Please recharge your credits to continue.`,
+        );
+      }
+
+      // 3. Negative Ledger Deduction Entry
+      const deduction = repo.create({
+        userId,
+        amount: -requiredAmount,
+        transactionType,
+        idempotencyKey,
+        description,
+        metadata: {
+          ...metadata,
+          balanceBefore: currentBalance,
+          balanceAfter: currentBalance - requiredAmount,
+        },
+      });
+
+      const saved = await repo.save(deduction);
+      this.logger.log(
+        `Deducted ${requiredAmount} credits from user ${userId} (${transactionType}: ${description}). Remaining: ${currentBalance - requiredAmount}`,
       );
-      throw new ForbiddenException(
-        `Insufficient credit balance (${currentBalance} available, ${requiredAmount} required). Please recharge your credits to continue.`,
-      );
-    }
 
-    // 3. Negative Ledger Deduction Entry
-    const deduction = repo.create({
-      userId,
-      amount: -requiredAmount,
-      transactionType,
-      idempotencyKey,
-      description,
-      metadata: {
-        ...metadata,
-        balanceBefore: currentBalance,
-        balanceAfter: currentBalance - requiredAmount,
-      },
+      return saved;
     });
-
-    const saved = await repo.save(deduction);
-    this.logger.log(
-      `Deducted ${requiredAmount} credits from user ${userId} (${transactionType}: ${description}). Remaining: ${currentBalance - requiredAmount}`,
-    );
-
-    return saved;
   }
 
   async consumeFeatureAccess(
@@ -275,5 +277,182 @@ export class CreditsService {
       { initial: true },
       manager,
     );
+  }
+
+  async getTaskCreditSpend(taskId: string, manager?: EntityManager): Promise<number> {
+    const repo = this.getRepo(manager);
+    const entries = await repo
+      .createQueryBuilder('ledger')
+      .where("ledger.metadata->>'taskId' = :taskId", { taskId })
+      .getMany();
+
+    let total = 0;
+    for (const e of entries) {
+      const status = (e.metadata as any)?.status;
+      if (status === 'RESERVED' || status === 'COMMITTED') {
+        total += Math.abs(Number((e.metadata as any)?.cost || e.amount));
+      }
+    }
+    return total;
+  }
+
+  private async runWithUserCreditLock<T>(
+    userId: string,
+    manager: EntityManager | undefined,
+    fn: (txManager?: EntityManager) => Promise<T>,
+  ): Promise<T> {
+    if (manager) {
+      return fn(manager);
+    }
+
+    const connection = (this.ledgerRepository as any)?.manager?.connection;
+    const isPostgres = connection?.options?.type === 'postgres';
+    if (isPostgres && typeof connection.transaction === 'function') {
+      return connection.transaction(async (txManager: EntityManager) => {
+        await txManager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+          `credits:user:${userId}`,
+        ]);
+        return fn(txManager);
+      });
+    }
+
+    return fn(undefined);
+  }
+
+  async reserveCredits(
+    userId: string,
+    cost: number,
+    taskId: string,
+    stepIndex: number,
+    manager?: EntityManager,
+  ): Promise<{ success: boolean; reservationKey: string; grantedVia: 'pro_pass' | 'credits' }> {
+    const requiredCost = Math.abs(cost);
+    const reservationKey = `res:${taskId}:${stepIndex}`;
+
+    if (requiredCost <= 0) {
+      return { success: true, reservationKey, grantedVia: 'credits' };
+    }
+
+    return this.runWithUserCreditLock(userId, manager, async (txManager) => {
+      if (await this.hasActivePro(userId, txManager)) {
+        return { success: true, reservationKey: `pro:${taskId}:${stepIndex}`, grantedVia: 'pro_pass' };
+      }
+
+      const maxTaskCredits = Number(process.env.AGENT_MAX_TASK_CREDITS || 6);
+      const currentTaskSpend = await this.getTaskCreditSpend(taskId, txManager);
+      if (currentTaskSpend + requiredCost > maxTaskCredits) {
+        throw new ForbiddenException(
+          `Task credit spending limit exceeded (${currentTaskSpend} spent/reserved, ${requiredCost} requested, max ${maxTaskCredits} per task).`,
+        );
+      }
+
+      const repo = this.getRepo(txManager);
+      const existing = await repo.findOne({ where: { idempotencyKey: reservationKey } });
+      if (existing) {
+        const status = (existing.metadata as any)?.status;
+        if (status === 'RESERVED' || status === 'COMMITTED') {
+          return { success: true, reservationKey, grantedVia: 'credits' };
+        }
+      }
+
+      const currentBalance = await this.getBalance(userId, txManager);
+      if (currentBalance < requiredCost) {
+        throw new ForbiddenException(
+          `Insufficient credit balance (${currentBalance} available, ${requiredCost} required). Please recharge your credits to continue.`,
+        );
+      }
+
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      const entry = repo.create({
+        userId,
+        amount: -requiredCost,
+        transactionType: 'agent_reservation',
+        idempotencyKey: reservationKey,
+        description: `Credit reservation for task ${taskId} step ${stepIndex}`,
+        metadata: {
+          status: 'RESERVED',
+          taskId,
+          stepIndex,
+          cost: requiredCost,
+          expiresAt: expiresAt.toISOString(),
+          balanceBefore: currentBalance,
+          balanceAfter: currentBalance - requiredCost,
+        },
+      });
+
+      await repo.save(entry);
+      return { success: true, reservationKey, grantedVia: 'credits' };
+    });
+  }
+
+  async commitReservation(idempotencyKey: string, manager?: EntityManager): Promise<CreditLedger | null> {
+    if (idempotencyKey.startsWith('pro:') || idempotencyKey.startsWith('free:')) {
+      return null;
+    }
+
+    const repo = this.getRepo(manager);
+    const entry = await repo.findOne({ where: { idempotencyKey } });
+    if (!entry) {
+      this.logger.warn(`Attempted to commit non-existent reservation: ${idempotencyKey}`);
+      return null;
+    }
+
+    const metadata = (entry.metadata || {}) as Record<string, any>;
+    metadata.status = 'COMMITTED';
+    metadata.committedAt = new Date().toISOString();
+    entry.metadata = metadata;
+    entry.transactionType = 'agent_task';
+    return repo.save(entry);
+  }
+
+  async releaseReservation(
+    idempotencyKey: string,
+    reason: string = 'Operation aborted or failed',
+    manager?: EntityManager,
+  ): Promise<CreditLedger | null> {
+    if (idempotencyKey.startsWith('pro:') || idempotencyKey.startsWith('free:')) {
+      return null;
+    }
+
+    const repo = this.getRepo(manager);
+    const entry = await repo.findOne({ where: { idempotencyKey } });
+    if (!entry) {
+      return null;
+    }
+
+    const metadata = (entry.metadata || {}) as Record<string, any>;
+    if (metadata.status === 'RELEASED' || metadata.status === 'COMMITTED') {
+      return entry;
+    }
+
+    entry.amount = 0;
+    metadata.status = 'RELEASED';
+    metadata.releasedAt = new Date().toISOString();
+    metadata.releaseReason = reason;
+    entry.metadata = metadata;
+    return repo.save(entry);
+  }
+
+  async releaseExpiredReservations(manager?: EntityManager): Promise<number> {
+    const repo = this.getRepo(manager);
+    const nowIso = new Date().toISOString();
+    const expiredEntries = await repo
+      .createQueryBuilder('ledger')
+      .where("ledger.transaction_type = 'agent_reservation'")
+      .andWhere("ledger.metadata->>'status' = 'RESERVED'")
+      .andWhere("ledger.metadata->>'expiresAt' < :nowIso", { nowIso })
+      .getMany();
+
+    for (const entry of expiredEntries) {
+      entry.amount = 0;
+      const metadata = (entry.metadata || {}) as Record<string, any>;
+      metadata.status = 'RELEASED';
+      metadata.releasedAt = nowIso;
+      metadata.releaseReason = 'Reservation expired';
+      entry.metadata = metadata;
+      await repo.save(entry);
+    }
+
+    return expiredEntries.length;
   }
 }

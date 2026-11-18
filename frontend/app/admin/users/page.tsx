@@ -22,6 +22,7 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [limit, setLimit] = useState(50);
 
   // Grant Credits Modal state
   const [selectedUser, setSelectedUser] = useState<AdminUserItem | null>(null);
@@ -29,14 +30,17 @@ export default function AdminUsersPage() {
   const [grantReason, setGrantReason] = useState('Customer Support Courtesy Grant');
   const [granting, setGranting] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const loadUsers = async () => {
+  const loadUsers = async (limitOverride?: number) => {
     setLoading(true);
+    setErrorMessage(null);
     try {
-      const data = await apiClient.getAdminUsers(search, roleFilter, 100);
+      const data = await apiClient.getAdminUsers(search, roleFilter, limitOverride ?? limit);
       setUsers(data);
     } catch (err) {
       logger.error('Failed to load users', err);
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to load users.');
     } finally {
       setLoading(false);
     }
@@ -46,6 +50,15 @@ export default function AdminUsersPage() {
     loadUsers();
   }, [roleFilter]);
 
+  useEffect(() => {
+    if (!selectedUser) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedUser(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedUser]);
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     loadUsers();
@@ -54,6 +67,7 @@ export default function AdminUsersPage() {
   const handleGrantCredits = async () => {
     if (!selectedUser || grantAmount <= 0) return;
     setGranting(true);
+    setErrorMessage(null);
     try {
       const res = await apiClient.grantUserCredits(selectedUser.id, grantAmount, grantReason);
       setToastMessage(`Granted ${grantAmount} credits to ${selectedUser.email}. New balance: ${res.newBalance}`);
@@ -61,7 +75,7 @@ export default function AdminUsersPage() {
       await loadUsers();
       setTimeout(() => setToastMessage(null), 4000);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to grant credits');
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to grant credits');
     } finally {
       setGranting(false);
     }
@@ -81,7 +95,8 @@ export default function AdminUsersPage() {
         </div>
 
         <button
-          onClick={loadUsers}
+          type="button"
+          onClick={() => void loadUsers()}
           disabled={loading}
           className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition shadow-2xs self-start"
         >
@@ -90,11 +105,17 @@ export default function AdminUsersPage() {
         </button>
       </div>
 
-      {/* Toast Notification */}
+      {/* Toast & Error Notifications */}
       {toastMessage && (
-        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-bold text-emerald-800 shadow-xs">
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 p-4 text-xs font-bold text-emerald-800 dark:text-emerald-200 shadow-xs">
           <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
           <span>{toastMessage}</span>
+        </div>
+      )}
+      {errorMessage && (
+        <div role="alert" className="flex items-center gap-2 rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 p-4 text-xs font-semibold text-rose-700 dark:text-rose-200 shadow-xs">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{errorMessage}</span>
         </div>
       )}
 
@@ -177,10 +198,18 @@ export default function AdminUsersPage() {
                 <th className="px-5 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {users.length === 0 ? (
+            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+              {loading ? (
+                [1, 2, 3, 4].map((n) => (
+                  <tr key={n}>
+                    <td colSpan={7} className="px-5 py-4">
+                      <div className="h-5 rounded bg-slate-100 dark:bg-zinc-800 animate-pulse" />
+                    </td>
+                  </tr>
+                ))
+              ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center text-slate-400">
+                  <td colSpan={7} className="px-5 py-12 text-center text-slate-500 dark:text-zinc-400">
                     No users matched your query.
                   </td>
                 </tr>
@@ -262,23 +291,50 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
+      {/* Load More Pagination (FN-47) */}
+      {users.length >= limit && (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={() => {
+              const nextLimit = limit + 50;
+              setLimit(nextLimit);
+              void loadUsers(nextLimit);
+            }}
+            className="rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-800 transition cursor-pointer"
+          >
+            Load More Users ({users.length} loaded)
+          </button>
+        </div>
+      )}
+
       {/* GRANT CREDITS MODAL */}
       {selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="grant-credits-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedUser(null);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-[#14171C] p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-zinc-800">
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
                   <Coins className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">Grant Bonus Credits</h3>
-                  <p className="text-[11px] text-slate-400">Recipient: {selectedUser.email}</p>
+                  <h3 id="grant-credits-modal-title" className="text-sm font-bold text-slate-900 dark:text-zinc-100">Grant Bonus Credits</h3>
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-400">Recipient: {selectedUser.email}</p>
                 </div>
               </div>
               <button
+                type="button"
+                aria-label="Close grant credits modal"
                 onClick={() => setSelectedUser(null)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -286,7 +342,7 @@ export default function AdminUsersPage() {
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                <label htmlFor="admin-grant-amount" className="text-xs font-semibold text-slate-700 dark:text-zinc-300 block mb-1">
                   Credit Amount
                 </label>
                 <div className="grid grid-cols-4 gap-2 mb-2">
@@ -295,10 +351,10 @@ export default function AdminUsersPage() {
                       key={amt}
                       type="button"
                       onClick={() => setGrantAmount(amt)}
-                      className={`rounded-lg py-1.5 text-xs font-bold transition border ${
+                      className={`rounded-lg py-1.5 text-xs font-bold transition border cursor-pointer ${
                         grantAmount === amt
                           ? 'bg-[#285FEA] text-white border-blue-600 shadow-xs'
-                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                          : 'bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-700'
                       }`}
                     >
                       +{amt}
@@ -306,23 +362,25 @@ export default function AdminUsersPage() {
                   ))}
                 </div>
                 <input
+                  id="admin-grant-amount"
                   type="number"
                   min="1"
                   value={grantAmount}
                   onChange={(e) => setGrantAmount(Number(e.target.value))}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className="w-full rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-xs text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                <label htmlFor="admin-grant-reason" className="text-xs font-semibold text-slate-700 dark:text-zinc-300 block mb-1">
                   Reason / Internal Note
                 </label>
                 <input
+                  id="admin-grant-reason"
                   type="text"
                   value={grantReason}
                   onChange={(e) => setGrantReason(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className="w-full rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-xs text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                   placeholder="e.g. Courtesy test grant"
                 />
               </div>

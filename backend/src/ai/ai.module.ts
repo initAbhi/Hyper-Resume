@@ -12,6 +12,6 @@ import { CreditsModule } from '../credits/credits.module.js';
   imports: [ConfigModule, AuthModule, CreditsModule],
   controllers: [AiController],
   providers: [MockAiProvider, GeminiAiProvider, GeminiInterviewProvider, AiService],
-  exports: [AiService, GeminiInterviewProvider],
+  exports: [AiService, GeminiInterviewProvider, GeminiAiProvider],
 })
-export class AiModule {}
+export class AiModule { }

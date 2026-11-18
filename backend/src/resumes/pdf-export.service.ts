@@ -49,7 +49,10 @@ export class PdfExportService implements OnModuleDestroy {
   async onModuleDestroy(): Promise<void> {
     if (this.browser) {
       try {
-        await this.browser.close();
+        await Promise.race([
+          this.browser.close(),
+          new Promise((resolve) => setTimeout(resolve, 3000)),
+        ]);
       } catch {
         // Ignore shutdown errors
       }
@@ -117,7 +120,8 @@ export class PdfExportService implements OnModuleDestroy {
     const safeHtmlClass = (dto.htmlClassName || '').replace(/[^a-zA-Z0-9_\-\s]/g, '').replace(/\bdark\b/g, '');
     const safeRootStyle = (dto.rootStyle || '')
       .replace(/<\/?[a-z][^>]*>/gi, '')
-      .replace(/url\s*\([^)]*\)/gi, '');
+      .replace(/url\s*\([^)]*\)/gi, '')
+      .replace(/["'<>\\]/g, '');
 
     const frontendOrigin = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
 
@@ -156,7 +160,8 @@ ${styles}
       display: none !important;
     }
 
-    #resume-document-print {
+    #resume-document-print,
+    #recruiter-resume-print {
       width: ${pageWidthMm} !important;
       max-width: ${pageWidthMm} !important;
       margin: 0 auto !important;
@@ -164,6 +169,16 @@ ${styles}
       background: #ffffff !important;
       border: none !important;
       box-shadow: none !important;
+    }
+
+    #resume-document-print header,
+    #resume-document-print footer,
+    #resume-document-print aside,
+    #recruiter-resume-print header,
+    #recruiter-resume-print footer,
+    #recruiter-resume-print aside {
+      display: block !important;
+      visibility: visible !important;
     }
 
     /* Single-flow templates: remove artificial gap and allow clean multi-page flow */
@@ -188,12 +203,13 @@ ${styles}
       box-decoration-break: clone;
     }
 
-    /* Explicit 2-page templates keep fixed page bounds and footer alignment */
+    /* Explicit 2-page templates allow overflow to flow naturally instead of clipping bullets */
     #resume-page-1,
     #resume-page-2 {
-      height: ${pageHeightMm} !important;
-      max-height: ${pageHeightMm} !important;
-      overflow: hidden !important;
+      min-height: ${pageHeightMm} !important;
+      height: auto !important;
+      max-height: none !important;
+      overflow: visible !important;
       justify-content: space-between !important;
       page-break-after: always !important;
       break-after: page !important;
@@ -283,21 +299,30 @@ ${html}
       if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
         return false;
       }
-      const host = parsed.hostname.toLowerCase();
+      const host = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
       const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
       const allowedFrontendHost = new URL(frontendUrl).hostname.toLowerCase();
 
-      // Permit local frontend static fonts/assets, block other private/metadata IP SSRF targets
+      // Permit local frontend static fonts/assets, block other private/metadata/numeric IP SSRF targets
       if (host === allowedFrontendHost || host === 'localhost' || host === '127.0.0.1') {
         return parsed.port === '' || parsed.port === '3000' || parsed.port === '3082';
       }
       if (
         host === 'metadata.google.internal' ||
+        host === '0.0.0.0' ||
+        host === '::' ||
+        host === '::1' ||
+        host.startsWith('::ffff:') ||
+        host.startsWith('fe80:') ||
+        host.startsWith('fc') ||
+        host.startsWith('fd') ||
+        host.startsWith('127.') ||
+        host.startsWith('0.') ||
         host.startsWith('169.254.') ||
         host.startsWith('10.') ||
         host.startsWith('192.168.') ||
         /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
-        host === '[::1]'
+        /^(\d+|0x[0-9a-f]+)$/.test(host)
       ) {
         return false;
       }

@@ -43,7 +43,12 @@ export function SampleResumeModal({
 
   // Close on Escape key
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      setIsCloning(false);
+      setCloningMode(null);
+      setCloneError(null);
+      return;
+    }
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
@@ -62,6 +67,12 @@ export function SampleResumeModal({
 
   if (!isOpen || !resume) return null;
 
+  const toSafeUrl = (raw?: string) => {
+    const trimmed = (raw || '').trim();
+    if (!trimmed) return undefined;
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  };
+
   const modalTemplateKey = getSampleTemplateKey(resume);
   const sampleContent: ResumeContent = {
     contact: {
@@ -69,9 +80,9 @@ export function SampleResumeModal({
       email: resume.candidate.email,
       phone: resume.candidate.phone,
       location: resume.candidate.location,
-      linkedinUrl: resume.candidate.linkedin ? `https://${resume.candidate.linkedin}` : undefined,
-      githubUrl: resume.candidate.github ? `https://${resume.candidate.github}` : undefined,
-      websiteUrl: resume.candidate.portfolio ? `https://${resume.candidate.portfolio}` : undefined,
+      linkedinUrl: toSafeUrl(resume.candidate.linkedin),
+      githubUrl: toSafeUrl(resume.candidate.github),
+      websiteUrl: toSafeUrl(resume.candidate.portfolio),
     },
     headline: resume.role,
     summary: resume.summary,
@@ -100,16 +111,16 @@ export function SampleResumeModal({
       name: proj.name,
       description: proj.description,
       highlights: proj.highlights,
-      url: proj.url,
+      url: toSafeUrl(proj.url),
     })),
     certifications: resume.certifications?.map((cert) => ({
       name: cert,
-      issuer: resume.company,
+      issuer: '',
     })),
     layout: {
       accentColor: resume.brandColor || '#285FEA',
-      fontFamily: modalTemplateKey === 'ivy-league' ? 'serif' : 'sans',
-      pageMargin: 16,
+      fontFamily: modalTemplateKey === 'ivy-league' || modalTemplateKey === 'jake-ats' ? 'serif' : 'sans',
+      pageMargin: 32,
       fontSizeScale: 1,
       lineHeight: 1.4,
     },
@@ -161,12 +172,12 @@ export function SampleResumeModal({
       })),
       certifications: resume.certifications?.map((cert) => ({
         name: cert,
-        issuer: resume.company,
+        issuer: '',
       })),
       layout: {
         accentColor: resume.brandColor || '#285FEA',
-        fontFamily: templateKey === 'ivy-league' ? 'serif' : 'sans',
-        pageMargin: 16,
+        fontFamily: templateKey === 'ivy-league' || templateKey === 'jake-ats' ? 'serif' : 'sans',
+        pageMargin: 32,
         fontSizeScale: 1,
         lineHeight: 1.4,
       },
@@ -190,20 +201,44 @@ export function SampleResumeModal({
     }
 
     try {
+      const baseName = `${resume.company} - ${resume.role} (Full Template)`;
+      let uniqueName = baseName;
+      try {
+        const existing = await apiClient.listResumes();
+        const existingNames = new Set(
+          (Array.isArray(existing) ? existing : []).map((r) => (r.name || '').trim().toLowerCase()),
+        );
+        if (existingNames.has(baseName.toLowerCase())) {
+          let counter = 2;
+          while (existingNames.has(`${baseName} (${counter})`.toLowerCase())) {
+            counter += 1;
+          }
+          uniqueName = `${baseName} (${counter})`;
+        }
+      } catch {
+        // Proceed with baseName
+      }
+
       const created = await apiClient.createResume({
-        name: `${resume.company} - ${resume.role} (Full Template)`,
+        name: uniqueName,
         targetRole: resume.role,
         targetCompany: resume.company,
         templateKey,
         content: resumeContent,
       });
 
+      setIsCloning(false);
+      setCloningMode(null);
+      onClose();
       router.push(`/app/resumes/${created.id}`);
     } catch (err: unknown) {
       logger.error('Failed to clone full resume template', err);
       setCloneError(
         err instanceof Error ? err.message : 'Failed to clone resume into your workspace. Please try again.'
       );
+      setIsCloning(false);
+      setCloningMode(null);
+    } finally {
       setIsCloning(false);
       setCloningMode(null);
     }
@@ -299,12 +334,18 @@ export function SampleResumeModal({
         content: starterContent,
       });
 
+      setIsCloning(false);
+      setCloningMode(null);
+      onClose();
       router.push(`/app/resumes/${created.id}`);
     } catch (err: unknown) {
       logger.error('Failed to create starter template', err);
       setCloneError(
         err instanceof Error ? err.message : 'Failed to create starter template. Please try again.'
       );
+      setIsCloning(false);
+      setCloningMode(null);
+    } finally {
       setIsCloning(false);
       setCloningMode(null);
     }
@@ -547,7 +588,7 @@ export function SampleResumeModal({
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
                 <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-                  Verified ATS Benchmark ({resume.resumeStyle} &bull; {modalTemplateKey})
+                  Verified ATS Benchmark &bull; Template: {modalTemplateKey}
                 </span>
               </div>
               <span className="text-zinc-400 italic">
@@ -562,7 +603,7 @@ export function SampleResumeModal({
                 content={sampleContent}
                 accentColor={resume.brandColor || '#285FEA'}
                 fontFamily={modalTemplateKey === 'ivy-league' ? 'serif' : 'sans'}
-                showPhoto={false}
+                showPhoto={true}
                 showHighlights={false}
               />
             </div>

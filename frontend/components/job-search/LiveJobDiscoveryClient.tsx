@@ -7,6 +7,7 @@ import {
   ArrowUpRight,
   Bookmark,
   BookmarkCheck,
+  Bot,
   Briefcase,
   Building2,
   CheckCircle2,
@@ -31,6 +32,8 @@ import {
   formatRelativePostedDate,
   normalizeBoardSlugInput,
 } from '@/lib/job-discovery-utils';
+import { useOptionalGlobalAgent } from '@/lib/global-agent-context';
+import { useAuth } from '@/lib/auth-context';
 
 type SourceOption = 'all' | 'greenhouse' | 'ashby' | 'lever' | 'remotive' | 'arbeitnow';
 type WorkplaceOption = 'all' | 'remote' | 'hybrid' | 'onsite';
@@ -45,6 +48,9 @@ interface ActiveMatchBanner {
 export default function LiveJobDiscoveryClient() {
   const uid = useId();
   const initializedRef = useRef(false);
+  const globalAgent = useOptionalGlobalAgent();
+  const { refreshUser } = useAuth();
+  const [visibleCount, setVisibleCount] = useState(20);
 
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [boards, setBoards] = useState<CuratedAtsBoard[]>([]);
@@ -72,6 +78,45 @@ export default function LiveJobDiscoveryClient() {
   const [recentMatchBanner, setRecentMatchBanner] = useState<ActiveMatchBanner | null>(null);
   const [statusMessage, setStatusMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Sync selected resume into shared Global Agent Context
+  useEffect(() => {
+    if (!globalAgent || !selectedResumeId) return;
+    const activeResume = resumes.find((r) => r.id === selectedResumeId);
+    globalAgent.updateContext({
+      activeResumeId: selectedResumeId,
+      activeResumeName: activeResume?.name,
+    });
+  }, [globalAgent, selectedResumeId, resumes]);
+
+  const handleAskAgentToMatch = useCallback(
+    (job: DiscoveredJobItem) => {
+      if (!globalAgent) return;
+      const activeResume = resumes.find((r) => r.id === selectedResumeId);
+      const normalizedWorkplace =
+        job.workplaceType === 'Remote' ||
+        job.workplaceType === 'Hybrid' ||
+        job.workplaceType === 'Onsite'
+          ? job.workplaceType
+          : undefined;
+      globalAgent.launchPrompt({
+        prompt: `Analyze "${job.title}" at ${job.company} against my active resume and tell me how well I match, including key skill gaps.`,
+        autoSubmit: true,
+        context: {
+          activeResumeId: selectedResumeId || undefined,
+          activeResumeName: activeResume?.name,
+          activeJobId: job.id,
+          jobTitle: job.title,
+          companyName: job.company,
+          location: job.location,
+          workplace: normalizedWorkplace,
+          applyUrl: job.applyUrl,
+          jobDescriptionText: job.descriptionText || job.snippet,
+        },
+      });
+    },
+    [globalAgent, resumes, selectedResumeId],
+  );
 
   const executeSearch = useCallback(
     async (overrides?: {
@@ -108,6 +153,7 @@ export default function LiveJobDiscoveryClient() {
         });
 
         setJobs(data.jobs);
+        setVisibleCount(20);
         setTotalMatches(data.total);
         setLiveCount(data.liveCount);
         setSourcesStatus(data.sourcesStatus);
@@ -260,6 +306,7 @@ export default function LiveJobDiscoveryClient() {
         company: job.company,
         match: res.match,
       });
+      void refreshUser().catch(() => {});
       setStatusMessage(
         `Completed verified match analysis for ${job.title} at ${job.company}: ${res.match.score}% overall fit.`,
       );
@@ -339,7 +386,7 @@ export default function LiveJobDiscoveryClient() {
             </span>
           ))}
           {fetchedAt && (
-            <span className="text-[#848D9A] ml-auto">
+            <span className="text-[#5A6270] dark:text-[#9EA7B4] ml-auto">
               Synced {new Date(fetchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
           )}
@@ -546,7 +593,7 @@ export default function LiveJobDiscoveryClient() {
           {/* Quick Direct ATS Board Chips */}
           {boards.length > 0 && (
             <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-[#F1F3F5] dark:border-[#252A33]">
-              <span className="text-[11px] font-medium text-[#848D9A] mr-1">
+              <span className="text-[11px] font-medium text-[#5A6270] dark:text-[#9EA7B4] mr-1">
                 Direct ATS Lookup:
               </span>
               {boards.map((board) => {
@@ -640,7 +687,20 @@ export default function LiveJobDiscoveryClient() {
 
       {/* Jobs Result List */}
       <div className="space-y-3">
-        {!isLoading && jobs.length === 0 ? (
+        {isLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3, 4].map((n) => (
+              <div
+                key={n}
+                className="rounded-xl border border-[#E2E5E9] dark:border-[#252A33] bg-white dark:bg-[#14171C] p-5 space-y-3 animate-pulse"
+              >
+                <div className="h-4 w-1/3 rounded bg-[#E2E5E9] dark:bg-[#252A33]" />
+                <div className="h-3 w-1/2 rounded bg-[#F1F3F5] dark:bg-[#1D2128]" />
+                <div className="h-3 w-full rounded bg-[#F1F3F5] dark:bg-[#1D2128]" />
+              </div>
+            ))}
+          </div>
+        ) : jobs.length === 0 ? (
           <div className="rounded-xl border border-dashed border-[#CBD0D7] dark:border-[#333945] bg-white dark:bg-[#14171C] p-10 text-center space-y-2.5">
             <p className="text-sm font-semibold text-[#1A1D23] dark:text-[#F0F2F5]">
               No openings matched your current filters
@@ -655,14 +715,22 @@ export default function LiveJobDiscoveryClient() {
               onClick={() => {
                 setSearchQuery('');
                 setWorkplaceFilter('all');
-                void handleClearBoardFilter();
+                setBoardTokenInput('');
+                setSourceFilter('all');
+                void executeSearch({
+                  q: '',
+                  workplace: 'all',
+                  boardToken: '',
+                  source: 'all',
+                });
               }}
             >
               Clear All Filters
             </Button>
           </div>
         ) : (
-          jobs.map((job) => {
+          <>
+          {jobs.slice(0, visibleCount).map((job) => {
             const fit = classifyMatchTier(job.matchScore);
             const matchedSet = new Set(
               (job.matchedSkills || []).map((s) => s.toLowerCase()),
@@ -692,11 +760,11 @@ export default function LiveJobDiscoveryClient() {
 
                     <div className="flex items-center gap-3 text-xs text-[#5A6270] dark:text-[#9EA7B4] flex-wrap">
                       <span className="font-semibold text-[#1A1D23] dark:text-[#F0F2F5] inline-flex items-center gap-1">
-                        <Building2 className="w-3.5 h-3.5 text-[#848D9A]" aria-hidden="true" />
+                        <Building2 className="w-3.5 h-3.5 text-[#5A6270] dark:text-[#9EA7B4]" aria-hidden="true" />
                         {job.company}
                       </span>
                       <span className="inline-flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5 text-[#848D9A]" aria-hidden="true" />
+                        <MapPin className="w-3.5 h-3.5 text-[#5A6270] dark:text-[#9EA7B4]" aria-hidden="true" />
                         {job.location}
                       </span>
                       <span>&middot; {formatRelativePostedDate(job.postedAt)}</span>
@@ -789,6 +857,20 @@ export default function LiveJobDiscoveryClient() {
                         <span>Match CV</span>
                       </Button>
 
+                      {globalAgent && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          data-testid="ask-agent-match-btn"
+                          onClick={() => handleAskAgentToMatch(job)}
+                          className="h-8 text-xs gap-1 border-blue-200 dark:border-blue-800 text-[#285FEA] dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                        >
+                          <Bot className="w-3.5 h-3.5" aria-hidden="true" />
+                          <span>Ask Agent to Match</span>
+                        </Button>
+                      )}
+
                       <a
                         href={job.applyUrl}
                         target="_blank"
@@ -817,7 +899,7 @@ export default function LiveJobDiscoveryClient() {
                           : 'Strong baseline coverage'}
                       </span>
                       <Link
-                        href={`/app/match`}
+                        href={`/app/match?role=${encodeURIComponent(job.title)}&company=${encodeURIComponent(job.company)}${selectedResumeId ? `&resumeId=${selectedResumeId}` : ''}`}
                         className="inline-flex items-center gap-1 text-[#285FEA] font-medium hover:underline"
                       >
                         <span>Open Match Workspace</span>
@@ -828,7 +910,20 @@ export default function LiveJobDiscoveryClient() {
                 </details>
               </article>
             );
-          })
+          })}
+          {jobs.length > visibleCount && (
+            <div className="flex justify-center pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setVisibleCount((c) => c + 20)}
+              >
+                Load More Openings ({Math.min(visibleCount, jobs.length)} of {jobs.length})
+              </Button>
+            </div>
+          )}
+          </>
         )}
       </div>
     </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect, useRef, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
@@ -17,7 +17,10 @@ import {
   Award,
   ChevronRight,
   ShieldCheck,
-  Check
+  Check,
+  Pause,
+  Play,
+  XCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -48,8 +51,12 @@ export default function ActiveInterviewStudioPage({ params }: PageProps) {
   // Input & Timer state
   const [candidateAnswer, setCandidateAnswer] = useState<string>('');
   const [timeTakenSeconds, setTimeTakenSeconds] = useState<number>(0);
+  const [isPaused, setIsPaused] = useState<boolean>(false);
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [speechSupported, setSpeechSupported] = useState<boolean>(false);
+  const [confirmAbandon, setConfirmAbandon] = useState<boolean>(false);
+  const [isAbandoning, setIsAbandoning] = useState<boolean>(false);
+  const recognitionRef = useRef<any>(null);
 
   // Follow-up state
   const [followUpAnswer, setFollowUpAnswer] = useState<string>('');
@@ -68,21 +75,29 @@ export default function ActiveInterviewStudioPage({ params }: PageProps) {
 
   // 2. Timer Loop
   useEffect(() => {
-    if (!session || session.status !== 'in_progress' || activeTurn) return;
+    if (!session || session.status !== 'in_progress' || activeTurn || isPaused) return;
 
     const interval = setInterval(() => {
       setTimeTakenSeconds((prev) => prev + 1);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [session, activeTurn]);
+  }, [session, activeTurn, isPaused]);
 
-  // 3. Web Speech API Initialization
+  // 3. Web Speech API Initialization & cleanup on unmount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const hasSpeech = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
       setSpeechSupported(hasSpeech);
     }
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {}
+        recognitionRef.current = null;
+      }
+    };
   }, []);
 
   async function loadSession() {
@@ -99,9 +114,12 @@ export default function ActiveInterviewStudioPage({ params }: PageProps) {
         return;
       }
 
-      // Find current active question
+      // Find current active question (prevent looping back to Q1 when all questions answered — FN-36)
       const currIdx = data.session.currentQuestionIndex;
-      const currentQ = data.questions.find((q) => q.orderIndex === currIdx) || data.questions[0];
+      const sortedQs = [...data.questions].sort((a, b) => a.orderIndex - b.orderIndex);
+      const currentQ =
+        sortedQs.find((q) => q.orderIndex === currIdx) ||
+        (currIdx >= sortedQs.length ? sortedQs[sortedQs.length - 1] : sortedQs[0]);
       setActiveQuestion(currentQ || null);
 
       // Check if current question already has an evaluated turn
@@ -114,12 +132,22 @@ export default function ActiveInterviewStudioPage({ params }: PageProps) {
     }
   }
 
-  // Speech Recognition Toggle
+  function stopSpeechRecording() {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+      recognitionRef.current = null;
+    }
+    setIsRecording(false);
+  }
+
+  // Speech Recognition Toggle (FN-36: properly stops ref & appends only finalized segments)
   function toggleSpeechRecording() {
     if (!speechSupported) return;
 
     if (isRecording) {
-      setIsRecording(false);
+      stopSpeechRecording();
       return;
     }
 
@@ -132,19 +160,32 @@ export default function ActiveInterviewStudioPage({ params }: PageProps) {
       recognition.lang = 'en-US';
 
       recognition.onstart = () => setIsRecording(true);
-      recognition.onend = () => setIsRecording(false);
-      recognition.onerror = () => setIsRecording(false);
-
-      recognition.onresult = (event: any) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          transcript += event.results[i][0].transcript;
-        }
-        setCandidateAnswer((prev) => (prev ? `${prev} ${transcript}` : transcript).slice(0, 1500));
+      recognition.onend = () => {
+        recognitionRef.current = null;
+        setIsRecording(false);
+      };
+      recognition.onerror = () => {
+        recognitionRef.current = null;
+        setIsRecording(false);
       };
 
+      recognition.onresult = (event: any) => {
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          }
+        }
+        const cleaned = finalTranscript.trim();
+        if (cleaned) {
+          setCandidateAnswer((prev) => (prev ? `${prev} ${cleaned}` : cleaned).slice(0, 1500));
+        }
+      };
+
+      recognitionRef.current = recognition;
       recognition.start();
     } catch {
+      recognitionRef.current = null;
       setIsRecording(false);
     }
   }
@@ -158,7 +199,7 @@ export default function ActiveInterviewStudioPage({ params }: PageProps) {
 
     setIsSubmitting(true);
     setErrorMsg(null);
-    if (isRecording) setIsRecording(false);
+    stopSpeechRecording();
 
     try {
       const turn = await apiClient.submitInterviewAnswer(sessionId, {
@@ -201,11 +242,25 @@ export default function ActiveInterviewStudioPage({ params }: PageProps) {
     }
   }
 
-  async function handleNextQuestion() {
-    if (!session) return;
+  async function handleAbandonSession() {
+    setIsAbandoning(true);
+    setErrorMsg(null);
+    stopSpeechRecording();
+    try {
+      await apiClient.abandonInterviewSession(sessionId);
+      router.push('/app/interview');
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Failed to abandon interview session.');
+      setIsAbandoning(false);
+      setConfirmAbandon(false);
+    }
+  }
 
-    // Check if this was the last question
-    const nextIdx = (session.currentQuestionIndex || 0) + 1;
+  async function handleNextQuestion() {
+    if (!session || !activeQuestion) return;
+
+    // Check if this was the last question (use activeQuestion.orderIndex to avoid stale index — FN-36)
+    const nextIdx = activeQuestion.orderIndex + 1;
     if (nextIdx >= session.totalQuestions) {
       handleFinishSession();
       return;
@@ -301,7 +356,48 @@ export default function ActiveInterviewStudioPage({ params }: PageProps) {
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted text-xs font-mono font-semibold text-foreground border border-border">
             <Clock className="w-3.5 h-3.5 text-muted-foreground" />
             <span>{formatTime(timeTakenSeconds)}</span>
+            {!activeTurn && (
+              <button
+                type="button"
+                aria-label={isPaused ? 'Resume timer' : 'Pause timer'}
+                title={isPaused ? 'Resume timer' : 'Pause timer'}
+                onClick={() => setIsPaused((p) => !p)}
+                className="ml-1 p-0.5 rounded hover:bg-background text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                {isPaused ? <Play className="w-3 h-3" /> : <Pause className="w-3 h-3" />}
+              </button>
+            )}
           </div>
+
+          {confirmAbandon ? (
+            <div className="inline-flex items-center gap-1">
+              <button
+                type="button"
+                disabled={isAbandoning}
+                onClick={handleAbandonSession}
+                className="px-2 py-1 text-[11px] font-semibold rounded bg-rose-600 text-white hover:bg-rose-700 cursor-pointer"
+              >
+                {isAbandoning ? 'Ending...' : 'End Session'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmAbandon(false)}
+                className="px-2 py-1 text-[11px] rounded border border-border text-muted-foreground cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmAbandon(true)}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border text-xs text-muted-foreground hover:text-rose-600 hover:border-rose-300 transition-colors cursor-pointer"
+              title="Abandon session"
+            >
+              <XCircle className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Abandon</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -337,7 +433,7 @@ export default function ActiveInterviewStudioPage({ params }: PageProps) {
         /* Unanswered: Response Editor */
         <Card className="p-5 border-border bg-card space-y-4 shadow-xs">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-medium text-foreground">
+            <label htmlFor="interview-candidate-answer" className="text-xs font-medium text-foreground">
               Your Response (STAR or Technical Architecture)
             </label>
 
@@ -364,6 +460,7 @@ export default function ActiveInterviewStudioPage({ params }: PageProps) {
           </div>
 
           <textarea
+            id="interview-candidate-answer"
             value={candidateAnswer}
             onChange={(e) => setCandidateAnswer(e.target.value.slice(0, 1500))}
             placeholder="Type your response here... Structure your answer with clear context, specific actions you took, and measurable results or architectural trade-offs."
@@ -491,7 +588,9 @@ export default function ActiveInterviewStudioPage({ params }: PageProps) {
             {/* Completed Follow-up Notes */}
             {activeTurn.followUpAnswer && (
               <div className="p-3 rounded-lg bg-muted/40 border border-border text-xs space-y-1">
-                <div className="font-semibold text-foreground">Follow-Up Answered (Score: {activeTurn.followUpScore || 80}/100)</div>
+                <div className="font-semibold text-foreground">
+                  Follow-Up Answered (Score: {activeTurn.followUpScore ?? 0}/100)
+                </div>
                 <div className="text-muted-foreground italic">&ldquo;{activeTurn.followUpAnswer}&rdquo;</div>
               </div>
             )}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   X,
   Upload,
@@ -30,32 +30,74 @@ export function PhotoUploadModal({
   const [activeTab, setActiveTab] = useState<'upload' | 'link'>('upload');
   const [urlInput, setUrlInput] = useState(photoUrl || '');
   const [previewError, setPreviewError] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  useEffect(() => {
+    setUrlInput(photoUrl || '');
+    setUploadError(null);
+  }, [photoUrl, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
-  const handleFileSelect = (file: File) => {
+  const compressImageToDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Could not read the selected image file.'));
+      reader.onload = () => {
+        const src = reader.result as string;
+        const img = new Image();
+        img.onerror = () => reject(new Error('Unsupported or corrupted image file.'));
+        img.onload = () => {
+          const maxDim = 300;
+          const scale = Math.min(1, maxDim / Math.max(img.width || 1, img.height || 1));
+          const targetW = Math.max(1, Math.round(img.width * scale));
+          const targetH = Math.max(1, Math.round(img.height * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = targetW;
+          canvas.height = targetH;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(src);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, targetW, targetH);
+          resolve(canvas.toDataURL('image/jpeg', 0.82));
+        };
+        img.src = src;
+      };
+      reader.readAsDataURL(file);
+    });
+
+  const handleFileSelect = async (file: File) => {
+    setUploadError(null);
     if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file (PNG, JPG, WEBP).');
+      setUploadError('Please upload an image file (PNG, JPG, or WEBP).');
       return;
     }
-    // Max 5MB
     if (file.size > 5 * 1024 * 1024) {
-      alert('Image size should be under 5MB.');
+      setUploadError('Image size must be under 5MB.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      if (dataUrl) {
-        setUrlInput(dataUrl);
-        setPreviewError(false);
-        onPhotoChange(dataUrl, true);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressedDataUrl = await compressImageToDataUrl(file);
+      setUrlInput(compressedDataUrl);
+      setPreviewError(false);
+      onPhotoChange(compressedDataUrl, true);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Unable to process image.');
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -69,9 +111,23 @@ export function PhotoUploadModal({
   const handleApplyUrl = () => {
     const trimmed = urlInput.trim();
     if (!trimmed) {
+      setUploadError(null);
       onPhotoChange('', showPhoto);
       return;
     }
+    const isSafeDataImage = /^data:image\/(png|jpeg|jpg|webp|gif);base64,/i.test(trimmed);
+    let isSafeHttp = false;
+    try {
+      const parsed = new URL(trimmed);
+      isSafeHttp = parsed.protocol === 'https:' || parsed.protocol === 'http:';
+    } catch {
+      isSafeHttp = false;
+    }
+    if (!isSafeDataImage && !isSafeHttp) {
+      setUploadError('Please enter a valid http(s) image URL.');
+      return;
+    }
+    setUploadError(null);
     setPreviewError(false);
     onPhotoChange(trimmed, true);
   };
@@ -209,8 +265,9 @@ export function PhotoUploadModal({
                 className="hidden"
                 onChange={(e) => {
                   if (e.target.files && e.target.files[0]) {
-                    handleFileSelect(e.target.files[0]);
+                    void handleFileSelect(e.target.files[0]);
                   }
+                  e.target.value = '';
                 }}
               />
 
@@ -235,9 +292,15 @@ export function PhotoUploadModal({
                   Click to browse or drag and drop
                 </p>
                 <p className="text-[11px] text-zinc-500 mt-1">
-                  PNG, JPG, or WEBP up to 5MB
+                  PNG, JPG, or WEBP up to 5MB (auto-optimized for fast PDF export)
                 </p>
               </div>
+              {uploadError && (
+                <div className="flex items-center gap-1.5 text-[11px] text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 p-2 rounded-lg border border-rose-200 dark:border-rose-900">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{uploadError}</span>
+                </div>
+              )}
             </div>
           )}
 

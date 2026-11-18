@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { apiClient, AdminPaymentSettings } from '@/lib/api-client';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -35,8 +36,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const [paymentSettings, setPaymentSettings] = useState<AdminPaymentSettings | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [switchingMode, setSwitchingMode] = useState(false);
+  const [confirmLiveSwitch, setConfirmLiveSwitch] = useState(false);
+  const [modeError, setModeError] = useState<string | null>(null);
 
   // Authentication check
   useEffect(() => {
@@ -54,36 +56,39 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [isAuthenticated, user]);
 
-  const handleQuickToggleMode = async () => {
+  const executeToggleMode = async (nextMode: 'test_mode' | 'live_mode') => {
     if (!paymentSettings || switchingMode) return;
-    const nextMode = paymentSettings.mode === 'test_mode' ? 'live_mode' : 'test_mode';
-    if (nextMode === 'live_mode') {
-      const confirmed = window.confirm(
-        '⚠️ Switch Payment Gateway to LIVE PRODUCTION?\n\nReal customer credit cards and UPI accounts will be charged real money.',
-      );
-      if (!confirmed) return;
-    }
-
     setSwitchingMode(true);
+    setModeError(null);
+    setConfirmLiveSwitch(false);
     try {
       const updated = await apiClient.updateAdminPaymentMode(nextMode);
       setPaymentSettings(updated);
-      window.location.reload();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to switch payment mode');
+      setModeError(err instanceof Error ? err.message : 'Failed to switch payment mode');
     } finally {
       setSwitchingMode(false);
     }
   };
 
+  const handleQuickToggleMode = () => {
+    if (!paymentSettings || switchingMode) return;
+    const nextMode = paymentSettings.mode === 'test_mode' ? 'live_mode' : 'test_mode';
+    if (nextMode === 'live_mode') {
+      setConfirmLiveSwitch(true);
+      return;
+    }
+    void executeToggleMode(nextMode);
+  };
+
   if (authLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC]">
+      <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC] dark:bg-[#0D1015]">
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 rounded-xl bg-[#285FEA] animate-pulse flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-blue-500/20">
             H
           </div>
-          <p className="text-xs text-slate-500 font-medium">Loading HypeResume Admin Suite...</p>
+          <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Loading HypeResume Admin Suite...</p>
         </div>
       </div>
     );
@@ -92,13 +97,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // Unauthorized view
   if (!user || user.role !== 'admin') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC] p-4">
-        <div className="w-full max-w-md rounded-2xl border border-red-200 bg-white p-8 text-center shadow-xl">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+      <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC] dark:bg-[#0D1015] p-4">
+        <div className="w-full max-w-md rounded-2xl border border-red-200 dark:border-red-900 bg-white dark:bg-[#14171C] p-8 text-center shadow-xl">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400">
             <ShieldAlert className="h-7 w-7" />
           </div>
-          <h1 className="text-xl font-bold text-slate-900">403 - Administrator Access Required</h1>
-          <p className="mt-2 text-sm text-slate-600">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-50">403 - Administrator Access Required</h1>
+          <p className="mt-2 text-sm text-slate-600 dark:text-zinc-400">
             This administrative console is restricted to system administrators. Your account ({user?.email || 'Guest'}) does not have permission.
           </p>
           <div className="mt-6 flex flex-col gap-3">
@@ -110,7 +115,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </Link>
             <Link
               href="/login"
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 dark:border-zinc-700 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-800 transition"
             >
               Sign in with Admin Account
             </Link>
@@ -161,7 +166,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#F8FAFC] text-slate-900 font-sans antialiased">
+    <div className="flex h-screen overflow-hidden bg-[#F8FAFC] dark:bg-[#0D1015] text-slate-900 dark:text-zinc-100 font-sans antialiased">
       {/* Mobile Sidebar Overlay */}
       {isMobileSidebarOpen && (
         <div
@@ -170,27 +175,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         />
       )}
 
-      {/* LEFT SIDEBAR (Clean white SaaS style matching screenshot) */}
+      {/* LEFT SIDEBAR */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col justify-between border-r border-slate-200 bg-white transition-transform duration-200 lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col justify-between border-r border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#14171C] transition-transform duration-200 lg:static lg:translate-x-0 ${
           isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex flex-col flex-1 min-h-0">
           {/* Brand Header */}
-          <div className="flex h-16 items-center justify-between px-6 border-b border-slate-100">
+          <div className="flex h-16 items-center justify-between px-6 border-b border-slate-100 dark:border-zinc-800">
             <Link href="/admin" className="flex items-center gap-2.5">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#285FEA] to-[#4F46E5] text-white shadow-md shadow-blue-500/20 font-bold text-sm">
                 HR
               </div>
               <div className="flex flex-col">
-                <span className="text-base font-extrabold tracking-tight text-slate-900 flex items-center gap-1.5">
+                <span className="text-base font-extrabold tracking-tight text-slate-900 dark:text-zinc-50 flex items-center gap-1.5">
                   HypeResume
-                  <span className="rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-[#285FEA] border border-blue-100">
+                  <span className="rounded-md bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 text-[10px] font-bold text-[#285FEA] dark:text-blue-300 border border-blue-100 dark:border-blue-800">
                     Admin
                   </span>
                 </span>
-                <span className="text-[10px] text-slate-400 font-medium -mt-0.5">Management Suite</span>
+                <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-medium -mt-0.5">Management Suite</span>
               </div>
             </Link>
 
@@ -312,51 +317,43 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* MAIN VIEWPORT CONTAINER */}
       <div className="flex flex-1 flex-col overflow-hidden min-w-0">
-        {/* Top Navbar Header (Clean white with search, breadcrumb, live mode indicator) */}
-        <header className="h-16 border-b border-slate-200 bg-white px-3 sm:px-6 lg:px-8 flex items-center justify-between shrink-0 z-20">
+        {/* Top Navbar Header */}
+        <header className="h-16 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#14171C] px-3 sm:px-6 lg:px-8 flex items-center justify-between shrink-0 z-20">
           <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <button
+              type="button"
               onClick={() => setIsMobileSidebarOpen(true)}
-              className="rounded-lg p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-500 hover:bg-slate-100 lg:hidden cursor-pointer"
+              className="rounded-lg p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 lg:hidden cursor-pointer"
               aria-label="Open sidebar"
             >
               <Menu className="h-5 w-5" />
             </button>
 
-            {/* Breadcrumb matching reference image */}
-            <nav className="hidden sm:flex items-center gap-2 text-xs font-medium text-slate-400">
-              <Link href="/admin" className="hover:text-slate-700 transition">
+            {/* Breadcrumb */}
+            <nav aria-label="Admin breadcrumb" className="hidden sm:flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-zinc-400">
+              <Link href="/admin" className="hover:text-slate-800 dark:hover:text-zinc-100 transition">
                 Home
               </Link>
-              <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
-              <span className="text-slate-500">Admin</span>
-              <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
-              <span className="font-semibold text-slate-800">{getBreadcrumb()}</span>
+              <ChevronRight className="h-3.5 w-3.5 text-slate-300 dark:text-zinc-600" />
+              <span>Admin</span>
+              <ChevronRight className="h-3.5 w-3.5 text-slate-300 dark:text-zinc-600" />
+              <span className="font-semibold text-slate-800 dark:text-zinc-100">{getBreadcrumb()}</span>
             </nav>
           </div>
 
           {/* Right Header Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Quick Search */}
-            <div className="relative hidden md:block w-64">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search here... (⌘K)"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/60 py-2 pl-9 pr-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#285FEA] focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition"
-              />
-            </div>
+            <ThemeToggle />
 
             {/* Live Gateway Pill Badge */}
             <button
+              type="button"
               onClick={handleQuickToggleMode}
               title="Click to toggle gateway mode"
-              className={`flex items-center gap-1.5 rounded-full px-2.5 sm:px-3 py-1 text-xs font-bold transition border shadow-xs min-h-[36px] sm:min-h-0 ${
+              className={`flex items-center gap-1.5 rounded-full px-2.5 sm:px-3 py-1 text-xs font-bold transition border shadow-xs min-h-[36px] sm:min-h-0 cursor-pointer ${
                 isLive
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                  : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100'
+                  : 'bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800 hover:bg-amber-100'
               }`}
             >
               <span
@@ -368,23 +365,48 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <span className="sm:hidden">{isLive ? 'LIVE' : 'TEST'}</span>
             </button>
 
-            {/* Notifications Icon */}
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 transition cursor-pointer">
-              <Bell className="h-4 w-4" />
-            </div>
-
             {/* Profile Avatar Chip */}
             <div className="flex items-center gap-2 pl-2">
               <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-indigo-600 to-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-xs">
                 {(user?.fullName?.trim()?.charAt(0) || 'A').toUpperCase()}
               </div>
               <div className="hidden xl:block text-left">
-                <div className="text-xs font-bold text-slate-800 leading-tight">{user?.fullName || 'Admin User'}</div>
-                <div className="text-[10px] text-slate-400">Super Admin</div>
+                <div className="text-xs font-bold text-slate-800 dark:text-zinc-100 leading-tight">{user?.fullName || 'Admin User'}</div>
+                <div className="text-[10px] text-slate-500 dark:text-zinc-400">Super Admin</div>
               </div>
             </div>
           </div>
         </header>
+
+        {confirmLiveSwitch && (
+          <div className="px-4 sm:px-6 lg:px-8 py-2.5 bg-amber-50 dark:bg-amber-950/50 border-b border-amber-200 dark:border-amber-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span className="font-semibold text-amber-900 dark:text-amber-200">
+              Switch Payment Gateway to LIVE PRODUCTION? Real customer cards and UPI will be charged.
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void executeToggleMode('live_mode')}
+                className="px-3 py-1 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700 cursor-pointer"
+              >
+                Confirm Live Mode
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmLiveSwitch(false)}
+                className="px-3 py-1 rounded-lg border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {modeError && (
+          <div role="alert" className="px-4 sm:px-6 lg:px-8 py-2 bg-rose-50 dark:bg-rose-950/50 border-b border-rose-200 dark:border-rose-800 text-xs text-rose-700 dark:text-rose-200">
+            {modeError}
+          </div>
+        )}
 
         {/* Scrollable Main Viewport */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">

@@ -111,6 +111,9 @@ export function ResumeScoreInteractiveAudit() {
           <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800">
             <AtsAuditBreakdown
               score={auditResult.score}
+              atsScore={auditResult.atsScore}
+              matchScore={auditResult.matchScore}
+              compositeScore={auditResult.compositeScore}
               findings={auditResult.findings}
               recommendations={auditResult.recommendations}
               showScoreRing

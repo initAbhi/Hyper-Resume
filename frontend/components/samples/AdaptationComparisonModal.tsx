@@ -175,7 +175,19 @@ export function AdaptationComparisonModal({
           }),
         };
       } else if (baseProposed && sampleResume) {
-        // Ensure benchmark layout styling is propagated even if no manual bullet edits occurred
+        // Apply selective decisions AND propagate benchmark layout styling
+        const mergedSkills = [
+          ...(baseProposed.skills || []),
+          ...acceptedSkills
+            .filter(
+              (s) =>
+                !(baseProposed.skills || []).some(
+                  (existing) => existing.name.toLowerCase() === s.toLowerCase(),
+                ),
+            )
+            .map((name) => ({ name, category: 'Benchmark Skills' })),
+        ];
+
         customFinalContent = {
           ...baseProposed,
           layout: {
@@ -184,6 +196,24 @@ export function AdaptationComparisonModal({
             fontFamily: sampleTemplateKey === 'ivy-league' ? 'serif' : (baseProposed.layout?.fontFamily || 'sans'),
             pageMargin: 16,
           },
+          summary:
+            summaryDecision === 'accept'
+              ? sectionChanges.summary?.adapted || baseProposed.summary
+              : sectionChanges.summary?.original || baseProposed.summary,
+          skills: mergedSkills,
+          experience: (baseProposed.experience || []).map((exp, cIdx) => {
+            const diffExp = experiences[cIdx];
+            if (!diffExp) return exp;
+            const cKey = String(cIdx);
+            return {
+              ...exp,
+              bullets: diffExp.bullets.map((b, bIdx) => {
+                const bKey = String(bIdx);
+                const accepted = (bulletDecisions[cKey]?.[bKey] ?? 'accept') === 'accept';
+                return accepted ? b.adapted : b.original;
+              }),
+            };
+          }),
         };
       }
 
@@ -288,11 +318,10 @@ export function AdaptationComparisonModal({
                 <button
                   type="button"
                   onClick={() => setSummaryDecision((d) => (d === 'accept' ? 'reject' : 'accept'))}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                    summaryDecision === 'accept'
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${summaryDecision === 'accept'
                       ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-300'
                       : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
-                  }`}
+                    }`}
                 >
                   {summaryDecision === 'accept' ? (
                     <>
@@ -313,11 +342,10 @@ export function AdaptationComparisonModal({
                   <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Original</span>
                   <p className="text-zinc-700 dark:text-zinc-300">{sectionChanges.summary.original || 'No original summary provided.'}</p>
                 </div>
-                <div className={`p-3 rounded-xl border space-y-1 ${
-                  summaryDecision === 'accept'
+                <div className={`p-3 rounded-xl border space-y-1 ${summaryDecision === 'accept'
                     ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800'
                     : 'bg-zinc-50 dark:bg-zinc-900/40 border-zinc-200 dark:border-zinc-800 opacity-60'
-                }`}>
+                  }`}>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Adapted (Benchmark Phrasing)</span>
                   <p className="text-zinc-900 dark:text-zinc-100 font-medium">{sectionChanges.summary.adapted}</p>
                 </div>
@@ -362,9 +390,8 @@ export function AdaptationComparisonModal({
                     return (
                       <div
                         key={bIdx}
-                        className={`p-4 transition-colors ${
-                          isAccepted ? 'bg-emerald-50/20 dark:bg-emerald-950/10' : 'bg-transparent'
-                        }`}
+                        className={`p-4 transition-colors ${isAccepted ? 'bg-emerald-50/20 dark:bg-emerald-950/10' : 'bg-transparent'
+                          }`}
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 space-y-2 text-xs">
@@ -392,9 +419,8 @@ export function AdaptationComparisonModal({
                                 </button>
                               </div>
                             ) : (
-                              <div className={`text-zinc-900 dark:text-zinc-100 font-medium leading-relaxed ${
-                                !isAccepted ? 'opacity-50' : ''
-                              }`}>
+                              <div className={`text-zinc-900 dark:text-zinc-100 font-medium leading-relaxed ${!isAccepted ? 'opacity-50' : ''
+                                }`}>
                                 <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mr-1.5">Adapted:</span>
                                 {displayedAdapted}
                               </div>
@@ -414,11 +440,10 @@ export function AdaptationComparisonModal({
                             <button
                               type="button"
                               onClick={() => setEditingBulletKey(isEditing ? null : editKey)}
-                              className={`p-2 rounded-xl transition-all cursor-pointer ${
-                                isEditing
+                              className={`p-2 rounded-xl transition-all cursor-pointer ${isEditing
                                   ? 'bg-blue-600 text-white'
                                   : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
-                              }`}
+                                }`}
                               title="Edit adapted bullet text"
                             >
                               <Edit2 className="w-4 h-4" />
@@ -426,11 +451,10 @@ export function AdaptationComparisonModal({
                             <button
                               type="button"
                               onClick={() => handleToggleBullet(cIdx, bIdx)}
-                              className={`p-2 rounded-xl transition-all cursor-pointer ${
-                                isAccepted
+                              className={`p-2 rounded-xl transition-all cursor-pointer ${isAccepted
                                   ? 'bg-emerald-500 text-white shadow-xs hover:bg-emerald-600'
                                   : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
-                              }`}
+                                }`}
                               title={isAccepted ? 'Accepted. Click to keep original bullet.' : 'Rejected. Click to accept adapted bullet.'}
                             >
                               {isAccepted ? <Check className="w-4 h-4" /> : <RotateCcw className="w-4 h-4" />}
@@ -470,11 +494,10 @@ export function AdaptationComparisonModal({
                       key={skill}
                       type="button"
                       onClick={() => handleToggleSkill(skill)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-                        isChecked
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${isChecked
                           ? 'bg-[#285FEA] text-white shadow-xs'
                           : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200'
-                      }`}
+                        }`}
                     >
                       {isChecked ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
                       <span>{skill}</span>

@@ -22,7 +22,7 @@ export function AtsScoreShowcase() {
     <section className="relative w-full overflow-hidden bg-[#0a0a0a] px-4 py-16 text-white sm:px-6 sm:py-24 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
             ATS & writing audit
           </p>
           <h2 className="mt-3 font-rubik text-3xl font-semibold tracking-tight sm:text-4xl lg:text-[2.75rem]">
@@ -48,7 +48,7 @@ export function AtsScoreShowcase() {
             </div>
 
             <div className="absolute left-3 top-4 z-10 max-w-[210px] rounded-xl bg-[#121214]/94 p-3 shadow-2xl ring-1 ring-white/10 backdrop-blur-md sm:left-4 sm:top-6 sm:max-w-[230px] sm:p-3.5">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
                 What we found
               </p>
               <ul className="mt-2 space-y-1.5 text-[11px] leading-snug text-zinc-300">
@@ -60,7 +60,7 @@ export function AtsScoreShowcase() {
                   <Check className="mt-0.5 h-3 w-3 shrink-0 text-emerald-400" />
                   Quantified impact bullets
                 </li>
-                <li className="flex gap-1.5 text-zinc-500">
+                <li className="flex gap-1.5 text-zinc-400">
                   <span className="mt-0.5 h-3 w-3 shrink-0 text-center text-[10px]">○</span>
                   Add 1 metric in Projects
                 </li>
@@ -71,7 +71,7 @@ export function AtsScoreShowcase() {
               <p className="text-[10px] font-semibold uppercase tracking-wider text-blue-300">
                 Evidence-safe rewrite
               </p>
-              <p className="mt-1.5 text-[10px] leading-snug text-zinc-500 line-through">
+              <p className="mt-1.5 text-[10px] leading-snug text-zinc-400 line-through">
                 Developed Spring Boot on AWS EC2.
               </p>
               <p className="mt-1 text-[11px] leading-snug text-zinc-200">
@@ -94,7 +94,7 @@ export function AtsScoreShowcase() {
                   <li key={d.name} className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-sm font-medium text-white">{d.name}</p>
-                      <p className="mt-0.5 text-xs text-zinc-500">{d.tip}</p>
+                      <p className="mt-0.5 text-xs text-zinc-400">{d.tip}</p>
                     </div>
                     <span className="shrink-0 text-xs font-medium tabular-nums text-zinc-400">
                       {d.weight}
@@ -109,7 +109,7 @@ export function AtsScoreShowcase() {
                 Run free ATS check
                 <ArrowRight className="h-4 w-4" />
               </Link>
-              <p className="mt-3 text-center text-[11px] text-zinc-500">
+              <p className="mt-3 text-center text-[11px] text-zinc-400">
                 Upload a PDF or DOCX — no account required.
               </p>
             </div>

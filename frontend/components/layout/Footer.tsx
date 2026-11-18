@@ -5,13 +5,15 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Logo } from '../ui/Logo';
 import { DappledLight } from '@/components/reactbits';
+import { useAuth } from '@/lib/auth-context';
 
 export function Footer() {
   const pathname = usePathname();
+  const { isAuthenticated } = useAuth();
   if (pathname?.startsWith('/app') || pathname?.startsWith('/admin') || pathname?.startsWith('/r/')) return null;
 
   const productLinks = [
-    { label: 'AI Resume Builder', href: '/login' },
+    { label: 'AI Resume Builder', href: isAuthenticated ? '/app' : '/login' },
     { label: 'Resume Checker', href: '/tools/resume-checker' },
     { label: 'Job Matcher', href: '/tools/job-match' },
     { label: 'Bullet Improver', href: '/tools/bullet-improver' },

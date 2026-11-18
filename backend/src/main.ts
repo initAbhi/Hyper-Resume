@@ -14,6 +14,9 @@ async function bootstrap() {
     logger,
   });
 
+  // Enable NestJS lifecycle shutdown hooks (OnModuleDestroy / OnApplicationShutdown) for SIGTERM/SIGINT
+  app.enableShutdownHooks();
+
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT', 3001);
   const frontendUrl = configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
@@ -91,6 +94,10 @@ async function bootstrap() {
       'If-Match',
       'If-None-Match',
       'If-Modified-Since',
+      'Last-Event-ID',
+      'last-event-id',
+      'X-Stream-Ticket',
+      'x-stream-ticket',
     ],
     exposedHeaders: [
       'Content-Disposition',

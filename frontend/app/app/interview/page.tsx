@@ -21,9 +21,13 @@ import {
   Coins,
   Gauge,
   HelpCircle,
+  Bot,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/lib/auth-context';
+import { useOptionalGlobalAgent } from '@/lib/global-agent-context';
 import { 
   apiClient, 
   type Resume, 
@@ -35,11 +39,16 @@ import {
 
 export default function AiInterviewStudioPage() {
   const router = useRouter();
+  const { refreshUser } = useAuth();
 
   // State
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [jobs, setJobs] = useState<JobDescription[]>([]);
   const [pastSessions, setPastSessions] = useState<InterviewSession[]>([]);
+  const [sessionsLimit, setSessionsLimit] = useState<number>(20);
+  const [totalSessions, setTotalSessions] = useState<number>(0);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [creditBalance, setCreditBalance] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isStarting, setIsStarting] = useState<boolean>(false);
@@ -51,6 +60,34 @@ export default function AiInterviewStudioPage() {
   const [sessionMode, setSessionMode] = useState<InterviewSessionMode>('quick_practice');
   const [targetRole, setTargetRole] = useState<string>('Full Stack Developer');
   const [difficulty, setDifficulty] = useState<InterviewDifficulty>('mid');
+  const globalAgent = useOptionalGlobalAgent();
+
+  // Hydrate target role & resume from Global Agent Context if arriving from Job Search / Match
+  useEffect(() => {
+    if (!globalAgent || isLoading) return;
+    const ctx = globalAgent.pageContext;
+    if (ctx.jobTitle && targetRole === 'Full Stack Developer') {
+      setTargetRole(ctx.jobTitle);
+    }
+    if (ctx.activeResumeId && !selectedResumeId) {
+      setSelectedResumeId(ctx.activeResumeId);
+    }
+  }, [globalAgent, isLoading, targetRole, selectedResumeId]);
+
+  // Sync interview setup context into Global Agent Context
+  useEffect(() => {
+    if (!globalAgent) return;
+    const selectedResume = resumes.find((r) => r.id === selectedResumeId);
+    const selectedJob = jobs.find((j) => j.id === selectedJobId);
+    globalAgent.updateContext({
+      activeResumeId: selectedResumeId || undefined,
+      activeResumeName: selectedResume?.name,
+      jobTitle: selectedJob?.title || targetRole || undefined,
+      companyName: selectedJob?.companyName || undefined,
+      jobDescriptionId: selectedJob?.id || undefined,
+      jobDescriptionText: selectedJob?.originalText || undefined,
+    });
+  }, [globalAgent, resumes, jobs, selectedResumeId, selectedJobId, targetRole]);
 
   // Mode credit requirements
   const creditCosts: Record<InterviewSessionMode, number> = {
@@ -71,7 +108,7 @@ export default function AiInterviewStudioPage() {
         apiClient.listResumes({ limit: 50 }),
         apiClient.listJobDescriptions({ limit: 50 }),
         apiClient.getCreditBalance(),
-        apiClient.listInterviewSessions({ limit: 20 }),
+        apiClient.listInterviewSessions({ limit: sessionsLimit }),
       ]);
 
       if (resumesData.status === 'fulfilled') {
@@ -94,6 +131,7 @@ export default function AiInterviewStudioPage() {
 
       if (sessionsData.status === 'fulfilled') {
         setPastSessions(sessionsData.value.items || []);
+        setTotalSessions(sessionsData.value.total || (sessionsData.value.items || []).length);
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to load interview studio data.');
@@ -132,6 +170,7 @@ export default function AiInterviewStudioPage() {
         idempotencyKey: `start-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       });
 
+      await refreshUser().catch(() => {});
       router.push(`/app/interview/${session.id}`);
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to initialize interview session.');
@@ -143,53 +182,53 @@ export default function AiInterviewStudioPage() {
     <div className="max-w-5xl mx-auto space-y-8 py-2">
       {/* Sleek Hero Banner */}
       <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-gradient-to-br from-blue-50/70 via-indigo-50/20 to-purple-50/40 dark:from-blue-950/25 dark:via-zinc-900 dark:to-purple-950/20 p-6 sm:p-8 shadow-xs relative overflow-hidden">
-        <div className="max-w-3xl space-y-3">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100/70 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 text-blue-700 dark:text-blue-300 text-xs font-semibold shadow-2xs">
-            <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-            <span>AI Interview Readiness Studio</span>
-          </div>
-
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Role-Specific Interview Practice
-          </h1>
-
-          <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed max-w-2xl">
-            Practice realistic hiring manager & technical interview rounds grounded in your actual resume bullet points and target job requirements. Get instant feedback on STAR structure, quantifiable impact, and technical accuracy.
-          </p>
-
-          <div className="pt-2 flex flex-wrap items-center gap-4 text-xs text-zinc-600 dark:text-zinc-400 font-medium">
-            <div className="inline-flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>Grounded in your verified resume</span>
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
+          <div className="max-w-2xl space-y-3">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100/70 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 text-blue-700 dark:text-blue-300 text-xs font-semibold shadow-2xs">
+              <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              <span>AI Interview Readiness Studio</span>
             </div>
-            <div className="inline-flex items-center gap-1.5">
-              <Zap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <span>Adaptive follow-up challenges</span>
-            </div>
-            <div className="inline-flex items-center gap-1.5">
-              <Award className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              <span>Personalized model answers</span>
-            </div>
-          </div>
-        </div>
 
-        {/* Credit Balance Floating Card */}
-        <div className="mt-5 sm:mt-0 sm:absolute sm:top-7 sm:right-7 flex items-center gap-3.5 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-zinc-200/80 dark:border-zinc-700/80 rounded-xl px-4 py-2.5 shadow-xs">
-          <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-            <Coins className="w-4 h-4" />
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
+              Role-Specific Interview Practice
+            </h1>
+
+            <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed max-w-2xl">
+              Practice realistic hiring manager & technical interview rounds grounded in your actual resume bullet points and target job requirements. Get instant feedback on STAR structure, quantifiable impact, and technical accuracy.
+            </p>
+
+            <div className="pt-2 flex flex-wrap items-center gap-4 text-xs text-zinc-600 dark:text-zinc-400 font-medium">
+              <div className="inline-flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>Grounded in your verified resume</span>
+              </div>
+              <div className="inline-flex items-center gap-1.5">
+                <Zap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span>Adaptive follow-up challenges</span>
+              </div>
+              <div className="inline-flex items-center gap-1.5">
+                <Award className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <span>Personalized model answers</span>
+              </div>
+            </div>
           </div>
-          <div>
-            <div className="text-[10px] uppercase font-bold text-zinc-400 dark:text-zinc-500 tracking-wider">Your Balance</div>
-            <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">{creditBalance} Credits</div>
-          </div>
-          <Link href="/pricing" className="ml-1">
-            <button
-              type="button"
-              className="px-2.5 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 rounded-lg transition-colors cursor-pointer"
+
+          {/* Credit Balance Card (responsive, never overlaps hero copy on tablet) */}
+          <div className="flex items-center gap-3.5 self-start shrink-0 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-zinc-200/80 dark:border-zinc-700/80 rounded-xl px-4 py-2.5 shadow-xs">
+            <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <Coins className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 tracking-wider">Your Balance</div>
+              <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">{creditBalance} Credits</div>
+            </div>
+            <Link
+              href="/pricing"
+              className="ml-1 px-2.5 py-1 text-xs font-semibold text-blue-700 dark:text-blue-300 hover:text-blue-800 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 rounded-lg transition-colors"
             >
               Recharge
-            </button>
-          </Link>
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -212,15 +251,18 @@ export default function AiInterviewStudioPage() {
 
             {/* Step 1: Select Practice Mode */}
             <div className="space-y-3">
-              <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider block">
+              <span id="interview-mode-label" className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider block">
                 1. Select Interview Mode
-              </label>
+              </span>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div role="radiogroup" aria-labelledby="interview-mode-label" className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Quick Practice */}
-                <div
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={sessionMode === 'quick_practice'}
                   onClick={() => setSessionMode('quick_practice')}
-                  className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                  className={`text-left p-4 rounded-xl border cursor-pointer transition-all ${
                     sessionMode === 'quick_practice'
                       ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/40 ring-3 ring-blue-500/15 shadow-xs'
                       : 'border-slate-200 dark:border-zinc-800 bg-slate-50/40 dark:bg-zinc-800/30 hover:border-slate-300 dark:hover:border-zinc-700'
@@ -232,15 +274,18 @@ export default function AiInterviewStudioPage() {
                       2 Credits
                     </span>
                   </div>
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-2 leading-relaxed">
+                  <p className="text-[11px] text-zinc-600 dark:text-zinc-400 mt-2 leading-relaxed">
                     3 targeted questions. Warm-up confidence builder without follow-ups.
                   </p>
-                </div>
+                </button>
 
                 {/* Full Mock */}
-                <div
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={sessionMode === 'full_mock'}
                   onClick={() => setSessionMode('full_mock')}
-                  className={`p-4 rounded-xl border cursor-pointer transition-all relative ${
+                  className={`text-left p-4 rounded-xl border cursor-pointer transition-all relative ${
                     sessionMode === 'full_mock'
                       ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/40 ring-3 ring-blue-500/15 shadow-xs'
                       : 'border-slate-200 dark:border-zinc-800 bg-slate-50/40 dark:bg-zinc-800/30 hover:border-slate-300 dark:hover:border-zinc-700'
@@ -252,15 +297,18 @@ export default function AiInterviewStudioPage() {
                       5 Credits
                     </span>
                   </div>
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-2 leading-relaxed">
+                  <p className="text-[11px] text-zinc-600 dark:text-zinc-400 mt-2 leading-relaxed">
                     5 deep questions + adaptive follow-ups & full readiness report.
                   </p>
-                </div>
+                </button>
 
                 {/* Weak Area */}
-                <div
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={sessionMode === 'weak_area'}
                   onClick={() => setSessionMode('weak_area')}
-                  className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                  className={`text-left p-4 rounded-xl border cursor-pointer transition-all ${
                     sessionMode === 'weak_area'
                       ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/40 ring-3 ring-blue-500/15 shadow-xs'
                       : 'border-slate-200 dark:border-zinc-800 bg-slate-50/40 dark:bg-zinc-800/30 hover:border-slate-300 dark:hover:border-zinc-700'
@@ -272,21 +320,23 @@ export default function AiInterviewStudioPage() {
                       3 Credits
                     </span>
                   </div>
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-2 leading-relaxed">
+                  <p className="text-[11px] text-zinc-600 dark:text-zinc-400 mt-2 leading-relaxed">
                     Re-tests questions & competencies where your past scores were low.
                   </p>
-                </div>
+                </button>
               </div>
             </div>
 
             {/* Step 2: Select Resume & Target Job */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                <label htmlFor="interview-grounding-resume" className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
                   <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                   <span>Grounding Resume</span>
                 </label>
                 <select
+                  id="interview-grounding-resume"
+                  aria-label="Grounding Resume"
                   value={selectedResumeId}
                   onChange={(e) => setSelectedResumeId(e.target.value)}
                   className="w-full text-xs rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50/60 dark:bg-zinc-800/50 px-3 py-2.5 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-zinc-900 transition-all font-medium"
@@ -304,11 +354,13 @@ export default function AiInterviewStudioPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                <label htmlFor="interview-target-jd" className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
                   <Briefcase className="w-3.5 h-3.5 text-zinc-400" />
                   <span>Target Job Description (Optional)</span>
                 </label>
                 <select
+                  id="interview-target-jd"
+                  aria-label="Target Job Description"
                   value={selectedJobId}
                   onChange={(e) => setSelectedJobId(e.target.value)}
                   className="w-full text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/50 px-3 py-2.5 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
@@ -326,10 +378,11 @@ export default function AiInterviewStudioPage() {
             {/* Step 3: Target Role & Difficulty */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                <label htmlFor="interview-target-role" className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
                   Target Role Title
                 </label>
                 <input
+                  id="interview-target-role"
                   type="text"
                   value={targetRole}
                   onChange={(e) => setTargetRole(e.target.value)}
@@ -339,10 +392,12 @@ export default function AiInterviewStudioPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                <label htmlFor="interview-difficulty" className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
                   Interview Seniority / Difficulty
                 </label>
                 <select
+                  id="interview-difficulty"
+                  aria-label="Interview Seniority or Difficulty"
                   value={difficulty}
                   onChange={(e) => setDifficulty(e.target.value as InterviewDifficulty)}
                   className="w-full text-xs rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50/60 dark:bg-zinc-800/50 px-3 py-2.5 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-zinc-900 transition-all font-medium"
@@ -401,6 +456,55 @@ export default function AiInterviewStudioPage() {
 
         {/* Right Col: Feature Highlights & Summary */}
         <div className="space-y-5">
+          {/* Phase 4: AI Agent Interview Prep Launcher */}
+          {globalAgent && (
+            <div
+              data-testid="interview-agent-launcher"
+              className="rounded-2xl border border-blue-200/80 dark:border-blue-900/60 bg-blue-50/40 dark:bg-blue-950/20 p-5 space-y-3 shadow-xs"
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#285FEA] text-white flex items-center justify-center shrink-0">
+                  <Bot className="w-4 h-4" aria-hidden="true" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                    AI Agent Interview Prep
+                  </h3>
+                  <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                    Grounded in your selected resume &amp; role
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                Let the AI Agent inspect your resume, align with the job requirements, launch a personalized interview session, and present Question 1.
+              </p>
+              <button
+                type="button"
+                disabled={resumes.length === 0}
+                onClick={() => {
+                  const selectedResume = resumes.find((r) => r.id === selectedResumeId);
+                  const selectedJob = jobs.find((j) => j.id === selectedJobId);
+                  globalAgent.launchPrompt({
+                    prompt: `Prepare me for a technical screening for ${selectedJob?.title || targetRole || 'this role'}${selectedJob?.companyName ? ` at ${selectedJob.companyName}` : ''} and ask me the first question.`,
+                    autoSubmit: true,
+                    context: {
+                      activeResumeId: selectedResumeId || undefined,
+                      activeResumeName: selectedResume?.name,
+                      jobTitle: selectedJob?.title || targetRole || undefined,
+                      companyName: selectedJob?.companyName || undefined,
+                      jobDescriptionId: selectedJob?.id || undefined,
+                      jobDescriptionText: selectedJob?.originalText || undefined,
+                    },
+                  });
+                }}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[#285FEA] hover:bg-[#1E4BC8] text-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>Prepare with AI Agent &amp; Ask Q1</span>
+              </button>
+            </div>
+          )}
+
           <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 space-y-5 shadow-xs">
             <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
               What the Interviewer Evaluates
@@ -478,7 +582,7 @@ export default function AiInterviewStudioPage() {
           <div className="rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 p-8 text-center text-zinc-500 space-y-2 bg-zinc-50/30 dark:bg-zinc-900/30">
             <Briefcase className="w-8 h-8 mx-auto opacity-30" />
             <div className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">No past interview sessions yet.</div>
-            <div className="text-[11px] text-zinc-400">Configure a session above and click Start Interview Studio to practice.</div>
+            <div className="text-[11px] text-zinc-600 dark:text-zinc-400">Configure a session above and click Start Interview Studio to practice.</div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -520,18 +624,79 @@ export default function AiInterviewStudioPage() {
                     )}
                   </div>
 
-                  <Link href={sess.status === 'completed' ? `/app/interview/${sess.id}/report` : `/app/interview/${sess.id}`}>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 text-xs font-semibold transition-all cursor-pointer"
+                  <div className="flex items-center gap-2">
+                    {confirmDeleteId === sess.id ? (
+                      <div className="inline-flex items-center gap-1">
+                        <button
+                          type="button"
+                          disabled={deletingId === sess.id}
+                          onClick={async () => {
+                            setDeletingId(sess.id);
+                            try {
+                              await apiClient.deleteInterviewSession(sess.id);
+                              setPastSessions((prev) => prev.filter((s) => s.id !== sess.id));
+                              setTotalSessions((prev) => Math.max(0, prev - 1));
+                            } catch (err: any) {
+                              setErrorMsg(err?.message || 'Failed to delete session.');
+                            } finally {
+                              setDeletingId(null);
+                              setConfirmDeleteId(null);
+                            }
+                          }}
+                          className="px-2 py-1 text-[11px] font-semibold rounded bg-rose-600 text-white hover:bg-rose-700 cursor-pointer"
+                        >
+                          Delete
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="px-2 py-1 text-[11px] rounded border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        aria-label={`Delete interview session ${sess.targetRole}`}
+                        onClick={() => setConfirmDeleteId(sess.id)}
+                        className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                        title="Delete session"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <Link
+                      href={sess.status === 'completed' ? `/app/interview/${sess.id}/report` : `/app/interview/${sess.id}`}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 text-xs font-semibold transition-all"
                     >
                       <span>{sess.status === 'completed' ? 'View Scorecard' : 'Resume Interview'}</span>
                       <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                  </Link>
+                    </Link>
+                  </div>
                 </div>
               </div>
             ))}
+          </div>
+        )}
+        {pastSessions.length < totalSessions && (
+          <div className="flex justify-center pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                const nextLimit = sessionsLimit + 20;
+                setSessionsLimit(nextLimit);
+                const res = await apiClient.listInterviewSessions({ limit: nextLimit }).catch(() => null);
+                if (res) {
+                  setPastSessions(res.items || []);
+                  setTotalSessions(res.total || res.items.length);
+                }
+              }}
+            >
+              Load More Sessions ({pastSessions.length} of {totalSessions})
+            </Button>
           </div>
         )}
       </div>

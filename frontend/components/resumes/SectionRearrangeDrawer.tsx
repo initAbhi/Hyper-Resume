@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowDown,
   ArrowUp,
@@ -74,6 +74,15 @@ export function SectionRearrangeDrawer({
 }: SectionRearrangeDrawerProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -199,18 +208,17 @@ export function SectionRearrangeDrawer({
                 );
                 const isActive =
                   JSON.stringify(builtInCurrent) ===
-                    JSON.stringify(preset.order) && hiddenSet.size === 0;
+                  JSON.stringify(preset.order) && hiddenSet.size === 0;
                 return (
                   <button
                     key={presetKey}
                     type="button"
                     data-testid={`preset-order-${presetKey}`}
                     onClick={() => applyPresetOrder([...preset.order])}
-                    className={`px-3 py-2 rounded-lg border text-left font-medium transition-colors cursor-pointer ${
-                      isActive
+                    className={`px-3 py-2 rounded-lg border text-left font-medium transition-colors cursor-pointer ${isActive
                         ? 'border-blue-600 bg-blue-50/70 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
                         : 'border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-300'
-                    }`}
+                      }`}
                   >
                     {preset.label}
                   </button>
@@ -275,15 +283,14 @@ export function SectionRearrangeDrawer({
                       setDraggedIndex(null);
                       setDragOverIndex(null);
                     }}
-                    className={`group flex items-center gap-2.5 p-2.5 rounded-xl border transition-all select-none ${
-                      isDragging
+                    className={`group flex items-center gap-2.5 p-2.5 rounded-xl border transition-all select-none ${isDragging
                         ? 'opacity-50 border-blue-400 bg-blue-50/40'
                         : isDragOver
                           ? 'border-blue-600 ring-2 ring-blue-500/20 bg-blue-50/30 dark:bg-blue-950/30'
                           : isHidden
                             ? 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900 opacity-60'
                             : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800/50 hover:border-zinc-300 dark:hover:border-zinc-700'
-                    }`}
+                      }`}
                   >
                     <div
                       className="text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 cursor-grab active:cursor-grabbing shrink-0"
@@ -302,7 +309,7 @@ export function SectionRearrangeDrawer({
                             Custom
                           </span>
                         )}
-                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 shrink-0">
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 shrink-0">
                           {countText}
                         </span>
                       </div>
@@ -359,11 +366,10 @@ export function SectionRearrangeDrawer({
                             : `Hide ${meta.label} from resume`
                         }
                         onClick={() => toggleVisibility(key)}
-                        className={`p-1 rounded-md transition-colors cursor-pointer ${
-                          isHidden
+                        className={`p-1 rounded-md transition-colors cursor-pointer ${isHidden
                             ? 'text-amber-600 bg-amber-50 dark:bg-amber-950/40'
-                            : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                        }`}
+                            : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                          }`}
                       >
                         {isHidden ? (
                           <EyeOff className="w-3.5 h-3.5" />
@@ -384,7 +390,7 @@ export function SectionRearrangeDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="w-full py-2.5 px-4 bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 text-white dark:text-zinc-900 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+            className="w-full py-2.5 px-4 bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 text-xs font-bold rounded-lg transition-colors cursor-pointer"
           >
             Done Reordering
           </button>

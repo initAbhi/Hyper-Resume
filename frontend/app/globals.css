@@ -172,7 +172,9 @@
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
 }
 
-*, ::before, ::after {
+*,
+::before,
+::after {
   box-sizing: border-box;
   border-color: var(--border);
 }
@@ -211,8 +213,15 @@ body {
 
 /* Subtle, functional animations */
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-fade-in {
@@ -245,7 +254,10 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, ::before, ::after {
+
+  *,
+  ::before,
+  ::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -265,8 +277,10 @@ body {
 /* True Physical A4 Sizing (Exact Enhancv Benchmark: 210mm x 297mm) */
 .resume-page-a4 {
   width: 100%;
-  max-width: 794px; /* 210mm in 96 DPI CSS pixels */
-  min-height: 1123px; /* 297mm in 96 DPI CSS pixels */
+  max-width: 794px;
+  /* 210mm in 96 DPI CSS pixels */
+  min-height: 1123px;
+  /* 297mm in 96 DPI CSS pixels */
   background-color: #ffffff;
   box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
   border: 1px solid rgba(229, 231, 235, 0.9);
@@ -320,6 +334,7 @@ body {
   0% {
     transform: translateX(0%);
   }
+
   100% {
     transform: translateX(-50%);
   }
@@ -329,6 +344,7 @@ body {
   0% {
     transform: translateX(-50%);
   }
+
   100% {
     transform: translateX(0%);
   }
@@ -360,9 +376,12 @@ body {
 }
 
 @keyframes float-slow {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0px) scale(1);
   }
+
   50% {
     transform: translateY(-8px) scale(1.02);
   }
@@ -373,10 +392,13 @@ body {
 }
 
 @keyframes pulse-subtle {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
+
   50% {
     opacity: 0.75;
     transform: scale(0.98);
@@ -417,12 +439,15 @@ body {
     top: 0%;
     opacity: 0;
   }
+
   15% {
     opacity: 1;
   }
+
   85% {
     opacity: 1;
   }
+
   100% {
     top: 100%;
     opacity: 0;
@@ -434,9 +459,12 @@ body {
 }
 
 @keyframes float-hero-doc {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: rotateX(11deg) rotateY(-8deg) rotateZ(1deg) translateY(0px) translateZ(40px);
   }
+
   50% {
     transform: rotateX(13deg) rotateY(-6deg) rotateZ(1.5deg) translateY(-10px) translateZ(50px);
   }
@@ -447,9 +475,12 @@ body {
 }
 
 @keyframes float-panel-top {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0px) translateZ(65px);
   }
+
   50% {
     transform: translateY(-8px) translateZ(75px);
   }
@@ -460,9 +491,12 @@ body {
 }
 
 @keyframes float-panel-bottom {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0px) translateZ(55px);
   }
+
   50% {
     transform: translateY(-6px) translateZ(65px);
   }
@@ -473,14 +507,14 @@ body {
 }
 
 .glow-violet-rim {
-  box-shadow: 
+  box-shadow:
     0 0 0 1px rgba(110, 86, 255, 0.3),
     0 8px 32px -8px rgba(85, 37, 245, 0.4),
     0 24px 64px -12px rgba(66, 99, 255, 0.25);
 }
 
 .glow-violet-deep {
-  box-shadow: 
+  box-shadow:
     0 0 0 1px rgba(139, 92, 246, 0.35),
     0 12px 40px -10px rgba(85, 37, 245, 0.5),
     0 0 50px -15px rgba(66, 99, 255, 0.3);
@@ -523,7 +557,8 @@ body {
     margin: 0mm !important;
   }
 
-  html, body {
+  html,
+  body {
     background-color: #ffffff !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -535,22 +570,22 @@ body {
   }
 
   /* Hide app navigation and controls, but PRESERVE resume template headers and sidebars */
-  header:not(#resume-document-print *),
-  footer:not(#resume-document-print *),
-  aside:not(#resume-document-print *),
-  nav:not(#resume-document-print *),
+  header:not(#resume-document-print *):not(#recruiter-resume-print *):not(#sample-resume-modal-wrapper *),
+  footer:not(#resume-document-print *):not(#recruiter-resume-print *):not(#sample-resume-modal-wrapper *),
+  aside:not(#resume-document-print *):not(#recruiter-resume-print *):not(#sample-resume-modal-wrapper *),
+  nav:not(#resume-document-print *):not(#recruiter-resume-print *):not(#sample-resume-modal-wrapper *),
   button,
   select,
   input,
   textarea,
   .no-print,
-  [role="navigation"]:not(#resume-document-print *),
-  [role="banner"]:not(#resume-document-print *),
-  [role="dialog"],
-  [aria-modal="true"],
-  .fixed,
+  [role="navigation"]:not(#resume-document-print *):not(#recruiter-resume-print *):not(#sample-resume-modal-wrapper *),
+  [role="banner"]:not(#resume-document-print *):not(#recruiter-resume-print *):not(#sample-resume-modal-wrapper *),
+  [role="dialog"]:not(#sample-resume-modal-wrapper),
+  [aria-modal="true"]:not(#sample-resume-modal-wrapper),
+  .fixed:not(#sample-resume-modal-wrapper),
   #export-pdf-modal,
-  [id*="modal"] {
+  [id*="modal"]:not(#sample-resume-modal-wrapper) {
     display: none !important;
     visibility: hidden !important;
   }
@@ -558,8 +593,26 @@ body {
   #resume-document-print header,
   #resume-document-print footer,
   #resume-document-print aside,
-  #resume-document-print [role="banner"] {
+  #resume-document-print [role="banner"],
+  #recruiter-resume-print header,
+  #recruiter-resume-print footer,
+  #recruiter-resume-print aside,
+  #recruiter-resume-print [role="banner"],
+  #sample-resume-modal-wrapper header,
+  #sample-resume-modal-wrapper footer,
+  #sample-resume-modal-wrapper aside {
     display: block !important;
+    visibility: visible !important;
+  }
+
+  #sample-resume-modal-wrapper {
+    position: static !important;
+    display: block !important;
+    visibility: visible !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
   }
 
   main {
@@ -571,7 +624,7 @@ body {
   }
 
   /* When sample resume modal is active, hide everything else inside main during print */
-  body:has(#sample-resume-modal-wrapper) main > *:not(:has(#sample-resume-modal-wrapper)) {
+  body:has(#sample-resume-modal-wrapper) main>*:not(:has(#sample-resume-modal-wrapper)) {
     display: none !important;
   }
 
@@ -593,14 +646,15 @@ body {
 
   #resume-page-1,
   #resume-page-2 {
-    height: 297mm !important;
-    max-height: 297mm !important;
-    overflow: hidden !important;
-    justify-content: space-between !important;
+    min-height: 297mm !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    justify-content: flex-start !important;
     page-break-after: always !important;
     break-after: page !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
   }
 
   #resume-page-1:last-child,
@@ -609,7 +663,7 @@ body {
     break-after: avoid !important;
   }
 
-  .resume-page-a4:not([class*="p-0"]) {
+  .resume-page-a4:not([class*="p-0"]):not([data-hr-margin-managed="true"]) {
     padding: 12mm 14mm !important;
   }
 
@@ -723,14 +777,17 @@ progress.hr-progress::-moz-progress-bar {
 }
 
 @keyframes progress-bar-indeterminate {
+
   from,
   to {
     inline-size: var(--progress-bar-indeterminate-size);
     margin-right: auto;
   }
+
   from {
     translate: -100%;
   }
+
   to {
     translate: 100cqi;
   }
@@ -796,15 +853,11 @@ progress.hr-loading-spinner:indeterminate {
   height: var(--size);
   border-radius: 50%;
   appearance: none;
-  background: conic-gradient(
-      from var(--_from),
+  background: conic-gradient(from var(--_from),
       var(--spinner-color) calc(var(--_to) - var(--_from)),
-      transparent 0
-    )
-    var(--track-color);
+      transparent 0) var(--track-color);
   animation:
-    hr-progress-spin var(--_used-spinner-duration) linear infinite
-    var(--hr-spinner-dash-animation, );
+    hr-progress-spin var(--_used-spinner-duration) linear infinite var(--hr-spinner-dash-animation, );
 }
 
 .dark progress.hr-loading-spinner:indeterminate {
@@ -823,11 +876,9 @@ progress.hr-loading-spinner:indeterminate {
 @supports not (background-clip: border-area) {
   progress.hr-loading-spinner:indeterminate {
     --clip-boundary: calc(100% - var(--thickness));
-    mask-image: radial-gradient(
-      farthest-side,
-      transparent var(--clip-boundary),
-      black var(--clip-boundary)
-    );
+    mask-image: radial-gradient(farthest-side,
+        transparent var(--clip-boundary),
+        black var(--clip-boundary));
     border: 0;
   }
 }
@@ -859,10 +910,12 @@ progress.hr-loading-spinner:indeterminate {
     --hr-arc-start: 0deg;
     --hr-arc-end: 3deg;
   }
+
   50% {
     --hr-arc-start: 100deg;
     --hr-arc-end: 358deg;
   }
+
   to {
     --hr-arc-start: 360deg;
     --hr-arc-end: 363deg;
@@ -870,7 +923,7 @@ progress.hr-loading-spinner:indeterminate {
 }
 
 /* Native <details> Disclosure Styles */
-details.hr-job-details > summary {
+details.hr-job-details>summary {
   list-style: none;
   display: inline-flex;
   align-items: center;
@@ -878,11 +931,11 @@ details.hr-job-details > summary {
   cursor: pointer;
 }
 
-details.hr-job-details > summary::-webkit-details-marker {
+details.hr-job-details>summary::-webkit-details-marker {
   display: none;
 }
 
-details.hr-job-details > summary::before {
+details.hr-job-details>summary::before {
   content: "";
   inline-size: 0.9em;
   block-size: 0.9em;
@@ -892,12 +945,12 @@ details.hr-job-details > summary::before {
   rotate: -90deg;
 }
 
-details.hr-job-details[open] > summary::before {
+details.hr-job-details[open]>summary::before {
   rotate: 0deg;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  details.hr-job-details > summary::before {
+  details.hr-job-details>summary::before {
     transition: rotate 0.2s ease;
   }
 
@@ -1052,10 +1105,8 @@ progress.hr-progress-ring {
   width: var(--size);
   height: var(--size);
   border-radius: 50%;
-  background: conic-gradient(
-    var(--fill-color) calc(var(--value) * 1%),
-    var(--track-color) 0
-  );
+  background: conic-gradient(var(--fill-color) calc(var(--value) * 1%),
+      var(--track-color) 0);
   background-clip: border-area;
   border: var(--thickness) solid transparent;
   background-origin: border-box;
@@ -1074,10 +1125,8 @@ progress.hr-progress-ring {
 
 @supports not (background-clip: border-area) {
   progress.hr-progress-ring {
-    mask-image: radial-gradient(
-      transparent calc(50% - var(--thickness)),
-      black calc(50% - var(--thickness) + 0.5px)
-    );
+    mask-image: radial-gradient(transparent calc(50% - var(--thickness)),
+        black calc(50% - var(--thickness) + 0.5px));
     border: 0;
   }
 }
@@ -1118,7 +1167,7 @@ progress.hr-progress-ring::-moz-progress-bar {
 }
 
 /* Native Details Accordion with Intrinsic Size Animation */
-.hr-accordion details > summary {
+.hr-accordion details>summary {
   list-style: none;
   display: flex;
   align-items: center;
@@ -1126,11 +1175,11 @@ progress.hr-progress-ring::-moz-progress-bar {
   cursor: pointer;
 }
 
-.hr-accordion details > summary::-webkit-details-marker {
+.hr-accordion details>summary::-webkit-details-marker {
   display: none;
 }
 
-.hr-accordion details > summary::before {
+.hr-accordion details>summary::before {
   content: "";
   inline-size: 0.48rem;
   block-size: 0.48rem;
@@ -1142,7 +1191,7 @@ progress.hr-progress-ring::-moz-progress-bar {
   opacity: 0.65;
 }
 
-.hr-accordion details[open] > summary::before {
+.hr-accordion details[open]>summary::before {
   transform: rotate(45deg);
 }
 
@@ -1157,7 +1206,7 @@ progress.hr-progress-ring::-moz-progress-bar {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .hr-accordion details > summary::before {
+  .hr-accordion details>summary::before {
     transition: transform 0.2s ease;
   }
 
@@ -1175,8 +1224,25 @@ progress.hr-progress-ring::-moz-progress-bar {
   -ms-overflow-style: none;
   -webkit-overflow-scrolling: touch;
 }
+
 .no-visible-scrollbar::-webkit-scrollbar {
   display: none;
 }
 
+/* Native modal dialog scroll containment (prevents background page scroll chaining) */
+dialog:modal {
+  overscroll-behavior: contain;
+}
 
+dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+/* Keep scrolled canvas items clear of sticky headers and the floating bottom toolbar */
+#resume-document-print [data-editable-field],
+#resume-document-print [data-entry-delete],
+#resume-document-print [data-resume-section] {
+  scroll-margin-top: 96px;
+  scroll-margin-bottom: 120px;
+}

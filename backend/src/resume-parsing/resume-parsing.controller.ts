@@ -44,7 +44,7 @@ export class ResumeParsingController {
 
   @Post('public/parse-and-audit')
   @HttpCode(HttpStatus.OK)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', COMPRESSION_FILE_INTERCEPTOR_OPTIONS))
   async parseAndAuditPublic(
     @Req() req: Request,
     @UploadedFile() file?: UploadedFilePayload,
@@ -76,9 +76,42 @@ export class ResumeParsingController {
     };
   }
 
+  @Post('public/compress-and-parse')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('file', COMPRESSION_FILE_INTERCEPTOR_OPTIONS))
+  async compressAndParsePublic(
+    @Req() req: Request,
+    @UploadedFile() file?: UploadedFilePayload,
+  ) {
+    this.enforcePublicUploadLimit(req);
+    if (!file) {
+      throw new BadRequestException('A PDF file must be provided in the multipart request');
+    }
+    const compression = await this.compressionService.compressPdf(
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+    );
+    const parsed = await this.parserService.parseUploadedFileWithRawText(
+      compression.compressedBuffer || file.buffer,
+      file.originalname,
+      'application/pdf',
+    );
+    return {
+      compression: {
+        originalSize: compression.originalSize,
+        compressedSize: compression.compressedSize,
+        savingsPercent: compression.reductionPercentage,
+        status: compression.status,
+      },
+      extractedText: parsed.extractedText,
+      draft: parsed.draft,
+    };
+  }
+
   @Post('upload')
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', COMPRESSION_FILE_INTERCEPTOR_OPTIONS))
   async uploadAndParse(
     @UploadedFile() file?: UploadedFilePayload,
   ) {

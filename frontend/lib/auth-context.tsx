@@ -22,6 +22,7 @@ interface AuthContextType {
     experienceLevel?: string;
   }) => Promise<{ isNewUser?: boolean }>;
   logout: () => Promise<void>;
+  clearAuth: () => void;
   refreshUser: () => Promise<void>;
 }
 
@@ -51,6 +52,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
+    const path = typeof window !== 'undefined' ? window.location.pathname : '';
+    const isProtectedRoute = path.startsWith('/app') || path.startsWith('/admin');
+    const hasToken =
+      typeof window !== 'undefined' &&
+      Boolean(
+        window.localStorage.getItem('hr_access_token') ||
+        window.localStorage.getItem('hr_refresh_token') ||
+        document.cookie.includes('hr_refresh_token') ||
+        document.cookie.includes('hr_access_token'),
+      );
+
+    // Avoid firing unauthenticated /auth/me (401 console noise) on public pages when no token/cookie is present
+    if (!isProtectedRoute && !hasToken) {
+      setIsLoading(false);
+      return () => {
+        isMounted = false;
+      };
+    }
+
     apiClient
       .getMe()
       .then((data) => {
@@ -76,6 +96,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isMounted = false;
     };
+  }, []);
+
+  // Cross-tab auth synchronization via localStorage storage events (FN-38)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'hr_access_token' && !e.newValue) {
+        apiClient.setToken(null);
+        setUser(null);
+        setCreditBalance(0);
+      } else if (e.key === 'hr_access_token' && e.newValue) {
+        void refreshUser();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [refreshUser]);
+
+  const clearAuth = useCallback(() => {
+    apiClient.setTokens(null, null);
+    setUser(null);
+    setCreditBalance(0);
   }, []);
 
   const login = async (credentials: { email: string; password: string }) => {
@@ -146,8 +188,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const hasActivePro = Boolean(
     user?.hasActivePro ||
-      user?.isLifetimePro ||
-      (user?.proExpiresAt && new Date(user.proExpiresAt).getTime() > Date.now()),
+    user?.isLifetimePro ||
+    (user?.proExpiresAt && new Date(user.proExpiresAt).getTime() > Date.now()),
   );
 
   return (
@@ -162,6 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signup,
         googleLogin,
         logout,
+        clearAuth,
         refreshUser,
       }}
     >

@@ -19,7 +19,9 @@ export type CreditTransactionType =
   | 'linkedin_optimize'
   | 'export_pdf'
   | 'mock_interview'
-  | 'refund';
+  | 'refund'
+  | 'agent_task'
+  | 'agent_reservation';
 
 @Entity('credit_ledger')
 export class CreditLedger {
