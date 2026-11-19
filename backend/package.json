@@ -21,6 +21,7 @@
     "test:cov": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
+    "eval:golden": "bun scripts/run-golden-eval.ts",
     "typeorm": "bun ./node_modules/typeorm/cli.js -d src/database/data-source.ts",
     "migration:show": "bun ./node_modules/typeorm/cli.js migration:show -d src/database/data-source.ts",
     "migration:run": "bun ./node_modules/typeorm/cli.js migration:run -d src/database/data-source.ts",

@@ -30,6 +30,12 @@ export interface AgentTool<TArgs = unknown, TResult = unknown> {
   readonly description: string;
   readonly permissionTier: ToolPermissionTier;
   readonly requiresApproval: boolean;
+  /**
+   * Mandatory security boundary flag required on EVERY tool definition:
+   * - true: safe to expose as a Gemini function declaration (still subject to requiresApproval if mutating)
+   * - false: internal/system-only tool NEVER callable by the LLM (e.g. apply_approved_edits)
+   */
+  readonly isModelCallable: boolean;
   readonly creditCost: number;
   readonly timeoutMs: number;
   readonly inputSchema: Record<string, unknown>;

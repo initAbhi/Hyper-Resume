@@ -22,6 +22,7 @@ export class RestoreVersionTool implements AgentTool<RestoreVersionArgs, unknown
     "Restores a resume's content to the exact state of a previous snapshot version. Overwrites active resume content; requires human approval.";
   readonly permissionTier = ToolPermissionTier.STATE_MUTATING;
   readonly requiresApproval = true;
+  readonly isModelCallable = true;
   readonly creditCost = 0;
   readonly timeoutMs = 8000;
 

@@ -598,6 +598,23 @@ function GlobalAgentProviderCore({
               statusMessage: data.message || 'Workflow completed',
               errorMessage: null,
             }));
+            if (data.summary && data.summary.trim().length > 0) {
+              const completedId = data.messageId || `completed-${data.taskId || taskId}`;
+              setMessages((prev) =>
+                prev.some((m) => m.id === completedId)
+                  ? prev
+                  : [
+                      ...prev,
+                      {
+                        id: completedId,
+                        conversationId: convId,
+                        role: 'assistant',
+                        content: data.summary!,
+                        createdAt: new Date().toISOString(),
+                      },
+                    ],
+              );
+            }
             setStreamingText('');
             setConnectionState('idle');
             void refreshMessages(convId);

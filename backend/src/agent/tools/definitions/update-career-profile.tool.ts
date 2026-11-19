@@ -25,6 +25,7 @@ export class UpdateCareerProfileTool implements AgentTool<UpdateCareerProfileArg
     "Updates candidate master Career Vault preferences and confirmed skills in candidate_profiles. AI-detected skills are never automatically promoted to verified without candidate confirmation.";
   readonly permissionTier = ToolPermissionTier.STATE_MUTATING;
   readonly requiresApproval = true;
+  readonly isModelCallable = true;
   readonly creditCost = 0;
   readonly timeoutMs = 8000;
 

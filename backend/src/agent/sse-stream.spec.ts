@@ -297,6 +297,31 @@ describe('SSE Stream & Ticket Authentication (Phase 2)', () => {
 
       subscription.unsubscribe();
     });
+
+    it('delivers ephemeral token chunks in real time without DB writes or sequence corruption', async () => {
+      const observable = agentService.subscribeToConversationStream('conv-1', 'user-1');
+      const received: any[] = [];
+      const subscription = observable.subscribe({
+        next: (event) => received.push(event),
+      });
+
+      await new Promise((r) => setTimeout(r, 15));
+
+      agentService.publishEphemeralEvent('task-9', 'conv-1', 'message_chunk', {
+        chunk: 'Hello ',
+      });
+      agentService.publishEphemeralEvent('task-9', 'conv-1', 'message_chunk', {
+        chunk: 'world!',
+      });
+
+      expect(mockTaskEventRepo.save).not.toHaveBeenCalled();
+      expect(received).toEqual([
+        { type: 'message_chunk', data: { taskId: 'task-9', chunk: 'Hello ' } },
+        { type: 'message_chunk', data: { taskId: 'task-9', chunk: 'world!' } },
+      ]);
+
+      subscription.unsubscribe();
+    });
   });
 });
 

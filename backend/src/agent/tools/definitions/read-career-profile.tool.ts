@@ -18,6 +18,7 @@ export class ReadCareerProfileTool implements AgentTool<ReadCareerProfileArgs, u
     "Retrieves the candidate's master Career Vault preferences, experience history, and verified skills from their candidate profile.";
   readonly permissionTier = ToolPermissionTier.READ_ONLY;
   readonly requiresApproval = false;
+  readonly isModelCallable = true;
   readonly creditCost = 0;
   readonly timeoutMs = 5000;
 

@@ -26,6 +26,7 @@ export class SearchJobsTool implements AgentTool<SearchJobsArgs, unknown> {
     'Searches live postings across major tech ATS job boards (Ashby, Greenhouse, Lever, Remotive, Arbeitnow) and ranks results by candidate profile fit.';
   readonly permissionTier = ToolPermissionTier.READ_ONLY;
   readonly requiresApproval = false;
+  readonly isModelCallable = true;
   readonly creditCost = 0;
   readonly timeoutMs = 15000;
 

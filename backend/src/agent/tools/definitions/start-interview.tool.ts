@@ -26,6 +26,7 @@ export class StartInterviewTool implements AgentTool<StartInterviewArgs, unknown
     'Initializes an AI mock interview practice session based on the candidate resume and target job description.';
   readonly permissionTier = ToolPermissionTier.AI_ANALYSIS;
   readonly requiresApproval = false;
+  readonly isModelCallable = true;
   readonly creditCost = 2;
   readonly timeoutMs = 20000;
 

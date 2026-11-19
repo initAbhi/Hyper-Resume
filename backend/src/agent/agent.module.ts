@@ -18,6 +18,7 @@ import { InterviewsModule } from '../interviews/interviews.module.js';
 import { AiModule } from '../ai/ai.module.js';
 import { CreditsModule } from '../credits/credits.module.js';
 import { AuthModule } from '../auth/auth.module.js';
+import { ResumeParsingModule } from '../resume-parsing/resume-parsing.module.js';
 
 import { ToolRegistryService } from './tools/tool-registry.service.js';
 import { AgentService } from './agent.service.js';
@@ -26,6 +27,9 @@ import { AgentExecutorService } from './agent-executor.service.js';
 import { DurableTaskWorker } from './durable-task-worker.js';
 import { SseTicketGuard } from './guards/sse-ticket.guard.js';
 import { AgentController } from './agent.controller.js';
+import { JdUrlParserService } from './services/jd-url-parser.service.js';
+import { AgentAttachmentService } from './services/agent-attachment.service.js';
+import { AgentUsageGuardService } from './services/agent-usage-guard.service.js';
 import { ReadResumeTool } from './tools/definitions/read-resume.tool.js';
 import { ReadResumeVersionsTool } from './tools/definitions/read-resume-versions.tool.js';
 import { SearchJobsTool } from './tools/definitions/search-jobs.tool.js';
@@ -41,6 +45,7 @@ import { CreateResumeTool } from './tools/definitions/create-resume.tool.js';
 import { ApplyApprovedEditsTool } from './tools/definitions/apply-edits.tool.js';
 import { RestoreVersionTool } from './tools/definitions/restore-version.tool.js';
 import { UpdateCareerProfileTool } from './tools/definitions/update-career-profile.tool.js';
+import { ParseJdOrPdfTool } from './tools/definitions/parse-jd-or-pdf.tool.js';
 
 const TOOLS = [
   ReadResumeTool,
@@ -58,6 +63,7 @@ const TOOLS = [
   ApplyApprovedEditsTool,
   RestoreVersionTool,
   UpdateCareerProfileTool,
+  ParseJdOrPdfTool,
 ];
 
 @Module({
@@ -81,6 +87,7 @@ const TOOLS = [
     AiModule,
     CreditsModule,
     AuthModule,
+    ResumeParsingModule,
   ],
   controllers: [AgentController],
   providers: [
@@ -90,6 +97,9 @@ const TOOLS = [
     AgentExecutorService,
     DurableTaskWorker,
     SseTicketGuard,
+    JdUrlParserService,
+    AgentAttachmentService,
+    AgentUsageGuardService,
     ...TOOLS,
   ],
   exports: [
@@ -100,6 +110,9 @@ const TOOLS = [
     AgentExecutorService,
     DurableTaskWorker,
     SseTicketGuard,
+    JdUrlParserService,
+    AgentAttachmentService,
+    AgentUsageGuardService,
     ...TOOLS,
   ],
 })

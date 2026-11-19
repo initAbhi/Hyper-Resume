@@ -37,6 +37,30 @@ import { AgentTaskProgress } from './AgentTaskProgress';
 import { AgentDiffCard } from './AgentDiffCard';
 import { AgentApprovalModal } from './AgentApprovalModal';
 import { AgentMessageContent } from './AgentMessageMarkdown';
+import {
+  AgentAttachmentStatusBar,
+  AgentAttachmentToolbar,
+  AgentDropOverlay,
+  useComposerAttachments,
+} from './AgentComposerAttachments';
+import {
+  AgentMentionPopover,
+  AgentMentionTriggerButton,
+  AgentPinnedChipsBar,
+  buildPinnedSubmissionPayload,
+  useComposerMentions,
+  type ComposerPinnedItem,
+} from './AgentComposerMentions';
+import {
+  AgentContextualQuickActions,
+  resolveContextualQuickActions,
+  resolveScreenStarterChips,
+  type ContextualQuickActionChip,
+} from './AgentContextualQuickActions';
+import {
+  AgentOnboardingCards,
+  type OnboardingCardItem,
+} from './AgentOnboardingCards';
 
 const MAX_MESSAGE_LENGTH = 10000;
 
@@ -61,6 +85,8 @@ export interface AgentChatPanelProps {
   onCollapse?: () => void;
   isMobileDrawer?: boolean;
   client?: AgentApiClient;
+  externalPin?: ComposerPinnedItem | null;
+  onExternalPinConsumed?: () => void;
 }
 
 interface ActiveTaskState {
@@ -91,9 +117,13 @@ export function AgentChatPanel({
   onCollapse,
   isMobileDrawer = false,
   client = agentClient,
+  externalPin,
+  onExternalPinConsumed,
 }: AgentChatPanelProps) {
   const inputId = useId();
   const inputHintId = useId();
+  const mentionListboxId = useId();
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const messagesListRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const streamRef = useRef<AgentStreamConnection | null>(null);
@@ -141,6 +171,32 @@ export function AgentChatPanel({
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
   const [isApprovalActionBusy, setIsApprovalActionBusy] = useState(false);
 
+  const composerAttachments = useComposerAttachments({ client });
+  const composerMentions = useComposerMentions({
+    currentResumeId: resumeId,
+    currentResumeName: resumeName,
+    activeJob: composerAttachments.state.parsedJd
+      ? {
+          jobDescriptionId: composerAttachments.state.parsedJd.jobDescriptionId,
+          jobTitle: composerAttachments.state.parsedJd.title,
+          companyName: composerAttachments.state.parsedJd.companyName,
+          jobDescriptionText: composerAttachments.state.parsedJd.descriptionText,
+          applyUrl: composerAttachments.state.parsedJd.applyUrl,
+          location: composerAttachments.state.parsedJd.location,
+        }
+      : null,
+  });
+
+  // Pin canvas bullet/section pushed from CanvasFloatingToolbar "Ask AI Agent"
+  useEffect(() => {
+    if (!externalPin) return;
+    composerMentions.pinItem(externalPin);
+    onExternalPinConsumed?.();
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+    });
+  }, [externalPin, composerMentions.pinItem, onExternalPinConsumed]);
+
   // Keep latest callbacks in refs so SSE listeners never close over stale props
   const onProposalChangeRef = useRef(onProposalChange);
   onProposalChangeRef.current = onProposalChange;
@@ -148,12 +204,12 @@ export function AgentChatPanel({
     ((convId: string, taskId: string, opts?: { forceReplay?: boolean }) => void) | null
   >(null);
 
-  const scrollToBottom = useCallback(() => {
+  const scrollToBottom = useCallback((instant = false) => {
     const prefersReducedMotion =
       typeof window !== 'undefined' &&
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const behavior: ScrollBehavior = prefersReducedMotion ? 'auto' : 'smooth';
+    const behavior: ScrollBehavior = instant || prefersReducedMotion ? 'auto' : 'smooth';
 
     if (messagesListRef.current && typeof messagesListRef.current.scrollTo === 'function') {
       messagesListRef.current.scrollTo({
@@ -172,7 +228,7 @@ export function AgentChatPanel({
   }, []);
 
   useEffect(() => {
-    scrollToBottom();
+    scrollToBottom(Boolean(streamingAssistantText));
   }, [messages.length, activeTask?.status, activeTask?.steps.length, activeProposal?.executionId, streamingAssistantText, scrollToBottom]);
 
   // Disconnect stream cleanly on unmount
@@ -450,6 +506,23 @@ export function AgentChatPanel({
               statusMessage: data.message || 'Task completed',
               errorMessage: null,
             }));
+            if (data.summary && data.summary.trim().length > 0) {
+              const completedId = data.messageId || `completed-${data.taskId || taskId}`;
+              setMessages((prev) =>
+                prev.some((m) => m.id === completedId)
+                  ? prev
+                  : [
+                      ...prev,
+                      {
+                        id: completedId,
+                        conversationId: convId,
+                        role: 'assistant',
+                        content: data.summary!,
+                        createdAt: new Date().toISOString(),
+                      },
+                    ],
+              );
+            }
             setStreamingAssistantText('');
             setConnectionState('idle');
             void refreshMessages(convId);
@@ -505,12 +578,16 @@ export function AgentChatPanel({
   openEventStreamRef.current = openEventStream;
 
   const handleSubmitMessage = async (rawContent?: string) => {
-    const content = (rawContent ?? inputValue).trim();
+    const rawUserText = (rawContent ?? inputValue).trim();
+    const activePins = rawContent ? [] : composerMentions.pinnedItems;
 
-    if (!content) {
+    if (!rawUserText && activePins.length === 0) {
       setInputError('Please enter an instruction for the AI Agent.');
       return;
     }
+
+    const pinnedPayload = buildPinnedSubmissionPayload(rawUserText, activePins);
+    const content = pinnedPayload.content;
 
     if (content.length > MAX_MESSAGE_LENGTH) {
       setInputError(
@@ -551,15 +628,39 @@ export function AgentChatPanel({
 
       setMessages((prev) => [...prev, optimisticUserMsg]);
       setInputValue('');
+      composerMentions.closeMentionMenu();
+      composerMentions.clearPinnedItems();
       setStreamingAssistantText('');
       setPanelArtifacts({});
       onProposalChange(null);
       setConfirmedMetricIds({});
 
+      const attachedJd = composerAttachments.state.parsedJd;
+      const attachedResume = composerAttachments.state.parsedResume;
+      const effectiveResumeId =
+        pinnedPayload.overrideResumeId || attachedResume?.resumeId || resumeId;
+      const mergedContext = {
+        ...(attachedJd
+          ? {
+              activeResumeId: effectiveResumeId,
+              activeResumeName: attachedResume?.resumeName || resumeName,
+              jobDescriptionId: attachedJd.jobDescriptionId,
+              jobTitle: attachedJd.title,
+              companyName: attachedJd.companyName,
+              jobDescriptionText: attachedJd.descriptionText,
+              applyUrl: attachedJd.applyUrl,
+              location: attachedJd.location,
+              workplace: attachedJd.workplace,
+            }
+          : {}),
+        ...pinnedPayload.contextPatch,
+      };
+      const hasContext = Object.keys(mergedContext).length > 0;
       const submitted = await client.submitMessage(targetConvId, {
         content,
-        activeResumeId: resumeId,
+        activeResumeId: effectiveResumeId,
         idempotencyKey,
+        ...(hasContext ? { context: mergedContext } : {}),
       });
 
       // Replace optimistic message ID with server ID
@@ -602,7 +703,10 @@ export function AgentChatPanel({
   };
 
   const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (composerMentions.handleMentionKeyDown(e, inputValue, setInputValue)) {
+      return;
+    }
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) {
       e.preventDefault();
       void handleSubmitMessage();
     }
@@ -864,12 +968,14 @@ export function AgentChatPanel({
     <aside
       data-testid="agent-chat-panel"
       aria-label="AI Career Agent"
-      className={`flex flex-col bg-white dark:bg-zinc-950 border border-zinc-200/90 dark:border-zinc-800 shadow-sm overflow-clip ${
+      {...composerAttachments.dragHandlers}
+      className={`relative flex flex-col bg-white dark:bg-zinc-950 border border-zinc-200/90 dark:border-zinc-800 shadow-sm overflow-clip ${
         isMobileDrawer
           ? 'h-full w-full rounded-none sm:rounded-l-2xl'
           : 'rounded-2xl h-full min-h-0 w-full'
       }`}
     >
+      <AgentDropOverlay visible={composerAttachments.isDraggingOver} />
       {/* Panel Header */}
       <div className="px-4 py-3 border-b border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/70 flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -1066,6 +1172,49 @@ export function AgentChatPanel({
                 Ask the Agent to audit ATS compliance, strengthen bullets, or propose targeted edits. Every edit requires your review and approval before modifying your resume.
               </p>
             </div>
+            <AgentOnboardingCards
+              disabled={isSubmitting || isTaskActive}
+              onSelectAction={(card: OnboardingCardItem) => {
+                if (card.intent === 'open_jd_url') {
+                  if (composerAttachments.state.parsedJd) {
+                    const jd = composerAttachments.state.parsedJd;
+                    void handleSubmitMessage(
+                      `Match and tailor my resume for ${jd.title} at ${jd.companyName} and propose edits.`,
+                    );
+                  } else {
+                    composerAttachments.setShowUrlBar(true);
+                  }
+                  return;
+                }
+                if (card.prompt) {
+                  void handleSubmitMessage(card.prompt);
+                }
+              }}
+            />
+            <AgentContextualQuickActions
+              ariaLabel="Quick resume actions"
+              disabled={isSubmitting || isTaskActive}
+              chips={resolveScreenStarterChips({
+                route: '/app/resumes',
+                resumeName,
+                hasActiveResume: true,
+                activeJob: composerAttachments.state.parsedJd
+                  ? {
+                      title: composerAttachments.state.parsedJd.title,
+                      companyName: composerAttachments.state.parsedJd.companyName,
+                    }
+                  : null,
+              })}
+              onSelectChip={(chip: ContextualQuickActionChip) => {
+                if (chip.intent === 'open_jd_url') {
+                  composerAttachments.setShowUrlBar(true);
+                  return;
+                }
+                if (chip.prompt) {
+                  void handleSubmitMessage(chip.prompt);
+                }
+              }}
+            />
             <div className="space-y-1.5">
               {QUICK_PROMPTS.map((prompt) => (
                 <button
@@ -1090,14 +1239,28 @@ export function AgentChatPanel({
           return visibleMessages.map((msg, idx) => {
             const isUser = msg.role === 'user';
             const isLastAssistant = !isUser && idx === visibleMessages.length - 1;
-            const offersApplyAction =
-              isLastAssistant &&
-              !isTaskActive &&
-              !isSubmitting &&
-              !activeProposal &&
-              /\b(apply these changes|propose|implement|ats score|rewrite|improve)\b/i.test(
-                msg.content,
-              );
+            const contextualChips =
+              isLastAssistant && !isTaskActive && !isSubmitting && !activeProposal
+                ? resolveContextualQuickActions({
+                    lastAssistantMessageId: msg.id,
+                    lastAssistantContent: msg.content,
+                    hasActiveResume: true,
+                    activeJob: composerAttachments.state.parsedJd
+                      ? {
+                          title: composerAttachments.state.parsedJd.title,
+                          companyName: composerAttachments.state.parsedJd.companyName,
+                        }
+                      : null,
+                    artifacts: {
+                      atsScore: panelArtifacts.atsScore,
+                      matchScore: panelArtifacts.matchScore,
+                      discoveredJobsCount: panelArtifacts.jobs?.length,
+                      hasCoverLetter: Boolean(panelArtifacts.coverLetterId),
+                      hasInterviewSession: Boolean(panelArtifacts.interviewSessionId),
+                    },
+                    route: '/app/resumes',
+                  })
+                : [];
 
             return (
               <div key={msg.id} className="space-y-2">
@@ -1133,36 +1296,46 @@ export function AgentChatPanel({
                     />
                   </div>
                 </div>
-                {offersApplyAction && (
-                  <div className="pl-9 flex flex-wrap gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void handleSubmitMessage('Apply all the changes you just suggested to my resume')
+                {contextualChips.length > 0 && (
+                  <AgentContextualQuickActions
+                    className="pl-9"
+                    chips={contextualChips}
+                    disabled={isSubmitting || isTaskActive}
+                    onSelectChip={(chip) => {
+                      if (chip.intent === 'open_jd_url') {
+                        composerAttachments.setShowUrlBar(true);
+                        return;
                       }
-                      className="inline-flex items-center gap-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-[11px] font-semibold shadow-2xs transition-colors cursor-pointer"
-                    >
-                      <Sparkles className="w-3 h-3" aria-hidden="true" />
-                      <span>Apply these changes</span>
-                    </button>
-                  </div>
+                      if (chip.prompt) {
+                        void handleSubmitMessage(chip.prompt);
+                      }
+                    }}
+                  />
                 )}
               </div>
             );
           });
         })()}
 
-        {/* Streamed Assistant Text Preview */}
+        {/* Streamed Assistant Text Preview (Live Token-by-Token Markdown) */}
         {streamingAssistantText && (
-          <div className="flex items-start gap-2.5">
+          <div
+            data-testid="agent-streaming-bubble"
+            aria-busy="true"
+            className="flex items-start gap-2.5"
+          >
             <div
               aria-hidden="true"
               className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200/80 dark:border-blue-800"
             >
               <Bot className="w-3.5 h-3.5" />
             </div>
-            <div className="max-w-[85%] rounded-2xl rounded-tl-sm px-3.5 py-2.5 text-xs leading-relaxed bg-zinc-100/90 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border border-zinc-200/70 dark:border-zinc-800 whitespace-pre-wrap break-words">
-              {streamingAssistantText}
+            <div className="max-w-[85%] rounded-2xl rounded-tl-sm px-3.5 py-2.5 text-xs leading-relaxed bg-zinc-100/90 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border border-zinc-200/70 dark:border-zinc-800 break-words">
+              <AgentMessageContent content={streamingAssistantText} isUser={false} />
+              <span
+                aria-hidden="true"
+                className="inline-block w-1.5 h-3.5 ml-1 align-middle rounded-xs bg-blue-600 dark:bg-blue-400 animate-pulse motion-reduce:animate-none"
+              />
             </div>
           </div>
         )}
@@ -1295,8 +1468,27 @@ export function AgentChatPanel({
       {/* Composer Form */}
       <form
         onSubmit={handleFormSubmit}
-        className="p-3 border-t border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/50 space-y-2 shrink-0"
+        className="relative p-3 border-t border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/50 space-y-2 shrink-0"
       >
+        <AgentPinnedChipsBar
+          items={composerMentions.pinnedItems}
+          onRemove={composerMentions.unpinItem}
+          liveAnnouncement={composerMentions.liveAnnouncement}
+        />
+        <AgentAttachmentStatusBar
+          state={composerAttachments.state}
+          showUrlBar={composerAttachments.showUrlBar}
+          urlInput={composerAttachments.urlInput}
+          onUrlInputChange={composerAttachments.setUrlInput}
+          onSubmitUrl={() => void composerAttachments.handleParseUrl()}
+          onCloseUrlBar={() => composerAttachments.setShowUrlBar(false)}
+          onClearResume={composerAttachments.clearParsedResume}
+          onClearJd={composerAttachments.clearParsedJd}
+          onClearError={composerAttachments.clearError}
+          onQuickPrompt={(prompt) => void handleSubmitMessage(prompt)}
+          disabled={isSubmitting || isTaskActive}
+          showOpenResumeLink
+        />
         {inputError && (
           <p
             role="alert"
@@ -1306,30 +1498,78 @@ export function AgentChatPanel({
             {inputError}
           </p>
         )}
-        <div className="flex items-end gap-2">
+        <div className="relative flex items-end gap-1.5">
+          <AgentMentionPopover
+            listboxId={mentionListboxId}
+            isOpen={composerMentions.isOpen}
+            query={composerMentions.activeMention?.query || ''}
+            options={composerMentions.filteredOptions}
+            highlightedIndex={composerMentions.highlightedIndex}
+            onHighlight={composerMentions.setHighlightedIndex}
+            onSelect={(opt) => {
+              composerMentions.selectOption(opt, inputValue, setInputValue);
+              textareaRef.current?.focus();
+            }}
+            onClose={composerMentions.closeMentionMenu}
+          />
+          <AgentAttachmentToolbar
+            fileInputRef={composerAttachments.fileInputRef}
+            onFileSelected={(file) => void composerAttachments.handleFileUpload(file)}
+            onOpenFilePicker={composerAttachments.openFilePicker}
+            showUrlBar={composerAttachments.showUrlBar}
+            onToggleUrlBar={() => composerAttachments.setShowUrlBar((v) => !v)}
+            disabled={isSubmitting}
+          />
+          <AgentMentionTriggerButton
+            isOpen={composerMentions.isOpen}
+            disabled={isSubmitting}
+            onClick={() => {
+              composerMentions.openMentionMenu(inputValue, setInputValue);
+              textareaRef.current?.focus();
+            }}
+          />
           <div className="flex-1 min-w-0">
             <label htmlFor={inputId} className="sr-only">
               Ask the AI Resume Agent
             </label>
             <textarea
+              ref={textareaRef}
               id={inputId}
               rows={2}
               value={inputValue}
               disabled={isSubmitting}
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded={composerMentions.isOpen}
+              aria-controls={composerMentions.isOpen ? mentionListboxId : undefined}
+              aria-activedescendant={
+                composerMentions.isOpen && composerMentions.filteredOptions.length > 0
+                  ? `${mentionListboxId}-opt-${composerMentions.highlightedIndex}`
+                  : undefined
+              }
               aria-describedby={inputHintId}
               aria-invalid={inputError ? 'true' : undefined}
               onChange={(e) => {
                 setInputValue(e.target.value);
+                composerMentions.handleTextChange(e.target.value, e.target.selectionStart);
                 if (inputError) setInputError(null);
               }}
+              onClick={(e) => {
+                const el = e.currentTarget;
+                composerMentions.handleTextChange(el.value, el.selectionStart);
+              }}
               onKeyDown={handleTextareaKeyDown}
-              placeholder="Ask to audit ATS score, tighten bullets, or tailor for a role…"
+              placeholder="Type @ to pin @Experience, @Job, @Resume — or drop a PDF/JD URL…"
               className="w-full resize-none rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-600 disabled:opacity-60"
             />
           </div>
           <button
             type="submit"
-            disabled={isSubmitting || isTaskActive || inputValue.trim().length === 0}
+            disabled={
+              isSubmitting ||
+              isTaskActive ||
+              (inputValue.trim().length === 0 && composerMentions.pinnedItems.length === 0)
+            }
             aria-label="Send instruction to AI Agent"
             className="h-10 w-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-xs transition-colors disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
           >
@@ -1344,7 +1584,7 @@ export function AgentChatPanel({
           id={inputHintId}
           className="flex items-center justify-between text-[10.5px] text-zinc-500 dark:text-zinc-400 px-1"
         >
-          <span>Enter to send · AI tools use 1–2 credits (free on Pro)</span>
+          <span>Type @ to pin sections/jobs · Drop PDF or JD URL · Enter to send</span>
           {inputValue.length > 8000 && (
             <span
               className={

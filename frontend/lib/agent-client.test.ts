@@ -470,5 +470,44 @@ describe('AgentApiClient & Ticket-Authenticated SSE Stream (Phase 3)', () => {
 
     conn.disconnect();
   });
+
+  it('delivers ephemeral message_chunk events even when EventSource repeats the previous durable lastEventId', async () => {
+    FakeEventSource.instances = [];
+    const { transport } = createMockTransport({
+      'POST /agent/conversations/conv-1/stream-ticket': () => ({
+        ticket: 'stream-ticket-1',
+        expiresInSeconds: 30,
+      }),
+    });
+    const client = new AgentApiClient(transport);
+
+    const chunks: string[] = [];
+    const statuses: string[] = [];
+    const conn = client.connectToStream(
+      'conv-1',
+      {
+        onTaskStatus: (d) => statuses.push(d.status),
+        onMessageChunk: (d) => chunks.push(d.chunk || ''),
+      },
+      { EventSourceCtor: FakeEventSource, taskId: 'task-1' },
+    );
+
+    await new Promise((r) => setTimeout(r, 10));
+    const es = FakeEventSource.instances[0];
+    es.emitOpen();
+
+    // Durable event advances highestNumericSeq to 10
+    es.emitEvent('task_status', { taskId: 'task-1', status: 'RUNNING' }, '10');
+    // Per WHATWG EventSource spec, id-less ephemeral message_chunk events inherit lastEventId = '10'
+    es.emitEvent('message_chunk', { taskId: 'task-1', chunk: 'Hello ' }, '10');
+    es.emitEvent('message_chunk', { taskId: 'task-1', chunk: 'world!' }, '10');
+    // Duplicate durable event '10' must still be deduplicated
+    es.emitEvent('task_status', { taskId: 'task-1', status: 'RUNNING' }, '10');
+
+    expect(statuses).toEqual(['RUNNING']);
+    expect(chunks).toEqual(['Hello ', 'world!']);
+
+    conn.disconnect();
+  });
 });
 

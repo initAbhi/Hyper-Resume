@@ -3,6 +3,7 @@ import {
   Logger,
   NotFoundException,
   OnModuleDestroy,
+  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, Repository } from 'typeorm';
@@ -17,16 +18,20 @@ import { AgentStreamTicket } from './entities/agent-stream-ticket.entity.js';
 import { AgentToolExecution } from './entities/agent-tool-execution.entity.js';
 import { CreditsService } from '../credits/credits.service.js';
 import { CreateAgentMessageDto, CreateConversationDto } from './dto/agent-message.dto.js';
+import { AgentUsageGuardService } from './services/agent-usage-guard.service.js';
 
 export interface SseStreamEvent {
-  id: string;
+  id?: string;
   type: string;
   data: Record<string, unknown>;
+  ephemeral?: boolean;
+  originInstanceId?: string;
 }
 
 @Injectable()
 export class AgentService implements OnModuleDestroy {
   private readonly logger = new Logger(AgentService.name);
+  private readonly instanceId = crypto.randomUUID();
   private readonly eventEmitter = new EventEmitter();
   private pgListenerClient: any = null;
   private pgListenerInitPromise: Promise<any> | null = null;
@@ -46,6 +51,8 @@ export class AgentService implements OnModuleDestroy {
     private readonly ticketRepo: Repository<AgentStreamTicket>,
     private readonly creditsService: CreditsService,
     private readonly dataSource: DataSource,
+    @Optional()
+    private readonly usageGuard?: AgentUsageGuardService,
   ) {
     this.eventEmitter.setMaxListeners(1000);
   }
@@ -203,7 +210,7 @@ export class AgentService implements OnModuleDestroy {
       await this.conversationRepo.save(conversation);
     }
 
-    // Idempotency check if key is provided
+    // Idempotency check if key is provided (must run before rate-limit accounting so retries don't double-count)
     if (dto.idempotencyKey) {
       const existingTask = await this.taskRepo
         .createQueryBuilder('task')
@@ -221,32 +228,45 @@ export class AgentService implements OnModuleDestroy {
       }
     }
 
-    // Save user message
-    const userMessage = this.messageRepo.create({
-      conversationId,
-      role: 'user',
-      content: dto.content.trim(),
-    });
-    const savedMessage = await this.messageRepo.save(userMessage);
+    // Enforce Per-User & Per-Conversation Burst Rate Limits + Daily AI Token/Cost Caps (Free & Pro)
+    if (this.usageGuard) {
+      await this.usageGuard.enforceMessageGuard(userId, conversationId, Date.now(), {
+        holdInFlightSlot: true,
+      });
+    }
 
-    // Create AgentTask in PENDING state
-    const task = this.taskRepo.create({
-      conversationId,
-      userId,
-      status: 'PENDING',
-      fenceToken: 0,
-      taskInput: {
+    let savedMessage: AgentMessage;
+    let savedTask: AgentTask;
+    try {
+      // Save user message
+      const userMessage = this.messageRepo.create({
+        conversationId,
+        role: 'user',
         content: dto.content.trim(),
-        activeResumeId: resolvedResumeId,
-        context: mergedContext,
-        messageId: savedMessage.id,
-      },
-      metadata: {
-        idempotencyKey: dto.idempotencyKey,
-        retries: 0,
-      },
-    });
-    const savedTask = await this.taskRepo.save(task);
+      });
+      savedMessage = await this.messageRepo.save(userMessage);
+
+      // Create AgentTask in PENDING state
+      const task = this.taskRepo.create({
+        conversationId,
+        userId,
+        status: 'PENDING',
+        fenceToken: 0,
+        taskInput: {
+          content: dto.content.trim(),
+          activeResumeId: resolvedResumeId,
+          context: mergedContext,
+          messageId: savedMessage.id,
+        },
+        metadata: {
+          idempotencyKey: dto.idempotencyKey,
+          retries: 0,
+        },
+      });
+      savedTask = await this.taskRepo.save(task);
+    } finally {
+      this.usageGuard?.releaseInFlightSubmit(userId);
+    }
 
     // Publish task_created event
     await this.publishEvent(savedTask.id, conversationId, 'task_status', {
@@ -255,10 +275,20 @@ export class AgentService implements OnModuleDestroy {
       message: 'Task created and queued for worker leasing',
     });
 
+    // Immediately wake local DurableTaskWorker (eliminates ~500-1000ms poll delay for <1.2s TTFT)
+    this.eventEmitter.emit('task:queued', savedTask.id);
+
     return {
       taskId: savedTask.id,
       conversationId,
       messageId: savedMessage.id,
+    };
+  }
+
+  onTaskQueued(listener: (taskId: string) => void): () => void {
+    this.eventEmitter.on('task:queued', listener);
+    return () => {
+      this.eventEmitter.removeListener('task:queued', listener);
     };
   }
 
@@ -347,6 +377,47 @@ export class AgentService implements OnModuleDestroy {
     return savedEvent;
   }
 
+  /**
+   * Emits a real-time ephemeral SSE event (e.g. token-by-token message_chunk) directly to
+   * connected subscribers without writing a row to agent_task_events on every token.
+   */
+  publishEphemeralEvent(
+    taskId: string,
+    conversationId: string,
+    eventType: string,
+    eventPayload: Record<string, unknown>,
+  ): void {
+    const sseEvent: SseStreamEvent = {
+      type: eventType,
+      data: {
+        taskId,
+        ...eventPayload,
+      },
+      ephemeral: true,
+    };
+
+    // 1. Immediate in-process EventEmitter delivery (sub-millisecond)
+    this.eventEmitter.emit(`conversation:${conversationId}`, sseEvent);
+
+    // 2. Best-effort multi-instance PostgreSQL NOTIFY fan-out (tagged with originInstanceId to prevent self-echo)
+    if (this.dataSource?.isInitialized && this.dataSource?.options?.type === 'postgres') {
+      const channel = this.getPgChannelName(conversationId);
+      if (channel) {
+        const payloadString = JSON.stringify({
+          ...sseEvent,
+          originInstanceId: this.instanceId,
+        });
+        if (Buffer.byteLength(payloadString, 'utf8') <= 7500) {
+          void this.dataSource
+            .query(`SELECT pg_notify($1, $2)`, [channel, payloadString])
+            .catch(() => {
+              // Non-fatal in single-instance / mock environments
+            });
+        }
+      }
+    }
+  }
+
   async onModuleDestroy(): Promise<void> {
     this.channelRefCounts.clear();
     this.channelToConversation.clear();
@@ -408,6 +479,9 @@ export class AgentService implements OnModuleDestroy {
                   data: dbEvent.eventPayload,
                 });
               }
+              return;
+            }
+            if (parsed.ephemeral && parsed.originInstanceId === this.instanceId) {
               return;
             }
             this.eventEmitter.emit(`conversation:${convId}`, parsed);
@@ -504,6 +578,11 @@ export class AgentService implements OnModuleDestroy {
         }
         if (!replayCompleted) {
           buffer.push(event);
+        } else if (event.ephemeral || !event.id) {
+          observer.next({
+            type: event.type,
+            data: event.data,
+          });
         } else {
           const eventSeq = this.parseSequenceId(event.id) ?? 0n;
           if (eventSeq > highestReplayedSeq) {
@@ -565,10 +644,17 @@ export class AgentService implements OnModuleDestroy {
             });
           }
 
-          // Step 4: Flush buffered live events (deduplicating against highestReplayedSeq)
+          // Step 4: Flush buffered live events (deduplicating durable events against highestReplayedSeq)
           replayCompleted = true;
           for (const buffered of buffer) {
             if (isDisposed) return;
+            if (buffered.ephemeral || !buffered.id) {
+              observer.next({
+                type: buffered.type,
+                data: buffered.data,
+              });
+              continue;
+            }
             const bSeq = this.parseSequenceId(buffered.id) ?? 0n;
             if (bSeq > highestReplayedSeq) {
               highestReplayedSeq = bSeq;

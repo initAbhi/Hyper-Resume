@@ -103,6 +103,7 @@ import { CanvaDock, type StudioPanel } from '@/components/resumes/CanvaDock';
 import { CanvaBottomBar } from '@/components/resumes/CanvaBottomBar';
 import { AddContentDrawer } from '@/components/resumes/AddContentDrawer';
 import { AgentChatPanel } from '@/components/resumes/AgentChatPanel';
+import type { ComposerPinnedItem } from '@/components/resumes/AgentComposerMentions';
 import { buildCanvasDiffMapFromProposal } from '@/components/resumes/templates/CanvasEditContext';
 import type { AgentApprovalProposal } from '@/lib/agent-client';
 
@@ -328,6 +329,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
   const [hasMountedMobileAgent, setHasMountedMobileAgent] = useState(false);
   const [activeAgentProposal, setActiveAgentProposal] = useState<AgentApprovalProposal | null>(null);
   const [focusedDiffPath, setFocusedDiffPath] = useState<string | null>(null);
+  const [pendingAgentPin, setPendingAgentPin] = useState<ComposerPinnedItem | null>(null);
   const [agentToast, setAgentToast] = useState<{ type: 'success' | 'info'; message: string } | null>(null);
 
   const pendingCanvasDiffs = React.useMemo(
@@ -1111,6 +1113,47 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
       });
     },
     [updateContent],
+  );
+
+  const handleAskAgentFromCanvas = useCallback(
+    (meta: BulletSelectionMeta) => {
+      const cleanText = (meta.currentText || '').trim();
+      const shortExcerpt =
+        cleanText.length > 48 ? `${cleanText.slice(0, 48).trim()}…` : cleanText || 'Selected text';
+      const isSummary = meta.section === 'summary' || meta.fieldPath === 'summary';
+
+      const pin: ComposerPinnedItem = isSummary
+        ? {
+            kind: 'section',
+            id: 'section:summary',
+            label: '@Summary',
+            sectionKey: 'summary',
+            fieldPath: 'summary',
+            excerpt: cleanText,
+          }
+        : {
+            kind: 'bullet',
+            id: `bullet:${meta.fieldPath}`,
+            label:
+              meta.section === 'experience'
+                ? `Exp #${(meta.expIdx ?? 0) + 1} · Bullet #${(meta.bulletIdx ?? 0) + 1}: "${shortExcerpt}"`
+                : meta.section === 'projects'
+                  ? `Project #${(meta.projIdx ?? 0) + 1} · #${(meta.bulletIdx ?? 0) + 1}: "${shortExcerpt}"`
+                  : `Bullet: "${shortExcerpt}"`,
+            sectionKey: meta.section,
+            fieldPath: meta.fieldPath,
+            excerpt: cleanText,
+          };
+
+      setPendingAgentPin(pin);
+      if (isDesktopLg && editorMode === 'canvas') {
+        openStudioPanel('agent');
+      } else {
+        setHasMountedMobileAgent(true);
+        setIsMobileAgentOpen(true);
+      }
+    },
+    [editorMode, isDesktopLg, openStudioPanel],
   );
 
   const handleTriggerAiEnhanceFromCanvas = useCallback(
@@ -2212,6 +2255,8 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
               onProposalApproved={handleAgentProposalApproved}
               onProposalRejected={handleAgentProposalRejected}
               onCollapse={closeStudioPanel}
+              externalPin={pendingAgentPin}
+              onExternalPinConsumed={() => setPendingAgentPin(null)}
             />
           </div>
         )}
@@ -3469,7 +3514,10 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                             highlightKeywords={activeJobKeywords.length > 0 ? activeJobKeywords : undefined}
                             showHighlights={isExportModalOpen ? false : showHighlights}
                           />
-                          <CanvasFloatingToolbar onTriggerAiEnhance={handleTriggerAiEnhanceFromCanvas} />
+                          <CanvasFloatingToolbar
+                            onTriggerAiEnhance={handleTriggerAiEnhanceFromCanvas}
+                            onAskAgent={handleAskAgentFromCanvas}
+                          />
                         </CanvasEditProvider>
                       );
                     })()}
@@ -3918,6 +3966,8 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
               onProposalRejected={handleAgentProposalRejected}
               onCollapse={() => setIsMobileAgentOpen(false)}
               isMobileDrawer
+              externalPin={pendingAgentPin}
+              onExternalPinConsumed={() => setPendingAgentPin(null)}
             />
           </div>
         </div>

@@ -50,6 +50,7 @@ describe('ToolRegistryService', () => {
         description: 'Duplicate mock tool',
         permissionTier: ToolPermissionTier.READ_ONLY,
         requiresApproval: false,
+        isModelCallable: true,
         creditCost: 0,
         timeoutMs: 5000,
         inputSchema: {},

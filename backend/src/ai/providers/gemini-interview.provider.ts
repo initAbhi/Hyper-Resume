@@ -3,9 +3,16 @@ import {
   GatewayTimeoutException,
   Injectable,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PromptSanitizer } from '../utils/prompt-sanitizer.js';
+import { calculateUsageCost } from '../config/ai-model-pricing.js';
+import {
+  AiModelRouterService,
+  type AiModelTier,
+  type AiTaskKind,
+} from '../services/ai-model-router.service.js';
 import type { QuestionCategory } from '../../interviews/entities/interview-question.entity.js';
 import type { TurnEvaluation } from '../../interviews/entities/interview-turn.entity.js';
 
@@ -53,6 +60,8 @@ export interface InterviewAiTelemetry {
   outputTokens: number;
   thinkingTokens: number;
   estimatedCostUsd: number;
+  modelId?: string;
+  modelTier?: AiModelTier;
 }
 
 @Injectable()
@@ -62,17 +71,21 @@ export class GeminiInterviewProvider {
   private readonly modelId: string;
   private readonly timeoutMs = 8500; // 8.5 second timeout
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    @Optional()
+    private readonly modelRouter?: AiModelRouterService,
+  ) {
     this.apiKey =
       this.configService.get<string>('AI_API_KEY') ||
       this.configService.get<string>('GEMINI_API_KEY');
     const rawModel =
       this.configService.get<string>('AI_INTERVIEW_MODEL') ||
       this.configService.get<string>('AI_MODEL') ||
-      'gemini-3.5-flash-lite';
+      'gemini-flash-lite-latest';
     this.modelId =
-      !rawModel || rawModel.includes('1.5') || rawModel.includes('2.0') || rawModel.includes('2.5')
-        ? 'gemini-3.5-flash-lite'
+      !rawModel || rawModel.includes('1.5')
+        ? 'gemini-flash-lite-latest'
         : rawModel;
   }
 
@@ -140,6 +153,7 @@ ${count > 3 ? '- Question 3: Probing an unevidenced skill from target JD\n- Ques
         userPrompt,
         jsonSchema,
         maxOutputTokens,
+        'interview_questions',
       );
 
       return {
@@ -221,6 +235,7 @@ ${PromptSanitizer.wrapUntrusted('candidate_response', cleanAnswer)}`;
         userPrompt,
         jsonSchema,
         450, // maxOutputTokens cap
+        'interview_evaluation',
       );
 
       return {
@@ -278,6 +293,7 @@ ${PromptSanitizer.wrapUntrusted('follow_up_answer', cleanAnswer)}`;
         userPrompt,
         jsonSchema,
         400, // maxOutputTokens cap
+        'interview_evaluation',
       );
 
       return {
@@ -358,6 +374,7 @@ ${JSON.stringify(turnSummaries, null, 2)}`;
         userPrompt,
         jsonSchema,
         800, // maxOutputTokens cap
+        'interview_evaluation',
       );
 
       return {
@@ -389,8 +406,18 @@ ${JSON.stringify(turnSummaries, null, 2)}`;
     prompt: string,
     jsonSchema: Record<string, unknown>,
     maxOutputTokens: number,
+    taskKind: AiTaskKind = 'interview_evaluation',
   ): Promise<{ data: T; telemetry: InterviewAiTelemetry }> {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${this.modelId}:generateContent?key=${this.apiKey}`;
+    const route = this.modelRouter?.resolveForTask(taskKind);
+    const tier: AiModelTier = route?.tier || (taskKind === 'interview_questions' ? 'fast' : 'reasoning');
+    const explicitInterviewOverride = this.configService.get<string>('AI_INTERVIEW_MODEL')?.trim();
+    const modelsToTry = explicitInterviewOverride
+      ? [explicitInterviewOverride, ...(route ? [route.primaryModel, ...route.fallbackModels] : [this.modelId])]
+      : route
+        ? [route.primaryModel, ...route.fallbackModels]
+        : [this.modelId];
+    const uniqueModels = modelsToTry.filter((m, idx, arr) => Boolean(m) && arr.indexOf(m) === idx);
+
     const payload = {
       systemInstruction: { parts: [{ text: systemInstruction }] },
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -405,67 +432,88 @@ ${JSON.stringify(turnSummaries, null, 2)}`;
     let cumulativeInputTokens = 0;
     let cumulativeOutputTokens = 0;
     let cumulativeThinkingTokens = 0;
+    let lastError: unknown;
 
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+    for (const activeModelId of uniqueModels) {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${activeModelId}:generateContent?key=${this.apiKey}`;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
 
-      try {
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-          signal: controller.signal,
-        });
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: controller.signal,
+          });
 
-        clearTimeout(timeoutId);
+          clearTimeout(timeoutId);
 
-        const resJson: any = await response.json();
-        const usage = resJson.usageMetadata || {};
-        cumulativeInputTokens += usage.promptTokenCount || 0;
-        cumulativeOutputTokens += usage.candidatesTokenCount || 0;
-        cumulativeThinkingTokens += usage.candidatesTokensDetails?.[0]?.thinkingTokenCount || 0;
+          const resJson: any = await response.json();
+          const usage = resJson.usageMetadata || {};
+          cumulativeInputTokens += usage.promptTokenCount || 0;
+          cumulativeOutputTokens += usage.candidatesTokenCount || 0;
+          cumulativeThinkingTokens += usage.candidatesTokensDetails?.[0]?.thinkingTokenCount || 0;
 
-        if (!response.ok) {
-          this.logger.warn(`Gemini API error (attempt ${attempt}): ${response.status} - ${JSON.stringify(resJson)}`);
-          if (response.status === 429 && attempt < 2) {
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-            continue;
+          if (!response.ok) {
+            this.logger.warn(
+              `Gemini interview API warning (model=${activeModelId}, tier=${tier}, attempt=${attempt}): ${response.status} - ${JSON.stringify(resJson).slice(0, 180)}`,
+            );
+            lastError = new BadGatewayException(`AI service returned error status ${response.status}`);
+            if ((response.status === 429 || response.status === 503) && attempt < 2) {
+              await new Promise((resolve) => setTimeout(resolve, 800));
+              continue;
+            }
+            break; // Move to next fallback model in tier chain
           }
-          throw new BadGatewayException(`AI service returned error status ${response.status}`);
-        }
 
-        const candidateText = resJson.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!candidateText) {
-          throw new BadGatewayException('Malformed or empty completion returned by AI provider');
-        }
-
-        const parsedData = JSON.parse(candidateText) as T;
-        const estimatedCostUsd =
-          (cumulativeInputTokens * 0.10 + cumulativeOutputTokens * 0.40) / 1_000_000;
-
-        return {
-          data: parsedData,
-          telemetry: {
-            inputTokens: cumulativeInputTokens,
-            outputTokens: cumulativeOutputTokens,
-            thinkingTokens: cumulativeThinkingTokens,
-            estimatedCostUsd,
-          },
-        };
-      } catch (err: any) {
-        clearTimeout(timeoutId);
-        if (err.name === 'AbortError') {
-          if (attempt < 2) {
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-            continue;
+          const candidateText = resJson.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!candidateText) {
+            throw new BadGatewayException('Malformed or empty completion returned by AI provider');
           }
-          throw new GatewayTimeoutException('AI inference service timed out after 8.5 seconds');
+
+          const parsedData = JSON.parse(candidateText) as T;
+          let estimatedCostUsd =
+            (cumulativeInputTokens * 0.25 + cumulativeOutputTokens * 2.0) / 1_000_000;
+          try {
+            estimatedCostUsd = calculateUsageCost(
+              activeModelId,
+              cumulativeInputTokens,
+              cumulativeOutputTokens,
+            ).costUsd;
+          } catch {
+            // Keep conservative estimate if custom override model isn't in pricing table
+          }
+
+          return {
+            data: parsedData,
+            telemetry: {
+              inputTokens: cumulativeInputTokens,
+              outputTokens: cumulativeOutputTokens,
+              thinkingTokens: cumulativeThinkingTokens,
+              estimatedCostUsd,
+              modelId: activeModelId,
+              modelTier: tier,
+            },
+          };
+        } catch (err: any) {
+          clearTimeout(timeoutId);
+          lastError = err;
+          if (err.name === 'AbortError') {
+            if (attempt < 2) {
+              await new Promise((resolve) => setTimeout(resolve, 600));
+              continue;
+            }
+            lastError = new GatewayTimeoutException('AI inference service timed out after 8.5 seconds');
+            break;
+          }
+          if (attempt >= 2) break;
         }
-        if (attempt >= 2) throw err;
       }
     }
 
+    if (lastError instanceof Error) throw lastError;
     throw new BadGatewayException('Failed to generate response from AI service after retry');
   }
 

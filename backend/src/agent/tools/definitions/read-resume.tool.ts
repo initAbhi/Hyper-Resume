@@ -21,6 +21,7 @@ export class ReadResumeTool implements AgentTool<ReadResumeArgs, unknown> {
     'Retrieves the complete structured resume content (contact, headline, summary, experience, education, skills, projects, certifications) for a specified resume owned by the user.';
   readonly permissionTier = ToolPermissionTier.READ_ONLY;
   readonly requiresApproval = false;
+  readonly isModelCallable = true;
   readonly creditCost = 0;
   readonly timeoutMs = 5000;
 

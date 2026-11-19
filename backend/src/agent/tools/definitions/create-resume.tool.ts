@@ -22,6 +22,7 @@ export class CreateResumeTool implements AgentTool<CreateResumeArgs, unknown> {
     'Creates a new independent resume draft for the candidate. Safe additive operation; does not overwrite any existing resume.';
   readonly permissionTier = ToolPermissionTier.SAFE_MUTATING;
   readonly requiresApproval = false;
+  readonly isModelCallable = true;
   readonly creditCost = 0;
   readonly timeoutMs = 8000;
 

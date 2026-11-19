@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -6,14 +7,18 @@ import {
   Headers,
   HttpCode,
   HttpStatus,
+  Optional,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
   Query,
   Sse,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Observable } from 'rxjs';
 import { AgentService } from './agent.service.js';
 import { AgentExecutorService } from './agent-executor.service.js';
@@ -22,14 +27,43 @@ import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import type { User } from '../users/entities/user.entity.js';
 import { CreateAgentMessageDto, CreateConversationDto } from './dto/agent-message.dto.js';
 import { ApproveToolDto } from './dto/approve-tool.dto.js';
+import { ParseAttachmentUrlDto } from './dto/parse-attachment-url.dto.js';
 import { SseTicketGuard } from './guards/sse-ticket.guard.js';
+import {
+  AgentAttachmentService,
+  type AttachmentParseKind,
+  type UploadedAttachmentFile,
+} from './services/agent-attachment.service.js';
+import { AgentUsageGuardService } from './services/agent-usage-guard.service.js';
+
+const ATTACHMENT_UPLOAD_OPTIONS = {
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10 MB
+  },
+};
 
 @Controller('agent')
 export class AgentController {
   constructor(
     private readonly agentService: AgentService,
     private readonly executorService: AgentExecutorService,
+    @Optional()
+    private readonly attachmentService?: AgentAttachmentService,
+    @Optional()
+    private readonly usageGuard?: AgentUsageGuardService,
   ) {}
+
+  @Get('usage')
+  @UseGuards(JwtAuthGuard)
+  async getUsage(
+    @CurrentUser() user: User,
+    @Query('conversationId') conversationId?: string,
+  ) {
+    if (!this.usageGuard) {
+      return { available: false };
+    }
+    return this.usageGuard.getUsageSnapshot(user.id, conversationId);
+  }
 
   @Post('conversations')
   @UseGuards(JwtAuthGuard)
@@ -192,6 +226,40 @@ export class AgentController {
     @Param('taskId', ParseUUIDPipe) taskId: string,
   ) {
     return this.agentService.cancelTask(taskId, user.id);
+  }
+
+  @Post('attachments/parse')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('file', ATTACHMENT_UPLOAD_OPTIONS))
+  async parseUploadedAttachment(
+    @CurrentUser() user: User,
+    @UploadedFile() file?: UploadedAttachmentFile,
+    @Body('kind') kind?: AttachmentParseKind,
+  ) {
+    if (!this.attachmentService) {
+      throw new BadRequestException('Attachment parsing service is unavailable');
+    }
+    if (this.usageGuard) {
+      await this.usageGuard.enforceAttachmentGuard(user.id);
+    }
+    return this.attachmentService.parseUploadedAttachment(user.id, file, kind || 'auto');
+  }
+
+  @Post('attachments/parse-url')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async parseJobUrlAttachment(
+    @CurrentUser() user: User,
+    @Body() dto: ParseAttachmentUrlDto,
+  ) {
+    if (!this.attachmentService) {
+      throw new BadRequestException('Attachment parsing service is unavailable');
+    }
+    if (this.usageGuard) {
+      await this.usageGuard.enforceAttachmentGuard(user.id);
+    }
+    return this.attachmentService.parseJobUrlAttachment(user.id, dto.url);
   }
 }
 

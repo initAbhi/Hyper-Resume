@@ -23,6 +23,7 @@ export class RunAtsAuditTool implements AgentTool<RunAtsAuditArgs, unknown> {
     "Executes HyperResume's comprehensive 5-dimension ATS audit engine on the specified resume. Evaluates parse rate, impact metrics, action verb strength, section structure, writing quality, and simulated ATS platforms.";
   readonly permissionTier = ToolPermissionTier.AI_ANALYSIS;
   readonly requiresApproval = false;
+  readonly isModelCallable = true;
   readonly creditCost = 0;
   readonly timeoutMs = 10000;
 

@@ -21,6 +21,7 @@ export class ReadResumeVersionsTool implements AgentTool<ReadResumeVersionsArgs,
     'Retrieves the list of historical snapshot versions for a resume, including version numbers, change summaries, and creation timestamps.';
   readonly permissionTier = ToolPermissionTier.READ_ONLY;
   readonly requiresApproval = false;
+  readonly isModelCallable = true;
   readonly creditCost = 0;
   readonly timeoutMs = 5000;
 

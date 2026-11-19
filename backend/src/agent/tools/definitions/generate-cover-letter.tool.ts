@@ -25,6 +25,7 @@ export class GenerateCoverLetterTool implements AgentTool<GenerateCoverLetterArg
     'Generates a personalized cover letter draft connecting candidate achievements with target job priorities. Stages the letter non-destructively.';
   readonly permissionTier = ToolPermissionTier.AI_ANALYSIS;
   readonly requiresApproval = false;
+  readonly isModelCallable = true;
   readonly creditCost = 2;
   readonly timeoutMs = 25000;
 

@@ -21,6 +21,7 @@ export class DurableTaskWorker implements OnModuleInit, OnModuleDestroy {
 
   private pollInterval?: NodeJS.Timeout;
   private reservationReaperInterval?: NodeJS.Timeout;
+  private unsubscribeTaskQueued?: () => void;
   private isRunning = false;
   private isStopping = false;
   private readonly activeHeartbeats = new Map<string, NodeJS.Timeout>();
@@ -59,6 +60,19 @@ export class DurableTaskWorker implements OnModuleInit, OnModuleDestroy {
       }
     }, intervalMs);
 
+    // Event-driven wake-up: lease newly submitted tasks immediately instead of waiting for next poll tick
+    if (this.agentService && typeof this.agentService.onTaskQueued === 'function') {
+      this.unsubscribeTaskQueued = this.agentService.onTaskQueued(() => {
+        if (this.isStopping) return;
+        setTimeout(() => {
+          if (this.isStopping) return;
+          void this.pollOnce().catch((err: any) => {
+            this.logger.error(`Error in immediate worker poll: ${err.message}`);
+          });
+        }, 30);
+      });
+    }
+
     // Release expired credit reservations every 5 minutes
     if (this.creditsService) {
       this.reservationReaperInterval = setInterval(async () => {
@@ -80,6 +94,11 @@ export class DurableTaskWorker implements OnModuleInit, OnModuleDestroy {
   public stopWorker(): void {
     this.isStopping = true;
     this.isRunning = false;
+
+    if (this.unsubscribeTaskQueued) {
+      this.unsubscribeTaskQueued();
+      this.unsubscribeTaskQueued = undefined;
+    }
 
     if (this.pollInterval) {
       clearInterval(this.pollInterval);

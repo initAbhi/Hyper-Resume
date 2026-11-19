@@ -1,5 +1,7 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsIn,
   IsNotEmpty,
@@ -9,6 +11,55 @@ import {
   MaxLength,
   ValidateNested,
 } from 'class-validator';
+
+export class PinnedAgentTargetDto {
+  @IsIn(['section', 'bullet', 'job', 'resume'])
+  kind!: 'section' | 'bullet' | 'job' | 'resume';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  id?: string;
+
+  @IsString()
+  @MaxLength(255)
+  label!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  sectionKey?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  fieldPath?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(600)
+  excerpt?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  resumeId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  jobId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  jobTitle?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  companyName?: string;
+}
 
 export class AgentMessageContextDto {
   @IsOptional()
@@ -78,6 +129,20 @@ export class AgentMessageContextDto {
   @IsOptional()
   @IsIn(['Executive', 'Enthusiastic', 'Technical', 'Concise'])
   tone?: 'Executive' | 'Enthusiastic' | 'Technical' | 'Concise';
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(12)
+  @IsString({ each: true })
+  @MaxLength(64, { each: true })
+  focusSections?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(12)
+  @ValidateNested({ each: true })
+  @Type(() => PinnedAgentTargetDto)
+  pinnedTargets?: PinnedAgentTargetDto[];
 }
 
 export class CreateConversationDto {

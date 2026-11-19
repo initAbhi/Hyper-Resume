@@ -1,5 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import {
+  AiModelRouterService,
+  type AiModelTier,
+  type AiTaskKind,
+} from '../services/ai-model-router.service.js';
 import type {
   AiProvider,
   AdaptationProviderResult,
@@ -38,6 +43,7 @@ import { sanitizeSectionRewriteResult } from '../utils/section-rewriter.util.js'
 
 export interface GeminiContentPart {
   text?: string;
+  thought?: boolean;
   functionCall?: {
     name: string;
     args: Record<string, any>;
@@ -61,9 +67,15 @@ export interface GeminiFunctionCallingResponse {
   }>;
   telemetry: {
     promptTokens: number;
+    cachedInputTokens?: number;
     completionTokens: number;
     totalTokens: number;
     costUsd: number;
+    savedCostUsd?: number;
+    tierSavingsUsd?: number;
+    tierSavingsPct?: number;
+    modelTier?: AiModelTier;
+    taskKind?: AiTaskKind;
     modelId: string;
     pricingVersion: string;
   };
@@ -75,8 +87,34 @@ export class GeminiAiProvider implements AiProvider {
   private readonly logger = new Logger(GeminiAiProvider.name);
   private readonly apiKey?: string;
   private readonly model: string;
+  /** Per-model 60s health cooldown when a model hits 503 high-demand or AbortError timeouts */
+  private readonly degradedUntil = new Map<string, number>();
 
-  constructor(private readonly configService: ConfigService) {
+  private markModelDegraded(modelId: string, cooldownMs = 60_000): void {
+    this.degradedUntil.set(modelId, Date.now() + cooldownMs);
+  }
+
+  private orderModelsByHealth(models: string[]): string[] {
+    const now = Date.now();
+    const healthy: string[] = [];
+    const degraded: string[] = [];
+    for (const m of models) {
+      const until = this.degradedUntil.get(m);
+      if (until && until > now) {
+        degraded.push(m);
+      } else {
+        if (until) this.degradedUntil.delete(m);
+        healthy.push(m);
+      }
+    }
+    return [...healthy, ...degraded];
+  }
+
+  constructor(
+    private readonly configService: ConfigService,
+    @Optional()
+    private readonly modelRouter?: AiModelRouterService,
+  ) {
     this.apiKey = this.configService.get<string>('AI_API_KEY') || this.configService.get<string>('GEMINI_API_KEY');
     const rawModel = this.configService.get<string>('AI_MODEL', 'gemini-2.5-flash');
     this.model = (!rawModel || rawModel.includes('1.5'))
@@ -85,6 +123,67 @@ export class GeminiAiProvider implements AiProvider {
 
     // Safeguard 1: Verify model pricing exists on initialization
     getModelPricing(this.model);
+  }
+
+  public getActiveModel(tier?: AiModelTier, taskKind?: AiTaskKind): string {
+    if (this.modelRouter) {
+      if (taskKind) return this.modelRouter.resolveForTask(taskKind).primaryModel;
+      if (tier) return this.modelRouter.resolveForTier(tier).primaryModel;
+    }
+    return this.model;
+  }
+
+  private resolveModelChain(options?: {
+    model?: string;
+    tier?: AiModelTier;
+    taskKind?: AiTaskKind;
+  }): { tier: AiModelTier; preferredModel: string; modelsToTry: string[] } {
+    if (options?.model) {
+      const tier: AiModelTier =
+        options.tier ||
+        (options.taskKind && this.modelRouter
+          ? this.modelRouter.getTierForTask(options.taskKind)
+          : /lite/i.test(options.model)
+            ? 'fast'
+            : 'reasoning');
+      const baseFallbacks = this.modelRouter
+        ? this.modelRouter.resolveForTier(tier, options.taskKind).fallbackModels
+        : ['gemini-flash-lite-latest', 'gemini-flash-latest', 'gemini-3.1-flash-lite-preview', 'gemini-2.5-flash'];
+      const modelsToTry = this.orderModelsByHealth(
+        [options.model, ...baseFallbacks].filter(
+          (m, idx, arr) => Boolean(m) && arr.indexOf(m) === idx,
+        ),
+      );
+      return { tier, preferredModel: options.model, modelsToTry };
+    }
+
+    if (this.modelRouter && (options?.taskKind || options?.tier)) {
+      const route = options.taskKind
+        ? this.modelRouter.resolveForTask(options.taskKind)
+        : this.modelRouter.resolveForTier(options.tier!);
+      return {
+        tier: route.tier,
+        preferredModel: route.primaryModel,
+        modelsToTry: this.orderModelsByHealth([route.primaryModel, ...route.fallbackModels]),
+      };
+    }
+
+    const fallbackCandidates = [
+      'gemini-2.5-flash',
+      'gemini-flash-lite-latest',
+      'gemini-flash-latest',
+      'gemini-3.1-flash-lite-preview',
+    ];
+    const modelsToTry = this.orderModelsByHealth(
+      [this.model, ...fallbackCandidates].filter(
+        (m, idx, arr) => Boolean(m) && arr.indexOf(m) === idx,
+      ),
+    );
+    return {
+      tier: options?.tier || (/lite/i.test(this.model) ? 'fast' : 'reasoning'),
+      preferredModel: this.model,
+      modelsToTry,
+    };
   }
 
   async parseResumeText(text: string): Promise<ParsedProfileDraft> {
@@ -119,7 +218,7 @@ Return JSON in this shape:
 Resume text:
 ${text}`;
 
-    const { data } = await this.callGeminiWithUsage<ParsedProfileDraft>(prompt);
+    const { data } = await this.callGeminiWithUsage<ParsedProfileDraft>(prompt, 'metadata_extraction');
     return data;
   }
 
@@ -139,7 +238,7 @@ Return JSON array of requirements:
 Job Description:
 ${text}`;
 
-    const { data } = await this.callGeminiWithUsage<ParsedJobRequirement[]>(prompt);
+    const { data } = await this.callGeminiWithUsage<ParsedJobRequirement[]>(prompt, 'metadata_extraction');
     return data;
   }
 
@@ -168,7 +267,7 @@ Return JSON array:
   }
 ]`;
 
-    const { data } = await this.callGeminiWithUsage<RequirementMatchOutput[]>(prompt);
+    const { data } = await this.callGeminiWithUsage<RequirementMatchOutput[]>(prompt, 'deep_jd_tailoring');
     return data;
   }
 
@@ -369,7 +468,7 @@ Return JSON conforming strictly to this format:
   ]
 }`;
 
-    const { data, telemetry } = await this.callGeminiWithUsage<RawAiAdaptationPayload>(prompt);
+    const { data, telemetry } = await this.callGeminiWithUsage<RawAiAdaptationPayload>(prompt, 'deep_jd_tailoring');
 
     return {
       payload: data,
@@ -401,7 +500,7 @@ Return JSON:
   "adaptedContent": any
 }`;
 
-    const { data, telemetry } = await this.callGeminiWithUsage<{ adaptedContent: any }>(prompt);
+    const { data, telemetry } = await this.callGeminiWithUsage<{ adaptedContent: any }>(prompt, 'deep_jd_tailoring');
 
     return {
       sectionKey,
@@ -461,7 +560,7 @@ Return JSON strictly in this schema:
   "factualVerificationNotes": string
 }`;
 
-    const { data } = await this.callGeminiWithUsage<JobTailorSuggestions>(prompt);
+    const { data } = await this.callGeminiWithUsage<JobTailorSuggestions>(prompt, 'deep_jd_tailoring');
     return {
       ...data,
       provider: this.name,
@@ -663,7 +762,7 @@ Return STRICT JSON matching this exact schema:
   "factualVerificationNotes": "Short verification confirming every company, technology, and metric matches the candidate resume."
 }`;
 
-    const { data } = await this.callGeminiWithUsage<CoverLetterGenerateResult>(prompt);
+    const { data } = await this.callGeminiWithUsage<CoverLetterGenerateResult>(prompt, 'deep_jd_tailoring');
 
     const bodyParagraphs = Array.isArray(data?.bodyParagraphs)
       ? data.bodyParagraphs
@@ -980,7 +1079,7 @@ Return STRICT JSON matching this shape:
   "factualVerificationNotes": "Short confirmation that all claims trace strictly to verified candidate evidence."
 }`;
 
-    const { data } = await this.callGeminiWithUsage<Partial<LinkedInOptimizeResult>>(prompt);
+    const { data } = await this.callGeminiWithUsage<Partial<LinkedInOptimizeResult>>(prompt, 'deep_jd_tailoring');
 
     const headlineSuggestions =
       Array.isArray(data?.headlineSuggestions) && data.headlineSuggestions.length >= 2
@@ -1173,17 +1272,17 @@ ${schemaBlock}`;
     return sanitizeSectionRewriteResult(input, { ...data, provider: this.name });
   }
 
-  private async callGeminiWithUsage<T>(prompt: string): Promise<{ data: T; telemetry: any }> {
+  private async callGeminiWithUsage<T>(
+    prompt: string,
+    taskKind: AiTaskKind = 'bullet_rewrite',
+  ): Promise<{ data: T; telemetry: any }> {
     if (!this.apiKey) {
       throw new Error(
         'Gemini API key is not configured. Set AI_API_KEY in backend .env to enable real Gemini inference.',
       );
     }
 
-    const fallbackCandidates = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite'];
-    const modelsToTry = [this.model, ...fallbackCandidates].filter(
-      (m, idx, arr) => m && arr.indexOf(m) === idx,
-    );
+    const { tier, modelsToTry } = this.resolveModelChain({ taskKind });
 
     let lastError: Error | null = null;
 
@@ -1191,7 +1290,7 @@ ${schemaBlock}`;
       for (let attempt = 1; attempt <= 2; attempt++) {
         const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${this.apiKey}`;
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 25000);
+        const timeoutId = setTimeout(() => controller.abort(), 14000);
 
         try {
           const response = await fetch(endpoint, {
@@ -1217,9 +1316,15 @@ ${schemaBlock}`;
 
             lastError = new Error(`AI Provider model ${modelToUse} failed with status ${response.status}`);
 
-            // Transient retry on 503 (Overloaded) or 429 (Rate Limit) or 500
-            if (response.status === 503 || response.status === 429 || response.status === 500) {
-              await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+            // On 503 (overloaded), mark model degraded and immediately fail over to next healthy model
+            if (response.status === 503) {
+              this.markModelDegraded(modelToUse);
+              break;
+            }
+
+            // Transient retry on 429 (Rate Limit) or 500
+            if (response.status === 429 || response.status === 500) {
+              await new Promise((resolve) => setTimeout(resolve, attempt * 800));
               continue;
             }
 
@@ -1243,12 +1348,21 @@ ${schemaBlock}`;
           const totalTokens = usage.totalTokenCount || (promptTokens + completionTokens);
 
           const costInfo = calculateUsageCost(modelToUse, promptTokens, completionTokens);
+          const tierSavings = this.modelRouter?.computeTierSavings(
+            modelToUse,
+            promptTokens,
+            completionTokens,
+          );
 
           const telemetry = {
             promptTokens,
             completionTokens,
             totalTokens,
             costUsd: costInfo.costUsd,
+            tierSavingsUsd: tierSavings?.tierSavingsUsd ?? 0,
+            tierSavingsPct: tierSavings?.tierSavingsPct ?? 0,
+            modelTier: tier,
+            taskKind,
             modelId: costInfo.modelId,
             pricingVersion: costInfo.pricingVersion,
           };
@@ -1260,8 +1374,12 @@ ${schemaBlock}`;
             `Gemini API invocation exception (model: ${modelToUse}, attempt ${attempt}): ${err.message}`,
           );
           lastError = err;
+          if (err?.name === 'AbortError' || /aborted/i.test(String(err?.message || ''))) {
+            this.markModelDegraded(modelToUse);
+            break;
+          }
           if (attempt < 2) {
-            await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+            await new Promise((resolve) => setTimeout(resolve, attempt * 800));
           }
         }
       }
@@ -1277,6 +1395,15 @@ ${schemaBlock}`;
       systemInstruction?: string;
       temperature?: number;
       model?: string;
+      tier?: AiModelTier;
+      taskKind?: AiTaskKind;
+      timeoutMs?: number;
+      maxTotalMs?: number;
+      responseMimeType?: 'application/json' | 'text/plain';
+      responseSchema?: Record<string, unknown>;
+      cachedContent?: string;
+      fallbackPrefixContents?: GeminiMessageContent[];
+      onCacheEvict?: (cachedContentName: string) => void;
     },
   ): Promise<GeminiFunctionCallingResponse> {
     if (!this.apiKey) {
@@ -1285,40 +1412,68 @@ ${schemaBlock}`;
       );
     }
 
-    const fallbackCandidates = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite'];
-    const preferredModel = options?.model || this.model;
-    const modelsToTry = [preferredModel, ...fallbackCandidates].filter(
-      (m, idx, arr) => m && arr.indexOf(m) === idx,
-    );
+    const { tier, preferredModel, modelsToTry } = this.resolveModelChain(options);
+    const deadline = options?.maxTotalMs ? Date.now() + options.maxTotalMs : undefined;
+    const perModelTimeoutMs = options?.timeoutMs ?? 14000;
 
     let lastError: Error | null = null;
+    let activeCachedContent = options?.cachedContent;
 
     for (const modelToUse of modelsToTry) {
+      if (deadline && deadline - Date.now() <= 1200) {
+        break;
+      }
+      // Explicit cachedContent handles are bound to the primary model they were created on
+      const useCacheOnThisModel = Boolean(activeCachedContent && modelToUse === preferredModel);
       for (let attempt = 1; attempt <= 2; attempt++) {
+        const remainingMs = deadline ? deadline - Date.now() : perModelTimeoutMs;
+        if (deadline && remainingMs <= 1200) {
+          break;
+        }
+        const effectiveTimeoutMs = Math.max(1200, Math.min(perModelTimeoutMs, remainingMs));
         const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${this.apiKey}`;
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 25000);
+        const timeoutId = setTimeout(() => controller.abort(), effectiveTimeoutMs);
 
         try {
-          const bodyPayload: Record<string, any> = {
-            contents,
-            generationConfig: {
-              temperature: options?.temperature ?? 0.2,
-            },
-          };
+          const useCacheNow = Boolean(activeCachedContent && useCacheOnThisModel);
+          const effectiveContents =
+            !useCacheNow && options?.fallbackPrefixContents?.length
+              ? [...options.fallbackPrefixContents, ...contents]
+              : contents;
 
-          if (options?.systemInstruction) {
-            bodyPayload.systemInstruction = {
-              parts: [{ text: options.systemInstruction }],
-            };
+          const generationConfig: Record<string, unknown> = {
+            temperature: options?.temperature ?? 0.2,
+          };
+          if (options?.responseMimeType) {
+            generationConfig.responseMimeType = options.responseMimeType;
+          }
+          if (options?.responseSchema && (!tools || tools.length === 0)) {
+            generationConfig.responseSchema = options.responseSchema;
           }
 
-          if (tools && tools.length > 0) {
-            bodyPayload.tools = [
-              {
-                functionDeclarations: tools,
-              },
-            ];
+          const bodyPayload: Record<string, any> = {
+            contents: effectiveContents,
+            generationConfig,
+          };
+
+          if (useCacheNow && activeCachedContent) {
+            // Per Gemini REST spec: systemInstruction & tools are stored inside cachedContent
+            bodyPayload.cachedContent = activeCachedContent;
+          } else {
+            if (options?.systemInstruction) {
+              bodyPayload.systemInstruction = {
+                parts: [{ text: options.systemInstruction }],
+              };
+            }
+
+            if (tools && tools.length > 0) {
+              bodyPayload.tools = [
+                {
+                  functionDeclarations: tools,
+                },
+              ];
+            }
           }
 
           const response = await fetch(endpoint, {
@@ -1336,10 +1491,23 @@ ${schemaBlock}`;
               `Gemini Function Calling warning (model: ${modelToUse}, attempt ${attempt}): status ${response.status} - ${errorText.substring(0, 150)}`,
             );
 
+            // If an explicit cachedContent expired/invalidated remotely, evict and retry uncached cleanly
+            if (useCacheNow && activeCachedContent && (response.status === 400 || response.status === 404)) {
+              options?.onCacheEvict?.(activeCachedContent);
+              activeCachedContent = undefined;
+              continue;
+            }
+
             lastError = new Error(`AI Provider model ${modelToUse} failed with status ${response.status}`);
 
-            if (response.status === 503 || response.status === 429 || response.status === 500) {
-              await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+            // On 503 (overloaded) or 429 (quota/RPM limit), mark degraded and immediately fail over
+            if (response.status === 503 || response.status === 429) {
+              this.markModelDegraded(modelToUse);
+              break;
+            }
+
+            if (response.status === 500) {
+              await new Promise((resolve) => setTimeout(resolve, attempt * 800));
               continue;
             }
 
@@ -1353,6 +1521,7 @@ ${schemaBlock}`;
           const functionCalls: Array<{ name: string; args: Record<string, any> }> = [];
 
           for (const part of candidateParts) {
+            if (part.thought) continue;
             if (part.text) {
               textOutput += part.text;
             }
@@ -1366,16 +1535,34 @@ ${schemaBlock}`;
 
           const usage = data.usageMetadata || {};
           const promptTokens = usage.promptTokenCount || 0;
+          const cachedInputTokens = usage.cachedContentTokenCount || 0;
           const completionTokens = usage.candidatesTokenCount || 0;
           const totalTokens = usage.totalTokenCount || (promptTokens + completionTokens);
 
-          const costInfo = calculateUsageCost(modelToUse, promptTokens, completionTokens);
+          const costInfo = calculateUsageCost(
+            modelToUse,
+            promptTokens,
+            completionTokens,
+            cachedInputTokens,
+          );
+          const tierSavings = this.modelRouter?.computeTierSavings(
+            modelToUse,
+            promptTokens,
+            completionTokens,
+            cachedInputTokens,
+          );
 
           const telemetry = {
             promptTokens,
+            cachedInputTokens: costInfo.cachedInputTokens,
             completionTokens,
             totalTokens,
             costUsd: costInfo.costUsd,
+            savedCostUsd: costInfo.savedCostUsd,
+            tierSavingsUsd: tierSavings?.tierSavingsUsd ?? 0,
+            tierSavingsPct: tierSavings?.tierSavingsPct ?? 0,
+            modelTier: tier,
+            taskKind: options?.taskKind,
             modelId: costInfo.modelId,
             pricingVersion: costInfo.pricingVersion,
           };
@@ -1391,6 +1578,11 @@ ${schemaBlock}`;
             `Gemini Function Calling exception (model: ${modelToUse}, attempt ${attempt}): ${err.message}`,
           );
           lastError = err;
+          // On AbortError timeout, mark model degraded and immediately fail over
+          if (err?.name === 'AbortError' || /aborted/i.test(String(err?.message || ''))) {
+            this.markModelDegraded(modelToUse);
+            break;
+          }
           if (attempt < 2) {
             await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
           }
@@ -1399,5 +1591,275 @@ ${schemaBlock}`;
     }
 
     throw lastError || new Error('All AI models failed to generate content');
+  }
+
+  /**
+   * Native Gemini token-by-token SSE streaming via :streamGenerateContent?alt=sse.
+   * Emits every non-thought text delta via onTextDelta immediately as bytes arrive,
+   * while still supporting Gemini function declarations and full usage telemetry.
+   */
+  async streamGeminiWithFunctions(
+    contents: GeminiMessageContent[],
+    tools?: any[],
+    options?: {
+      systemInstruction?: string;
+      temperature?: number;
+      model?: string;
+      tier?: AiModelTier;
+      taskKind?: AiTaskKind;
+      responseMimeType?: 'application/json' | 'text/plain';
+      responseSchema?: Record<string, unknown>;
+      signal?: AbortSignal;
+      cachedContent?: string;
+      fallbackPrefixContents?: GeminiMessageContent[];
+      onCacheEvict?: (cachedContentName: string) => void;
+      onTextDelta?: (delta: string) => void | Promise<void>;
+    },
+  ): Promise<GeminiFunctionCallingResponse> {
+    if (!this.apiKey) {
+      throw new Error(
+        'Gemini API key is not configured. Set AI_API_KEY in backend .env to enable real Gemini inference.',
+      );
+    }
+
+    const { tier, preferredModel, modelsToTry } = this.resolveModelChain(options);
+
+    let lastError: Error | null = null;
+    let activeCachedContent = options?.cachedContent;
+
+    for (const modelToUse of modelsToTry) {
+      const useCacheOnThisModel = Boolean(activeCachedContent && modelToUse === preferredModel);
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        if (options?.signal?.aborted) {
+          throw new Error('Streaming request aborted');
+        }
+
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:streamGenerateContent?alt=sse&key=${this.apiKey}`;
+        const controller = new AbortController();
+        const FIRST_BYTE_TIMEOUT_MS = 10000;
+        const INACTIVITY_TIMEOUT_MS = 20000;
+        let inactivityTimer: NodeJS.Timeout | null = null;
+
+        const resetInactivityTimer = (ms = INACTIVITY_TIMEOUT_MS) => {
+          if (inactivityTimer) clearTimeout(inactivityTimer);
+          inactivityTimer = setTimeout(() => controller.abort(), ms);
+        };
+
+        const onExternalAbort = () => controller.abort();
+        if (options?.signal) {
+          options.signal.addEventListener('abort', onExternalAbort, { once: true });
+        }
+
+        resetInactivityTimer(FIRST_BYTE_TIMEOUT_MS);
+        let emittedChars = 0;
+
+        try {
+          const useCacheNow = Boolean(activeCachedContent && useCacheOnThisModel);
+          const effectiveContents =
+            !useCacheNow && options?.fallbackPrefixContents?.length
+              ? [...options.fallbackPrefixContents, ...contents]
+              : contents;
+
+          const generationConfig: Record<string, unknown> = {
+            temperature: options?.temperature ?? 0.2,
+          };
+          if (options?.responseMimeType) {
+            generationConfig.responseMimeType = options.responseMimeType;
+          }
+          if (options?.responseSchema && (!tools || tools.length === 0)) {
+            generationConfig.responseSchema = options.responseSchema;
+          }
+
+          const bodyPayload: Record<string, any> = {
+            contents: effectiveContents,
+            generationConfig,
+          };
+
+          if (useCacheNow && activeCachedContent) {
+            bodyPayload.cachedContent = activeCachedContent;
+          } else {
+            if (options?.systemInstruction) {
+              bodyPayload.systemInstruction = {
+                parts: [{ text: options.systemInstruction }],
+              };
+            }
+
+            if (tools && tools.length > 0) {
+              bodyPayload.tools = [
+                {
+                  functionDeclarations: tools,
+                },
+              ];
+            }
+          }
+
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'text/event-stream',
+            },
+            signal: controller.signal,
+            body: JSON.stringify(bodyPayload),
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            this.logger.warn(
+              `Gemini SSE Stream warning (model: ${modelToUse}, attempt ${attempt}): status ${response.status} - ${errorText.substring(0, 150)}`,
+            );
+
+            if (useCacheNow && activeCachedContent && (response.status === 400 || response.status === 404)) {
+              options?.onCacheEvict?.(activeCachedContent);
+              activeCachedContent = undefined;
+              continue;
+            }
+
+            lastError = new Error(
+              `AI Provider stream model ${modelToUse} failed with status ${response.status}`,
+            );
+
+            // On 503 (overloaded) or 429 (quota/RPM limit), mark degraded and immediately fail over
+            if (response.status === 503 || response.status === 429) {
+              this.markModelDegraded(modelToUse);
+              break;
+            }
+
+            if (response.status === 500) {
+              await new Promise((resolve) => setTimeout(resolve, attempt * 800));
+              continue;
+            }
+            break;
+          }
+
+          if (!response.body || typeof response.body.getReader !== 'function') {
+            throw new Error('Streaming response body unavailable');
+          }
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder('utf-8');
+          let lineBuffer = '';
+          let textOutput = '';
+          const functionCalls: Array<{ name: string; args: Record<string, any> }> = [];
+          let usage: Record<string, number> = {};
+
+          const processSseLine = async (rawLine: string) => {
+            const line = rawLine.trim();
+            if (!line || !line.startsWith('data:')) return;
+            const jsonStr = line.slice(5).trim();
+            if (!jsonStr || jsonStr === '[DONE]') return;
+
+            let frame: any;
+            try {
+              frame = JSON.parse(jsonStr);
+            } catch {
+              return;
+            }
+
+            if (frame.usageMetadata) {
+              usage = frame.usageMetadata;
+            }
+
+            const parts: GeminiContentPart[] = frame.candidates?.[0]?.content?.parts || [];
+            for (const part of parts) {
+              // Never stream internal model thinking/reasoning tokens to end-user chat
+              if (part.thought) continue;
+
+              if (typeof part.text === 'string' && part.text.length > 0) {
+                textOutput += part.text;
+                emittedChars += part.text.length;
+                if (options?.onTextDelta) {
+                  await options.onTextDelta(part.text);
+                }
+              }
+
+              if (part.functionCall) {
+                functionCalls.push({
+                  name: part.functionCall.name,
+                  args: part.functionCall.args || {},
+                });
+              }
+            }
+          };
+
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            resetInactivityTimer();
+
+            lineBuffer += decoder.decode(value, { stream: true });
+            const lines = lineBuffer.split(/\r?\n/);
+            lineBuffer = lines.pop() ?? '';
+
+            for (const line of lines) {
+              await processSseLine(line);
+            }
+          }
+
+          // Flush trailing decoder bytes and remaining line buffer
+          lineBuffer += decoder.decode();
+          if (lineBuffer.trim()) {
+            await processSseLine(lineBuffer);
+          }
+
+          const promptTokens = usage.promptTokenCount || 0;
+          const cachedInputTokens = usage.cachedContentTokenCount || 0;
+          const completionTokens = usage.candidatesTokenCount || 0;
+          const totalTokens = usage.totalTokenCount || promptTokens + completionTokens;
+          const costInfo = calculateUsageCost(
+            modelToUse,
+            promptTokens,
+            completionTokens,
+            cachedInputTokens,
+          );
+          const tierSavings = this.modelRouter?.computeTierSavings(
+            modelToUse,
+            promptTokens,
+            completionTokens,
+            cachedInputTokens,
+          );
+
+          return {
+            text: textOutput || undefined,
+            functionCalls: functionCalls.length > 0 ? functionCalls : undefined,
+            telemetry: {
+              promptTokens,
+              cachedInputTokens: costInfo.cachedInputTokens,
+              completionTokens,
+              totalTokens,
+              costUsd: costInfo.costUsd,
+              savedCostUsd: costInfo.savedCostUsd,
+              tierSavingsUsd: tierSavings?.tierSavingsUsd ?? 0,
+              tierSavingsPct: tierSavings?.tierSavingsPct ?? 0,
+              modelTier: tier,
+              taskKind: options?.taskKind,
+              modelId: costInfo.modelId,
+              pricingVersion: costInfo.pricingVersion,
+            },
+          };
+        } catch (err: any) {
+          this.logger.warn(
+            `Gemini SSE Stream exception (model: ${modelToUse}, attempt ${attempt}, emitted=${emittedChars}): ${err.message}`,
+          );
+          lastError = err;
+
+          // If tokens were already streamed to the user, do not retry and duplicate output
+          if (emittedChars > 0 || options?.signal?.aborted) {
+            throw err;
+          }
+
+          if (attempt < 2) {
+            await new Promise((resolve) => setTimeout(resolve, attempt * 800));
+          }
+        } finally {
+          if (inactivityTimer) clearTimeout(inactivityTimer);
+          if (options?.signal) {
+            options.signal.removeEventListener('abort', onExternalAbort);
+          }
+        }
+      }
+    }
+
+    throw lastError || new Error('All AI models failed to stream content');
   }
 }

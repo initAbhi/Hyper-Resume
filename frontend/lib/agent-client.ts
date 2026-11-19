@@ -139,6 +139,21 @@ export interface AgentMessageContext {
   activeApplicationId?: string;
   activeInterviewSessionId?: string;
   tone?: 'Executive' | 'Enthusiastic' | 'Technical' | 'Concise';
+  focusSections?: string[];
+  pinnedTargets?: PinnedAgentTarget[];
+}
+
+export interface PinnedAgentTarget {
+  kind: 'section' | 'bullet' | 'job' | 'resume';
+  id: string;
+  label: string;
+  sectionKey?: string;
+  fieldPath?: string;
+  excerpt?: string;
+  resumeId?: string;
+  jobId?: string;
+  jobTitle?: string;
+  companyName?: string;
 }
 
 export interface SubmitAgentMessageInput {
@@ -186,6 +201,37 @@ export interface AgentTaskSummary {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface AgentParsedResumeAttachment {
+  kind: 'resume';
+  fileName: string;
+  resumeId: string;
+  resumeName: string;
+  atsScore: number;
+  topIssues: string[];
+  extractedTextLength: number;
+  headline?: string;
+  skillsCount: number;
+  experienceCount: number;
+}
+
+export interface AgentParsedJdAttachment {
+  kind: 'jd';
+  fileName?: string;
+  jobDescriptionId: string;
+  title: string;
+  companyName: string;
+  location?: string;
+  workplace?: 'Remote' | 'Hybrid' | 'Onsite';
+  applyUrl?: string;
+  descriptionText: string;
+  source?: string;
+  extractedTextLength: number;
+}
+
+export type AgentParsedAttachment =
+  | AgentParsedResumeAttachment
+  | AgentParsedJdAttachment;
 
 /**
  * Canonical normalized SSE event types covering both Phase 2 snake_case
@@ -539,8 +585,13 @@ export class AgentStreamConnection {
       }
     }
 
-    // Duplicate & out-of-order suppression
-    if (resolvedId) {
+    const normalizedType = normalizeStreamEventType(resolvedRawType);
+
+    // Duplicate & out-of-order suppression for durable sequenced events.
+    // Note: Per WHATWG EventSource spec, events omitted an `id:` field (such as ephemeral
+    // `message_chunk` token deltas) inherit the previous event's `ev.lastEventId`, so
+    // `message_chunk` MUST bypass sequence-number deduplication to avoid being dropped.
+    if (resolvedId && normalizedType !== 'message_chunk') {
       const numericSeq = parseNumericSequence(resolvedId);
       if (numericSeq !== null) {
         if (this.highestNumericSeq !== null && numericSeq <= this.highestNumericSeq) {
@@ -556,7 +607,6 @@ export class AgentStreamConnection {
       this.lastEventId = resolvedId;
     }
 
-    const normalizedType = normalizeStreamEventType(resolvedRawType);
     const streamEvent: AgentStreamEvent = {
       id: resolvedId,
       type: normalizedType,
@@ -828,6 +878,36 @@ export class AgentApiClient {
     const res = await this.transport.request<AgentTaskSummary>(
       `/agent/tasks/${encodeURIComponent(taskId)}/cancel`,
       { method: 'POST' },
+    );
+    return res.data;
+  }
+
+  async uploadAttachment(
+    file: File,
+    kind: 'auto' | 'resume' | 'jd' = 'auto',
+  ): Promise<AgentParsedAttachment> {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (kind !== 'auto') {
+      formData.append('kind', kind);
+    }
+    const res = await this.transport.request<AgentParsedAttachment>(
+      '/agent/attachments/parse',
+      {
+        method: 'POST',
+        body: formData,
+      },
+    );
+    return res.data;
+  }
+
+  async parseJobUrl(url: string): Promise<AgentParsedJdAttachment> {
+    const res = await this.transport.request<AgentParsedJdAttachment>(
+      '/agent/attachments/parse-url',
+      {
+        method: 'POST',
+        body: JSON.stringify({ url: url.trim() }),
+      },
     );
     return res.data;
   }

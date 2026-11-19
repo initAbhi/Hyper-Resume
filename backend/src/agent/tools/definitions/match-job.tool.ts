@@ -26,6 +26,7 @@ export class MatchJobTool implements AgentTool<MatchJobArgs, unknown> {
     'Analyzes a candidate resume against a target job description, identifying grounded evidence matches, missing critical skills, and ATS match score.';
   readonly permissionTier = ToolPermissionTier.AI_ANALYSIS;
   readonly requiresApproval = false;
+  readonly isModelCallable = true;
   readonly creditCost = 1;
   readonly timeoutMs = 20000;
 

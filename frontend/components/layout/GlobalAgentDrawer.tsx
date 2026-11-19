@@ -36,6 +36,28 @@ import { AgentTaskProgress } from '@/components/resumes/AgentTaskProgress';
 import { AgentDiffCard } from '@/components/resumes/AgentDiffCard';
 import { AgentApprovalModal } from '@/components/resumes/AgentApprovalModal';
 import { AgentMessageContent } from '@/components/resumes/AgentMessageMarkdown';
+import {
+  AgentAttachmentStatusBar,
+  AgentAttachmentToolbar,
+  AgentDropOverlay,
+  useComposerAttachments,
+} from '@/components/resumes/AgentComposerAttachments';
+import {
+  AgentMentionPopover,
+  AgentMentionTriggerButton,
+  AgentPinnedChipsBar,
+  buildPinnedSubmissionPayload,
+  useComposerMentions,
+} from '@/components/resumes/AgentComposerMentions';
+import {
+  AgentContextualQuickActions,
+  resolveContextualQuickActions,
+  resolveScreenStarterChips,
+} from '@/components/resumes/AgentContextualQuickActions';
+import {
+  AgentOnboardingCards,
+  type OnboardingCardItem,
+} from '@/components/resumes/AgentOnboardingCards';
 
 const GLOBAL_QUICK_PROMPTS = [
   'Find me remote engineering jobs and match them against my resume',
@@ -48,6 +70,7 @@ export function GlobalAgentDrawer() {
     isOpen,
     closeDrawer,
     pageContext,
+    updateContext,
     clearJobContext,
     clearResumeContext,
     selectResumeContext,
@@ -90,8 +113,10 @@ export function GlobalAgentDrawer() {
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   const sheetRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const inputId = useId();
   const titleId = useId();
+  const mentionListboxId = useId();
 
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
   const [isApprovalBusy, setIsApprovalBusy] = useState(false);
@@ -99,6 +124,55 @@ export function GlobalAgentDrawer() {
   const [showResumePicker, setShowResumePicker] = useState(false);
   const [availableResumes, setAvailableResumes] = useState<Resume[]>([]);
   const [isLoadingResumes, setIsLoadingResumes] = useState(false);
+
+  const composerAttachments = useComposerAttachments({
+    onResumeParsed: (res) => {
+      selectResumeContext({ id: res.resumeId, name: res.resumeName });
+      setAvailableResumes((prev) =>
+        prev.some((r) => r.id === res.resumeId)
+          ? prev
+          : [
+              {
+                id: res.resumeId,
+                name: res.resumeName,
+                templateKey: 'clean-modern',
+                version: 1,
+                isMaster: false,
+                isArchived: false,
+              } as Resume,
+              ...prev,
+            ],
+      );
+    },
+    onJdParsed: (jd) => {
+      updateContext({
+        jobDescriptionId: jd.jobDescriptionId,
+        jobTitle: jd.title,
+        companyName: jd.companyName,
+        jobDescriptionText: jd.descriptionText,
+        applyUrl: jd.applyUrl,
+        location: jd.location,
+        workplace: jd.workplace,
+      });
+    },
+  });
+
+  const composerMentions = useComposerMentions({
+    currentResumeId: pageContext.activeResumeId,
+    currentResumeName: pageContext.activeResumeName,
+    activeJob:
+      pageContext.jobTitle || pageContext.companyName
+        ? {
+            jobDescriptionId: pageContext.jobDescriptionId,
+            jobTitle: pageContext.jobTitle,
+            companyName: pageContext.companyName,
+            jobDescriptionText: pageContext.jobDescriptionText,
+            applyUrl: pageContext.applyUrl,
+            location: pageContext.location,
+          }
+        : null,
+    availableResumes: availableResumes.length > 0 ? availableResumes : undefined,
+  });
 
   const handleToggleResumePicker = async () => {
     const nextOpen = !showResumePicker;
@@ -180,7 +254,7 @@ export function GlobalAgentDrawer() {
     return () => dialog.removeEventListener('cancel', onCancel);
   }, [closeDrawer]);
 
-  // Auto-scroll conversation log
+  // Auto-scroll conversation log (instant 60fps follow while streaming to avoid smooth-scroll jank)
   useEffect(() => {
     if (!isOpen || !messagesEndRef.current) return;
     if (typeof messagesEndRef.current.scrollIntoView === 'function') {
@@ -189,7 +263,7 @@ export function GlobalAgentDrawer() {
         typeof window.matchMedia === 'function' &&
         window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       messagesEndRef.current.scrollIntoView({
-        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        behavior: streamingText || prefersReducedMotion ? 'auto' : 'smooth',
         block: 'end',
       });
     }
@@ -208,15 +282,32 @@ export function GlobalAgentDrawer() {
     }
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitDraftWithMentions = () => {
+    const activePins = composerMentions.pinnedItems;
+    if (activePins.length > 0) {
+      const payload = buildPinnedSubmissionPayload(draftInput, activePins, pageContext);
+      composerMentions.closeMentionMenu();
+      composerMentions.clearPinnedItems();
+      setDraftInput('');
+      void submitMessage(payload.content, payload.contextPatch);
+      return;
+    }
+    composerMentions.closeMentionMenu();
     void submitMessage();
   };
 
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    submitDraftWithMentions();
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (composerMentions.handleMentionKeyDown(e, draftInput, setDraftInput)) {
+      return;
+    }
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) {
       e.preventDefault();
-      void submitMessage();
+      submitDraftWithMentions();
     }
   };
 
@@ -238,8 +329,10 @@ export function GlobalAgentDrawer() {
       >
         <div
           ref={sheetRef}
-          className="w-full max-w-lg h-[100svh] bg-white dark:bg-zinc-950 border-l border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col overflow-hidden"
+          {...composerAttachments.dragHandlers}
+          className="relative w-full max-w-lg h-[100svh] bg-white dark:bg-zinc-950 border-l border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col overflow-hidden"
         >
+          <AgentDropOverlay visible={composerAttachments.isDraggingOver} />
           {/* Drawer Header */}
           <div className="px-4 py-3.5 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/80 flex items-center justify-between gap-2 shrink-0">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -584,6 +677,49 @@ export function GlobalAgentDrawer() {
                     Run end-to-end workflows across Job Discovery, Match Analysis, Resume Tailoring, Cover Letter Studio, and Mock Interviews. Resume edits always require your explicit approval.
                   </p>
                 </div>
+                <AgentOnboardingCards
+                  disabled={isSubmitting || isTaskRunning}
+                  onSelectAction={(card: OnboardingCardItem) => {
+                    if (card.intent === 'open_jd_url') {
+                      if (pageContext.jobTitle || pageContext.companyName) {
+                        void submitMessage(
+                          `Match and tailor my resume for ${pageContext.jobTitle || 'this role'}${pageContext.companyName ? ` at ${pageContext.companyName}` : ''} and propose edits.`,
+                        );
+                      } else {
+                        composerAttachments.setShowUrlBar(true);
+                      }
+                      return;
+                    }
+                    if (card.prompt) {
+                      void submitMessage(card.prompt);
+                    }
+                  }}
+                />
+                <AgentContextualQuickActions
+                  ariaLabel="Quick actions for this screen"
+                  disabled={isSubmitting || isTaskRunning}
+                  chips={resolveScreenStarterChips({
+                    route: pageContext.route,
+                    resumeName: pageContext.activeResumeName,
+                    hasActiveResume: Boolean(pageContext.activeResumeId),
+                    activeJob:
+                      pageContext.jobTitle || pageContext.companyName
+                        ? {
+                            title: pageContext.jobTitle,
+                            companyName: pageContext.companyName,
+                          }
+                        : null,
+                  })}
+                  onSelectChip={(chip) => {
+                    if (chip.intent === 'open_jd_url') {
+                      composerAttachments.setShowUrlBar(true);
+                      return;
+                    }
+                    if (chip.prompt) {
+                      void submitMessage(chip.prompt);
+                    }
+                  }}
+                />
                 <div className="space-y-1.5">
                   {GLOBAL_QUICK_PROMPTS.map((prompt) => (
                     <button
@@ -608,15 +744,28 @@ export function GlobalAgentDrawer() {
               return visibleMessages.map((msg, idx) => {
                 const isUser = msg.role === 'user';
                 const isLastAssistant = !isUser && idx === visibleMessages.length - 1;
-                const offersApplyAction =
-                  isLastAssistant &&
-                  !isTaskRunning &&
-                  !isSubmitting &&
-                  !activeProposal &&
-                  Boolean(pageContext.activeResumeId) &&
-                  /\b(apply these changes|propose|implement|ats score|rewrite|improve)\b/i.test(
-                    msg.content,
-                  );
+                const contextualChips =
+                  isLastAssistant && !isTaskRunning && !isSubmitting && !activeProposal
+                    ? resolveContextualQuickActions({
+                        lastAssistantMessageId: msg.id,
+                        lastAssistantContent: msg.content,
+                        hasActiveResume: Boolean(pageContext.activeResumeId),
+                        activeJob:
+                          pageContext.jobTitle || pageContext.companyName
+                            ? {
+                                title: pageContext.jobTitle,
+                                companyName: pageContext.companyName,
+                              }
+                            : null,
+                        artifacts: {
+                          matchScore: artifacts.latestMatch?.overallScore,
+                          discoveredJobsCount: artifacts.discoveredJobs.length,
+                          hasCoverLetter: Boolean(artifacts.generatedCoverLetter),
+                          hasInterviewSession: Boolean(artifacts.interviewSession),
+                        },
+                        route: pageContext.route,
+                      })
+                    : [];
 
                 return (
                   <div key={msg.id} className="space-y-2">
@@ -652,19 +801,21 @@ export function GlobalAgentDrawer() {
                         />
                       </div>
                     </div>
-                    {offersApplyAction && (
-                      <div className="pl-9 flex flex-wrap gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void submitMessage('Apply all the changes you just suggested to my resume')
+                    {contextualChips.length > 0 && (
+                      <AgentContextualQuickActions
+                        className="pl-9"
+                        chips={contextualChips}
+                        disabled={isSubmitting || isTaskRunning}
+                        onSelectChip={(chip) => {
+                          if (chip.intent === 'open_jd_url') {
+                            composerAttachments.setShowUrlBar(true);
+                            return;
                           }
-                          className="inline-flex items-center gap-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-[11px] font-semibold shadow-2xs transition-colors cursor-pointer"
-                        >
-                          <Sparkles className="w-3 h-3" aria-hidden="true" />
-                          <span>Apply these changes</span>
-                        </button>
-                      </div>
+                          if (chip.prompt) {
+                            void submitMessage(chip.prompt);
+                          }
+                        }}
+                      />
                     )}
                   </div>
                 );
@@ -672,15 +823,23 @@ export function GlobalAgentDrawer() {
             })()}
 
             {streamingText && (
-              <div className="flex items-start gap-2.5">
+              <div
+                data-testid="agent-streaming-bubble"
+                aria-busy="true"
+                className="flex items-start gap-2.5"
+              >
                 <div
                   aria-hidden="true"
-                  className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-blue-50 text-blue-600 border border-blue-200"
+                  className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800"
                 >
                   <Bot className="w-3.5 h-3.5" />
                 </div>
-                <div className="max-w-[85%] rounded-2xl rounded-tl-sm px-3.5 py-2.5 text-xs leading-relaxed bg-zinc-100 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 whitespace-pre-wrap">
-                  {streamingText}
+                <div className="max-w-[85%] rounded-2xl rounded-tl-sm px-3.5 py-2.5 text-xs leading-relaxed bg-zinc-100/90 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border border-zinc-200/70 dark:border-zinc-800 break-words">
+                  <AgentMessageContent content={streamingText} isUser={false} />
+                  <span
+                    aria-hidden="true"
+                    className="inline-block w-1.5 h-3.5 ml-1 align-middle rounded-xs bg-[#285FEA] dark:bg-blue-400 animate-pulse motion-reduce:animate-none"
+                  />
                 </div>
               </div>
             )}
@@ -958,35 +1117,105 @@ export function GlobalAgentDrawer() {
           {/* Composer */}
           <form
             onSubmit={handleFormSubmit}
-            className="p-3 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/60 space-y-1.5 shrink-0"
+            className="relative p-3 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/60 space-y-1.5 shrink-0"
           >
+            <AgentPinnedChipsBar
+              items={composerMentions.pinnedItems}
+              onRemove={composerMentions.unpinItem}
+              liveAnnouncement={composerMentions.liveAnnouncement}
+            />
+            <AgentAttachmentStatusBar
+              state={composerAttachments.state}
+              showUrlBar={composerAttachments.showUrlBar}
+              urlInput={composerAttachments.urlInput}
+              onUrlInputChange={composerAttachments.setUrlInput}
+              onSubmitUrl={() => void composerAttachments.handleParseUrl()}
+              onCloseUrlBar={() => composerAttachments.setShowUrlBar(false)}
+              onClearResume={composerAttachments.clearParsedResume}
+              onClearJd={() => {
+                composerAttachments.clearParsedJd();
+                clearJobContext();
+              }}
+              onClearError={composerAttachments.clearError}
+              onQuickPrompt={(prompt) => launchPrompt({ prompt, autoSubmit: true })}
+              disabled={isSubmitting || isTaskRunning}
+              showOpenResumeLink
+            />
             {inputError && (
               <p role="alert" className="text-[11px] text-rose-600 font-medium px-1">
                 {inputError}
               </p>
             )}
-            <div className="flex items-end gap-2">
+            <div className="relative flex items-end gap-1.5">
+              <AgentMentionPopover
+                listboxId={mentionListboxId}
+                isOpen={composerMentions.isOpen}
+                query={composerMentions.activeMention?.query || ''}
+                options={composerMentions.filteredOptions}
+                highlightedIndex={composerMentions.highlightedIndex}
+                onHighlight={composerMentions.setHighlightedIndex}
+                onSelect={(opt) => {
+                  composerMentions.selectOption(opt, draftInput, setDraftInput);
+                  textareaRef.current?.focus();
+                }}
+                onClose={composerMentions.closeMentionMenu}
+              />
+              <AgentAttachmentToolbar
+                fileInputRef={composerAttachments.fileInputRef}
+                onFileSelected={(file) => void composerAttachments.handleFileUpload(file)}
+                onOpenFilePicker={composerAttachments.openFilePicker}
+                showUrlBar={composerAttachments.showUrlBar}
+                onToggleUrlBar={() => composerAttachments.setShowUrlBar((v) => !v)}
+                disabled={isSubmitting}
+              />
+              <AgentMentionTriggerButton
+                isOpen={composerMentions.isOpen}
+                disabled={isSubmitting}
+                onClick={() => {
+                  composerMentions.openMentionMenu(draftInput, setDraftInput);
+                  textareaRef.current?.focus();
+                }}
+              />
               <div className="flex-1 min-w-0">
                 <label htmlFor={inputId} className="sr-only">
                   Ask the AI Career Assistant
                 </label>
                 <textarea
+                  ref={textareaRef}
                   id={inputId}
                   rows={2}
                   value={draftInput}
                   disabled={isSubmitting}
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded={composerMentions.isOpen}
+                  aria-controls={composerMentions.isOpen ? mentionListboxId : undefined}
+                  aria-activedescendant={
+                    composerMentions.isOpen && composerMentions.filteredOptions.length > 0
+                      ? `${mentionListboxId}-opt-${composerMentions.highlightedIndex}`
+                      : undefined
+                  }
                   onChange={(e) => {
                     setDraftInput(e.target.value);
+                    composerMentions.handleTextChange(e.target.value, e.target.selectionStart);
                     if (inputError) setInputError(null);
                   }}
+                  onClick={(e) => {
+                    const el = e.currentTarget;
+                    composerMentions.handleTextChange(el.value, el.selectionStart);
+                  }}
                   onKeyDown={handleKeyDown}
-                  placeholder="Find remote jobs, tailor your resume, draft a cover letter, or start interview prep…"
+                  placeholder="Type @ to pin @Experience, @Job, @Resume — or drop a PDF/JD URL…"
                   className="w-full resize-none rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-600 disabled:opacity-60"
                 />
               </div>
               <button
                 type="submit"
-                disabled={isSubmitting || isTaskRunning || draftInput.trim().length === 0}
+                disabled={
+                  isSubmitting ||
+                  isTaskRunning ||
+                  (draftInput.trim().length === 0 && composerMentions.pinnedItems.length === 0)
+                }
                 aria-label="Send message to AI Career Assistant"
                 className="h-10 w-10 rounded-xl bg-[#285FEA] hover:bg-[#1E4BC8] text-white flex items-center justify-center shadow-xs transition-colors disabled:opacity-45 cursor-pointer shrink-0"
               >
@@ -998,7 +1227,7 @@ export function GlobalAgentDrawer() {
               </button>
             </div>
             <div className="flex items-center justify-between text-[10.5px] text-zinc-500 dark:text-zinc-400 px-1">
-              <span>Enter to send · Closing drawer keeps tasks running · 1–2 credits (free on Pro)</span>
+              <span>Type @ to pin sections/jobs · Closing drawer keeps tasks running</span>
               {draftInput.length > 8000 && (
                 <span className={draftInput.length > 10000 ? 'text-rose-600 font-semibold' : ''}>
                   {draftInput.length.toLocaleString()} / 10,000

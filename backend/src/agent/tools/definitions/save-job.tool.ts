@@ -27,6 +27,7 @@ export class SaveJobTool implements AgentTool<SaveJobArgs, unknown> {
     "Adds a discovered job opportunity into the candidate's application tracker pipeline ('saved' status). Safe additive operation.";
   readonly permissionTier = ToolPermissionTier.SAFE_MUTATING;
   readonly requiresApproval = false;
+  readonly isModelCallable = true;
   readonly creditCost = 0;
   readonly timeoutMs = 8000;
 

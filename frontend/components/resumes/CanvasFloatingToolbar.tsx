@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
+  Bot,
   Sparkles,
   Wand2,
   Plus,
@@ -22,9 +23,13 @@ export interface CanvasFloatingToolbarProps {
     meta: BulletSelectionMeta,
     mode?: 'star' | 'xyz' | 'metric' | 'executive' | 'technical' | 'concise'
   ) => void;
+  onAskAgent?: (meta: BulletSelectionMeta) => void;
 }
 
-export function CanvasFloatingToolbar({ onTriggerAiEnhance }: CanvasFloatingToolbarProps) {
+export function CanvasFloatingToolbar({
+  onTriggerAiEnhance,
+  onAskAgent,
+}: CanvasFloatingToolbarProps) {
   const {
     isEditable,
     activeSelection,
@@ -216,6 +221,8 @@ export function CanvasFloatingToolbar({ onTriggerAiEnhance }: CanvasFloatingTool
   const toolbarNode = (
     <div
       ref={toolbarRef}
+      role="toolbar"
+      aria-label={isSummary ? 'Summary editing actions' : 'Bullet editing actions'}
       data-export-exclude="true"
       data-floating-toolbar="true"
       style={{
@@ -234,12 +241,30 @@ export function CanvasFloatingToolbar({ onTriggerAiEnhance }: CanvasFloatingTool
             id="fab-rewrite-summary-btn"
             onMouseDown={preventFocusLoss}
             onClick={() => onTriggerAiEnhance(getFreshSelection(), 'executive')}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold transition-all shadow-xs cursor-pointer group shrink-0"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 min-h-[28px] rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold transition-all shadow-xs cursor-pointer group shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
             title="Rewrite Professional Summary with AI tones"
           >
-            <Sparkles className="w-3.5 h-3.5 text-blue-200 group-hover:rotate-12 transition-transform" />
+            <Sparkles className="w-3.5 h-3.5 text-blue-200 group-hover:rotate-12 transition-transform" aria-hidden="true" />
             <span>AI Rewrite Summary</span>
           </button>
+
+          {onAskAgent && (
+            <button
+              type="button"
+              id="fab-ask-agent-btn"
+              data-testid="canvas-ask-agent-btn"
+              onMouseDown={preventFocusLoss}
+              onClick={() => {
+                setIsMenuOpen(false);
+                onAskAgent(getFreshSelection());
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 min-h-[28px] rounded-lg bg-zinc-800 hover:bg-zinc-700 text-blue-300 hover:text-white border border-zinc-700 font-semibold transition-colors cursor-pointer shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+              title="Pin this summary into AI Agent chat"
+            >
+              <Bot className="w-3.5 h-3.5 text-blue-400" aria-hidden="true" />
+              <span>Ask AI Agent</span>
+            </button>
+          )}
 
           <div className="relative">
             <button
@@ -299,13 +324,32 @@ export function CanvasFloatingToolbar({ onTriggerAiEnhance }: CanvasFloatingTool
             id="fab-enhance-bullet-btn"
             onMouseDown={preventFocusLoss}
             onClick={() => onTriggerAiEnhance(getFreshSelection(), 'star')}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold transition-all shadow-xs cursor-pointer group shrink-0"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 min-h-[28px] rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold transition-all shadow-xs cursor-pointer group shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
             title="Enhance bullet with Gemini AI STAR/XYZ Impact"
           >
-            <Sparkles className="w-3.5 h-3.5 text-blue-200 group-hover:rotate-12 transition-transform" />
+            <Sparkles className="w-3.5 h-3.5 text-blue-200 group-hover:rotate-12 transition-transform" aria-hidden="true" />
             <span className="hidden sm:inline">Enhance Bullet</span>
             <span className="sm:hidden">Enhance</span>
           </button>
+
+          {onAskAgent && (
+            <button
+              type="button"
+              id="fab-ask-agent-btn"
+              data-testid="canvas-ask-agent-btn"
+              onMouseDown={preventFocusLoss}
+              onClick={() => {
+                setIsMenuOpen(false);
+                onAskAgent(getFreshSelection());
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 min-h-[28px] rounded-lg bg-zinc-800 hover:bg-zinc-700 text-blue-300 hover:text-white border border-zinc-700 font-semibold transition-colors cursor-pointer shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+              title="Pin this bullet into AI Agent chat"
+            >
+              <Bot className="w-3.5 h-3.5 text-blue-400" aria-hidden="true" />
+              <span className="hidden sm:inline">Ask AI Agent</span>
+              <span className="sm:hidden">Ask AI</span>
+            </button>
+          )}
 
           {/* Quick Option Dropdown Trigger */}
           <div className="relative">
