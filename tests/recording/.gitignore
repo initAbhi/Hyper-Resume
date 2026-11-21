@@ -1,0 +1,11 @@
+# Runcast runtime link (made by setup)
+.kit
+.env.local
+.results/
+# Video recordings (render reads them)
+.captures/
+.report/
+videos/
+narration/
+# YouTube OAuth client and token (runcast-publish)
+.youtube/
