@@ -6,13 +6,14 @@ import {
   Briefcase,
   Link2,
   Sparkles,
+  Bot,
 } from 'lucide-react';
 
 export interface OnboardingCardItem {
-  id: 'boost_ats' | 'tailor_jd' | 'find_jobs';
+  id: 'boost_ats' | 'tailor_jd' | 'find_jobs' | 'interview_me';
   stepNumber: string;
   badge: string;
-  badgeTheme: 'emerald' | 'blue' | 'purple';
+  badgeTheme: 'emerald' | 'blue' | 'purple' | 'amber';
   title: string;
   description: string;
   actionText: string;
@@ -62,6 +63,20 @@ export const ONBOARDING_CARDS: OnboardingCardItem[] = [
     intent: 'prompt',
     icon: Briefcase,
   },
+  {
+    id: 'interview_me',
+    stepNumber: '4',
+    badge: 'Zero to Resume',
+    badgeTheme: 'amber',
+    title: 'Build from Scratch (Interview Me)',
+    description:
+      'Starting with an empty resume? The AI assistant will interview you step-by-step and draft a full ATS resume.',
+    actionText: 'Start Interview',
+    prompt:
+      'I am starting from scratch and need to build a new resume. Please interview me step-by-step: ask me about my background, target role, education, top projects, and technical skills, and draft a high-scoring resume on my canvas.',
+    intent: 'prompt',
+    icon: Bot,
+  },
 ];
 
 export interface AgentOnboardingCardsProps {
@@ -99,14 +114,18 @@ export function AgentOnboardingCards({
               ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
               : card.badgeTheme === 'blue'
                 ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
-                : 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800';
+                : card.badgeTheme === 'amber'
+                  ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                  : 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800';
 
           const iconContainerClasses =
             card.badgeTheme === 'emerald'
               ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200/80 dark:border-emerald-800/80'
               : card.badgeTheme === 'blue'
                 ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200/80 dark:border-blue-800/80'
-                : 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-200/80 dark:border-purple-800/80';
+                : card.badgeTheme === 'amber'
+                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200/80 dark:border-amber-800/80'
+                  : 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-200/80 dark:border-purple-800/80';
 
           return (
             <article

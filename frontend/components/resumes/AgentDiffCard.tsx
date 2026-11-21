@@ -184,6 +184,7 @@ export interface AgentDiffCardProps {
   onOpenApprovalModal: () => void;
   onReject: () => void;
   isSubmitting?: boolean;
+  isOverflowing?: boolean;
 }
 
 export function AgentDiffCard({
@@ -197,6 +198,7 @@ export function AgentDiffCard({
   onOpenApprovalModal,
   onReject,
   isSubmitting = false,
+  isOverflowing = false,
 }: AgentDiffCardProps) {
   const idPrefix = useId();
   const stats = analyzeProposalChanges(proposal);
@@ -303,6 +305,19 @@ export function AgentDiffCard({
           </span>
         </div>
       </div>
+
+      {/* Phase 2: 1-Page Layout Alert */}
+      {isOverflowing && (
+        <div className="mx-3.5 mt-2.5 rounded-lg border border-amber-300 dark:border-amber-800/80 bg-amber-50 dark:bg-amber-950/40 p-2.5 flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <div className="text-[11px] text-amber-900 dark:text-amber-200">
+            <p className="font-semibold">⚠️ 1-Page Layout Cutoff Notice</p>
+            <p className="text-amber-800 dark:text-amber-300 mt-0.5">
+              This proposal causes resume content to spill over onto Page 2. After approving, you can click <strong>⚡ Fit to 1 Page</strong> on the canvas to automatically recalibrate density.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Diff Body */}
       <div className="p-3.5 space-y-3 max-h-[360px] overflow-y-auto">

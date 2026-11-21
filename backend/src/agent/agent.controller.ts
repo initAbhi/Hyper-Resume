@@ -13,11 +13,13 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   Sse,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Observable } from 'rxjs';
 import { AgentService } from './agent.service.js';
@@ -157,7 +159,12 @@ export class AgentController {
     @Query('lastEventId') lastEventId?: string,
     @Headers('last-event-id') lastEventIdHeader?: string,
     @Query('taskId') taskId?: string,
+    @Res({ passthrough: true }) res?: Response,
   ): Observable<{ id?: string; type?: string; data: Record<string, unknown> }> {
+    if (res && typeof res.setHeader === 'function') {
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
+    }
     const resolvedLastId = lastEventId || lastEventIdHeader;
     if (taskId) {
       return this.agentService.subscribeToConversationStream(

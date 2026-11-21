@@ -12,10 +12,12 @@ import {
   Printer,
   ShieldCheck,
   AlertTriangle,
+  Code2,
 } from 'lucide-react';
-import { apiClient, downloadExportBlob } from '@/lib/api-client';
+import { apiClient, downloadExportBlob, type ResumeContent } from '@/lib/api-client';
 import { analytics } from '@/lib/analytics';
 import { buildVectorPdfPayload } from '@/lib/pdf-html-serializer';
+import { generateLatexFromResume } from '@/lib/latex-generator';
 
 interface ExportPdfModalProps {
   isOpen: boolean;
@@ -24,6 +26,7 @@ interface ExportPdfModalProps {
   resumeName: string;
   pageSize?: 'A4' | 'US Letter';
   targetContainerId?: string;
+  content?: ResumeContent;
 }
 
 interface ExportVerificationMeta {
@@ -45,6 +48,7 @@ function ExportPdfModalDialog({
   resumeName,
   pageSize = 'A4',
   targetContainerId = 'resume-document-print',
+  content,
 }: ExportPdfModalProps) {
   const [progress, setProgress] = useState(15);
   const [statusLabel, setStatusLabel] = useState('Preparing vector layout...');
@@ -60,6 +64,20 @@ function ExportPdfModalDialog({
 
   const cleanFileName =
     (resumeName || 'Resume').trim().replace(/[/\\?%*:|"<>]/g, '-') + '.pdf';
+
+  const handleDownloadLatex = useCallback(() => {
+    if (!content) return;
+    const texSource = generateLatexFromResume(content);
+    const blob = new Blob([texSource], { type: 'text/x-tex;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (resumeName || 'Resume').trim().replace(/[/\\?%*:|"<>]/g, '-') + '.tex';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }, [content, resumeName]);
 
   const triggerDownload = useCallback(
     (blobUrl: string) => {
@@ -360,6 +378,18 @@ function ExportPdfModalDialog({
                   : 'Download Editable Word (.docx)'}
               </span>
             </button>
+            {content && (
+              <button
+                type="button"
+                data-testid="modal-export-latex-btn"
+                onClick={handleDownloadLatex}
+                className="w-full inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/80 hover:bg-zinc-100 dark:hover:bg-zinc-750 text-zinc-800 dark:text-zinc-200 text-xs font-semibold transition-colors cursor-pointer"
+                title="Download standard single-column Jake's Resume LaTeX source"
+              >
+                <Code2 className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
+                <span>Download Jake's Resume LaTeX (.tex)</span>
+              </button>
+            )}
           </div>
         )}
 

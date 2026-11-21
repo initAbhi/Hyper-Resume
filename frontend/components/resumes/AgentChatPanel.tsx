@@ -84,6 +84,7 @@ export interface AgentChatPanelProps {
   onProposalRejected?: (proposal: AgentApprovalProposal) => void;
   onCollapse?: () => void;
   isMobileDrawer?: boolean;
+  isOverflowing?: boolean;
   client?: AgentApiClient;
   externalPin?: ComposerPinnedItem | null;
   onExternalPinConsumed?: () => void;
@@ -116,6 +117,7 @@ export function AgentChatPanel({
   onProposalRejected,
   onCollapse,
   isMobileDrawer = false,
+  isOverflowing = false,
   client = agentClient,
   externalPin,
   onExternalPinConsumed,
@@ -1440,6 +1442,7 @@ export function AgentChatPanel({
             onOpenApprovalModal={() => setIsApprovalModalOpen(true)}
             onReject={() => void handleRejectProposal(activeProposal)}
             isSubmitting={isApprovalActionBusy}
+            isOverflowing={isOverflowing}
           />
         )}
 

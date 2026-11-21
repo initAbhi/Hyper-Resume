@@ -306,15 +306,22 @@ export default function RecruiterPublicViewPage({
           </div>
         </div>
 
-        <footer className="print:hidden text-center text-[11px] text-zinc-500 pt-1 pb-4">
-          Hosted on{' '}
-          <Link
-            href="/"
-            className="font-semibold text-zinc-700 dark:text-zinc-300 hover:underline"
-          >
-            HypeResume
-          </Link>{' '}
-          · Clean ATS Vector Format
+        <footer className="print:hidden max-w-xl mx-auto text-center pt-4 pb-8 space-y-2">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-850 border border-zinc-200 dark:border-zinc-750 text-xs text-zinc-700 dark:text-zinc-300 shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+            <span>Built & ATS-verified with <strong>HypeResume</strong></span>
+            <span className="text-zinc-300 dark:text-zinc-600">·</span>
+            <Link
+              href="/register?utm_source=shared_resume&utm_medium=viral_footer"
+              className="text-blue-600 dark:text-blue-400 font-semibold hover:underline inline-flex items-center gap-0.5"
+            >
+              <span>Build yours free</span>
+              <ExternalLink className="w-3 h-3" />
+            </Link>
+          </div>
+          <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
+            Vector ATS PDF & DOCX export stay ₹0 forever · No watermarks · Zero fake metrics
+          </p>
         </footer>
       </div>
     </div>

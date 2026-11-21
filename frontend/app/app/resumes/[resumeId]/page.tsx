@@ -286,6 +286,12 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
   }, [canvasContainerEl]);
 
   const targetA4Width = pageSize === 'US Letter' ? 816 : 794;
+  const singlePageHeight = pageSize === 'US Letter' ? 1056 : 1123;
+  const calculatedPageCount = canvasHeight
+    ? Math.max(1, Math.ceil(canvasHeight / singlePageHeight))
+    : 1;
+  const isOverflowingSinglePage = (canvasHeight ?? 0) > singlePageHeight + 20;
+
   const fitScale = containerWidth
     ? Math.min(1.0, Math.max(0.2, (containerWidth - 24) / targetA4Width))
     : 0.6;
@@ -1412,6 +1418,37 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
     [updateContent],
   );
 
+  const handleFitToOnePage = useCallback(() => {
+    const currentLayout = effectiveLayout || {};
+    const newFontSizeScale = Math.max(
+      0.88,
+      Number(((currentLayout.fontSizeScale ?? 1.0) * 0.94).toFixed(2)),
+    );
+    const newLineHeight = Math.max(
+      1.22,
+      Number(((currentLayout.lineHeight ?? 1.45) * 0.93).toFixed(2)),
+    );
+    const newSectionSpacing = Math.max(
+      8,
+      Math.round((currentLayout.sectionSpacing ?? 16) * 0.75),
+    );
+    const newPageMargin = Math.max(
+      20,
+      Math.round((currentLayout.pageMargin ?? 36) * 0.75),
+    );
+
+    const nextLayout: ResumeLayoutSettings = {
+      ...currentLayout,
+      fontSizeScale: newFontSizeScale,
+      lineHeight: newLineHeight,
+      sectionSpacing: newSectionSpacing,
+      pageMargin: newPageMargin,
+      pageMode: 'single',
+    };
+
+    handleUpdateLayout(nextLayout);
+  }, [effectiveLayout, handleUpdateLayout]);
+
   useLayoutEffect(() => {
     if (!resumePrintRef.current || !content) return;
     applyResumeLayoutToDom(
@@ -2255,6 +2292,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
               onProposalApproved={handleAgentProposalApproved}
               onProposalRejected={handleAgentProposalRejected}
               onCollapse={closeStudioPanel}
+              isOverflowing={isOverflowingSinglePage}
               externalPin={pendingAgentPin}
               onExternalPinConsumed={() => setPendingAgentPin(null)}
             />
@@ -3478,8 +3516,33 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                     id="resume-document-print"
                     data-live-preview={livePreview ? 'true' : undefined}
                     style={{ width: `${targetA4Width}px` }}
-                    className="w-full print:w-full print:max-w-full"
+                    className="w-full print:w-full print:max-w-full relative"
                   >
+                    {/* Visual Page Break Dividers (Page Cutoff Indicator) */}
+                    {calculatedPageCount > 1 &&
+                      Array.from({ length: calculatedPageCount - 1 }).map((_, idx) => {
+                        const pageBreakTop = (idx + 1) * singlePageHeight;
+                        return (
+                          <div
+                            key={`page-break-${idx}`}
+                            style={{ top: `${pageBreakTop}px`, width: `${targetA4Width}px` }}
+                            className="absolute left-0 z-30 pointer-events-none print:hidden border-b-2 border-dashed border-rose-400/80 flex items-center justify-between px-3 py-1 -translate-y-1/2"
+                            aria-label={`Page ${idx + 1} cutoff`}
+                          >
+                            <span className="text-[10px] font-semibold bg-rose-50 dark:bg-zinc-900 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 px-2 py-0.5 rounded shadow-2xs pointer-events-auto flex items-center gap-1">
+                              <span>Page {idx + 1} Cutoff (A4 Limit)</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleFitToOnePage}
+                              className="pointer-events-auto text-[10px] bg-rose-600 hover:bg-rose-500 text-white font-medium px-2 py-0.5 rounded shadow-2xs transition-colors cursor-pointer flex items-center gap-1"
+                              title="Auto-adjust typography and spacing to fit on 1 page"
+                            >
+                              <span>⚡ Fit to 1 Page</span>
+                            </button>
+                          </div>
+                        );
+                      })}
                     {(() => {
                       const TemplateComponent = getTemplateComponent(effectiveTemplateKey);
                       return (
@@ -3911,6 +3974,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
         resumeName={resumeName || 'Resume'}
         pageSize={pageSize}
         targetContainerId="resume-document-print"
+        content={content}
       />
 
       {/* Canva-Grade Floating Bottom Workspace Bar (Zoom, Pages, Undo/Redo) */}
@@ -3919,7 +3983,9 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
           zoomMode={zoomMode}
           effectiveScale={effectiveScale}
           onSetZoomMode={setZoomMode}
-          pageCount={pageSize === 'US Letter' ? 1 : 1}
+          pageCount={calculatedPageCount}
+          isOverflowing={isOverflowingSinglePage}
+          onFitToOnePage={handleFitToOnePage}
           canUndo={historyStack.length > 0}
           canRedo={redoStack.length > 0}
           onUndo={handleUndo}
@@ -3966,6 +4032,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
               onProposalRejected={handleAgentProposalRejected}
               onCollapse={() => setIsMobileAgentOpen(false)}
               isMobileDrawer
+              isOverflowing={isOverflowingSinglePage}
               externalPin={pendingAgentPin}
               onExternalPinConsumed={() => setPendingAgentPin(null)}
             />

@@ -19,6 +19,8 @@ export interface CanvaBottomBarProps {
   effectiveScale: number;
   onSetZoomMode: (mode: ZoomMode) => void;
   pageCount?: number;
+  isOverflowing?: boolean;
+  onFitToOnePage?: () => void;
   canUndo?: boolean;
   canRedo?: boolean;
   onUndo?: () => void;
@@ -35,6 +37,8 @@ export function CanvaBottomBar({
   effectiveScale,
   onSetZoomMode,
   pageCount = 1,
+  isOverflowing = false,
+  onFitToOnePage,
   canUndo = false,
   canRedo = false,
   onUndo,
@@ -150,12 +154,24 @@ export function CanvaBottomBar({
 
       <div className="w-[1px] h-4 bg-zinc-200 dark:bg-zinc-800 shrink-0" />
 
-      {/* Page Count Indicator */}
+      {/* Page Count & Overflow Indicator */}
       <div className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-500 dark:text-zinc-400 whitespace-nowrap shrink-0">
-        <FileCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+        <FileCheck className={`w-3.5 h-3.5 shrink-0 ${isOverflowing ? 'text-amber-500 dark:text-amber-400' : 'text-blue-600 dark:text-blue-400'}`} />
         <span>
           {pageCount} {pageCount === 1 ? 'Page' : 'Pages'}
         </span>
+        {isOverflowing && onFitToOnePage && (
+          <button
+            type="button"
+            id="canva-fit-one-page-btn"
+            onClick={onFitToOnePage}
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-semibold text-[10px] transition-colors cursor-pointer border border-amber-500/20"
+            title="Auto-compress spacing and font scale to fit strictly within 1 page"
+            aria-label="Auto-fit to 1 page"
+          >
+            <span>⚡ Fit 1 Page</span>
+          </button>
+        )}
       </div>
 
       {onOpenAddContent && (

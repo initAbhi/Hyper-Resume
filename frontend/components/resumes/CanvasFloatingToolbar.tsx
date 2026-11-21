@@ -406,6 +406,18 @@ export function CanvasFloatingToolbar({
                   <Wand2 className="w-3 h-3 text-cyan-400" />
                   <span>Add Verified Metric</span>
                 </button>
+                <button
+                  type="button"
+                  onMouseDown={preventFocusLoss}
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    onTriggerAiEnhance(getFreshSelection(), 'concise');
+                  }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-zinc-800 text-left text-[11px] text-zinc-200 cursor-pointer"
+                >
+                  <Sparkles className="w-3 h-3 text-purple-400" />
+                  <span>Make Concise (1-Line)</span>
+                </button>
               </div>
             )}
           </div>

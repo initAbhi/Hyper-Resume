@@ -1255,11 +1255,11 @@ dialog::backdrop {
   interest-delay-end: var(--interest-delay-end);
 }
 
-.studio-preview-group:has([interestfor]:is(:interest-source, .interest-source)) [interestfor] {
+.studio-preview-group:has([interestfor]:is(:hover, :focus-visible, .interest-source)) [interestfor] {
   --interest-delay-start: 0s;
 }
 
-[interestfor]:is(:interest-source, .interest-source) {
+[interestfor]:is(:hover, :focus-visible, .interest-source) {
   outline: 2px solid var(--ring);
   outline-offset: 1px;
 }

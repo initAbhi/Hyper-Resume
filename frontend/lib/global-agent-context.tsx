@@ -245,7 +245,14 @@ function GlobalAgentProviderCore({
 }) {
 
   const [isOpen, setIsOpen] = useState(false);
-  const [pageContext, setPageContext] = useState<AgentMessageContext>({ route: pathname });
+  const [pageContextState, setPageContextState] = useState<AgentMessageContext>({});
+  const pageContext = React.useMemo<AgentMessageContext>(
+    () => ({
+      ...pageContextState,
+      route: pathname,
+    }),
+    [pageContextState, pathname],
+  );
   const [conversations, setConversations] = useState<
     Array<{ id: string; title?: string | null; updatedAt: string }>
   >([]);
@@ -276,18 +283,15 @@ function GlobalAgentProviderCore({
   const streamRef = useRef<AgentStreamConnection | null>(null);
   const lastEventIdRef = useRef<string | undefined>(undefined);
   const submitInFlightRef = useRef(false);
-  const convIdRef = useRef<string | null>(null);
+  const convIdRef = useRef<string | null>(conversationId);
   const pageContextRef = useRef<AgentMessageContext>(pageContext);
   const loadedForUserRef = useRef<string | null>(null);
   const previousUserIdRef = useRef<string | null>(currentUserId);
 
-  pageContextRef.current = pageContext;
-  convIdRef.current = conversationId;
-
-  // Sync route on navigation without clobbering selected job/resume context
   useEffect(() => {
-    setPageContext((prev) => (prev.route === pathname ? prev : { ...prev, route: pathname }));
-  }, [pathname]);
+    pageContextRef.current = pageContext;
+    convIdRef.current = conversationId;
+  }, [pageContext, conversationId]);
 
   // Strict user isolation: clear ALL in-memory state and disconnect SSE on logout or account switch
   useEffect(() => {
@@ -309,11 +313,11 @@ function GlobalAgentProviderCore({
       setHistoryError(null);
       setConnectionState('idle');
       setArtifacts(EMPTY_ARTIFACTS);
-      setPageContext({ route: pathname });
+      setPageContextState({});
       setNotice(null);
       previousUserIdRef.current = currentUserId;
     }
-  }, [currentUserId, pathname]);
+  }, [currentUserId]);
 
   // Cleanup SSE connection on provider unmount
   useEffect(() => {
@@ -348,7 +352,7 @@ function GlobalAgentProviderCore({
         const savedCtx = (latest.metadata as Record<string, unknown> | undefined)
           ?.workflowContext as Partial<AgentMessageContext> | undefined;
         if (savedCtx) {
-          setPageContext((prev) => mergeAgentContext(prev, savedCtx));
+          setPageContextState((prev) => mergeAgentContext(prev, savedCtx));
         }
         // Rehydrate in-flight task across reloads (FN-18)
         if (typeof client.listConversationTasks === 'function') {
@@ -358,8 +362,8 @@ function GlobalAgentProviderCore({
               ['PENDING', 'PLANNING', 'RUNNING', 'AWAITING_APPROVAL'].includes(t.status),
             );
             if (inFlight) {
-              const meta = (inFlight.metadata as Record<string, any> | undefined) || {};
-              const plan = meta.plan;
+              const meta = (inFlight.metadata as Record<string, unknown> | undefined) || {};
+              const plan = meta.plan as { goal?: string; steps?: AgentPlanStep[] } | undefined;
               setActiveTask({
                 taskId: inFlight.id,
                 status: inFlight.status,
@@ -412,26 +416,28 @@ function GlobalAgentProviderCore({
 
   const captureToolArtifact = useCallback((toolName: string, data: unknown) => {
     if (!data || typeof data !== 'object') return;
-    const payload = data as Record<string, any>;
+    const payload = data as Record<string, unknown>;
 
     if (toolName === 'search_discovered_jobs' && Array.isArray(payload.jobs)) {
-      const jobs: GlobalDiscoveredJobArtifact[] = payload.jobs.slice(0, 6).map((j: any) => ({
-        id: j.id,
-        title: j.title || 'Untitled Role',
-        company: j.company || 'Company',
-        location: j.location,
-        workplace: j.workplace,
-        source: j.source,
+      const rawJobs = payload.jobs as Array<Record<string, unknown>>;
+      const jobs: GlobalDiscoveredJobArtifact[] = rawJobs.slice(0, 6).map((j) => ({
+        id: typeof j.id === 'string' ? j.id : undefined,
+        title: typeof j.title === 'string' ? j.title : 'Untitled Role',
+        company: typeof j.company === 'string' ? j.company : 'Company',
+        location: typeof j.location === 'string' ? j.location : undefined,
+        workplace: typeof j.workplace === 'string' ? j.workplace : undefined,
+        source: typeof j.source === 'string' ? j.source : undefined,
         matchScore: typeof j.matchScore === 'number' ? j.matchScore : undefined,
-        matchedSkills: Array.isArray(j.matchedSkills) ? j.matchedSkills : undefined,
-        missingSkills: Array.isArray(j.missingSkills) ? j.missingSkills : undefined,
-        applyUrl: j.applyUrl,
-        descriptionSnippet: j.descriptionSnippet,
-        descriptionText: j.descriptionText,
+        matchedSkills: Array.isArray(j.matchedSkills) ? (j.matchedSkills as string[]) : undefined,
+        missingSkills: Array.isArray(j.missingSkills) ? (j.missingSkills as string[]) : undefined,
+        applyUrl: typeof j.applyUrl === 'string' ? j.applyUrl : undefined,
+        descriptionSnippet:
+          typeof j.descriptionSnippet === 'string' ? j.descriptionSnippet : undefined,
+        descriptionText: typeof j.descriptionText === 'string' ? j.descriptionText : undefined,
       }));
       setArtifacts((prev) => ({ ...prev, discoveredJobs: jobs }));
       if (jobs[0]) {
-        setPageContext((prev) =>
+        setPageContextState((prev) =>
           prev.jobTitle
             ? prev
             : mergeAgentContext(prev, {
@@ -449,9 +455,11 @@ function GlobalAgentProviderCore({
         latestMatch: {
           jobMatchId: String(payload.jobMatchId),
           overallScore: Number(payload.overallScore ?? 0),
-          matchedKeywords: Array.isArray(payload.matchedKeywords) ? payload.matchedKeywords : [],
+          matchedKeywords: Array.isArray(payload.matchedKeywords)
+            ? (payload.matchedKeywords as string[])
+            : [],
           missingHardSkills: Array.isArray(payload.missingHardSkills)
-            ? payload.missingHardSkills
+            ? (payload.missingHardSkills as string[])
             : [],
         },
       }));
@@ -466,7 +474,7 @@ function GlobalAgentProviderCore({
           alreadyTracked: Boolean(payload.alreadyTracked),
         },
       }));
-      setPageContext((prev) =>
+      setPageContextState((prev) =>
         mergeAgentContext(prev, { activeApplicationId: String(payload.applicationId) }),
       );
     } else if (toolName === 'generate_cover_letter' && payload.coverLetterId) {
@@ -487,12 +495,13 @@ function GlobalAgentProviderCore({
         interviewSession: {
           sessionId: String(payload.sessionId),
           targetRole: String(payload.targetRole || 'Target Role'),
-          sessionMode: payload.sessionMode,
-          totalQuestions: payload.totalQuestions,
-          firstQuestion: payload.firstQuestion,
+          sessionMode: typeof payload.sessionMode === 'string' ? payload.sessionMode : undefined,
+          totalQuestions:
+            typeof payload.totalQuestions === 'number' ? payload.totalQuestions : undefined,
+          firstQuestion: payload.firstQuestion as GlobalInterviewArtifact['firstQuestion'],
         },
       }));
-      setPageContext((prev) =>
+      setPageContextState((prev) =>
         mergeAgentContext(prev, { activeInterviewSessionId: String(payload.sessionId) }),
       );
     }
@@ -665,7 +674,7 @@ function GlobalAgentProviderCore({
   );
 
   const updateContext = useCallback((patch: Partial<AgentMessageContext>) => {
-    setPageContext((prev) => {
+    setPageContextState((prev) => {
       // If the user explicitly detached a resume, don't silently re-attach via background page sync
       if (prev.resumeDetached && patch.activeResumeId && patch.resumeDetached !== false) {
         const rest = { ...patch };
@@ -678,7 +687,7 @@ function GlobalAgentProviderCore({
   }, []);
 
   const clearJobContext = useCallback(() => {
-    setPageContext((prev) => ({
+    setPageContextState((prev) => ({
       route: prev.route,
       activeResumeId: prev.activeResumeId,
       activeResumeName: prev.activeResumeName,
@@ -688,7 +697,7 @@ function GlobalAgentProviderCore({
   }, []);
 
   const clearResumeContext = useCallback(() => {
-    setPageContext((prev) => {
+    setPageContextState((prev) => {
       const next: AgentMessageContext = {
         ...prev,
         resumeDetached: true,
@@ -707,7 +716,7 @@ function GlobalAgentProviderCore({
   }, []);
 
   const selectResumeContext = useCallback((resume: { id: string; name: string }) => {
-    setPageContext((prev) => ({
+    setPageContextState((prev) => ({
       ...prev,
       activeResumeId: resume.id,
       activeResumeName: resume.name,
@@ -737,8 +746,8 @@ function GlobalAgentProviderCore({
         const tasks = await client.listConversationTasks(targetConvId);
         const match = tasks.find((t) => t.id === targetTaskId);
         if (!match) return;
-        const meta = (match.metadata as Record<string, any> | undefined) || {};
-        const plan = meta.plan;
+        const meta = (match.metadata as Record<string, unknown> | undefined) || {};
+        const plan = meta.plan as { goal?: string; steps?: AgentPlanStep[] } | undefined;
         if (match.status === 'AWAITING_APPROVAL') {
           setActiveTask((prev) => ({
             taskId: match.id,
@@ -771,13 +780,19 @@ function GlobalAgentProviderCore({
             void onTaskCompletedRefresh().catch(() => {});
           }
         } else if (match.status === 'FAILED' || match.status === 'AWAITING_CREDITS') {
+          const errText =
+            typeof meta.executionError === 'string'
+              ? meta.executionError
+              : typeof meta.lastError === 'string'
+                ? meta.lastError
+                : 'The task encountered an error.';
           setActiveTask((prev) => ({
             taskId: match.id,
             status: match.status,
             goal: plan?.goal || prev?.goal,
             steps: Array.isArray(plan?.steps) ? plan.steps : prev?.steps || [],
             statusMessage: null,
-            errorMessage: meta.executionError || meta.lastError || 'The task encountered an error.',
+            errorMessage: errText,
           }));
           setStreamingText('');
           setConnectionState('idle');
@@ -817,7 +832,7 @@ function GlobalAgentProviderCore({
         : pageContextRef.current;
 
       if (overrideContext) {
-        setPageContext(mergedCtx);
+        setPageContextState(mergedCtx);
       }
 
       try {
@@ -890,7 +905,7 @@ function GlobalAgentProviderCore({
       if (context) {
         const next = mergeAgentContext(pageContextRef.current, context);
         pageContextRef.current = next;
-        setPageContext(next);
+        setPageContextState(next);
       }
       setIsOpen(true);
       if (autoSubmit) {

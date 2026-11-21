@@ -130,6 +130,13 @@ const STATUS_BADGE_STYLES: Record<
   },
 };
 
+const PROGRESS_TICKER_STAGES = [
+  'Analyzing resume structure & requirements...',
+  'Evaluating bullet action verbs & impact...',
+  'Aligning content & verifying factual metrics...',
+  'Synthesizing precision proposal diffs...',
+];
+
 export function AgentTaskProgress({
   status,
   goal,
@@ -140,6 +147,7 @@ export function AgentTaskProgress({
   onCancel,
   onRetry,
 }: AgentTaskProgressProps) {
+  const [tickerIndex, setTickerIndex] = React.useState(0);
   const badge = STATUS_BADGE_STYLES[status] || STATUS_BADGE_STYLES.PENDING;
   const heading = getFriendlyTaskStatusHeading(status, steps, statusMessage);
   const isActive =
@@ -147,6 +155,14 @@ export function AgentTaskProgress({
     status === 'PLANNING' ||
     status === 'RUNNING' ||
     status === 'AWAITING_APPROVAL';
+
+  React.useEffect(() => {
+    if ((status !== 'PENDING' && status !== 'PLANNING' && status !== 'RUNNING') || steps.length > 0) return;
+    const interval = setInterval(() => {
+      setTickerIndex((prev) => (prev + 1) % PROGRESS_TICKER_STAGES.length);
+    }, 3200);
+    return () => clearInterval(interval);
+  }, [status, steps.length]);
 
   return (
     <div
@@ -188,6 +204,11 @@ export function AgentTaskProgress({
             {goal && (
               <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
                 {goal}
+              </p>
+            )}
+            {(status === 'PENDING' || status === 'PLANNING' || status === 'RUNNING') && steps.length === 0 && (
+              <p className="text-[11px] text-blue-600 dark:text-blue-400 font-medium mt-1 animate-pulse">
+                {PROGRESS_TICKER_STAGES[tickerIndex]}
               </p>
             )}
           </div>
