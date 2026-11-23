@@ -33,7 +33,7 @@ export function VerifiedStatsAndTrustCloud() {
       icon: ShieldCheck,
     },
     {
-      value: '5 Free',
+      value: '10 Free',
       label: 'AI Credits on Signup',
       detail: 'Test STAR bullet rewriter and job matching with zero credit card required',
       icon: Sparkles,

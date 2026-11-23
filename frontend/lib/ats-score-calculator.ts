@@ -60,6 +60,73 @@ function clampScore(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
+function countMeaningfulExperienceEntries(
+  experience: Array<{ title?: string; company?: string; bullets?: string[] }> | undefined,
+): number {
+  return (experience || []).filter((entry) => {
+    const bullets = (entry.bullets || []).filter((b) => b.trim().length >= 20);
+    if (bullets.length > 0) return true;
+    const title = (entry.title || '').trim();
+    const company = (entry.company || '').trim();
+    if (title.length < 3 || company.length < 2) return false;
+    if (/^(df|asdf|sadf|test|xxx|n\/a)$/i.test(title) || /^(df|asdf|sadf|test|xxx|n\/a)$/i.test(company)) {
+      return false;
+    }
+    return title.length >= 4 && company.length >= 3;
+  }).length;
+}
+
+/** Mirrors backend computeResumeEvidenceDensity — caps empty drafts. */
+export function computeClientEvidenceDensity(input: {
+  wordCount: number;
+  totalBullets: number;
+  metricsCount: number;
+  declaredSkillCount: number;
+  corroboratedSkillCount: number;
+  missingEssentialSections: number;
+  hasEmail: boolean;
+  hasName: boolean;
+  meaningfulExperienceCount: number;
+}): number {
+  let points = 0;
+
+  if (input.wordCount >= 450) points += 24;
+  else if (input.wordCount >= 280) points += 20;
+  else if (input.wordCount >= 180) points += 15;
+  else if (input.wordCount >= 110) points += 10;
+  else if (input.wordCount >= 60) points += 4;
+  else if (input.wordCount >= 25) points += 1;
+
+  if (input.totalBullets >= 10) points += 26;
+  else if (input.totalBullets >= 8) points += 22;
+  else if (input.totalBullets >= 6) points += 18;
+  else if (input.totalBullets >= 3) points += 10;
+  else if (input.totalBullets === 2) points += 5;
+  else if (input.totalBullets === 1) points += 2;
+
+  if (input.metricsCount >= 7) points += 28;
+  else if (input.metricsCount >= 5) points += 24;
+  else if (input.metricsCount >= 3) points += 16;
+  else if (input.metricsCount === 2) points += 9;
+  else if (input.metricsCount === 1) points += 4;
+
+  if (input.metricsCount >= 5 && input.totalBullets >= 8) points += 14;
+  else if (input.metricsCount >= 3 && input.totalBullets >= 6) points += 6;
+
+  if (input.corroboratedSkillCount >= 6) points += 14;
+  else if (input.corroboratedSkillCount >= 3) points += 9;
+  else if (input.corroboratedSkillCount >= 1) points += 4;
+  else if (input.declaredSkillCount >= 4) points += 2;
+
+  const sectionScore = Math.max(0, 5 - input.missingEssentialSections);
+  points += sectionScore;
+  if (input.hasEmail) points += 1;
+  if (input.hasName) points += 1;
+  if (input.meaningfulExperienceCount >= 2) points += 1;
+
+  return Math.max(0, Math.min(1, points / 100));
+}
+
 export interface ClientAtsAuditResult {
   score: number;
   formattingScore: number;
@@ -103,10 +170,23 @@ export function calculateClientAtsScore(
   const hasSkills = Boolean(content.skills && content.skills.length > 0);
   const hasSummary = Boolean(content.summary?.trim() || content.headline?.trim());
 
-  if (!hasExp) formattingScore -= 18;
-  if (!hasEdu) formattingScore -= 18;
-  if (!hasSkills) formattingScore -= 18;
-  if (!hasSummary) formattingScore -= 18;
+  let missingEssentialSections = 0;
+  if (!hasExp) {
+    formattingScore -= 18;
+    missingEssentialSections += 1;
+  }
+  if (!hasEdu) {
+    formattingScore -= 18;
+    missingEssentialSections += 1;
+  }
+  if (!hasSkills) {
+    formattingScore -= 18;
+    missingEssentialSections += 1;
+  }
+  if (!hasSummary) {
+    formattingScore -= 18;
+    missingEssentialSections += 1;
+  }
 
   if (!content.contact?.email) formattingScore -= 14;
   if (!content.contact?.fullName) formattingScore -= 12;
@@ -179,15 +259,15 @@ export function calculateClientAtsScore(
 
   let metricsScore: number;
   if (totalBullets === 0) {
-    metricsScore = 35;
+    metricsScore = 0;
   } else if (metricRatio >= 0.5) {
     metricsScore = 88 + Math.min(12, metricsCount * 2 + xyzRatio * 8);
   } else if (metricRatio >= 0.25) {
     metricsScore = 72 + (metricRatio - 0.25) * 60 + xyzRatio * 6;
   } else if (metricRatio > 0) {
-    metricsScore = 55 + (metricRatio / 0.25) * 16 + xyzRatio * 4;
+    metricsScore = 48 + (metricRatio / 0.25) * 20 + xyzRatio * 4;
   } else {
-    metricsScore = 42;
+    metricsScore = Math.min(38, 18 + totalBullets * 2);
   }
   metricsScore = clampScore(metricsScore);
 
@@ -195,7 +275,7 @@ export function calculateClientAtsScore(
   const verbIndex = totalBullets > 0 ? totalVerbPoints / totalBullets : 0;
   let verbsScore =
     totalBullets === 0
-      ? 30
+      ? 0
       : clampScore(
         verbIndex >= 0.8
           ? 88 + Math.min(12, (verbIndex - 0.8) * 60)
@@ -210,7 +290,8 @@ export function calculateClientAtsScore(
     .map((s) => s.name?.trim())
     .filter(Boolean) as string[];
 
-  let depthScore = 30;
+  let depthScore = 0;
+  let corroboratedCount = 0;
   if (declaredSkills.length > 0) {
     const breadthScore = Math.min(40, declaredSkills.length * 5);
     const corpus = allBullets.join(' ').toLowerCase();
@@ -220,6 +301,7 @@ export function calculateClientAtsScore(
       const endB = /\w$/.test(s) ? '\\b' : '';
       return new RegExp(`${startB}${escaped}${endB}`, 'i').test(corpus);
     });
+    corroboratedCount = corroborated.length;
     const alignmentRatio = corroborated.length / declaredSkills.length;
     depthScore = clampScore(breadthScore + Math.round(alignmentRatio * 60));
   }
@@ -234,25 +316,63 @@ export function calculateClientAtsScore(
   ].join(' ');
   const wordCount = countWords(allText);
 
-  let brevityScore = 85;
-  if (wordCount < 140) brevityScore -= 18;
-  else if (wordCount < 200) brevityScore -= 8;
-  else if (wordCount > 1300) brevityScore -= 18;
+  const denseQuantified = metricsCount >= 4 && totalBullets >= 6;
+  const hasSomeMetrics = metricsCount >= 1 && totalBullets >= 3;
+  let brevityScore =
+    wordCount < 40
+      ? 8
+      : wordCount < 100
+        ? denseQuantified
+          ? 72
+          : hasSomeMetrics
+            ? 48
+            : 28
+        : 85;
+  if (wordCount < 140) brevityScore -= denseQuantified ? 4 : hasSomeMetrics ? 10 : 22;
+  else if (wordCount < 200) brevityScore -= denseQuantified ? 2 : 10;
   else if (wordCount > 1000) brevityScore -= 10;
+  else if (wordCount > 1300) brevityScore -= 18;
 
   if (totalBullets > 0) {
     const outlierRatio = (shortBullets + longBullets) / totalBullets;
     brevityScore -= Math.round(outlierRatio * 15);
+  } else {
+    brevityScore = Math.min(brevityScore, 12);
   }
   brevityScore = clampScore(brevityScore);
 
-  // Overall Calibrated 5-Dimension Score
-  const score = clampScore(
-    formattingScore * 0.25 +
-    metricsScore * 0.25 +
-    verbsScore * 0.2 +
-    depthScore * 0.15 +
-    brevityScore * 0.15,
+  const evidenceDensity = computeClientEvidenceDensity({
+    wordCount,
+    totalBullets,
+    metricsCount,
+    declaredSkillCount: declaredSkills.length,
+    corroboratedSkillCount: corroboratedCount,
+    missingEssentialSections,
+    hasEmail: Boolean(content.contact?.email),
+    hasName: Boolean(content.contact?.fullName),
+    meaningfulExperienceCount: countMeaningfulExperienceEntries(content.experience),
+  });
+  const evidenceCap = clampScore(4 + evidenceDensity * 96);
+
+  if (evidenceDensity < 0.35) {
+    const dimCap = clampScore(8 + evidenceDensity * 90);
+    formattingScore = Math.min(formattingScore, dimCap + 12);
+    metricsScore = Math.min(metricsScore, dimCap);
+    verbsScore = Math.min(verbsScore, dimCap);
+    depthScore = Math.min(depthScore, dimCap);
+    brevityScore = Math.min(brevityScore, dimCap);
+  }
+
+  // Overall Calibrated 5-Dimension Score (evidence-capped)
+  const score = Math.min(
+    clampScore(
+      formattingScore * 0.25 +
+      metricsScore * 0.25 +
+      verbsScore * 0.2 +
+      depthScore * 0.15 +
+      brevityScore * 0.15,
+    ),
+    evidenceCap,
   );
 
   return {

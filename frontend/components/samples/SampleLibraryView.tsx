@@ -12,6 +12,7 @@ import {
 } from '@/data/sample-resumes';
 import { SampleResumeCard } from './SampleResumeCard';
 import { SampleResumeModal } from './SampleResumeModal';
+import { SamplePaywallModal } from './SamplePaywallModal';
 import { SourceResumeSelectorModal } from './SourceResumeSelectorModal';
 import { AdaptationComparisonModal } from './AdaptationComparisonModal';
 import {
@@ -27,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { apiClient, ResumeContent } from '@/lib/api-client';
+import { getSampleAccentColor } from '@/lib/sample-resume-content';
 import { useAuth } from '@/lib/auth-context';
 
 interface SampleLibraryViewProps {
@@ -35,13 +37,14 @@ interface SampleLibraryViewProps {
 
 export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, hasActivePro } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedExperience, setSelectedExperience] = useState<string>('ALL');
   const [selectedCountry, setSelectedCountry] = useState<string>('ALL');
   const [selectedStyle, setSelectedStyle] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [previewResume, setPreviewResume] = useState<SampleResume | null>(null);
+  const [paywallOpen, setPaywallOpen] = useState(false);
   const [adaptingSample, setAdaptingSample] = useState<SampleResume | null>(null);
   const [activeAdaptation, setActiveAdaptation] = useState<any>(null);
   const [activeAdaptationSample, setActiveAdaptationSample] = useState<SampleResume | null>(null);
@@ -165,6 +168,15 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
     return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
   };
 
+  const handlePreview = (resume: SampleResume) => {
+    // Full sample previews are Pro-only — free / logged-out users see the paywall
+    if (!hasActivePro) {
+      setPaywallOpen(true);
+      return;
+    }
+    setPreviewResume(resume);
+  };
+
   const handleUseTemplateDirect = async (resume: SampleResume) => {
     const templateKey = getSampleTemplateKey(resume);
     const resumeContent: ResumeContent = {
@@ -211,7 +223,7 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
         issuer: '',
       })),
       layout: {
-        accentColor: resume.brandColor || '#285FEA',
+        accentColor: getSampleAccentColor(resume),
         fontFamily: templateKey === 'ivy-league' || templateKey === 'jake-ats' ? 'serif' : 'sans',
         pageMargin: 32,
         fontSizeScale: 1,
@@ -274,8 +286,7 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
       setLibraryError(
         err instanceof Error ? err.message : 'Could not clone template directly. Opening preview...'
       );
-      // Fallback: open modal preview
-      setPreviewResume(resume);
+      handlePreview(resume);
     } finally {
       setCloningResumeId(null);
     }
@@ -429,10 +440,7 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
             <SampleResumeCard
               key={resume.id}
               resume={resume}
-              isCloning={cloningResumeId === resume.id}
-              onPreview={(item) => setPreviewResume(item)}
-              onUseTemplate={(item) => handleUseTemplateDirect(item)}
-              onAdapt={(item) => setAdaptingSample(item)}
+              onPreview={handlePreview}
             />
           ))}
         </div>
@@ -457,7 +465,7 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
         </div>
       )}
 
-      {/* Interactive Full Resume Preview & Clone Modal */}
+      {/* Pro-only full preview */}
       <SampleResumeModal
         resume={previewResume}
         isOpen={!!previewResume}
@@ -467,6 +475,9 @@ export function SampleLibraryView({ isPublic = false }: SampleLibraryViewProps) 
           setPreviewResume(null);
         }}
       />
+
+      {/* Free / non-Pro sample paywall */}
+      <SamplePaywallModal isOpen={paywallOpen} onClose={() => setPaywallOpen(false)} />
 
       {/* Source Resume Selection Modal */}
       <SourceResumeSelectorModal

@@ -115,6 +115,62 @@ describe('linkedin-pdf-parser.util', () => {
     expect(normalized.experience.length).toBe(2);
   });
 
+  it('does not let a single hallucinated AI experience wipe deterministic jobs', () => {
+    const resumeText = `
+      Abhi Singh
+      Full Stack Developer
+      developerabhi17@gmail.com
+      Mumbai, India
+      PROFESSIONAL SUMMARY
+      Full Stack Developer with 2 years of experience building NestJS and Next.js systems.
+      WORK EXPERIENCE
+      Full Stack developer
+      Algoocean | Mumbai
+      June 2024 – Present
+      - Built NestJS APIs for a dating platform with 500K users.
+      - Deployed services on AWS EC2 with Docker and GitHub Actions.
+      Full Stack developer
+      SAAR IT | Remote
+      June 2023 – May 2024
+      - Delivered 3D GIS features with React, Node.js, and PostgreSQL.
+      PROJECTS
+      Infodatabox - Cloud Storage Platform
+      - Built NestJS/AWS S3 storage APIs.
+      Init.new – AI Website Builder
+      - Integrated Gemini API with Next.js and Convex.
+      EDUCATION
+      Bachelors in Computer Application (BCA)
+      Tilak Maharashtra Vidyapeeth
+      2026
+    `;
+    const aiDraft = {
+      contact: { fullName: 'Abhi Singh', email: 'developerabhi17@gmail.com' },
+      headline: 'Full Stack Developer',
+      summary: 'Wrong single-job hallucinated draft.',
+      location: 'Mumbai, India',
+      skills: [{ name: 'TypeScript', category: 'Tech' }],
+      experience: [
+        {
+          company: 'HyperResume Tech',
+          title: 'Senior Full Stack Engineer',
+          startDate: '2023',
+          current: true,
+          bullets: ['Built a resume product.'],
+        },
+      ],
+      education: [],
+      projects: [],
+      certifications: [],
+      confidenceScore: 88,
+    };
+
+    const normalized = normalizeParsedProfileDraft(aiDraft, resumeText);
+    const companies = normalized.experience.map((e) => e.company);
+    expect(companies).toEqual(expect.arrayContaining(['Algoocean', 'SAAR IT']));
+    expect(companies).not.toEqual(['HyperResume Tech']);
+    expect(normalized.experience.length).toBeGreaterThanOrEqual(2);
+  });
+
   it('parses generic non-LinkedIn resumes faithfully without fabricating Acme Cloud Infrastructure', () => {
     const genericText = `
       Maya Lin
@@ -131,6 +187,89 @@ describe('linkedin-pdf-parser.util', () => {
     expect(draft.contact?.email).toBe('maya.lin@datahub.io');
     expect(JSON.stringify(draft)).not.toContain('Acme Cloud Infrastructure');
     expect(draft.skills.map((s) => s.name)).toEqual(expect.arrayContaining(['SQL', 'Python', 'PostgreSQL']));
+    // Bullets-only experience must NOT invent a sentinel "Work Experience" role
+    expect(draft.experience.every((e) => e.company !== 'Work Experience')).toBe(true);
+  });
+
+  it('parses ATS title|date same-line roles and keeps projects intact without View Project ghosts', () => {
+    const atsText = `
+      Abhi Singh
+      Full Stack Developer
+      Mumbai, India | developerabhi17@gmail.com | +91 6268644194
+      linkedin.com/in/developer-abhi-j1714 | github.com/initAbhi | myportfolio
+      PROFESSIONAL SUMMARY
+      Full Stack Developer with 2 years of experience building NestJS and Next.js systems.
+      WORK EXPERIENCE
+      Full Stack developer June 2024 - Present
+      Algoocean | Mumbai
+      - Developed NestJS APIs for a dating platform with 500K users.
+      - Deployed services on AWS EC2 with Docker and GitHub Actions.
+      Full Stack developer June 2023 - May 2024
+      SAAR IT | Remote
+      - Delivered 3D GIS features with React, Node.js, and PostgreSQL.
+      SKILLS
+      Languages - TypeScript | JavaScript | Python
+      Frontend - Next.js | React.js
+      PROJECTS
+      Infodatabox - Cloud Storage Platform (Algoocean) View Project
+      Next.js | NestJS | PostgreSQL | AWS S3
+      - Built NestJS/AWS S3 storage APIs.
+      - Deployed on EC2 with Nginx and PM2.
+      Init.new - AI Website Builder
+      Next.js | Convex | MongoDB
+      - Integrated Gemini API with Next.js and Convex.
+      EDUCATION
+      Bachelors in Computer Application (BCA)
+      Tilak Maharashtra Vidyapeeth
+      2026
+    `;
+
+    const draft = parseGenericResumeText(atsText);
+    expect(draft.contact?.fullName).toBe('Abhi Singh');
+    expect(draft.headline.toLowerCase()).not.toContain('linkedin.com');
+    expect(draft.experience.map((e) => e.company)).toEqual(['Algoocean', 'SAAR IT']);
+    expect(draft.experience[0].title).toMatch(/full stack/i);
+    expect(draft.experience[0].bullets.length).toBeGreaterThanOrEqual(2);
+    expect(draft.projects.length).toBe(2);
+    expect(draft.projects[0].name).toMatch(/Infodatabox/i);
+    expect(draft.projects[0].description).toMatch(/Next\.js/i);
+    expect(draft.projects[0].highlights.length).toBeGreaterThanOrEqual(2);
+    expect(draft.projects.every((p) => !/view project/i.test(p.name))).toBe(true);
+    expect(draft.projects.every((p) => p.description !== p.name)).toBe(true);
+
+    const aiDraft = {
+      contact: { fullName: 'Abhi Singh', email: 'developerabhi17@gmail.com' },
+      headline: 'Full Stack Developer',
+      summary: 'AI summary',
+      location: 'Mumbai, India',
+      skills: [{ name: 'TypeScript', category: 'Languages' }],
+      experience: [
+        {
+          company: 'Algoocean',
+          title: 'Full Stack developer',
+          startDate: 'June 2024',
+          current: true,
+          bullets: ['AI bullet'],
+        },
+      ],
+      education: [],
+      projects: [
+        {
+          name: 'Infodatabox - Cloud Storage Platform (Algoocean)',
+          description: 'Next.js | NestJS',
+          highlights: ['Built storage APIs'],
+        },
+      ],
+      certifications: [],
+      confidenceScore: 90,
+    };
+
+    const normalized = normalizeParsedProfileDraft(aiDraft, atsText);
+    expect(normalized.experience.map((e) => e.company)).toEqual(
+      expect.arrayContaining(['Algoocean', 'SAAR IT']),
+    );
+    expect(normalized.experience.every((e) => e.company !== 'Work Experience')).toBe(true);
+    expect(normalized.projects.length).toBeGreaterThanOrEqual(2);
   });
 });
 

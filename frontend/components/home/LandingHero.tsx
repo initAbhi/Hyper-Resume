@@ -168,7 +168,7 @@ export function LandingHero() {
           <FadeContent trigger="mount" delay={0.3} className="mt-8">
             <ul className="mx-auto flex max-w-md flex-col gap-2.5 text-left text-sm text-zinc-300 sm:mx-auto lg:mx-0">
               {[
-                '5 welcome AI credits on signup',
+                '10 lifetime AI credits on signup',
                 'Unlimited free PDF & DOCX — no watermarks',
                 'Evidence-cited match — gaps stay visible',
               ].map((item) => (

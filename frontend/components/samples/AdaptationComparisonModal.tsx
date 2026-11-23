@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient, ResumeAdaptation, BulletDiff, ResumeContent } from '@/lib/api-client';
 import { SampleResume, getSampleTemplateKey } from '@/data/sample-resumes';
+import { getSampleAccentColor } from '@/lib/sample-resume-content';
 import {
   X,
   Check,
@@ -147,7 +148,7 @@ export function AdaptationComparisonModal({
           ...baseProposed,
           layout: {
             ...(baseProposed.layout || {}),
-            accentColor: sampleResume?.brandColor || baseProposed.layout?.accentColor || '#285FEA',
+            accentColor: (sampleResume ? getSampleAccentColor(sampleResume) : null) || baseProposed.layout?.accentColor || '#142d4c',
             fontFamily: sampleTemplateKey === 'ivy-league' ? 'serif' : (baseProposed.layout?.fontFamily || 'sans'),
             pageMargin: 16,
           },
@@ -192,7 +193,7 @@ export function AdaptationComparisonModal({
           ...baseProposed,
           layout: {
             ...(baseProposed.layout || {}),
-            accentColor: sampleResume.brandColor || baseProposed.layout?.accentColor || '#285FEA',
+            accentColor: getSampleAccentColor(sampleResume) || baseProposed.layout?.accentColor || '#142d4c',
             fontFamily: sampleTemplateKey === 'ivy-league' ? 'serif' : (baseProposed.layout?.fontFamily || 'sans'),
             pageMargin: 16,
           },

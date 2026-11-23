@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import crypto from 'node:crypto';
 import { AnalyticsEvent } from './analytics-event.entity.js';
+import { countryDisplayName, lookupGeoFromIp } from './geo-from-ip.util.js';
 
 export interface RecordAnalyticsEventInput {
   eventType: string;
@@ -44,6 +45,23 @@ export class AnalyticsService {
       fallbackContext?.userAgent,
     );
 
+    const geo = lookupGeoFromIp(fallbackContext?.ip);
+    const baseMeta =
+      input.metadata && typeof input.metadata === 'object' && !Array.isArray(input.metadata)
+        ? { ...input.metadata }
+        : {};
+
+    if (geo) {
+      baseMeta.countryCode = geo.countryCode;
+      baseMeta.country = countryDisplayName(geo.countryCode);
+      if (geo.region) baseMeta.region = geo.region;
+    }
+
+    // Never persist raw IP / UA into analytics rows
+    delete baseMeta.ip;
+    delete baseMeta.clientIp;
+    delete baseMeta.userAgent;
+
     const entity = this.analyticsRepo.create({
       eventType: cleanType,
       path: input.path?.trim().slice(0, 255) || null,
@@ -52,7 +70,7 @@ export class AnalyticsService {
       utmMedium: input.utmMedium?.trim().slice(0, 120) || null,
       utmCampaign: input.utmCampaign?.trim().slice(0, 120) || null,
       sessionHash,
-      metadata: input.metadata || null,
+      metadata: Object.keys(baseMeta).length > 0 ? baseMeta : null,
     });
 
     try {

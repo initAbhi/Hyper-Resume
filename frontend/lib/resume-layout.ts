@@ -31,6 +31,7 @@ export const DEFAULT_LAYOUT_SETTINGS: Required<
     | 'fontSizeScale'
     | 'lineHeight'
     | 'sectionSpacing'
+    | 'entrySpacing'
     | 'pageMargin'
   >
 > = {
@@ -39,6 +40,7 @@ export const DEFAULT_LAYOUT_SETTINGS: Required<
   fontSizeScale: 1,
   lineHeight: 1.45,
   sectionSpacing: 16,
+  entrySpacing: 12,
   pageMargin: 36,
 };
 
@@ -48,6 +50,7 @@ export interface NormalizedLayoutSettings {
   fontSizeScale: number;
   lineHeight: number;
   sectionSpacing: number;
+  entrySpacing: number;
   pageMargin: number;
   accentColor?: string;
   fontFamily?: 'sans' | 'serif' | 'mono';
@@ -73,7 +76,7 @@ export const LAYOUT_DENSITY_PRESETS: Record<
     description: 'Tighter spacing & 92% scale to fit dense histories cleanly',
     fontSizeScale: 0.92,
     lineHeight: 1.28,
-    sectionSpacing: 10,
+    sectionSpacing: 8,
     pageMargin: 24,
   },
   balanced: {
@@ -183,19 +186,23 @@ export function normalizeLayoutSettings(
     hiddenSections,
     fontSizeScale:
       typeof layout?.fontSizeScale === 'number' && !Number.isNaN(layout.fontSizeScale)
-        ? clamp(Number(layout.fontSizeScale.toFixed(2)), 0.85, 1.15)
+        ? clamp(Number(layout.fontSizeScale.toFixed(2)), 0.75, 1.25)
         : DEFAULT_LAYOUT_SETTINGS.fontSizeScale,
     lineHeight:
       typeof layout?.lineHeight === 'number' && !Number.isNaN(layout.lineHeight)
-        ? clamp(Number(layout.lineHeight.toFixed(2)), 1.2, 1.75)
+        ? clamp(Number(layout.lineHeight.toFixed(2)), 1.1, 1.85)
         : DEFAULT_LAYOUT_SETTINGS.lineHeight,
     sectionSpacing:
       typeof layout?.sectionSpacing === 'number' && !Number.isNaN(layout.sectionSpacing)
-        ? Math.round(clamp(layout.sectionSpacing, 8, 28))
+        ? Math.round(clamp(layout.sectionSpacing, 2, 36))
         : DEFAULT_LAYOUT_SETTINGS.sectionSpacing,
+    entrySpacing:
+      typeof layout?.entrySpacing === 'number' && !Number.isNaN(layout.entrySpacing)
+        ? Math.round(clamp(layout.entrySpacing, 2, 28))
+        : DEFAULT_LAYOUT_SETTINGS.entrySpacing,
     pageMargin:
       typeof layout?.pageMargin === 'number' && !Number.isNaN(layout.pageMargin)
-        ? Math.round(clamp(layout.pageMargin, 16, 52))
+        ? Math.round(clamp(layout.pageMargin, 12, 64))
         : DEFAULT_LAYOUT_SETTINGS.pageMargin,
     accentColor: layout?.accentColor,
     fontFamily: layout?.fontFamily,
@@ -341,12 +348,22 @@ export function applyResumeLayoutToDom(
     cfg.sectionOrder.length === DEFAULT_SECTION_ORDER.length &&
     cfg.sectionOrder.every((k, i) => k === DEFAULT_SECTION_ORDER[i]) &&
     hiddenSet.size === 0;
-  const isDefaultSpacing =
-    Math.abs(cfg.sectionSpacing - DEFAULT_LAYOUT_SETTINGS.sectionSpacing) < 0.5;
   const isDefaultMargin =
     Math.abs(cfg.pageMargin - DEFAULT_LAYOUT_SETTINGS.pageMargin) < 0.5;
   const isDefaultFontScale = Math.abs(cfg.fontSizeScale - 1) < 0.001;
   const isDefaultLineHeight = Math.abs(cfg.lineHeight - 1.45) < 0.005;
+
+  // Drive spacing via CSS variables so React re-renders can't revive Tailwind gap-*
+  container.style.setProperty('--hr-section-spacing', `${cfg.sectionSpacing}px`);
+  container.style.setProperty('--hr-entry-spacing', `${cfg.entrySpacing}px`);
+  container.dataset.hrTightEntries = cfg.entrySpacing <= 6 ? 'true' : 'false';
+  container.dataset.hrTightSections = cfg.sectionSpacing <= 6 ? 'true' : 'false';
+  container.querySelectorAll<HTMLElement>('.hr-ats-page, .resume-page-a4').forEach((pageEl) => {
+    pageEl.style.setProperty('--hr-section-spacing', `${cfg.sectionSpacing}px`);
+    pageEl.style.setProperty('--hr-entry-spacing', `${cfg.entrySpacing}px`);
+    pageEl.dataset.hrTightEntries = cfg.entrySpacing <= 6 ? 'true' : 'false';
+    pageEl.dataset.hrTightSections = cfg.sectionSpacing <= 6 ? 'true' : 'false';
+  });
 
   // 1. Section Reordering, Visibility, and Section Gap
   const sectionParents = new Set<HTMLElement>();
@@ -380,7 +397,7 @@ export function applyResumeLayoutToDom(
       delete section.dataset.hrHidden;
     }
 
-    if (!isDefaultOrder || !isDefaultSpacing) {
+    if (!isDefaultOrder) {
       section.style.order = String(rankMap.get(detectedKey) ?? 99);
       section.style.marginTop = '0px';
     } else {
@@ -396,17 +413,21 @@ export function applyResumeLayoutToDom(
     if (isMultiColGrid) {
       continue;
     }
-    if (!isDefaultOrder || !isDefaultSpacing) {
-      parent.style.display = 'flex';
-      parent.style.flexDirection = 'column';
-      parent.style.rowGap = `${cfg.sectionSpacing}px`;
-      parent.dataset.hrFlexManaged = 'true';
-    } else if (parent.dataset.hrFlexManaged === 'true') {
-      parent.style.display = '';
-      parent.style.flexDirection = '';
-      parent.style.rowGap = '';
-      delete parent.dataset.hrFlexManaged;
-    }
+    // Always apply section spacing from the slider (including default)
+    Array.from(parent.classList).forEach((c) => {
+      if (c.startsWith('space-y-') || c.startsWith('gap-')) parent.classList.remove(c);
+    });
+    parent.style.display = 'flex';
+    parent.style.flexDirection = 'column';
+    parent.style.setProperty('row-gap', `${cfg.sectionSpacing}px`, 'important');
+    parent.style.setProperty('gap', `${cfg.sectionSpacing}px`, 'important');
+    parent.dataset.hrFlexManaged = 'true';
+    Array.from(parent.children).forEach((child, idx) => {
+      if (!(child instanceof HTMLElement)) return;
+      if (idx > 0) {
+        child.style.setProperty('margin-top', '0px', 'important');
+      }
+    });
   }
 
   // 2. Page Margin Application (respecting templates with flush full-bleed sidebars/banners)
@@ -415,15 +436,44 @@ export function applyResumeLayoutToDom(
   );
   for (const pageEl of pageEls) {
     const isFlushFullBleed = /\bp-0!?(\s|$)/.test(pageEl.className);
-    const cs = window.getComputedStyle(pageEl);
-    const hasOuterPadding = !isFlushFullBleed && parseFloat(cs.paddingLeft || '0') > 4;
-    if (!isDefaultMargin && (hasOuterPadding || pageEl.dataset.hrMarginManaged === 'true')) {
-      pageEl.style.padding = `${cfg.pageMargin}px`;
+    if (isFlushFullBleed) continue;
+    // Always apply when non-default so ATS templates (.hr-ats-page) respect the slider
+    if (!isDefaultMargin) {
+      pageEl.style.setProperty('padding', `${cfg.pageMargin}px`, 'important');
       pageEl.dataset.hrMarginManaged = 'true';
-    } else if (isDefaultMargin && pageEl.dataset.hrMarginManaged === 'true') {
-      pageEl.style.padding = '';
+    } else if (pageEl.dataset.hrMarginManaged === 'true') {
+      pageEl.style.removeProperty('padding');
       delete pageEl.dataset.hrMarginManaged;
     }
+  }
+
+  // 2b. Entry spacing (gap between roles / projects / education rows)
+  const entryParents = new Set<HTMLElement>();
+  container.querySelectorAll<HTMLElement>('.resume-entry').forEach((entry) => {
+    if (entry.parentElement) entryParents.add(entry.parentElement);
+  });
+  for (const parent of entryParents) {
+    // Always drive entry gap from slider (including default) so Tailwind gap-* can't fight it
+    Array.from(parent.classList).forEach((c) => {
+      if (c.startsWith('space-y-') || c.startsWith('gap-')) parent.classList.remove(c);
+    });
+    parent.style.display = 'flex';
+    parent.style.flexDirection = 'column';
+    parent.style.setProperty('row-gap', `${cfg.entrySpacing}px`, 'important');
+    parent.style.setProperty('gap', `${cfg.entrySpacing}px`, 'important');
+    parent.dataset.hrEntryGapManaged = 'true';
+    parent.querySelectorAll<HTMLElement>(':scope > .resume-entry').forEach((child, idx) => {
+      if (idx > 0) child.style.setProperty('margin-top', '0px', 'important');
+      if (cfg.entrySpacing <= 6) {
+        child.querySelectorAll<HTMLElement>('ul, .hr-ats-bullets').forEach((ul) => {
+          ul.style.setProperty('margin-top', '2px', 'important');
+        });
+      } else {
+        child.querySelectorAll<HTMLElement>('ul, .hr-ats-bullets').forEach((ul) => {
+          ul.style.removeProperty('margin-top');
+        });
+      }
+    });
   }
 
   // 3. Read-first, Write-second Typography Scaling & Line Height (skip nested children of already-scaled elements to prevent double-scaling)

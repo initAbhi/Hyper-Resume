@@ -27,6 +27,7 @@ import { AgentTask } from '../agent/entities/agent-task.entity.js';
 import { AgentToolExecution } from '../agent/entities/agent-tool-execution.entity.js';
 import { AgentTaskEvent } from '../agent/entities/agent-task-event.entity.js';
 import { AgentStreamTicket } from '../agent/entities/agent-stream-ticket.entity.js';
+import { ContactSubmission } from '../contact/entities/contact-submission.entity.js';
 
 export const ALL_ENTITIES = [
   User,
@@ -58,4 +59,5 @@ export const ALL_ENTITIES = [
   AgentToolExecution,
   AgentTaskEvent,
   AgentStreamTicket,
+  ContactSubmission,
 ];

@@ -173,7 +173,7 @@ class AnalyticsService {
     ) {
       try {
         const sid = this.getOrCreateSessionId();
-        const urlParams = new URLSearchParams(window.location.search);
+        const attribution = this.getStickyAttribution();
         void fetch(`${env.apiUrl}/analytics/event`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -181,13 +181,18 @@ class AnalyticsService {
           keepalive: true,
           body: JSON.stringify({
             eventType: event,
-            path: window.location.pathname,
-            referrer: document.referrer || undefined,
-            utmSource: urlParams.get('utm_source') || undefined,
-            utmMedium: urlParams.get('utm_medium') || undefined,
-            utmCampaign: urlParams.get('utm_campaign') || undefined,
+            path: window.location.pathname + (window.location.search || ''),
+            referrer: attribution.referrer || undefined,
+            utmSource: attribution.utmSource || undefined,
+            utmMedium: attribution.utmMedium || undefined,
+            utmCampaign: attribution.utmCampaign || undefined,
             sessionId: sid,
-            metadata: sanitizedProps,
+            metadata: {
+              ...sanitizedProps,
+              ...(attribution.utmContent ? { utmContent: attribution.utmContent } : {}),
+              ...(attribution.utmTerm ? { utmTerm: attribution.utmTerm } : {}),
+              firstTouch: attribution.isFirstTouch,
+            },
           }),
         }).catch(() => {
           // Non-blocking telemetry
@@ -224,6 +229,67 @@ class AnalyticsService {
   }
 
   /**
+   * First-touch attribution: capture UTMs + referrer once per browser session
+   * so SPA navigations without query params still report the acquisition channel.
+   */
+  private getStickyAttribution(): {
+    utmSource?: string;
+    utmMedium?: string;
+    utmCampaign?: string;
+    utmContent?: string;
+    utmTerm?: string;
+    referrer?: string;
+    isFirstTouch: boolean;
+  } {
+    if (typeof window === 'undefined') {
+      return { isFirstTouch: false };
+    }
+
+    const storageKey = 'hr_analytics_attribution_v1';
+    try {
+      const existingRaw = window.sessionStorage?.getItem(storageKey);
+      if (existingRaw) {
+        const parsed = JSON.parse(existingRaw) as Record<string, string>;
+        return {
+          utmSource: parsed.utmSource || undefined,
+          utmMedium: parsed.utmMedium || undefined,
+          utmCampaign: parsed.utmCampaign || undefined,
+          utmContent: parsed.utmContent || undefined,
+          utmTerm: parsed.utmTerm || undefined,
+          referrer: parsed.referrer || undefined,
+          isFirstTouch: false,
+        };
+      }
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const referrer = document.referrer || undefined;
+      const payload = {
+        utmSource: urlParams.get('utm_source') || undefined,
+        utmMedium: urlParams.get('utm_medium') || undefined,
+        utmCampaign: urlParams.get('utm_campaign') || undefined,
+        utmContent: urlParams.get('utm_content') || undefined,
+        utmTerm: urlParams.get('utm_term') || undefined,
+        referrer,
+      };
+      window.sessionStorage?.setItem(storageKey, JSON.stringify(payload));
+      return { ...payload, isFirstTouch: true };
+    } catch {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        return {
+          utmSource: urlParams.get('utm_source') || undefined,
+          utmMedium: urlParams.get('utm_medium') || undefined,
+          utmCampaign: urlParams.get('utm_campaign') || undefined,
+          referrer: document.referrer || undefined,
+          isFirstTouch: true,
+        };
+      } catch {
+        return { isFirstTouch: false };
+      }
+    }
+  }
+
+  /**
    * Tracks UTM acquisition params if present (e.g., utm_source, utm_medium, utm_campaign)
    */
   public getAcquisitionContext(): { source: string; medium?: string; campaign?: string } {
@@ -231,11 +297,15 @@ class AnalyticsService {
       return { source: 'direct' };
     }
     try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const source = urlParams.get('utm_source') || (document.referrer ? new URL(document.referrer).hostname : 'direct');
-      const medium = urlParams.get('utm_medium') || undefined;
-      const campaign = urlParams.get('utm_campaign') || undefined;
-      return { source, medium, campaign };
+      const attribution = this.getStickyAttribution();
+      const source =
+        attribution.utmSource ||
+        (attribution.referrer ? new URL(attribution.referrer).hostname : 'direct');
+      return {
+        source,
+        medium: attribution.utmMedium,
+        campaign: attribution.utmCampaign,
+      };
     } catch {
       return { source: 'direct' };
     }

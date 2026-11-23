@@ -28,7 +28,7 @@ const ALL_TEMPLATES: (TemplateItem & { category: Exclude<CategoryKey, 'Popular'>
     category: 'Classic',
     img: 'https://cdn.prod.website-files.com/69e64c7c6b31ed98618646c6/6a04c207ce2523cbb765e4f2_Jake.avif',
     desc: 'High-density single-column engineering standard modeled on LaTeX conventions.',
-    tag: 'TOP ATS',
+    tag: 'Recommended',
   },
   {
     key: 'awesome-cv',

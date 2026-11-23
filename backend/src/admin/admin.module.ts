@@ -12,6 +12,7 @@ import { AdminGuard } from './guards/admin.guard.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { PaymentsModule } from '../payments/payments.module.js';
 import { CreditsModule } from '../credits/credits.module.js';
+import { ContactModule } from '../contact/contact.module.js';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { CreditsModule } from '../credits/credits.module.js';
     AuthModule,
     PaymentsModule,
     CreditsModule,
+    ContactModule,
   ],
   controllers: [AdminController],
   providers: [AdminService, AdminGuard],

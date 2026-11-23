@@ -294,6 +294,185 @@ body {
   padding: 34px 40px;
 }
 
+/*
+ * ATS typography scale (Jake / Classic).
+ * Uses pt so print + Puppeteer export stay readable (~Jake 11pt article defaults).
+ */
+.hr-ats-page {
+  /* Default padding — overridden by layout pageMargin via inline !important when managed */
+  padding: 0.55in 0.6in;
+  font-size: 11pt;
+  line-height: 1.35;
+  color: #111111;
+  --hr-section-spacing: 16px;
+  --hr-entry-spacing: 12px;
+}
+
+.hr-ats-page[data-hr-margin-managed='true'] {
+  /* Inline padding from applyResumeLayoutToDom wins */
+}
+
+.hr-ats-name {
+  font-size: 22pt;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.hr-ats-headline {
+  font-size: 11pt;
+  line-height: 1.3;
+  color: #333333;
+}
+
+.hr-ats-contact {
+  font-size: 9.5pt;
+  line-height: 1.35;
+  color: #333333;
+}
+
+.hr-ats-section-title {
+  flex: 1;
+  font-size: 11pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1.25px solid currentColor;
+  padding-bottom: 2px;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.hr-ats-body-text,
+.hr-ats-bullets,
+.hr-ats-bullets li {
+  font-size: 10.5pt;
+  line-height: 1.38;
+  color: #1a1a1a;
+}
+
+.hr-ats-entry-title {
+  font-size: 10.5pt;
+  line-height: 1.3;
+  color: #111111;
+}
+
+.hr-ats-entry-sub {
+  font-size: 10pt;
+  line-height: 1.3;
+  color: #333333;
+}
+
+.hr-ats-meta {
+  font-size: 10pt;
+  line-height: 1.3;
+  color: #444444;
+}
+
+.hr-ats-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.hr-ats-body {
+  gap: var(--hr-section-spacing, 14px) !important;
+  row-gap: var(--hr-section-spacing, 14px) !important;
+}
+
+.hr-entry-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hr-entry-spacing, 12px) !important;
+  row-gap: var(--hr-entry-spacing, 12px) !important;
+}
+
+.hr-ats-page[data-hr-tight-entries='true'] .hr-ats-bullets,
+.hr-ats-page[data-hr-tight-entries='true'] .resume-entry > ul {
+  margin-top: 2px !important;
+}
+
+.hr-ats-skill-row {
+  /* Inline flow keeps "Backend: Node.js, NestJS…" on one wrapping paragraph */
+  display: block;
+  font-size: 10.5pt;
+  line-height: 1.38;
+  white-space: normal;
+}
+
+.hr-ats-skill-label {
+  display: inline;
+  font-size: 10.5pt;
+  color: #111111;
+  margin-right: 0.25em;
+  white-space: nowrap;
+}
+
+.hr-ats-skill-row .hr-ats-body-text {
+  display: inline;
+}
+
+/* Skill chip: inline only — no flex/gap so commas stay tight */
+.hr-ats-skill-row .group\/skill {
+  position: relative;
+  display: inline;
+  white-space: normal;
+  padding: 0;
+  margin: 0;
+  vertical-align: baseline;
+}
+
+/* No selection/hover left rail on entries (explicit kill — overrides any stale HMR CSS) */
+.resume-entry.group\/entry,
+.resume-entry.group\/entry:hover,
+.resume-entry.group\/entry:focus-within,
+.resume-entry.group\/entry:focus,
+.resume-entry.group\/entry:active {
+  position: relative;
+  box-shadow: none !important;
+  border-left: none !important;
+}
+.resume-entry.group\/entry::before,
+.resume-entry.group\/entry::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Edit chrome must never inflate entry/section spacing */
+#resume-document-print .group\/bullets {
+  position: relative;
+}
+#resume-document-print [data-add-bullet-btn='true'] {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  margin-top: 2px;
+  z-index: 5;
+}
+#resume-document-print [data-entry-delete='entry'] {
+  position: absolute;
+}
+
+/* When entry spacing is tight, kill leftover template margins */
+.hr-ats-page[data-hr-tight-entries='true'] .hr-entry-stack {
+  margin-top: 2px !important;
+}
+.hr-ats-page[data-hr-tight-entries='true'] .hr-ats-bullets,
+.hr-ats-page[data-hr-tight-entries='true'] .resume-entry > ul {
+  margin-top: 1px !important;
+}
+.hr-ats-page[data-hr-tight-entries='true'] .hr-ats-entry-sub {
+  margin-top: 0 !important;
+}
+.hr-ats-page[data-hr-tight-sections='true'] .hr-ats-section-title {
+  padding-bottom: 1px;
+  margin-bottom: 0;
+}
+.hr-ats-page[data-hr-tight-sections='true'] .resume-section > .flex.items-center {
+  margin-bottom: 0;
+}
+
 .resume-paper-canvas {
   background: #ffffff;
   color: #1a1d23;
@@ -303,7 +482,7 @@ body {
   transition: border-color 0.15s ease;
 }
 
-/* Template Picker Miniature Live Preview */
+/* Template Picker + Sample Library miniature live preview */
 .template-thumbnail-render .resume-page-a4,
 .template-thumbnail-render .resume-paper-canvas {
   box-shadow: none !important;
@@ -311,6 +490,16 @@ body {
   margin: 0 !important;
   max-width: 100% !important;
   width: 100% !important;
+  /* Tighter page chrome so card thumbnails read denser */
+  padding: 18px 22px !important;
+  min-height: 1123px !important;
+  gap: 0 !important;
+  row-gap: 0 !important;
+}
+
+.template-thumbnail-render .resume-page-a4 > * + *,
+.template-thumbnail-render .resume-paper-canvas > * + * {
+  margin-top: 0.35rem !important;
 }
 
 /* Strip keyword highlight styling during PDF export or in export mode */
@@ -562,7 +751,7 @@ body {
     background-color: #ffffff !important;
     margin: 0 !important;
     padding: 0 !important;
-    font-size: 10pt !important;
+    font-size: 11pt !important;
     height: auto !important;
     overflow: visible !important;
     -webkit-print-color-adjust: exact !important;
@@ -684,10 +873,29 @@ body {
     box-shadow: none !important;
     padding: 0 !important;
     margin: 0 !important;
-    font-size: 10pt !important;
-    line-height: 1.4 !important;
+    font-size: 11pt !important;
+    line-height: 1.35 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  #resume-document-print .hr-ats-page:not([data-hr-margin-managed='true']) {
+    padding: 0.5in 0.55in !important;
+  }
+
+  #resume-document-print .hr-ats-name {
+    font-size: 20pt !important;
+  }
+
+  #resume-document-print .hr-ats-section-title {
+    font-size: 11pt !important;
+  }
+
+  #resume-document-print .hr-ats-body-text,
+  #resume-document-print .hr-ats-bullets,
+  #resume-document-print .hr-ats-bullets li,
+  #resume-document-print .hr-ats-entry-title {
+    font-size: 10.5pt !important;
   }
 
   #resume-document-print,
@@ -1216,6 +1424,17 @@ progress.hr-progress-ring::-moz-progress-bar {
     transition-timing-function: ease-in-out;
     transition-behavior: allow-discrete;
   }
+}
+
+/* Hide scrollbars (Canva dock, tab strips, etc.) */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 /* Aceternity tabs — hide scrollbar on tab strip */

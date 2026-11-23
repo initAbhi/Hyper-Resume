@@ -119,7 +119,10 @@ describe('AdminService', () => {
     const analytics = await service.getAnalyticsOverview();
     expect(analytics.overview.uniqueVisitors).toBe(0);
     expect(analytics.overview.pageViews).toBe(0);
+    expect(analytics.overview.landingPageViews).toBe(0);
     expect(analytics.topReferrers).toEqual([]);
+    expect(analytics.topCountries).toEqual([]);
+    expect(analytics.topPaths).toEqual([]);
     expect(analytics.chartData).toHaveLength(6);
   });
 

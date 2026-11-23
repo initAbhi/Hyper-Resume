@@ -27,20 +27,24 @@ import {
 import { LinkedInIcon } from '@/components/linkedin/LinkedInIcon';
 import {
   apiClient,
+  ApiError,
   Resume,
   ParsedProfileDraft,
   ResumeContent,
   type ResumeShareSummaryItem,
 } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
+import { FeatureLimitPaywallModal } from '@/components/billing/FeatureLimitPaywallModal';
+import { FREE_MAX_RESUMES } from '@/lib/plan-limits';
 
 export default function ResumesListPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, hasActivePro } = useAuth();
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [archivedResumes, setArchivedResumes] = useState<Resume[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showResumeLimitPaywall, setShowResumeLimitPaywall] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'master' | 'tailored' | 'archived'>('all');
   const [restoringId, setRestoringId] = useState<string | null>(null);
@@ -59,21 +63,63 @@ export default function ResumesListPage() {
   const [newResumeName, setNewResumeName] = useState('');
   const [newResumeRole, setNewResumeRole] = useState('');
   const [newResumeCompany, setNewResumeCompany] = useState('');
-  const [selectedTemplateKey, setSelectedTemplateKey] = useState<string | null>(null);
+  const [selectedTemplateKey, setSelectedTemplateKey] = useState<string | null>('jake-ats');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isAtResumeLimit = !hasActivePro && resumes.length >= FREE_MAX_RESUMES;
+
+  const openCreateFlow = () => {
+    if (isAtResumeLimit) {
+      setShowResumeLimitPaywall(true);
+      return;
+    }
+    setNewResumeName('');
+    setNewResumeRole('');
+    setNewResumeCompany('');
+    setIsCreateModalOpen(true);
+  };
+
+  const openImportFlow = () => {
+    if (isAtResumeLimit) {
+      setShowResumeLimitPaywall(true);
+      return;
+    }
+    setUploadFile(null);
+    setParsedDraft(null);
+    setUploadError(null);
+    setIsUploadModalOpen(true);
+  };
+
+  const handleLimitError = (err: unknown) => {
+    const message = err instanceof Error ? err.message : '';
+    const code = err instanceof ApiError ? err.code : '';
+    if (
+      code === 'RESUME_LIMIT_REACHED' ||
+      message.includes('RESUME_LIMIT_REACHED') ||
+      message.includes('active resumes')
+    ) {
+      setShowResumeLimitPaywall(true);
+      return true;
+    }
+    return false;
+  };
 
   // Auto-open Create modal when navigated with ?create=1&template=...
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || isLoading) return;
     const params = new URLSearchParams(window.location.search);
     const tpl = params.get('template');
     if (tpl) {
       setSelectedTemplateKey(tpl);
     }
     if (params.get('create') === '1' || tpl) {
-      setIsCreateModalOpen(true);
+      if (!hasActivePro && resumes.length >= FREE_MAX_RESUMES) {
+        setShowResumeLimitPaywall(true);
+      } else {
+        setIsCreateModalOpen(true);
+      }
     }
-  }, []);
+  }, [isLoading, hasActivePro, resumes.length]);
 
   // Upload Modal State
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -102,10 +148,13 @@ export default function ResumesListPage() {
       }).then((created) => {
         router.push('/app/resumes/' + created.id);
       }).catch((err) => {
-        setErrorMessage(err instanceof Error ? err.message : 'Failed to clone template.');
+        if (!handleLimitError(err)) {
+          setErrorMessage(err instanceof Error ? err.message : 'Failed to clone template.');
+        }
         setIsSubmitting(false);
       });
     } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   useEffect(() => {
@@ -178,22 +227,28 @@ export default function ResumesListPage() {
             graduationDate: '2021',
           },
         ],
+        layout: {
+          accentColor: '#000000',
+          fontFamily: 'serif',
+        },
       };
 
       const newResume = await apiClient.createResume({
         name: newResumeName.trim(),
         targetRole: newResumeRole.trim() || undefined,
         targetCompany: newResumeCompany.trim() || undefined,
-        templateKey: selectedTemplateKey || undefined,
+        templateKey: selectedTemplateKey || 'jake-ats',
         content: defaultContent,
       });
 
       setIsCreateModalOpen(false);
       router.push(`/app/resumes/${newResume.id}`);
     } catch (err: unknown) {
-      setErrorMessage(
-        err instanceof Error ? err.message : 'Failed to create resume.',
-      );
+      if (!handleLimitError(err)) {
+        setErrorMessage(
+          err instanceof Error ? err.message : 'Failed to create resume.',
+        );
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -239,7 +294,7 @@ export default function ResumesListPage() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isCreateModalOpen, isUploadModalOpen]);
 
-  const handleConfirmImport = async (destination: 'editor' | 'linkedin' = 'editor') => {
+  const handleConfirmImport = async () => {
     if (!parsedDraft) return;
 
     setIsSubmitting(true);
@@ -274,6 +329,10 @@ export default function ResumesListPage() {
         })),
         projects: parsedDraft.projects || [],
         certifications: parsedDraft.certifications || [],
+        layout: {
+          accentColor: '#000000',
+          fontFamily: 'serif',
+        },
         ...(parsedDraft.languages && parsedDraft.languages.length > 0
           ? {
               customSections: [
@@ -294,19 +353,20 @@ export default function ResumesListPage() {
 
       const resume = await apiClient.createResume({
         name: importedResumeName.trim() || 'Imported Resume',
+        templateKey: 'jake-ats',
         content: convertedContent,
       });
 
       setIsUploadModalOpen(false);
-      if (destination === 'linkedin') {
-        router.push(`/app/linkedin?resumeId=${resume.id}`);
-      } else {
-        router.push(`/app/resumes/${resume.id}`);
-      }
+      router.push(`/app/resumes/${resume.id}`);
     } catch (err: unknown) {
-      setUploadError(
-        err instanceof Error ? err.message : 'Failed to save imported resume.',
-      );
+      if (handleLimitError(err)) {
+        setIsUploadModalOpen(false);
+      } else {
+        setUploadError(
+          err instanceof Error ? err.message : 'Failed to save imported resume.',
+        );
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -324,6 +384,10 @@ export default function ResumesListPage() {
 
   const handleDuplicateResume = async (resumeId: string) => {
     if (duplicatingId) return;
+    if (isAtResumeLimit) {
+      setShowResumeLimitPaywall(true);
+      return;
+    }
     setErrorMessage(null);
     setDuplicatingId(resumeId);
     try {
@@ -345,9 +409,11 @@ export default function ResumesListPage() {
         }
       });
     } catch (err: unknown) {
-      setErrorMessage(
-        err instanceof Error ? err.message : 'Failed to duplicate resume',
-      );
+      if (!handleLimitError(err)) {
+        setErrorMessage(
+          err instanceof Error ? err.message : 'Failed to duplicate resume',
+        );
+      }
     } finally {
       setDuplicatingId(null);
     }
@@ -409,21 +475,10 @@ export default function ResumesListPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Link href="/app/linkedin">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <LinkedInIcon className="w-3.5 h-3.5 text-[#0A66C2]" />
-              <span>LinkedIn Studio</span>
-            </Button>
-          </Link>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
-              setUploadFile(null);
-              setParsedDraft(null);
-              setUploadError(null);
-              setIsUploadModalOpen(true);
-            }}
+            onClick={openImportFlow}
             className="gap-1.5"
           >
             <Upload className="w-3.5 h-3.5 text-[#285FEA]" />
@@ -432,12 +487,7 @@ export default function ResumesListPage() {
           <Button
             variant="primary"
             size="sm"
-            onClick={() => {
-              setNewResumeName('');
-              setNewResumeRole('');
-              setNewResumeCompany('');
-              setIsCreateModalOpen(true);
-            }}
+            onClick={openCreateFlow}
             className="gap-1.5"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -539,7 +589,7 @@ export default function ResumesListPage() {
               <Button
                 variant="primary"
                 size="sm"
-                onClick={() => setIsCreateModalOpen(true)}
+                onClick={openCreateFlow}
                 className="gap-1.5"
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -548,7 +598,7 @@ export default function ResumesListPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setIsUploadModalOpen(true)}
+                onClick={openImportFlow}
                 className="gap-1.5"
               >
                 <Upload className="w-3.5 h-3.5" />
@@ -989,32 +1039,28 @@ export default function ResumesListPage() {
                 Cancel
               </Button>
               {parsedDraft && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleConfirmImport('linkedin')}
-                    isLoading={isSubmitting}
-                    className="gap-1.5 border-[#0A66C2]/40 text-[#0A66C2] hover:bg-[#EFF6FF]"
-                  >
-                    <LinkedInIcon className="w-3.5 h-3.5" />
-                    Save &amp; Optimize LinkedIn
-                  </Button>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => handleConfirmImport('editor')}
-                    isLoading={isSubmitting}
-                  >
-                    <FileCheck className="w-3.5 h-3.5 mr-1.5" />
-                    Save &amp; Open in Editor
-                  </Button>
-                </>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => void handleConfirmImport()}
+                  isLoading={isSubmitting}
+                >
+                  <FileCheck className="w-3.5 h-3.5 mr-1.5" />
+                  Save &amp; Open in Editor
+                </Button>
               )}
             </div>
           </Card>
         </div>
       )}
+
+      <FeatureLimitPaywallModal
+        isOpen={showResumeLimitPaywall}
+        onClose={() => setShowResumeLimitPaywall(false)}
+        kind="resumes"
+        limit={FREE_MAX_RESUMES}
+        current={resumes.length}
+      />
 
       {/* Persistent Manual Popover Toast Notification Region */}
       <div role="region" aria-label="Notifications" aria-live="polite">

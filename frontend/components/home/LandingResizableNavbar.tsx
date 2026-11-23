@@ -64,10 +64,21 @@ export function LandingResizableNavbar() {
 
         <MobileNav>
           <MobileNavHeader>
-            <Link href="/" aria-label="HypeResume Home">
-              <Logo variant="full" size="md" theme="dark" priority />
+            <Link href="/" aria-label="HypeResume Home" className="min-w-0 shrink">
+              <Logo variant="full" size="sm" theme="dark" priority />
             </Link>
-            <MobileNavToggle isOpen={mobileOpen} onClick={() => setMobileOpen((v) => !v)} />
+            <div className="flex items-center gap-1.5">
+              {isAuthenticated ? (
+                <NavbarButton href="/app" variant="primary" className="!px-3 !py-1.5 text-xs">
+                  Dashboard
+                </NavbarButton>
+              ) : (
+                <NavbarButton href="/register" variant="primary" className="!px-3 !py-1.5 text-xs">
+                  Get Started
+                </NavbarButton>
+              )}
+              <MobileNavToggle isOpen={mobileOpen} onClick={() => setMobileOpen((v) => !v)} />
+            </div>
           </MobileNavHeader>
           <MobileNavMenu isOpen={mobileOpen} onClose={() => setMobileOpen(false)}>
             {NAV_ITEMS.map((item) => (
@@ -75,15 +86,20 @@ export function LandingResizableNavbar() {
                 key={item.name}
                 href={item.link}
                 onClick={() => setMobileOpen(false)}
-                className="w-full rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-200 transition hover:bg-white/[0.06] hover:text-white"
+                className="w-full rounded-xl px-3 py-3 text-sm font-medium text-zinc-200 transition hover:bg-white/[0.06] hover:text-white"
               >
                 {item.name}
               </Link>
             ))}
-            <div className="mt-3 flex w-full flex-col gap-2 border-t border-white/10 pt-3">
+            <div className="mt-2 flex w-full flex-col gap-2 border-t border-white/10 pt-3">
               {isAuthenticated ? (
-                <NavbarButton href="/app" variant="primary" className="w-full">
-                  Dashboard
+                <NavbarButton
+                  href="/app"
+                  variant="primary"
+                  className="w-full"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Open dashboard
                 </NavbarButton>
               ) : (
                 <>
@@ -94,7 +110,12 @@ export function LandingResizableNavbar() {
                   >
                     Log in
                   </Link>
-                  <NavbarButton href="/register" variant="primary" className="w-full">
+                  <NavbarButton
+                    href="/register"
+                    variant="primary"
+                    className="w-full"
+                    onClick={() => setMobileOpen(false)}
+                  >
                     Get Started
                   </NavbarButton>
                 </>

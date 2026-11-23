@@ -17,6 +17,7 @@ import {
   RefreshCw,
   Search,
   Sparkles,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,6 +35,9 @@ import {
 } from '@/lib/job-discovery-utils';
 import { useOptionalGlobalAgent } from '@/lib/global-agent-context';
 import { useAuth } from '@/lib/auth-context';
+import { FeatureLimitPaywallModal } from '@/components/billing/FeatureLimitPaywallModal';
+import { FREE_MAX_APPLICATIONS } from '@/lib/plan-limits';
+import { ApiError } from '@/lib/api-client';
 
 type SourceOption = 'all' | 'greenhouse' | 'ashby' | 'lever' | 'remotive' | 'arbeitnow';
 type WorkplaceOption = 'all' | 'remote' | 'hybrid' | 'onsite';
@@ -45,12 +49,58 @@ interface ActiveMatchBanner {
   match: JobMatch;
 }
 
+const PENDING_APPLY_STORAGE_KEY = 'hr_pending_job_apply_v1';
+const MIN_APPLY_AWAY_MS = 1600;
+
+interface PendingApplyJob {
+  id: string;
+  title: string;
+  company: string;
+  applyUrl: string;
+  location: string;
+  source?: string;
+  descriptionText: string;
+  resumeId?: string;
+  openedAt: number;
+}
+
+function readPendingApply(): PendingApplyJob | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(PENDING_APPLY_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PendingApplyJob;
+    if (!parsed?.id || !parsed?.applyUrl || !parsed?.title || !parsed?.company) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writePendingApply(job: PendingApplyJob | null) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (!job) sessionStorage.removeItem(PENDING_APPLY_STORAGE_KEY);
+    else sessionStorage.setItem(PENDING_APPLY_STORAGE_KEY, JSON.stringify(job));
+  } catch {
+    // Ignore quota / private mode failures — in-memory state still works.
+  }
+}
+
 export default function LiveJobDiscoveryClient() {
   const uid = useId();
   const initializedRef = useRef(false);
+  const pendingApplyRef = useRef<PendingApplyJob | null>(null);
+  const promptOpenRef = useRef(false);
+  const trackingBusyRef = useRef(false);
   const globalAgent = useOptionalGlobalAgent();
-  const { refreshUser } = useAuth();
+  const { refreshUser, hasActivePro } = useAuth();
   const [visibleCount, setVisibleCount] = useState(20);
+  const [showAppLimitPaywall, setShowAppLimitPaywall] = useState(false);
+  const [trackedCount, setTrackedCount] = useState(0);
+  const [pendingApplyPrompt, setPendingApplyPrompt] = useState<PendingApplyJob | null>(null);
+  const [trackingConfirmBusy, setTrackingConfirmBusy] = useState(false);
+  const [trackerToast, setTrackerToast] = useState<string | null>(null);
 
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [boards, setBoards] = useState<CuratedAtsBoard[]>([]);
@@ -198,12 +248,14 @@ export default function LiveJobDiscoveryClient() {
     async function bootstrap() {
       setIsLoading(true);
       try {
-        const [resumesData, boardsData] = await Promise.all([
+        const [resumesData, boardsData, appsData] = await Promise.all([
           apiClient.listResumes().catch(() => [] as Resume[]),
           apiClient.listDiscoveredBoards().catch(() => [] as CuratedAtsBoard[]),
+          apiClient.listApplications().catch(() => [] as unknown[]),
         ]);
         setResumes(resumesData);
         setBoards(boardsData);
+        setTrackedCount(Array.isArray(appsData) ? appsData.length : 0);
         const primaryResume =
           resumesData.find((r) => r.isMaster) || resumesData[0] || null;
         if (primaryResume) {
@@ -246,7 +298,187 @@ export default function LiveJobDiscoveryClient() {
     });
   };
 
+  const clearPendingApply = useCallback(() => {
+    pendingApplyRef.current = null;
+    writePendingApply(null);
+  }, []);
+
+  const dismissApplyPrompt = useCallback(() => {
+    promptOpenRef.current = false;
+    setPendingApplyPrompt(null);
+    clearPendingApply();
+  }, [clearPendingApply]);
+
+  const showTrackerToast = useCallback((message: string) => {
+    setTrackerToast(message);
+  }, []);
+
+  useEffect(() => {
+    if (!trackerToast) return;
+    const timer = window.setTimeout(() => setTrackerToast(null), 4200);
+    return () => window.clearTimeout(timer);
+  }, [trackerToast]);
+
+  useEffect(() => {
+    if (!pendingApplyPrompt) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !trackingBusyRef.current) {
+        dismissApplyPrompt();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [pendingApplyPrompt, dismissApplyPrompt]);
+
+  const openApplyPrompt = useCallback((pending: PendingApplyJob) => {
+    if (promptOpenRef.current || trackingBusyRef.current) return;
+    promptOpenRef.current = true;
+    setPendingApplyPrompt(pending);
+  }, []);
+
+  const handleApplyClick = useCallback(
+    (job: DiscoveredJobItem) => {
+      const openedAt = Date.now();
+      const pending: PendingApplyJob = {
+        id: job.id,
+        title: job.title,
+        company: job.company,
+        applyUrl: job.applyUrl,
+        location: job.location || '',
+        source: job.source,
+        descriptionText: job.descriptionText || job.snippet || '',
+        resumeId: selectedResumeId || undefined,
+        openedAt,
+      };
+
+      // Always open the listing first (same-tab blockers avoided via blank).
+      window.open(job.applyUrl, '_blank', 'noopener,noreferrer');
+
+      // Already tracked → no return prompt; user can manage status in Applications.
+      if (job.isSavedInTracker) {
+        clearPendingApply();
+        return;
+      }
+
+      pendingApplyRef.current = pending;
+      writePendingApply(pending);
+    },
+    [clearPendingApply, selectedResumeId],
+  );
+
+  const maybePromptAfterReturn = useCallback(() => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+    if (promptOpenRef.current || trackingBusyRef.current) return;
+
+    const pending = pendingApplyRef.current || readPendingApply();
+    if (!pending) return;
+    if (Date.now() - pending.openedAt < MIN_APPLY_AWAY_MS) return;
+
+    pendingApplyRef.current = pending;
+    openApplyPrompt(pending);
+  }, [openApplyPrompt]);
+
+  useEffect(() => {
+    const existing = readPendingApply();
+    if (existing) {
+      pendingApplyRef.current = existing;
+      // If user refreshed while away, prompt once the page is interactive.
+      if (Date.now() - existing.openedAt >= MIN_APPLY_AWAY_MS) {
+        openApplyPrompt(existing);
+      }
+    }
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') maybePromptAfterReturn();
+    };
+    const onFocus = () => maybePromptAfterReturn();
+
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [maybePromptAfterReturn, openApplyPrompt]);
+
+  const handleConfirmTrackApplication = async () => {
+    const pending = pendingApplyPrompt;
+    if (!pending || trackingBusyRef.current) return;
+
+    if (!hasActivePro && trackedCount >= FREE_MAX_APPLICATIONS) {
+      setShowAppLimitPaywall(true);
+      return;
+    }
+
+    trackingBusyRef.current = true;
+    setTrackingConfirmBusy(true);
+    setErrorMessage(null);
+
+    try {
+      const res = await apiClient.saveDiscoveredJobToTracker({
+        title: pending.title,
+        company: pending.company,
+        location: pending.location,
+        applyUrl: pending.applyUrl,
+        source: pending.source,
+        descriptionText:
+          pending.descriptionText.trim().length >= 30
+            ? pending.descriptionText
+            : `${pending.title} at ${pending.company}${pending.location ? ` (${pending.location})` : ''}`,
+        resumeId: pending.resumeId || selectedResumeId || undefined,
+      });
+
+      await apiClient.updateApplication(res.application.id, {
+        status: 'applied',
+        appliedDate: new Date().toISOString(),
+        applicationUrl: pending.applyUrl,
+      });
+
+      setJobs((prev) =>
+        prev.map((item) =>
+          item.id === pending.id || item.applyUrl === pending.applyUrl
+            ? {
+                ...item,
+                isSavedInTracker: true,
+                trackedApplicationId: res.application.id,
+              }
+            : item,
+        ),
+      );
+      if (!res.alreadyTracked) {
+        setTrackedCount((c) => c + 1);
+      }
+
+      dismissApplyPrompt();
+      showTrackerToast(
+        res.alreadyTracked
+          ? `Marked as applied — ${pending.title} at ${pending.company}`
+          : `Application added to tracker — ${pending.title} at ${pending.company}`,
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      const code = err instanceof ApiError ? err.code : '';
+      if (
+        code === 'APPLICATION_LIMIT_REACHED' ||
+        message.includes('tracked applications')
+      ) {
+        setShowAppLimitPaywall(true);
+      } else {
+        setErrorMessage(
+          err instanceof Error ? err.message : 'Failed to add application to tracker.',
+        );
+      }
+    } finally {
+      trackingBusyRef.current = false;
+      setTrackingConfirmBusy(false);
+    }
+  };
+
   const handleSaveToTracker = async (job: DiscoveredJobItem) => {
+    if (!hasActivePro && trackedCount >= FREE_MAX_APPLICATIONS) {
+      setShowAppLimitPaywall(true);
+      return;
+    }
     setSavingJobId(job.id);
     setErrorMessage(null);
     try {
@@ -271,15 +503,27 @@ export default function LiveJobDiscoveryClient() {
             : item,
         ),
       );
+      if (!res.alreadyTracked) {
+        setTrackedCount((c) => c + 1);
+      }
       setStatusMessage(
         res.alreadyTracked
           ? `${job.title} at ${job.company} is already bookmarked in your Application Tracker.`
           : `Saved ${job.title} at ${job.company} to your Application Tracker.`,
       );
     } catch (err) {
-      setErrorMessage(
-        err instanceof Error ? err.message : 'Failed to save job to Application Tracker.',
-      );
+      const message = err instanceof Error ? err.message : '';
+      const code = err instanceof ApiError ? err.code : '';
+      if (
+        code === 'APPLICATION_LIMIT_REACHED' ||
+        message.includes('tracked applications')
+      ) {
+        setShowAppLimitPaywall(true);
+      } else {
+        setErrorMessage(
+          err instanceof Error ? err.message : 'Failed to save job to Application Tracker.',
+        );
+      }
     } finally {
       setSavingJobId(null);
     }
@@ -871,15 +1115,14 @@ export default function LiveJobDiscoveryClient() {
                         </Button>
                       )}
 
-                      <a
-                        href={job.applyUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        type="button"
+                        onClick={() => handleApplyClick(job)}
                         className="inline-flex items-center gap-1 h-8 px-3 rounded-md bg-[#285FEA] hover:bg-[#1E4BC8] text-white text-xs font-medium transition-colors"
                       >
                         <span>Apply</span>
                         <ExternalLink className="w-3 h-3" aria-hidden="true" />
-                      </a>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -925,6 +1168,140 @@ export default function LiveJobDiscoveryClient() {
           )}
           </>
         )}
+      </div>
+
+      <FeatureLimitPaywallModal
+        isOpen={showAppLimitPaywall}
+        onClose={() => setShowAppLimitPaywall(false)}
+        kind="applications"
+        limit={FREE_MAX_APPLICATIONS}
+        current={trackedCount}
+      />
+
+      {pendingApplyPrompt && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={`${uid}-apply-prompt-title`}
+        >
+          <button
+            type="button"
+            className="absolute inset-0 bg-[#0B1220]/55 backdrop-blur-[2px]"
+            aria-label="Dismiss apply tracking prompt"
+            onClick={dismissApplyPrompt}
+            disabled={trackingConfirmBusy}
+          />
+          <div className="relative w-full max-w-md rounded-2xl border border-[#E2E5E9] dark:border-[#2A313C] bg-white dark:bg-[#14171C] shadow-2xl p-5 sm:p-6">
+            <button
+              type="button"
+              onClick={dismissApplyPrompt}
+              disabled={trackingConfirmBusy}
+              className="absolute right-3 top-3 rounded-md p-1.5 text-[#5A6270] hover:bg-[#F1F3F5] dark:hover:bg-[#1D2128] disabled:opacity-50"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="flex items-start gap-3 pr-6">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EDF3FD] text-[#285FEA] dark:bg-[#13203D]">
+                <Briefcase className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <div>
+                <h2
+                  id={`${uid}-apply-prompt-title`}
+                  className="text-base font-semibold tracking-tight text-[#1A1D23] dark:text-[#F0F2F5]"
+                >
+                  Did you apply to this role?
+                </h2>
+                <p className="mt-1 text-sm leading-relaxed text-[#5A6270] dark:text-[#9EA7B4]">
+                  Start tracking so you can follow up with a cover letter, notes, and next steps —
+                  without leaving Job Search.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-[#E2E5E9] dark:border-[#2A313C] bg-[#F7F8FA] dark:bg-[#1D2128]/70 px-3.5 py-3 space-y-2">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#8A93A1]">
+                  Role
+                </p>
+                <p className="text-sm font-medium text-[#1A1D23] dark:text-[#F0F2F5]">
+                  {pendingApplyPrompt.title}
+                </p>
+              </div>
+              <div className="flex items-start gap-2">
+                <Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#8A93A1]" aria-hidden="true" />
+                <p className="text-sm text-[#1A1D23] dark:text-[#F0F2F5]">
+                  {pendingApplyPrompt.company}
+                  {pendingApplyPrompt.location ? (
+                    <span className="text-[#5A6270] dark:text-[#9EA7B4]">
+                      {' '}
+                      · {pendingApplyPrompt.location}
+                    </span>
+                  ) : null}
+                </p>
+              </div>
+              <a
+                href={pendingApplyPrompt.applyUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex max-w-full items-center gap-1 truncate text-xs font-medium text-[#285FEA] hover:underline"
+              >
+                <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
+                <span className="truncate">{pendingApplyPrompt.applyUrl}</span>
+              </a>
+            </div>
+
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={dismissApplyPrompt}
+                disabled={trackingConfirmBusy}
+                className="sm:min-w-[7.5rem]"
+              >
+                Not yet
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                isLoading={trackingConfirmBusy}
+                onClick={() => void handleConfirmTrackApplication()}
+                className="gap-1.5 sm:min-w-[11rem]"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>Yes, start tracking</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div role="region" aria-label="Notifications" aria-live="polite">
+        <div
+          hidden={!trackerToast}
+          className="hr-toast-popover fixed bottom-5 right-5 z-[90] m-0 flex max-w-sm items-center gap-3 rounded-xl border border-emerald-200 bg-white px-4 py-3 text-xs shadow-xl dark:border-emerald-800 dark:bg-[#14171C]"
+        >
+          {trackerToast && (
+            <>
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <p className="min-w-0 flex-1 font-semibold text-[#1A1D23] dark:text-[#F0F2F5]">
+                {trackerToast}
+              </p>
+              <button
+                type="button"
+                aria-label="Dismiss notification"
+                onClick={() => setTrackerToast(null)}
+                className="shrink-0 rounded p-1 text-[#525B68] hover:text-[#1A1D23] dark:text-[#A3ACB9] dark:hover:text-[#F0F2F5]"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

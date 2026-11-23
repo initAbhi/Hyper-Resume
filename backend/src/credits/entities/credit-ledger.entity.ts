@@ -12,6 +12,7 @@ import { User } from '../../users/entities/user.entity.js';
 export type CreditTransactionType =
   | 'signup_bonus'
   | 'purchase'
+  | 'weekly_refill'
   | 'resume_analysis'
   | 'ai_tailor'
   | 'ai_adapt'

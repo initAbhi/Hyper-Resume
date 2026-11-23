@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JobApplication } from './entities/job-application.entity.js';
@@ -8,6 +8,8 @@ import { JobDescription } from '../jobs/entities/job-description.entity.js';
 import { CreateApplicationDto } from './dto/create-application.dto.js';
 import { UpdateApplicationDto } from './dto/update-application.dto.js';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
+import { CreditsService } from '../credits/credits.service.js';
+import { FREE_MAX_APPLICATIONS } from '../payments/pricing-plans.js';
 
 @Injectable()
 export class ApplicationsService {
@@ -22,6 +24,7 @@ export class ApplicationsService {
     private readonly versionRepository: Repository<ResumeVersion>,
     @InjectRepository(JobDescription)
     private readonly jobDescriptionRepository: Repository<JobDescription>,
+    private readonly creditsService: CreditsService,
   ) {}
 
   private async resolveOwnedJobDescriptionId(
@@ -89,6 +92,20 @@ export class ApplicationsService {
     userId: string,
     dto: CreateApplicationDto,
   ): Promise<JobApplication> {
+    const isPro = await this.creditsService.hasActivePro(userId);
+    if (!isPro) {
+      const trackedCount = await this.applicationRepository.count({ where: { userId } });
+      if (trackedCount >= FREE_MAX_APPLICATIONS) {
+        throw new ForbiddenException({
+          statusCode: 403,
+          error: 'APPLICATION_LIMIT_REACHED',
+          message: `Free Starter allows up to ${FREE_MAX_APPLICATIONS} tracked applications. Upgrade to Pro for unlimited tracking.`,
+          limit: FREE_MAX_APPLICATIONS,
+          current: trackedCount,
+        });
+      }
+    }
+
     const resumeVersionId = await this.resolveResumeVersionId(
       userId,
       dto.resumeVersionId || dto.resumeId,

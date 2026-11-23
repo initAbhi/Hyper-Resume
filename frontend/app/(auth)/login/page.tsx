@@ -71,53 +71,62 @@ function LoginFormContent() {
   useEffect(() => {
     if (!googleClientId) return;
 
+    const renderGoogleButton = () => {
+      if (!window.google?.accounts?.id) return;
+      const btnContainer = document.getElementById('google-btn-rendered');
+      if (!btnContainer) return;
+
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: async (response: { credential: string }) => {
+          if (response.credential) {
+            setIsGoogleLoading(true);
+            try {
+              const res = await googleLogin({ credential: response.credential });
+              if (res?.isNewUser) {
+                analytics.track('signup_completed', { source: 'google_oauth' });
+              }
+              router.push(buildPostLoginTarget(searchParams));
+            } catch (err: unknown) {
+              setErrorMessage(err instanceof Error ? err.message : 'Google sign in failed');
+            } finally {
+              setIsGoogleLoading(false);
+            }
+          }
+        },
+      });
+
+      const width = Math.max(240, Math.min(360, Math.floor(btnContainer.clientWidth || 320)));
+      btnContainer.innerHTML = '';
+      window.google.accounts.id.renderButton(btnContainer, {
+        theme: 'filled_black',
+        size: 'large',
+        type: 'standard',
+        text: 'continue_with',
+        shape: 'pill',
+        logo_alignment: 'left',
+        width,
+      });
+      setIsGoogleReady(true);
+    };
+
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
     script.defer = true;
-    script.onload = () => {
-      if (window.google?.accounts?.id) {
-        window.google.accounts.id.initialize({
-          client_id: googleClientId,
-          callback: async (response: { credential: string }) => {
-            if (response.credential) {
-              setIsGoogleLoading(true);
-              try {
-                const res = await googleLogin({ credential: response.credential });
-                if (res?.isNewUser) {
-                  analytics.track('signup_completed', { source: 'google_oauth' });
-                }
-                router.push(buildPostLoginTarget(searchParams));
-              } catch (err: unknown) {
-                setErrorMessage(err instanceof Error ? err.message : 'Google sign in failed');
-              } finally {
-                setIsGoogleLoading(false);
-              }
-            }
-          },
-        });
-
-        const btnContainer = document.getElementById('google-btn-rendered');
-        if (btnContainer) {
-          window.google.accounts.id.renderButton(btnContainer, {
-            theme: 'filled_black',
-            size: 'large',
-            type: 'standard',
-            text: 'continue_with',
-            shape: 'pill',
-            logo_alignment: 'left',
-            width: 360,
-          });
-          setIsGoogleReady(true);
-        }
-      }
-    };
+    script.onload = renderGoogleButton;
     script.onerror = () => {
       setIsGoogleReady(true);
     };
     document.body.appendChild(script);
 
+    const onResize = () => {
+      if (window.google?.accounts?.id) renderGoogleButton();
+    };
+    window.addEventListener('resize', onResize);
+
     return () => {
+      window.removeEventListener('resize', onResize);
       if (document.body.contains(script)) {
         document.body.removeChild(script);
       }
@@ -194,8 +203,11 @@ function LoginFormContent() {
 
           {googleClientId ? (
             <>
-              <div className="mt-6 flex w-full justify-center">
-                <div id="google-btn-rendered" className="min-h-[44px] w-full max-w-[360px]" />
+              <div className="mt-6 flex w-full justify-center overflow-hidden">
+                <div
+                  id="google-btn-rendered"
+                  className="min-h-[44px] w-full max-w-full overflow-hidden [&_iframe]:max-w-full"
+                />
               </div>
               {!isGoogleReady ? (
                 <div className="mt-2 flex h-11 w-full animate-pulse items-center justify-center rounded-xl bg-slate-100 dark:bg-white/[0.06] text-xs text-slate-500 dark:text-zinc-400">

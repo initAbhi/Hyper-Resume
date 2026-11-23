@@ -54,6 +54,21 @@ export function serializeCleanResumeHtml(
       m.style.setProperty('box-shadow', 'none', 'important');
     });
 
+  // Flatten contentEditable → static text so tagged PDFs don't duplicate glyphs.
+  clone.querySelectorAll<HTMLElement>('[contenteditable], [data-editable-field="true"]').forEach((el) => {
+    const text = (el.innerText || el.textContent || '').replace(/\u00A0/g, ' ');
+    el.removeAttribute('contenteditable');
+    el.removeAttribute('data-placeholder');
+    el.classList.remove(
+      'cursor-text',
+      'hover:bg-blue-50/60',
+      'hover:outline-dashed',
+      'focus:ring-2',
+      'focus:bg-blue-50/30',
+    );
+    el.replaceChildren(document.createTextNode(text));
+  });
+
   clone.querySelectorAll<HTMLImageElement>('img').forEach((img) => {
     const rawSrc = img.getAttribute('src');
     if (rawSrc && rawSrc.startsWith('/') && !rawSrc.startsWith('//')) {

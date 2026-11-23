@@ -220,3 +220,8 @@ export function useAuth(): AuthContextType {
   }
   return context;
 }
+
+/** Safe for SSR / unit tests rendered outside AuthProvider. */
+export function useAuthOptional(): AuthContextType | null {
+  return useContext(AuthContext) ?? null;
+}

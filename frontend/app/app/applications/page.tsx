@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import {
   apiClient,
+  ApiError,
   JobApplication,
   JobApplicationStatus,
   Resume,
@@ -31,12 +32,17 @@ import { ApplicationTableView } from '@/components/applications/ApplicationTable
 import { ApplicationKanbanView } from '@/components/applications/ApplicationKanbanView';
 import { ApplicationDeepWorkspace } from '@/components/applications/ApplicationDeepWorkspace';
 import { AddApplicationModal } from '@/components/applications/AddApplicationModal';
+import { FeatureLimitPaywallModal } from '@/components/billing/FeatureLimitPaywallModal';
+import { FREE_MAX_APPLICATIONS } from '@/lib/plan-limits';
+import { useAuth } from '@/lib/auth-context';
 
 export default function ApplicationsPage() {
+  const { hasActivePro } = useAuth();
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showAppLimitPaywall, setShowAppLimitPaywall] = useState(false);
 
   // View state: 'table' (spreadsheet) vs 'board' (kanban)
   const [viewMode, setViewMode] = useState<'table' | 'board'>('table');
@@ -55,6 +61,31 @@ export default function ApplicationsPage() {
 
   // Modal for adding a job
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  const isAtApplicationLimit =
+    !hasActivePro && applications.length >= FREE_MAX_APPLICATIONS;
+
+  const openAddApplication = () => {
+    if (isAtApplicationLimit) {
+      setShowAppLimitPaywall(true);
+      return;
+    }
+    setIsAddModalOpen(true);
+  };
+
+  const handleApplicationLimitError = (err: unknown) => {
+    const message = err instanceof Error ? err.message : '';
+    const code = err instanceof ApiError ? err.code : '';
+    if (
+      code === 'APPLICATION_LIMIT_REACHED' ||
+      message.includes('APPLICATION_LIMIT_REACHED') ||
+      message.includes('tracked applications')
+    ) {
+      setShowAppLimitPaywall(true);
+      return true;
+    }
+    return false;
+  };
 
   // Load initial data
   useEffect(() => {
@@ -269,6 +300,10 @@ export default function ApplicationsPage() {
     notes?: string;
   }) => {
     try {
+      if (isAtApplicationLimit) {
+        setShowAppLimitPaywall(true);
+        return;
+      }
       const created = await apiClient.createApplication(data);
       const withParsedMeta: JobApplication = {
         ...created,
@@ -277,12 +312,18 @@ export default function ApplicationsPage() {
       };
       setApplications((prev) => [withParsedMeta, ...prev]);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to create application');
+      if (!handleApplicationLimitError(err)) {
+        alert(err instanceof Error ? err.message : 'Failed to create application');
+      }
     }
   };
 
   // Load sample pipeline data (matching Teal reference images 1-4)
   const handleLoadSampleData = async () => {
+    if (isAtApplicationLimit) {
+      setShowAppLimitPaywall(true);
+      return;
+    }
     const sampleJobs = [
       {
         companyName: 'Acme Corp',
@@ -407,7 +448,7 @@ Requirements:
           <Button
             variant="primary"
             size="sm"
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={openAddApplication}
             className="gap-1.5 shadow-xs"
           >
             <Plus className="w-4 h-4" />
@@ -544,7 +585,7 @@ Requirements:
                 <Button
                   variant="primary"
                   size="sm"
-                  onClick={() => setIsAddModalOpen(true)}
+                  onClick={openAddApplication}
                   className="gap-1.5"
                 >
                   <Plus className="w-4 h-4" />
@@ -602,6 +643,14 @@ Requirements:
         resumes={resumes}
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={handleCreateApplication}
+      />
+
+      <FeatureLimitPaywallModal
+        isOpen={showAppLimitPaywall}
+        onClose={() => setShowAppLimitPaywall(false)}
+        kind="applications"
+        limit={FREE_MAX_APPLICATIONS}
+        current={applications.length}
       />
     </div>
   );

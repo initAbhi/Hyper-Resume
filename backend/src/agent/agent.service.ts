@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -16,7 +17,7 @@ import { AgentTask } from './entities/agent-task.entity.js';
 import { AgentTaskEvent } from './entities/agent-task-event.entity.js';
 import { AgentStreamTicket } from './entities/agent-stream-ticket.entity.js';
 import { AgentToolExecution } from './entities/agent-tool-execution.entity.js';
-import { CreditsService } from '../credits/credits.service.js';
+import { CREDIT_COSTS, CreditsService } from '../credits/credits.service.js';
 import { CreateAgentMessageDto, CreateConversationDto } from './dto/agent-message.dto.js';
 import { AgentUsageGuardService } from './services/agent-usage-guard.service.js';
 
@@ -235,6 +236,30 @@ export class AgentService implements OnModuleDestroy {
       });
     }
 
+    // Every agent reply costs 1 credit (idempotent per message key when provided)
+    const replyChargeKey =
+      dto.idempotencyKey?.trim()
+        ? `agent-reply:${userId}:${dto.idempotencyKey.trim()}`
+        : `agent-reply:${userId}:${crypto.randomUUID()}`;
+    let replyCharged = false;
+    try {
+      await this.creditsService.consumeFeatureAccess(
+        userId,
+        CREDIT_COSTS.AGENT_REPLY,
+        'agent_task',
+        replyChargeKey,
+        'AI agent reply',
+        { conversationId, kind: 'agent_reply' },
+      );
+      replyCharged = true;
+    } catch (err) {
+      this.usageGuard?.releaseInFlightSubmit(userId);
+      if (err instanceof ForbiddenException) throw err;
+      throw new ForbiddenException(
+        err instanceof Error ? err.message : 'Insufficient credits for AI agent reply (1 required).',
+      );
+    }
+
     let savedMessage: AgentMessage;
     let savedTask: AgentTask;
     try {
@@ -261,9 +286,20 @@ export class AgentService implements OnModuleDestroy {
         metadata: {
           idempotencyKey: dto.idempotencyKey,
           retries: 0,
+          replyChargeKey,
         },
       });
       savedTask = await this.taskRepo.save(task);
+    } catch (err) {
+      if (replyCharged) {
+        await this.creditsService.refundCredits(
+          userId,
+          CREDIT_COSTS.AGENT_REPLY,
+          replyChargeKey,
+          'Agent message persistence failed',
+        );
+      }
+      throw err;
     } finally {
       this.usageGuard?.releaseInFlightSubmit(userId);
     }

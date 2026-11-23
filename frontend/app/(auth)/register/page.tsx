@@ -109,6 +109,10 @@ function RegisterFormContent() {
 
         const btnContainer = document.getElementById('google-btn-rendered-register');
         if (btnContainer) {
+          const width = Math.max(
+            240,
+            Math.min(360, Math.floor(btnContainer.clientWidth || 320)),
+          );
           btnContainer.innerHTML = '';
           window.google.accounts.id.renderButton(btnContainer, {
             theme: 'outline',
@@ -117,7 +121,7 @@ function RegisterFormContent() {
             text: 'signup_with',
             shape: 'rectangular',
             logo_alignment: 'left',
-            width: 384,
+            width,
           });
           setIsGoogleReady(true);
         }
@@ -127,7 +131,9 @@ function RegisterFormContent() {
     const existing = document.querySelector<HTMLScriptElement>('script[src="https://accounts.google.com/gsi/client"]');
     if (existing && window.google?.accounts?.id) {
       initGoogleButton();
-      return;
+      const onResize = () => initGoogleButton();
+      window.addEventListener('resize', onResize);
+      return () => window.removeEventListener('resize', onResize);
     }
 
     const script = document.createElement('script');
@@ -140,7 +146,13 @@ function RegisterFormContent() {
     };
     document.body.appendChild(script);
 
+    const onResize = () => {
+      if (window.google?.accounts?.id) initGoogleButton();
+    };
+    window.addEventListener('resize', onResize);
+
     return () => {
+      window.removeEventListener('resize', onResize);
       if (document.body.contains(script)) {
         document.body.removeChild(script);
       }
@@ -209,7 +221,7 @@ function RegisterFormContent() {
         <CardHeader className="text-center pb-4 pt-6">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-[#285FEA] text-[11px] font-semibold mx-auto mb-2 border border-blue-100 dark:border-blue-900/60">
             <Sparkles className="w-3 h-3" />
-            <span>Includes 5 Free AI Audit Credits</span>
+            <span>Includes 10 lifetime AI credits</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             Create Your Account
@@ -236,7 +248,10 @@ function RegisterFormContent() {
           {/* Official Google Button Container */}
           {googleClientId ? (
             <>
-              <div id="google-btn-rendered-register" className="w-full flex justify-center min-h-[44px]" />
+              <div
+                id="google-btn-rendered-register"
+                className="flex min-h-[44px] w-full max-w-full justify-center overflow-hidden [&_iframe]:max-w-full"
+              />
               {!isGoogleReady && (
                 <div className="w-full h-11 rounded-xl bg-slate-100 dark:bg-zinc-800 animate-pulse flex items-center justify-center text-xs text-slate-400">
                   Loading Google Sign-Up...
@@ -420,7 +435,7 @@ function RegisterFormContent() {
               className="w-full h-10 rounded-xl bg-[#285FEA] hover:bg-[#1E4BC8] text-white font-medium text-xs shadow-xs"
               isLoading={isLoading}
             >
-              Get Started with 5 Free Credits
+              Get Started with 10 Free Credits
             </Button>
             <p className="text-xs text-center text-slate-500">
               Already have an account?{' '}

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { SampleResume, getSampleTemplateKey } from '@/data/sample-resumes';
+import { getSampleAccentColor } from '@/lib/sample-resume-content';
 import { apiClient, Resume } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import {
@@ -171,7 +172,7 @@ export function SourceResumeSelectorModal({
               graduationDate: edu.graduationDate,
             })),
             layout: {
-              accentColor: sampleResume.brandColor || '#285FEA',
+              accentColor: getSampleAccentColor(sampleResume),
               fontFamily: getSampleTemplateKey(sampleResume) === 'ivy-league' ? 'serif' : 'sans',
               pageMargin: 16,
             },

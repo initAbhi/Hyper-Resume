@@ -331,8 +331,8 @@ export function EditableField({
     : '';
 
   const surfaceHoverClasses = darkSurface
-    ? 'hover:bg-white/10 hover:outline-dashed hover:outline-1 hover:outline-white/40 focus:outline-none focus:ring-2 focus:ring-blue-400/70 focus:ring-inset focus:bg-white/10 selection:bg-blue-400/40 empty:before:text-white/50'
-    : 'hover:bg-blue-50/60 hover:outline-dashed hover:outline-1 hover:outline-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:ring-inset focus:bg-blue-50/30 selection:bg-blue-200 empty:before:text-zinc-400/80';
+    ? 'hover:bg-white/10 hover:outline-dashed hover:outline-1 hover:outline-white/40 focus:outline-none focus:outline focus:outline-2 focus:outline-blue-400/80 focus:bg-white/10 selection:bg-blue-400/40 empty:before:text-white/50'
+    : 'hover:bg-blue-50/60 hover:outline-dashed hover:outline-1 hover:outline-blue-300 focus:outline-none focus:outline focus:outline-2 focus:outline-blue-500/70 focus:bg-blue-50/30 selection:bg-blue-200 empty:before:text-zinc-400/80';
 
   const editableClasses = `cursor-text rounded-[2px] transition-all empty:before:content-[attr(data-placeholder)] empty:before:italic empty:before:pointer-events-none ${surfaceHoverClasses} ${pendingRemovalClasses} ${focusedDiffClasses} ${className}`;
 
@@ -343,6 +343,7 @@ export function EditableField({
       id={id}
       contentEditable
       suppressContentEditableWarning
+      spellCheck={false}
       data-editable-field="true"
       data-field-path={fieldPath}
       data-has-pending-diff={hasPendingDiff ? 'true' : undefined}
@@ -464,7 +465,7 @@ export function EditableBulletList({
   };
 
   return (
-    <div className="group/bullets">
+    <div className="group/bullets relative">
       {safeBullets.length > 0 && (
         <ul className={className}>
           {safeBullets.map((bullet, bIdx) => (
@@ -498,10 +499,11 @@ export function EditableBulletList({
           data-add-bullet-btn="true"
           onMouseDown={(e) => e.preventDefault()}
           onClick={handleAddFirstOrNextBullet}
-          className={`print:hidden mt-0.5 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium text-blue-600 hover:bg-blue-50 border border-dashed border-blue-200/90 transition-opacity cursor-pointer select-none ${
+          // Absolutely positioned so opacity:0 never inflates entry spacing (~20px before)
+          className={`print:hidden z-[5] inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium text-blue-600 hover:bg-blue-50 border border-dashed border-blue-200/90 transition-opacity cursor-pointer select-none ${
             safeBullets.length === 0
-              ? 'opacity-100'
-              : 'opacity-0 group-hover/bullets:opacity-100 focus:opacity-100'
+              ? 'relative mt-0.5 opacity-100'
+              : 'absolute left-0 top-full mt-0.5 opacity-0 group-hover/bullets:opacity-100 focus:opacity-100'
           }`}
           title="Add bullet point"
           aria-label="Add bullet point"

@@ -7,9 +7,14 @@ import { JobDescription } from '../jobs/entities/job-description.entity.js';
 import { ApplicationsService } from './applications.service.js';
 import { ApplicationsController } from './applications.controller.js';
 import { AuthModule } from '../auth/auth.module.js';
+import { CreditsModule } from '../credits/credits.module.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([JobApplication, Resume, ResumeVersion, JobDescription]), AuthModule],
+  imports: [
+    TypeOrmModule.forFeature([JobApplication, Resume, ResumeVersion, JobDescription]),
+    AuthModule,
+    CreditsModule,
+  ],
   controllers: [ApplicationsController],
   providers: [ApplicationsService],
   exports: [ApplicationsService],

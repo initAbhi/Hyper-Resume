@@ -24,6 +24,7 @@ export interface RequirementMatchAnalysis {
   text: string;
   type: string;
   importance: string;
+  keywords?: string[];
   status: 'supported' | 'needs_confirmation' | 'not_evidenced' | 'not_applicable';
   confidence: number;
   evidenceQuotes: string[];

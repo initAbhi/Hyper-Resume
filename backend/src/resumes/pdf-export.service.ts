@@ -203,6 +203,24 @@ ${styles}
       box-decoration-break: clone;
     }
 
+    /* Preserve ATS template typography (do not crush to tiny rem/px) */
+    .hr-ats-page {
+      font-size: 11pt !important;
+      line-height: 1.35 !important;
+    }
+    .hr-ats-page:not([data-hr-margin-managed='true']) {
+      padding: 0.5in 0.55in !important;
+    }
+    .hr-ats-name { font-size: 20pt !important; line-height: 1.15 !important; }
+    .hr-ats-section-title { font-size: 11pt !important; }
+    .hr-ats-body-text,
+    .hr-ats-bullets,
+    .hr-ats-bullets li,
+    .hr-ats-entry-title { font-size: 10.5pt !important; line-height: 1.38 !important; }
+    .hr-ats-entry-sub,
+    .hr-ats-meta,
+    .hr-ats-contact { font-size: 10pt !important; }
+
     /* Explicit 2-page templates allow overflow to flow naturally instead of clipping bullets */
     #resume-page-1,
     #resume-page-2 {

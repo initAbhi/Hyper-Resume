@@ -12,7 +12,6 @@ import {
   Share2,
   Sparkles,
   Target,
-  UserRound,
 } from 'lucide-react';
 import FadeContent from '@/components/FadeContent';
 
@@ -25,7 +24,7 @@ const PILLARS = [
   },
   {
     icon: Layers,
-    title: '82 company samples',
+    title: '25 company samples',
     body: 'Benchmark resumes across engineering, product, and more. Adapt one to your verified profile.',
     href: '/examples',
   },
@@ -46,12 +45,6 @@ const PILLARS = [
     title: 'Live job search',
     body: 'Query Ashby, Greenhouse, and Lever boards, score overlap, bookmark into Applications.',
     href: '/register?redirect=/app/job-search',
-  },
-  {
-    icon: UserRound,
-    title: 'LinkedIn studio',
-    body: 'Import a LinkedIn PDF, score the above-the-fold story, draft tighter headlines and About.',
-    href: '/register?redirect=/app/linkedin',
   },
   {
     icon: MessagesSquare,

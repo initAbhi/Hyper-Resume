@@ -25,6 +25,7 @@ export class PaymentsController {
     const xff = req.headers['x-forwarded-for'];
     const clientIp =
       (Array.isArray(xff) ? xff[0] : xff)?.split(',')[0]?.trim() ||
+      (typeof req.headers['x-real-ip'] === 'string' ? req.headers['x-real-ip'] : undefined) ||
       (typeof req.ip === 'string' ? req.ip : undefined);
     const clientUserAgent =
       typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : undefined;
@@ -35,12 +36,22 @@ export class PaymentsController {
         ? `${req.headers['origin']}/pricing`
         : undefined;
 
-    return { clientIp, clientUserAgent, sourceUrl };
+    return {
+      clientIp,
+      clientUserAgent,
+      sourceUrl,
+      headers: req.headers as Record<string, string | string[] | undefined>,
+    };
   }
 
   @Get('plans')
   getPlans() {
     return this.paymentsService.getPlans();
+  }
+
+  @Get('pricing-context')
+  async getPricingContext(@Req() req: Request) {
+    return this.paymentsService.getPricingContext(this.extractRequestContext(req));
   }
 
   @Get('promo-status')

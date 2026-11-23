@@ -4,7 +4,7 @@ import { PricingClient } from './PricingClient';
 
 export const metadata = constructMetadata({
   title: 'Transparent Pricing — HypeResume Pro',
-  description: 'Simple one-plan Pro pricing with flexible duration options: 1-Week Pass (₹149/$3), Monthly (₹399/$9), 6-Month Pass (₹1,200/$29), or Founding Lifetime Access (₹999/$19). Free tier with unwatermarked PDF export.',
+  description: 'Simple one-plan Pro pricing with regional rates: 1-Week Pass (₹149 / $7.99), Monthly (₹399 / $14.99), or Founding Lifetime (₹999 / $24.99). Free tier with unwatermarked PDF export.',
   path: '/pricing',
 });
 

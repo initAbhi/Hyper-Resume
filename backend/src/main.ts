@@ -19,6 +19,12 @@ async function bootstrap() {
   const frontendUrl = configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
   const isDev = configService.get<string>('NODE_ENV') === 'development';
 
+  // Required behind Nginx so req.ip / x-forwarded-for resolve to the real client
+  const expressApp = app.getHttpAdapter().getInstance();
+  if (expressApp?.set) {
+    expressApp.set('trust proxy', 1);
+  }
+
   // Security Headers
   app.use(
     helmet({

@@ -207,20 +207,28 @@ export class JobMatchingService {
       resumeContent,
       parsedRequirements,
     );
-    const requirementsAnalysis = this.enrichRequirements(rawAnalysis, parsedRequirements);
+    const requirementsAnalysis = this.sanitizeThinResumeAnalysis(
+      this.enrichRequirements(rawAnalysis, parsedRequirements),
+      resumeContent,
+    );
     const scoreComponents = this.calculateScoreComponents(
       requirementsAnalysis,
       parsedRequirements,
       resumeContent,
     );
 
-    const overallScore = Math.round(
+    let overallScore = Math.round(
       scoreComponents.requiredSkillsScore * 0.35 +
       scoreComponents.experienceScore * 0.25 +
       scoreComponents.preferredSkillsScore * 0.15 +
       scoreComponents.responsibilityScore * 0.15 +
       scoreComponents.formattingScore * 0.1,
     );
+
+    const thinCap = this.thinResumeMatchCap(resumeContent);
+    if (thinCap !== null) {
+      overallScore = Math.min(overallScore, thinCap);
+    }
 
     const recommendations = this.generateRecommendations(requirementsAnalysis);
 
@@ -493,50 +501,156 @@ export class JobMatchingService {
     });
   }
 
+  /** Near-empty / placeholder resumes cannot claim mid-tier match scores. */
+  private thinResumeMatchCap(resumeContent: any): number | null {
+    const density = this.resumeSubstance(resumeContent);
+    if (density.meaningfulBullets.length === 0 && density.wordish < 25) return 8;
+    if (density.isThinResume) return Math.max(8, Math.min(28, 6 + density.meaningfulBullets.length * 5));
+    return null;
+  }
+
+  private resumeSubstance(resumeContent: any) {
+    const experienceEntries = resumeContent?.experience || [];
+    const projectHighlights = (resumeContent?.projects || []).flatMap((p: any) =>
+      (p.highlights || []).filter((h: string) => typeof h === 'string' && h.trim().length >= 15),
+    );
+    const meaningfulBullets = [
+      ...experienceEntries.flatMap((e: any) =>
+        (e.bullets || []).filter((b: string) => typeof b === 'string' && b.trim().length >= 15),
+      ),
+      ...projectHighlights,
+    ];
+    const skillCount = (resumeContent?.skills || []).filter((s: any) => s?.name?.trim()).length;
+    const wordish =
+      [resumeContent?.summary, resumeContent?.headline, ...meaningfulBullets]
+        .filter(Boolean)
+        .join(' ')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean).length;
+    const isThinResume =
+      meaningfulBullets.length === 0 ||
+      wordish < 40 ||
+      (skillCount === 0 && meaningfulBullets.length < 2);
+    return { meaningfulBullets, skillCount, wordish, isThinResume };
+  }
+
+  /**
+   * When the resume has almost no substance, AI sometimes invents "supported"
+   * matches from dates/titles alone — demote those to not_evidenced.
+   */
+  private sanitizeThinResumeAnalysis(
+    analysis: RequirementMatchAnalysis[],
+    resumeContent: any,
+  ): RequirementMatchAnalysis[] {
+    const { isThinResume, meaningfulBullets } = this.resumeSubstance(resumeContent);
+    if (!isThinResume) return analysis;
+
+    const corpus = meaningfulBullets.join(' ').toLowerCase();
+    return analysis.map((item) => {
+      if (item.status !== 'supported' && item.status !== 'needs_confirmation') return item;
+      const quotes = (item.evidenceQuotes || []).join(' ').toLowerCase();
+      const keywords = (item.keywords || []).map((k) => String(k).toLowerCase());
+      const hasKeywordHit = keywords.some((k) => k.length >= 2 && corpus.includes(k));
+      const hasQuoteHit =
+        quotes.length >= 12 &&
+        meaningfulBullets.some((b) => quotes.includes(b.toLowerCase().slice(0, 24)));
+      if (hasKeywordHit || hasQuoteHit) {
+        // Keep as needs_confirmation at best on thin resumes — never full support
+        return {
+          ...item,
+          status: 'needs_confirmation' as const,
+          confidence: Math.min(Number(item.confidence || 50), 45),
+          explanation:
+            item.explanation ||
+            'Thin resume evidence — treat as unconfirmed until bullets explicitly prove this skill.',
+        };
+      }
+      return {
+        ...item,
+        status: 'not_evidenced' as const,
+        confidence: Math.min(Number(item.confidence || 40), 25),
+        evidenceQuotes: [],
+        explanation:
+          'Insufficient resume substance to support this requirement. Add specific experience bullets first.',
+        suggestedAction: 'Add quantified bullets that explicitly demonstrate this requirement.',
+      };
+    });
+  }
+
   private calculateScoreComponents(
     analysis: RequirementMatchAnalysis[],
     requirements: any[],
     resumeContent: any,
   ): ScoreComponents {
+    const { meaningfulBullets, isThinResume } = this.resumeSubstance(resumeContent);
+
+    const partialWeight = (status: string) =>
+      status === 'supported' ? 1 : status === 'needs_confirmation' ? 0.25 : 0;
+
     // 1. Required Skills Score
     const requiredReqs = analysis.filter((a) => {
       const req = requirements.find((r) => r.id === a.requirementId);
       return req?.type === 'required_skill';
     });
-    const supportedRequired = requiredReqs.filter((a) => a.status === 'supported').length;
     const requiredSkillsScore =
       requiredReqs.length > 0
-        ? Math.round((supportedRequired / requiredReqs.length) * 100)
-        : 85;
+        ? Math.round(
+            (requiredReqs.reduce((sum, a) => sum + partialWeight(a.status), 0) /
+              requiredReqs.length) *
+              100,
+          )
+        : isThinResume
+          ? 5
+          : 35;
 
     // 2. Preferred Skills Score
     const preferredReqs = analysis.filter((a) => {
       const req = requirements.find((r) => r.id === a.requirementId);
       return req?.type === 'preferred_skill';
     });
-    const supportedPreferred = preferredReqs.filter((a) => a.status === 'supported').length;
     const preferredSkillsScore =
       preferredReqs.length > 0
-        ? Math.round((supportedPreferred / preferredReqs.length) * 100)
-        : 75;
+        ? Math.round(
+            (preferredReqs.reduce((sum, a) => sum + partialWeight(a.status), 0) /
+              preferredReqs.length) *
+              100,
+          )
+        : isThinResume
+          ? 5
+          : 30;
 
-    // 3. Experience Relevance Score
-    const hasExp = (resumeContent.experience || []).length > 0;
-    const experienceScore = hasExp ? 88 : 40;
+    // 3. Experience Relevance Score — stubs with empty/placeholder bullets do NOT count
+    let experienceScore = 8;
+    if (meaningfulBullets.length >= 8) experienceScore = 90;
+    else if (meaningfulBullets.length >= 4) experienceScore = 72;
+    else if (meaningfulBullets.length >= 2) experienceScore = 48;
+    else if (meaningfulBullets.length === 1) experienceScore = 22;
 
     // 4. Responsibility & Domain Alignment Score
     const domainReqs = analysis.filter((a) => {
       const req = requirements.find((r) => r.id === a.requirementId);
       return req?.type === 'responsibility' || req?.type === 'domain';
     });
-    const supportedDomain = domainReqs.filter((a) => a.status === 'supported').length;
     const responsibilityScore =
       domainReqs.length > 0
-        ? Math.round((supportedDomain / domainReqs.length) * 100)
-        : 80;
+        ? Math.round(
+            (domainReqs.reduce((sum, a) => sum + partialWeight(a.status), 0) / domainReqs.length) *
+              100,
+          )
+        : isThinResume
+          ? 5
+          : 28;
 
     // 5. Formatting Score
-    const formattingScore = resumeContent.contact?.email && resumeContent.headline ? 95 : 70;
+    const hasContactBasics = Boolean(resumeContent?.contact?.email && resumeContent?.contact?.fullName);
+    const formattingScore = hasContactBasics
+      ? isThinResume
+        ? 35
+        : resumeContent?.headline
+          ? 90
+          : 70
+      : 15;
 
     return {
       requiredSkillsScore,

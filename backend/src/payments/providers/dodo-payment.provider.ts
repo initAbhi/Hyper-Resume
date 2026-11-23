@@ -37,16 +37,10 @@ export class DodoPaymentProvider implements PaymentProvider {
   private readonly liveApiKey: string;
   private readonly testWebhookSecret: string;
   private readonly liveWebhookSecret: string;
-  private readonly frontendUrl: string;
-
   private readonly testProductCatalog: Record<string, string>;
   private readonly liveProductCatalog: Record<string, string>;
 
   constructor(private readonly configService: ConfigService) {
-    this.frontendUrl = (
-      this.configService.get<string>('FRONTEND_URL') || 'https://hype-resume.com'
-    ).replace(/\/+$/, '');
-
     // Strict environment configuration only — never embed fallback secret keys in source code
     this.testApiKey = (
       this.configService.get<string>('DODO_PAYMENTS_TEST_API_KEY') ||
@@ -94,6 +88,9 @@ export class DodoPaymentProvider implements PaymentProvider {
       pro_lifetime:
         this.configService.get<string>('DODO_PRODUCT_ID_PRO_LIFETIME') ||
         'pdt_0NrjXNli5cBsc4SjHICgg',
+      live_smoke_50:
+        this.configService.get<string>('DODO_PRODUCT_ID_LIVE_SMOKE_50') ||
+        'pdt_0NsUYXHmar24h9oSRs6OR',
     };
 
     this.liveProductCatalog = {
@@ -109,6 +106,9 @@ export class DodoPaymentProvider implements PaymentProvider {
       pro_lifetime:
         this.configService.get<string>('DODO_LIVE_PRODUCT_ID_PRO_LIFETIME') ||
         'pdt_0NrjXO4hqllHPCBF1LPCY',
+      live_smoke_50:
+        this.configService.get<string>('DODO_LIVE_PRODUCT_ID_LIVE_SMOKE_50') ||
+        'pdt_0NsUYRSJWgfWffIg9CWWf',
     };
 
     const configuredEnv = this.configService.get<string>('DODO_PAYMENTS_ENVIRONMENT');
@@ -198,6 +198,26 @@ export class DodoPaymentProvider implements PaymentProvider {
     return m === 'live_mode' ? this.liveProductCatalog : this.testProductCatalog;
   }
 
+  /**
+   * Production checkouts must never bounce users to a developer machine.
+   * Re-read env on each call so PM2/.env fixes apply without stale constructor state.
+   */
+  private getFrontendBaseUrl(): string {
+    const configured = (
+      this.configService.get<string>('FRONTEND_URL') || 'https://hype-resume.com'
+    ).replace(/\/+$/, '');
+    const nodeEnv = (this.configService.get<string>('NODE_ENV') || '').toLowerCase();
+    const looksLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configured);
+    if (looksLocal && nodeEnv === 'production') {
+      this.logger.error(
+        `FRONTEND_URL is set to ${configured} in production. ` +
+          'Forcing https://hype-resume.com so Dodo return/cancel URLs stay on the live site.',
+      );
+      return 'https://hype-resume.com';
+    }
+    return configured || 'https://hype-resume.com';
+  }
+
   getSettingsSummary(): DodoSettingsSummary {
     return {
       mode: this.mode,
@@ -210,7 +230,7 @@ export class DodoPaymentProvider implements PaymentProvider {
       liveWebhookKeyMasked: this.mask(this.liveWebhookSecret),
       testProducts: this.testProductCatalog,
       liveProducts: this.liveProductCatalog,
-      frontendUrl: this.frontendUrl,
+      frontendUrl: this.getFrontendBaseUrl(),
     };
   }
 
@@ -228,6 +248,15 @@ export class DodoPaymentProvider implements PaymentProvider {
     }
 
     const normalizedCurrency = currency?.toUpperCase() === 'USD' ? 'USD' : 'INR';
+    const rawCountry = String(metadata?.countryCode || '').toUpperCase();
+    const billingCountry =
+      rawCountry.length === 2
+        ? rawCountry === 'UK'
+          ? 'GB'
+          : rawCountry
+        : normalizedCurrency === 'USD'
+          ? 'US'
+          : 'IN';
     const userEmail =
       (metadata?.email as string) ||
       (metadata?.userEmail as string) ||
@@ -238,11 +267,12 @@ export class DodoPaymentProvider implements PaymentProvider {
       'HypeResume Customer';
 
     const client = this.getActiveClient();
-    const returnUrl = `${this.frontendUrl}/pricing?status=success&orderId=${encodeURIComponent(orderId)}`;
-    const cancelUrl = `${this.frontendUrl}/pricing?status=cancelled&orderId=${encodeURIComponent(orderId)}`;
+    const frontendBaseUrl = this.getFrontendBaseUrl();
+    const returnUrl = `${frontendBaseUrl}/pricing?status=success&orderId=${encodeURIComponent(orderId)}`;
+    const cancelUrl = `${frontendBaseUrl}/pricing?status=cancelled&orderId=${encodeURIComponent(orderId)}`;
 
     this.logger.log(
-      `Creating Dodo [${this.mode}] checkout session for order ${orderId}, product ${productId}, currency ${normalizedCurrency}`,
+      `Creating Dodo [${this.mode}] checkout session for order ${orderId}, product ${productId}, currency ${normalizedCurrency}, country ${billingCountry}, returnUrl=${returnUrl}`,
     );
 
     const session = await client.checkoutSessions.create({
@@ -254,7 +284,8 @@ export class DodoPaymentProvider implements PaymentProvider {
       ],
       billing_currency: normalizedCurrency,
       billing_address: {
-        country: normalizedCurrency === 'USD' ? 'US' : 'IN',
+        // ISO-3166 alpha-2 from geo detection (Dodo CountryCode)
+        country: billingCountry as any,
       },
       customer: {
         email: userEmail,
@@ -265,13 +296,15 @@ export class DodoPaymentProvider implements PaymentProvider {
       minimal_address: true,
       show_saved_payment_methods: false,
       feature_flags: {
-        allow_currency_selection: true,
+        // Currency is fixed by geo pricing — do not let shoppers switch bands at checkout
+        allow_currency_selection: false,
       },
       metadata: {
         orderId,
         userId: String(metadata?.userId || ''),
         planId,
         currency: normalizedCurrency,
+        countryCode: billingCountry,
         environmentMode: this.mode,
       },
     });

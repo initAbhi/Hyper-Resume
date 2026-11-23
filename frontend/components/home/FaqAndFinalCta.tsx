@@ -21,7 +21,7 @@ const FAQS = [
   },
   {
     q: 'How is pricing different from Zety or Resume.io?',
-    a: 'HypeResume Pro is a transparent one-time pass (from ₹149 / $3 for a week, or Founding Lifetime at ₹999 / $19) — not an auto-renewing 4-week trial that locks your PDF.',
+    a: 'HypeResume Pro is a transparent one-time pass (from ₹149 / $7.99 for a week, or Founding Lifetime at ₹999 / $24.99) — not an auto-renewing 4-week trial that locks your PDF.',
   },
   {
     q: 'Can I keep multiple versions for different roles?',
@@ -38,7 +38,7 @@ export function FaqAndFinalCta() {
 
   return (
     <>
-      <section className="w-full bg-[#0a0a0a] px-4 py-16 text-white sm:px-6 sm:py-24 lg:px-8">
+      <section className="w-full bg-[#060b14] px-4 py-16 text-white sm:px-6 sm:py-24 lg:px-8">
         <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-12 lg:gap-16">
           <AnimatedContent distance={30} duration={0.7} className="lg:col-span-4">
             <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
@@ -84,12 +84,12 @@ export function FaqAndFinalCta() {
         </div>
       </section>
 
-      <section className="relative w-full overflow-hidden bg-[#0a0a0a] px-4 py-20 text-center text-white sm:px-6 sm:py-28 lg:px-8">
+      <section className="relative w-full overflow-hidden bg-[#060b14] px-4 py-20 text-center text-white sm:px-6 sm:py-28 lg:px-8">
         <div
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              'radial-gradient(ellipse 70% 50% at 50% 100%, rgba(85,37,245,0.18), transparent 70%)',
+              'radial-gradient(ellipse 70% 50% at 50% 100%, rgba(56,114,250,0.22), transparent 70%)',
           }}
         />
         <div className="relative z-10 mx-auto max-w-2xl">
@@ -121,7 +121,7 @@ export function FaqAndFinalCta() {
             </Link>
           </div>
           <p className="mt-5 text-xs text-zinc-400">
-            5 AI credits on signup · Free PDF &amp; DOCX · One-time Pro from ₹149 / $3
+            10 AI credits on signup · Free PDF &amp; DOCX · One-time Pro from ₹149 / $7.99
           </p>
         </div>
       </section>

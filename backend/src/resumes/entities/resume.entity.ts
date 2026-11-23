@@ -25,7 +25,7 @@ export class Resume extends BaseEntity {
   @Column({ type: 'varchar', length: 200 })
   name!: string;
 
-  @Column({ type: 'varchar', length: 100, default: 'clean-modern', name: 'template_key' })
+  @Column({ type: 'varchar', length: 100, default: 'jake-ats', name: 'template_key' })
   templateKey!: string;
 
   @Column({ type: 'varchar', length: 20, default: 'en-US' })

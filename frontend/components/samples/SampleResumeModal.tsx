@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { SampleResume, getSampleTemplateKey } from '@/data/sample-resumes';
+import { getSampleAccentColor, sampleResumeToContent } from '@/lib/sample-resume-content';
 import { CompanyBrandBadge } from './CompanyBrandBadge';
 import { ResumeTemplateRenderer } from '@/components/resumes/templates/ResumeTemplateRenderer';
 import {
@@ -67,64 +68,8 @@ export function SampleResumeModal({
 
   if (!isOpen || !resume) return null;
 
-  const toSafeUrl = (raw?: string) => {
-    const trimmed = (raw || '').trim();
-    if (!trimmed) return undefined;
-    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-  };
-
   const modalTemplateKey = getSampleTemplateKey(resume);
-  const sampleContent: ResumeContent = {
-    contact: {
-      fullName: resume.candidate.name,
-      email: resume.candidate.email,
-      phone: resume.candidate.phone,
-      location: resume.candidate.location,
-      linkedinUrl: toSafeUrl(resume.candidate.linkedin),
-      githubUrl: toSafeUrl(resume.candidate.github),
-      websiteUrl: toSafeUrl(resume.candidate.portfolio),
-    },
-    headline: resume.role,
-    summary: resume.summary,
-    skills: resume.skills.flatMap((cat) =>
-      cat.skills.map((skillName) => ({
-        name: skillName,
-        category: cat.category,
-      }))
-    ),
-    experience: resume.experience.map((exp) => ({
-      company: exp.company,
-      title: exp.title,
-      location: exp.location,
-      startDate: exp.startDate,
-      endDate: exp.endDate,
-      current: !!exp.current,
-      bullets: exp.bullets,
-    })),
-    education: resume.education.map((edu) => ({
-      school: edu.school,
-      degree: edu.degree,
-      field: edu.field || edu.degree,
-      graduationDate: edu.graduationDate,
-    })),
-    projects: resume.projects?.map((proj) => ({
-      name: proj.name,
-      description: proj.description,
-      highlights: proj.highlights,
-      url: toSafeUrl(proj.url),
-    })),
-    certifications: resume.certifications?.map((cert) => ({
-      name: cert,
-      issuer: '',
-    })),
-    layout: {
-      accentColor: resume.brandColor || '#285FEA',
-      fontFamily: modalTemplateKey === 'ivy-league' || modalTemplateKey === 'jake-ats' ? 'serif' : 'sans',
-      pageMargin: 32,
-      fontSizeScale: 1,
-      lineHeight: 1.4,
-    },
-  };
+  const sampleContent: ResumeContent = sampleResumeToContent(resume);
 
   // Mode 2: Full Template (with complete editable illustrative sample content)
   const handleUseFullTemplate = async () => {
@@ -175,7 +120,7 @@ export function SampleResumeModal({
         issuer: '',
       })),
       layout: {
-        accentColor: resume.brandColor || '#285FEA',
+        accentColor: getSampleAccentColor(resume),
         fontFamily: templateKey === 'ivy-league' || templateKey === 'jake-ats' ? 'serif' : 'sans',
         pageMargin: 32,
         fontSizeScale: 1,
@@ -300,7 +245,7 @@ export function SampleResumeModal({
         },
       ],
       layout: {
-        accentColor: resume.brandColor || '#285FEA',
+        accentColor: getSampleAccentColor(resume),
         fontFamily: templateKey === 'ivy-league' ? 'serif' : 'sans',
         pageMargin: 16,
         fontSizeScale: 1,
@@ -601,7 +546,7 @@ export function SampleResumeModal({
               <ResumeTemplateRenderer
                 templateKey={modalTemplateKey}
                 content={sampleContent}
-                accentColor={resume.brandColor || '#285FEA'}
+                accentColor={getSampleAccentColor(resume)}
                 fontFamily={modalTemplateKey === 'ivy-league' ? 'serif' : 'sans'}
                 showPhoto={true}
                 showHighlights={false}

@@ -84,6 +84,7 @@ import { AtsAuditDrawer } from '@/components/resumes/AtsAuditDrawer';
 import {
   AVAILABLE_TEMPLATES,
   getTemplateComponent,
+  templateSupportsPhoto,
   CanvasEditProvider,
   type BulletSelectionMeta,
 } from '@/components/resumes/templates';
@@ -146,11 +147,12 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
   const [resume, setResume] = useState<Resume | null>(null);
   const [content, setContent] = useState<ResumeContent | null>(null);
   const [resumeName, setResumeName] = useState('');
-  const [templateKey, setTemplateKey] = useState('double-column');
+  const [templateKey, setTemplateKey] = useState('jake-ats');
   const [serverVersion, setServerVersion] = useState<number>(1);
 
   // Unified Docked Live-Studio Inspector Panel State (zero backdrop blur, zero canvas overlap)
-  const [activePanel, setActivePanel] = useState<StudioPanel>('agent');
+  // Start with canvas-first (lean) — open AI Agent from the dock when needed
+  const [activePanel, setActivePanel] = useState<StudioPanel>(null);
   const [isDesktopLg, setIsDesktopLg] = useState(true);
 
   useEffect(() => {
@@ -201,13 +203,22 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
     setActivePanel(null);
   }, []);
 
+  const handlePreviewTemplate = useCallback(
+    (preview: { templateKey: string; label: string } | null) => {
+      setLivePreview(
+        preview ? { templateKey: preview.templateKey, label: preview.label } : null,
+      );
+    },
+    [],
+  );
+
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
   const [activeMatchScore, setActiveMatchScore] = useState<number | null>(null);
   const [activeJobKeywords, setActiveJobKeywords] = useState<string[]>([]);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const [accentColor, setAccentColor] = useState('#2563eb');
-  const [fontFamily, setFontFamily] = useState<'sans' | 'serif' | 'mono'>('sans');
+  const [accentColor, setAccentColor] = useState('#000000');
+  const [fontFamily, setFontFamily] = useState<'sans' | 'serif' | 'mono'>('serif');
   const [showPhoto, setShowPhoto] = useState(true);
   const [photoUrl, setPhotoUrl] = useState('');
   const [showHighlights, setShowHighlights] = useState(true);
@@ -555,7 +566,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
           education: [],
         });
         setResumeName(res.name);
-        setTemplateKey(res.templateKey || 'clean-modern');
+        setTemplateKey(res.templateKey || 'jake-ats');
         if (res.content?.contact?.photoUrl) {
           setPhotoUrl(res.content.contact.photoUrl);
         }
@@ -569,9 +580,13 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
         }
         if (res.content?.layout?.accentColor) {
           setAccentColor(res.content.layout.accentColor);
+        } else if ((res.templateKey || 'jake-ats') === 'jake-ats') {
+          setAccentColor('#000000');
         }
         if (res.content?.layout?.fontFamily) {
           setFontFamily(res.content.layout.fontFamily);
+        } else if ((res.templateKey || 'jake-ats') === 'jake-ats') {
+          setFontFamily('serif');
         }
         setServerVersion(res.version || 1);
         setSaveStatus('saved');
@@ -1548,13 +1563,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
             setTemplateKey(newKey);
             scheduleAutosave(content, resumeName, newKey);
           }}
-          onPreviewTemplate={(preview) =>
-            setLivePreview(
-              preview
-                ? { templateKey: preview.templateKey, label: preview.label }
-                : null,
-            )
-          }
+          onPreviewTemplate={handlePreviewTemplate}
           pageSize={pageSize}
           onPageSizeChange={setPageSize}
           content={content}
@@ -1598,6 +1607,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
               },
             }));
           }}
+          supportsPhoto={templateSupportsPhoto(effectiveTemplateKey)}
           showHighlights={showHighlights}
           onShowHighlightsChange={(nextHighlights) => {
             setShowHighlights(nextHighlights);
@@ -1609,6 +1619,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
               },
             }));
           }}
+          hasHighlightKeywords={activeJobKeywords.length > 0 || (content.skills?.length ?? 0) > 0}
           layout={content.layout}
           onLayoutChange={handleUpdateLayout}
           onPreviewChange={(preview) => setLivePreview(preview)}
@@ -3266,17 +3277,17 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                         onClick={() => handleQuickAccentColor(swatch.hex)}
                         title={`Color: ${swatch.label} (hover to preview, click to apply)`}
                         aria-label={`Set accent color to ${swatch.label}`}
-                        className={`w-4 h-4 rounded-full transition-transform cursor-pointer flex items-center justify-center ${
+                        className={`w-4 h-4 rounded-full cursor-pointer flex items-center justify-center ${
                           isSelected
-                            ? 'ring-2 ring-offset-1 ring-zinc-900 dark:ring-white dark:ring-offset-zinc-900 scale-110'
-                            : 'hover:scale-115'
+                            ? 'ring-2 ring-offset-1 ring-zinc-900 dark:ring-white dark:ring-offset-zinc-900'
+                            : 'hover:ring-1 hover:ring-zinc-400 dark:hover:ring-zinc-500'
                         }`}
                         style={{ backgroundColor: swatch.hex }}
                       />
                     );
                   })}
                   <label
-                    className="w-4 h-4 rounded-full border border-zinc-300 dark:border-zinc-600 overflow-hidden cursor-pointer flex items-center justify-center ml-0.5 hover:scale-110 transition-transform"
+                    className="w-4 h-4 rounded-full border border-zinc-300 dark:border-zinc-600 overflow-hidden cursor-pointer flex items-center justify-center ml-0.5 hover:ring-1 hover:ring-zinc-400"
                     title="Pick custom accent color (live)"
                   >
                     <input
@@ -3518,7 +3529,7 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                     style={{ width: `${targetA4Width}px` }}
                     className="w-full print:w-full print:max-w-full relative"
                   >
-                    {/* Visual Page Break Dividers (Page Cutoff Indicator) */}
+                    {/* Page-break markers: thin line + chips parked in page margins (not over body text) */}
                     {calculatedPageCount > 1 &&
                       Array.from({ length: calculatedPageCount - 1 }).map((_, idx) => {
                         const pageBreakTop = (idx + 1) * singlePageHeight;
@@ -3526,19 +3537,20 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                           <div
                             key={`page-break-${idx}`}
                             style={{ top: `${pageBreakTop}px`, width: `${targetA4Width}px` }}
-                            className="absolute left-0 z-30 pointer-events-none print:hidden border-b-2 border-dashed border-rose-400/80 flex items-center justify-between px-3 py-1 -translate-y-1/2"
+                            className="absolute left-0 z-20 pointer-events-none print:hidden"
                             aria-label={`Page ${idx + 1} cutoff`}
                           >
-                            <span className="text-[10px] font-semibold bg-rose-50 dark:bg-zinc-900 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 px-2 py-0.5 rounded shadow-2xs pointer-events-auto flex items-center gap-1">
-                              <span>Page {idx + 1} Cutoff (A4 Limit)</span>
+                            <div className="absolute inset-x-0 top-0 border-t border-dashed border-rose-400/45" />
+                            <span className="absolute left-1.5 -top-5 text-[9px] font-semibold whitespace-nowrap bg-rose-600 text-white px-1.5 py-0.5 rounded shadow-sm">
+                              Page {idx + 1} Cutoff
                             </span>
                             <button
                               type="button"
                               onClick={handleFitToOnePage}
-                              className="pointer-events-auto text-[10px] bg-rose-600 hover:bg-rose-500 text-white font-medium px-2 py-0.5 rounded shadow-2xs transition-colors cursor-pointer flex items-center gap-1"
+                              className="absolute right-1.5 -top-5 pointer-events-auto text-[9px] whitespace-nowrap bg-rose-600 hover:bg-rose-500 text-white font-medium px-1.5 py-0.5 rounded shadow-sm transition-colors cursor-pointer"
                               title="Auto-adjust typography and spacing to fit on 1 page"
                             >
-                              <span>⚡ Fit to 1 Page</span>
+                              Fit to 1 Page
                             </button>
                           </div>
                         );
@@ -3574,7 +3586,14 @@ export default function ResumeDetailPage({ params }: ResumeEditorPageProps) {
                             fontFamily={effectiveFontFamily}
                             showPhoto={showPhoto}
                             photoUrl={photoUrl}
-                            highlightKeywords={activeJobKeywords.length > 0 ? activeJobKeywords : undefined}
+                            highlightKeywords={
+                              activeJobKeywords.length > 0
+                                ? activeJobKeywords
+                                : (content.skills || [])
+                                    .map((s) => s.name)
+                                    .filter((n) => Boolean(n?.trim()))
+                                    .slice(0, 40)
+                            }
                             showHighlights={isExportModalOpen ? false : showHighlights}
                           />
                           <CanvasFloatingToolbar

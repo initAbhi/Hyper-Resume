@@ -49,7 +49,7 @@ describe('PaymentsService', () => {
     mockSettingRepo = {
       find: vi.fn().mockResolvedValue([
         { key: 'lifetime_promo_enabled', value: 'true' },
-        { key: 'lifetime_promo_cap', value: '10' },
+        { key: 'lifetime_promo_cap', value: '13' },
       ]),
     };
 
@@ -112,6 +112,8 @@ describe('PaymentsService', () => {
   it('should return configured 1-plan Pro options', () => {
     const plans = service.getPlans();
     expect(plans.some((p) => p.id === 'pro_weekly')).toBe(true);
+    expect(plans.some((p) => p.id === 'pro_6month')).toBe(false);
+    expect(plans.some((p) => p.id === 'free_tier')).toBe(false);
     expect(plans.some((p) => p.id === 'pro_monthly')).toBe(true);
     expect(plans.some((p) => p.id === 'pro_6month')).toBe(true);
     expect(plans.some((p) => p.id === 'pro_lifetime')).toBe(true);
@@ -122,8 +124,8 @@ describe('PaymentsService', () => {
     const promo = await service.getPromoStatus();
     expect(promo.enabled).toBe(true);
     expect(promo.claimedSeats).toBe(3);
-    expect(promo.totalCap).toBe(10);
-    expect(promo.remainingSeats).toBe(7);
+    expect(promo.totalCap).toBe(13);
+    expect(promo.remainingSeats).toBe(10);
     expect(promo.isSoldOut).toBe(false);
     expect(promo.priceInr).toBe(999);
     expect(promo.priceUsd).toBe(19);

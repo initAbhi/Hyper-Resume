@@ -24,6 +24,7 @@ import {
   Menu,
   X,
   Sparkles,
+  Headphones,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { apiClient, AdminPaymentSettings } from '@/lib/api-client';
@@ -133,6 +134,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       items: [
         { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
         { label: 'Payments & Billing', href: '/admin/payments', icon: CreditCard },
+        { label: 'Support Inbox', href: '/admin/support', icon: Headphones },
       ],
     },
     {
@@ -159,6 +161,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // Determine current breadcrumb
   const getBreadcrumb = () => {
     if (pathname === '/admin/payments') return 'Payments & Billing';
+    if (pathname === '/admin/support') return 'Support Inbox';
     if (pathname === '/admin/users') return 'Users & Accounts';
     if (pathname === '/admin/resumes') return 'Resumes Management';
     if (pathname === '/admin/settings') return 'Settings & Gateways';

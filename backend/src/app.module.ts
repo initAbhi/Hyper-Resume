@@ -25,6 +25,7 @@ import { PaymentsModule } from './payments/payments.module.js';
 import { TemplatesModule } from './templates/templates.module.js';
 import { EmailModule } from './email/email.module.js';
 import { AdminModule } from './admin/admin.module.js';
+import { ContactModule } from './contact/contact.module.js';
 import { InterviewsModule } from './interviews/interviews.module.js';
 import { CoverLettersModule } from './cover-letters/cover-letters.module.js';
 import { LinkedInModule } from './linkedin/linkedin.module.js';
@@ -61,6 +62,7 @@ import { AppService } from './app.service.js';
     TemplatesModule,
     EmailModule,
     AdminModule,
+    ContactModule,
     InterviewsModule,
     CoverLettersModule,
     LinkedInModule,

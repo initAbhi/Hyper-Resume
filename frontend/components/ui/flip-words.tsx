@@ -56,7 +56,7 @@ export function FlipWords({
             exit={{ y: '-100%', opacity: 0 }}
             transition={{ duration: SLIDE_MS, ease: EASE }}
             className={cn(
-              'absolute left-0 top-0 whitespace-nowrap bg-gradient-to-r from-violet-200 via-white to-violet-300 bg-clip-text font-semibold text-transparent',
+              'absolute left-0 top-0 whitespace-nowrap bg-gradient-to-r from-blue-200 via-white to-blue-300 bg-clip-text font-semibold text-transparent',
               className,
             )}
           >

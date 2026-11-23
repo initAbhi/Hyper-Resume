@@ -31,19 +31,20 @@ export function Footer() {
 
   const companyLinks = [
     { label: 'Pricing', href: '/pricing' },
+    { label: 'Contact & Support', href: '/contact' },
     { label: 'Privacy Policy', href: '/privacy' },
     { label: 'Terms of Service', href: '/terms' },
     { label: 'Security', href: '/security' },
   ];
 
   return (
-    <footer className="w-full bg-[#07080E] text-zinc-400 relative overflow-hidden">
-      {/* React Bits Pro: Dappled Light swaying leaf sunlight coming from right to left */}
+    <footer className="w-full bg-[#060b14] text-zinc-400 relative overflow-hidden">
+      {/* React Bits Pro: Dappled Light — brand blue beam matching hero */}
       <DappledLight 
         placement="top-right" 
-        lightColor="#7C3AED" 
+        lightColor="#3872FA" 
         beamOpacity={0.4} 
-        leafColor="#05060A"
+        leafColor="#040812"
         speed={0.9} 
       />
 
@@ -124,6 +125,9 @@ export function Footer() {
             © 2026 HypeResume. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
+            <Link href="/contact" className="text-xs text-zinc-400 hover:text-white transition-colors">
+              Support
+            </Link>
             <Link href="/privacy" className="text-xs text-zinc-400 hover:text-white transition-colors">
               Privacy
             </Link>

@@ -85,7 +85,12 @@ function NavbarInner() {
   const isLightSurface = !isHomePage;
 
   if (isHomePage) {
-    return <LandingResizableNavbar />;
+    return (
+      <>
+        <FoundingSalesBanner />
+        <LandingResizableNavbar />
+      </>
+    );
   }
 
   return (

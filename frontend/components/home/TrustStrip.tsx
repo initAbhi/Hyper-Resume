@@ -7,7 +7,7 @@ const CLAIMS = [
   'ATS builder + free PDF/DOCX',
   'Job match & live boards',
   'Cover letters · LinkedIn · interviews',
-  '82 company benchmarks',
+  '25 company benchmarks',
   'Application tracker included',
 ] as const;
 

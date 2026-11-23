@@ -64,6 +64,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const pixelId = process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID || '';
+  const clarityId = process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID || '';
 
   return (
     <html
@@ -115,6 +116,18 @@ fbq('track', 'PageView');`,
             </noscript>
             {/* End Meta Pixel Code */}
           </>
+        ) : null}
+        {clarityId ? (
+          <script
+            id="ms-clarity"
+            dangerouslySetInnerHTML={{
+              __html: `(function(c,l,a,r,i,t,y){
+c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+})(window, document, "clarity", "script", "${clarityId}");`,
+            }}
+          />
         ) : null}
       </head>
       <body className="min-h-full flex flex-col bg-white dark:bg-[#0a0a0a] text-zinc-900 dark:text-zinc-100 antialiased" style={{ fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif" }}>

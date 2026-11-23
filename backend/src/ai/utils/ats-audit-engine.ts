@@ -149,6 +149,83 @@ function clampScore(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
+/**
+ * Evidence density in [0, 1]. Near-empty resumes must stay in the teens;
+ * strong quantified resumes approach 1.0 and can score 90+.
+ */
+export function computeResumeEvidenceDensity(input: {
+  wordCount: number;
+  totalBullets: number;
+  metricsCount: number;
+  declaredSkillCount: number;
+  corroboratedSkillCount: number;
+  missingEssentialSections: number;
+  hasEmail: boolean;
+  hasName: boolean;
+  meaningfulExperienceCount: number;
+}): number {
+  let points = 0;
+
+  // Volume (0–24) — short but dense quantified resumes still earn credit
+  if (input.wordCount >= 450) points += 24;
+  else if (input.wordCount >= 280) points += 20;
+  else if (input.wordCount >= 180) points += 15;
+  else if (input.wordCount >= 110) points += 10;
+  else if (input.wordCount >= 60) points += 4;
+  else if (input.wordCount >= 25) points += 1;
+
+  // Bullet substance (0–26)
+  if (input.totalBullets >= 10) points += 26;
+  else if (input.totalBullets >= 8) points += 22;
+  else if (input.totalBullets >= 6) points += 18;
+  else if (input.totalBullets >= 3) points += 10;
+  else if (input.totalBullets === 2) points += 5;
+  else if (input.totalBullets === 1) points += 2;
+
+  // Quantified impact (0–28) — primary signal of premium resumes
+  if (input.metricsCount >= 7) points += 28;
+  else if (input.metricsCount >= 5) points += 24;
+  else if (input.metricsCount >= 3) points += 16;
+  else if (input.metricsCount === 2) points += 9;
+  else if (input.metricsCount === 1) points += 4;
+
+  // Dense quantified packs get an extra lift so elite drafts can reach 95+
+  if (input.metricsCount >= 5 && input.totalBullets >= 8) points += 14;
+  else if (input.metricsCount >= 3 && input.totalBullets >= 6) points += 6;
+
+  // Skills evidenced in narrative (0–14)
+  if (input.corroboratedSkillCount >= 6) points += 14;
+  else if (input.corroboratedSkillCount >= 3) points += 9;
+  else if (input.corroboratedSkillCount >= 1) points += 4;
+  else if (input.declaredSkillCount >= 4) points += 2;
+
+  // Structure / identity (0–8)
+  const sectionScore = Math.max(0, 5 - input.missingEssentialSections);
+  points += sectionScore;
+  if (input.hasEmail) points += 1;
+  if (input.hasName) points += 1;
+  if (input.meaningfulExperienceCount >= 2) points += 1;
+
+  return Math.max(0, Math.min(1, points / 100));
+}
+
+function countMeaningfulExperienceEntries(
+  experience: Array<{ title?: string; company?: string; bullets?: string[] }> | undefined,
+): number {
+  return (experience || []).filter((entry) => {
+    const bullets = (entry.bullets || []).filter((b) => b.trim().length >= 20);
+    if (bullets.length > 0) return true;
+    const title = (entry.title || '').trim();
+    const company = (entry.company || '').trim();
+    if (title.length < 3 || company.length < 2) return false;
+    // Reject obvious placeholders from the create-from-scratch seed
+    if (/^(df|asdf|sadf|test|xxx|n\/a)$/i.test(title) || /^(df|asdf|sadf|test|xxx|n\/a)$/i.test(company)) {
+      return false;
+    }
+    return title.length >= 4 && company.length >= 3;
+  }).length;
+}
+
 function detectDateFormatFamily(dateValue?: string): 'iso' | 'slash' | 'month_name' | 'year' | null {
   if (!dateValue) return null;
   const trimmed = dateValue.trim();
@@ -1148,7 +1225,7 @@ export function evaluateStructuredResumeAts(
 
   let metricsDimScore: number;
   if (totalBullets === 0) {
-    metricsDimScore = 35;
+    metricsDimScore = 0;
   } else if (metricRatio >= 0.5) {
     // High density (50%+ bullets quantified): 88 to 100
     metricsDimScore = 88 + Math.min(12, metricsCount * 2 + xyzRatio * 8);
@@ -1156,11 +1233,11 @@ export function evaluateStructuredResumeAts(
     // Moderate density (25% - 49% bullets quantified): 72 to 87
     metricsDimScore = 72 + (metricRatio - 0.25) * 60 + xyzRatio * 6;
   } else if (metricRatio > 0) {
-    // Emerging metrics (1% - 24% bullets quantified): 55 to 71
-    metricsDimScore = 55 + (metricRatio / 0.25) * 16 + xyzRatio * 4;
+    // Emerging metrics (1% - 24% bullets quantified): 48 to 71
+    metricsDimScore = 48 + (metricRatio / 0.25) * 20 + xyzRatio * 4;
   } else {
-    // Unquantified (pure responsibilities / tasks): 42
-    metricsDimScore = 42;
+    // Unquantified (pure responsibilities / tasks)
+    metricsDimScore = Math.min(38, 18 + totalBullets * 2);
   }
   metricsDimScore = clampScore(metricsDimScore);
 
@@ -1182,7 +1259,7 @@ export function evaluateStructuredResumeAts(
   const verbIndex = totalBullets > 0 ? totalVerbPoints / totalBullets : 0;
   let verbsDimScore =
     totalBullets === 0
-      ? 30
+      ? 0
       : clampScore(
           verbIndex >= 0.8
             ? 88 + Math.min(12, (verbIndex - 0.8) * 60)
@@ -1195,7 +1272,7 @@ export function evaluateStructuredResumeAts(
   verbsDimScore = clampScore(verbsDimScore);
 
   // Dimension 4: Technical Depth & Stack Alignment (15%)
-  let depthDimScore = 30;
+  let depthDimScore = 0;
   if (declaredSkills.length > 0) {
     const breadthScore = Math.min(40, declaredSkills.length * 5); // >= 8 skills gets full 40
     const alignmentRatio = corroboratedSkills.length / declaredSkills.length;
@@ -1204,9 +1281,21 @@ export function evaluateStructuredResumeAts(
   }
 
   // Dimension 5: Brevity & Information Density (15%)
-  let brevityDimScore = writingAudit.overallWritingScore;
-  if (wordCount < 140) brevityDimScore -= 18;
-  else if (wordCount < 200) brevityDimScore -= 8;
+  const denseQuantified = metricsCount >= 4 && totalBullets >= 6;
+  const hasSomeMetrics = metricsCount >= 1 && totalBullets >= 3;
+  let brevityDimScore =
+    wordCount < 40
+      ? 8
+      : wordCount < 100
+        ? denseQuantified
+          ? 72
+          : hasSomeMetrics
+            ? 48
+            : 28
+        : writingAudit.overallWritingScore;
+  // Dense metric-rich drafts should not be crushed for being concise
+  if (wordCount < 140) brevityDimScore -= denseQuantified ? 4 : hasSomeMetrics ? 10 : 22;
+  else if (wordCount < 200) brevityDimScore -= denseQuantified ? 2 : 10;
   else if (wordCount > 1000) brevityDimScore -= 10;
   else if (wordCount > 1300) brevityDimScore -= 18;
 
@@ -1214,7 +1303,7 @@ export function evaluateStructuredResumeAts(
     const outlierRatio = (shortBulletsCount + longBulletsCount) / totalBullets;
     brevityDimScore -= Math.round(outlierRatio * 15);
   } else {
-    brevityDimScore -= 15;
+    brevityDimScore = Math.min(brevityDimScore, 12);
   }
   brevityDimScore = clampScore(brevityDimScore);
 
@@ -1264,13 +1353,51 @@ export function evaluateStructuredResumeAts(
     },
   ];
 
-  const overallAtsScore = clampScore(
+  const meaningfulExperienceCount = countMeaningfulExperienceEntries(content.experience);
+  const evidenceDensity = computeResumeEvidenceDensity({
+    wordCount,
+    totalBullets,
+    metricsCount,
+    declaredSkillCount: declaredSkills.length,
+    corroboratedSkillCount: corroboratedSkills.length,
+    missingEssentialSections: missingSections.length,
+    hasEmail: Boolean(hasEmail),
+    hasName: Boolean(hasName),
+    meaningfulExperienceCount,
+  });
+
+  // Soft-cap: empty/near-empty drafts cannot look "ATS ready"
+  const evidenceCap = clampScore(4 + evidenceDensity * 96);
+
+  let overallAtsScore = clampScore(
     formattingDimScore * 0.25 +
       metricsDimScore * 0.25 +
       verbsDimScore * 0.2 +
       depthDimScore * 0.15 +
       brevityDimScore * 0.15,
   );
+  overallAtsScore = Math.min(overallAtsScore, evidenceCap);
+
+  // Re-clamp displayed dimension scores so the breakdown cannot contradict the overall cap
+  if (evidenceDensity < 0.35) {
+    const dimCap = clampScore(8 + evidenceDensity * 90);
+    formattingDimScore = Math.min(formattingDimScore, dimCap + 12);
+    metricsDimScore = Math.min(metricsDimScore, dimCap);
+    verbsDimScore = Math.min(verbsDimScore, dimCap);
+    depthDimScore = Math.min(depthDimScore, dimCap);
+    brevityDimScore = Math.min(brevityDimScore, dimCap);
+    // Refresh dimension array scores after capping
+    dimensions[0].score = formattingDimScore;
+    dimensions[0].status = classifyScoreStatus(formattingDimScore);
+    dimensions[1].score = metricsDimScore;
+    dimensions[1].status = classifyScoreStatus(metricsDimScore);
+    dimensions[2].score = verbsDimScore;
+    dimensions[2].status = classifyScoreStatus(verbsDimScore);
+    dimensions[3].score = depthDimScore;
+    dimensions[3].status = classifyScoreStatus(depthDimScore);
+    dimensions[4].score = brevityDimScore;
+    dimensions[4].status = classifyScoreStatus(brevityDimScore);
+  }
 
   // 8. Actionable Recommendations
   const recommendations: string[] = [];
@@ -1342,7 +1469,7 @@ export function evaluateStructuredResumeAts(
   const matchScore = jobDescriptionMatch ? jobDescriptionMatch.matchRate : undefined;
   const compositeScore =
     matchScore !== undefined
-      ? clampScore(atsScore * 0.4 + matchScore * 0.6)
+      ? clampScore(Math.min(atsScore * 0.4 + matchScore * 0.6, evidenceCap))
       : undefined;
   const overallScore = compositeScore !== undefined ? compositeScore : atsScore;
 

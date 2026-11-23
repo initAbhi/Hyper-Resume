@@ -194,60 +194,138 @@ export class AdminService implements OnModuleInit {
     };
   }
 
+  private isPageViewEvent(eventType?: string | null): boolean {
+    return eventType === 'landing_view' || eventType === 'page_view';
+  }
+
+  private isLandingPath(path?: string | null): boolean {
+    if (!path) return false;
+    const clean = path.split('?')[0] || '/';
+    return clean === '/' || clean === '';
+  }
+
   async getAnalyticsOverview() {
     const stats = await this.getStats();
 
     let uniqueVisitors = 0;
     let pageViews = 0;
+    let landingPageViews = 0;
+    let landingUniqueVisitors = 0;
+    let last7DayPageViews = 0;
+    let last7DayUniqueVisitors = 0;
     let topReferrers: Array<{ source: string; share: string; visits: number }> = [];
+    let topCountries: Array<{ country: string; countryCode: string; share: string; visits: number }> =
+      [];
+    let topPaths: Array<{ path: string; share: string; visits: number }> = [];
     const monthlyTraffic = new Map<string, { visitors: Set<string>; pageViews: number }>();
 
     if (this.analyticsRepo && typeof this.analyticsRepo.find === 'function') {
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
-      sixMonthsAgo.setDate(1);
-      sixMonthsAgo.setHours(0, 0, 0, 0);
-
       const events = await this.analyticsRepo.find({
         order: { createdAt: 'DESC' },
         take: 10000,
       });
 
       const visitorSet = new Set<string>();
+      const landingVisitorSet = new Set<string>();
+      const last7VisitorSet = new Set<string>();
       const sourceCounts = new Map<string, number>();
+      const countryCounts = new Map<string, { country: string; visits: number }>();
+      const pathCounts = new Map<string, number>();
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
       for (const ev of events) {
         const visitorId = ev.sessionHash || ev.id;
         visitorSet.add(visitorId);
-        if (ev.eventType === 'page_view') {
+        const isPv = this.isPageViewEvent(ev.eventType);
+        if (isPv) {
           pageViews += 1;
+        }
+
+        if (isPv && this.isLandingPath(ev.path)) {
+          landingPageViews += 1;
+          landingVisitorSet.add(visitorId);
+        }
+
+        const createdMs = new Date(ev.createdAt).getTime();
+        if (isPv && createdMs >= sevenDaysAgo) {
+          last7DayPageViews += 1;
+          last7VisitorSet.add(visitorId);
         }
 
         const sourceLabel =
           ev.utmSource?.trim() ||
-          (ev.referrer?.trim() ? ev.referrer.trim().replace(/^https?:\/\/(www\.)?/, '').split('/')[0] : '') ||
+          (ev.referrer?.trim()
+            ? ev.referrer.trim().replace(/^https?:\/\/(www\.)?/, '').split('/')[0]
+            : '') ||
           'Direct';
         sourceCounts.set(sourceLabel, (sourceCounts.get(sourceLabel) || 0) + 1);
+
+        const meta = (ev.metadata || {}) as Record<string, unknown>;
+        const countryCode =
+          typeof meta.countryCode === 'string' && meta.countryCode.trim()
+            ? meta.countryCode.trim().toUpperCase()
+            : '';
+        if (countryCode) {
+          const countryName =
+            typeof meta.country === 'string' && meta.country.trim()
+              ? meta.country.trim()
+              : countryCode;
+          const existing = countryCounts.get(countryCode) || { country: countryName, visits: 0 };
+          existing.visits += 1;
+          countryCounts.set(countryCode, existing);
+        }
+
+        if (isPv && ev.path) {
+          const pathKey = (ev.path.split('?')[0] || '/').slice(0, 120) || '/';
+          pathCounts.set(pathKey, (pathCounts.get(pathKey) || 0) + 1);
+        }
 
         const created = new Date(ev.createdAt);
         const ym = `${created.getFullYear()}-${String(created.getMonth() + 1).padStart(2, '0')}`;
         const bucket = monthlyTraffic.get(ym) || { visitors: new Set<string>(), pageViews: 0 };
         bucket.visitors.add(visitorId);
-        if (ev.eventType === 'page_view') {
+        if (isPv) {
           bucket.pageViews += 1;
         }
         monthlyTraffic.set(ym, bucket);
       }
 
       uniqueVisitors = visitorSet.size;
+      landingUniqueVisitors = landingVisitorSet.size;
+      last7DayUniqueVisitors = last7VisitorSet.size;
       const totalEvents = events.length || 1;
+      const toShare = (visits: number) => `${((visits / totalEvents) * 100).toFixed(1)}%`;
+
       topReferrers = Array.from(sourceCounts.entries())
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
+        .slice(0, 8)
         .map(([source, visits]) => ({
           source,
           visits,
-          share: `${((visits / totalEvents) * 100).toFixed(1)}%`,
+          share: toShare(visits),
+        }));
+
+      topCountries = Array.from(countryCounts.entries())
+        .sort((a, b) => b[1].visits - a[1].visits)
+        .slice(0, 8)
+        .map(([countryCode, row]) => ({
+          countryCode,
+          country: row.country,
+          visits: row.visits,
+          share: toShare(row.visits),
+        }));
+
+      const pathTotal = Math.max(
+        1,
+        Array.from(pathCounts.values()).reduce((sum, n) => sum + n, 0),
+      );
+      topPaths = Array.from(pathCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([path, visits]) => ({
+          path,
+          visits,
+          share: `${((visits / pathTotal) * 100).toFixed(1)}%`,
         }));
     }
 
@@ -289,12 +367,18 @@ export class AdminService implements OnModuleInit {
       overview: {
         uniqueVisitors,
         pageViews,
+        landingPageViews,
+        landingUniqueVisitors,
+        last7DayPageViews,
+        last7DayUniqueVisitors,
         totalOrders: stats.totalPayments,
         totalRevenue: stats.totalRevenueFormatted,
         conversionRate: `${stats.conversionRate}%`,
       },
       chartData,
       topReferrers,
+      topCountries,
+      topPaths,
     };
   }
 

@@ -55,9 +55,12 @@ export class AnalyticsController {
   async trackEvent(@Body() dto: TrackAnalyticsEventDto, @Req() req: Request) {
     this.enforceRateLimit(req);
     const forwardedFor = req.headers['x-forwarded-for'];
-    const ip = Array.isArray(forwardedFor)
+    const realIpHeader = req.headers['x-real-ip'];
+    const forwardedIp = Array.isArray(forwardedFor)
       ? forwardedFor[0]
-      : forwardedFor?.split(',')[0]?.trim() || req.ip;
+      : forwardedFor?.split(',')[0]?.trim();
+    const realIp = Array.isArray(realIpHeader) ? realIpHeader[0] : realIpHeader;
+    const ip = (forwardedIp || realIp || req.ip || '').toString().trim();
 
     return this.analyticsService.recordEvent(
       {

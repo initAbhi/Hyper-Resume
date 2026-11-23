@@ -19,25 +19,35 @@ export interface PlanConfig {
   isPro: boolean;
   isLifetime: boolean;
   isPromoOffer?: boolean;
+  /** Hidden from public pricing UI while kept for existing purchasers */
+  isHidden?: boolean;
   cadenceLabel: string;
   billingType: 'one_time' | 'recurring_monthly';
   badge?: string;
   features: string[];
 }
 
+/** Weekly AI credit grant for every active Pro pass */
+export const PRO_WEEKLY_CREDITS = 75;
+export const FREE_SIGNUP_CREDITS = 10;
+/** Free Starter hard caps (Pro = unlimited) */
+export const FREE_MAX_RESUMES = 2;
+export const FREE_MAX_APPLICATIONS = 50;
+
 const PRO_SHARED_FEATURES = [
-  'Unlimited AI job description matching & evidence citations',
-  'Unlimited grounded STAR / XYZ bullet rewrites & summary tailoring',
-  'Full Mock, Weak-Area & Quick Practice AI Interview Studio',
-  'Unlimited AI Cover Letters & LinkedIn Profile Optimizer audits',
-  'All 10 ATS resume templates + clean unwatermarked PDF & DOCX exports',
+  `${PRO_WEEKLY_CREDITS} AI credits every week (job match, rewrites, cover letters, interviews)`,
+  'All 10 ATS resume templates (8 Premium unlocked)',
+  'Unlimited resumes & unlimited job application tracking',
+  'Full Sample Library with company-caliber formats',
+  'Mock Interview Studio, Cover Letters & LinkedIn optimizer',
+  'Clean unwatermarked PDF & DOCX exports',
 ];
 
 export const PRICING_PLANS: Record<string, PlanConfig> = {
   free_tier: {
     id: 'free_tier',
     name: 'Free Starter',
-    tagline: 'Build your ATS resume free forever + 5 welcome AI credits to test optimization',
+    tagline: `Build forever free with ${FREE_SIGNUP_CREDITS} lifetime AI credits to try optimization`,
     amountMinor: 0,
     currency: 'INR',
     displayPrice: '₹0',
@@ -45,32 +55,34 @@ export const PRICING_PLANS: Record<string, PlanConfig> = {
       INR: { amountMinor: 0, displayPrice: '₹0' },
       USD: { amountMinor: 0, displayPrice: '$0' },
     },
-    credits: 5,
+    credits: FREE_SIGNUP_CREDITS,
     durationDays: 0,
     isPro: false,
     isLifetime: false,
     cadenceLabel: 'Free Forever',
     billingType: 'one_time',
     features: [
-      '5 Welcome AI Optimization Credits (~2 job matches or 1 quick interview)',
-      'Full ATS resume editor across all 10 templates',
-      'Unlimited watermark-free PDF & DOCX exports',
-      'Public recruiter share links & analytics',
+      `${FREE_SIGNUP_CREDITS} lifetime AI credits (no weekly refill)`,
+      "2 free ATS templates: Jake's Resume + Awesome CV",
+      `Up to ${FREE_MAX_RESUMES} active resumes at once`,
+      `Up to ${FREE_MAX_APPLICATIONS} job applications tracked`,
+      'Unlimited manual editing & watermark-free PDF/DOCX exports',
+      'Public recruiter share links',
       'Zero model training privacy guarantee',
     ],
   },
   pro_weekly: {
     id: 'pro_weekly',
     name: 'HypeResume Pro — 1 Week Pass',
-    tagline: 'Try full unlimited Pro power during an urgent interview sprint',
-    amountMinor: 14900, // ₹149
+    tagline: 'Full Pro for an urgent interview sprint — 75 AI credits this week',
+    amountMinor: 14900, // ₹149 (Tier 2/3 default)
     currency: 'INR',
     displayPrice: '₹149',
     prices: {
       INR: { amountMinor: 14900, displayPrice: '₹149' },
-      USD: { amountMinor: 300, displayPrice: '$3' },
+      USD: { amountMinor: 799, displayPrice: '$7.99' }, // Tier 1
     },
-    credits: 100,
+    credits: PRO_WEEKLY_CREDITS,
     durationDays: 7,
     isPro: true,
     isLifetime: false,
@@ -78,24 +90,24 @@ export const PRICING_PLANS: Record<string, PlanConfig> = {
     billingType: 'one_time',
     badge: 'Try 1 Week',
     features: [
-      '7 days of unrestricted HypeResume Pro access',
-      'Ideal for testing before committing or rapid application sprints',
+      '7 days of HypeResume Pro access',
+      `${PRO_WEEKLY_CREDITS} AI credits for the week`,
       'No automatic renewal or surprise rebilling',
-      ...PRO_SHARED_FEATURES.slice(0, 3),
+      ...PRO_SHARED_FEATURES.slice(1, 4),
     ],
   },
   pro_monthly: {
     id: 'pro_monthly',
     name: 'HypeResume Pro — 1 Month',
-    tagline: 'Flexible full-month job search accelerator with zero auto-renewal traps',
+    tagline: 'Flexible full-month job search pass with 75 AI credits every week',
     amountMinor: 39900, // ₹399
     currency: 'INR',
     displayPrice: '₹399',
     prices: {
       INR: { amountMinor: 39900, displayPrice: '₹399', effectiveMonthly: '₹399/mo' },
-      USD: { amountMinor: 900, displayPrice: '$9', effectiveMonthly: '$9/mo' },
+      USD: { amountMinor: 1499, displayPrice: '$14.99', effectiveMonthly: '$14.99/mo' }, // Tier 1
     },
-    credits: 300,
+    credits: PRO_WEEKLY_CREDITS,
     durationDays: 30,
     isPro: true,
     isLifetime: false,
@@ -103,7 +115,8 @@ export const PRICING_PLANS: Record<string, PlanConfig> = {
     billingType: 'one_time',
     badge: 'Most Flexible',
     features: [
-      '30 full days of unlimited HypeResume Pro access',
+      '30 days of HypeResume Pro access',
+      `${PRO_WEEKLY_CREDITS} AI credits refilled every week`,
       'Renew manually only if your job search continues',
       ...PRO_SHARED_FEATURES,
     ],
@@ -119,31 +132,32 @@ export const PRICING_PLANS: Record<string, PlanConfig> = {
       INR: { amountMinor: 120000, displayPrice: '₹1,200', effectiveMonthly: '₹200/mo' },
       USD: { amountMinor: 2900, displayPrice: '$29', effectiveMonthly: '$4.83/mo' },
     },
-    credits: 1500,
+    credits: PRO_WEEKLY_CREDITS,
     durationDays: 180,
     isPro: true,
     isLifetime: false,
+    isHidden: true,
     cadenceLabel: '6 months Pro access · Save 50%',
     billingType: 'one_time',
     badge: 'Save 50%',
     features: [
-      '180 days of unlimited HypeResume Pro access (just ₹200/month)',
-      'Covers full placement season, campus hiring, or senior role switches',
+      '180 days of HypeResume Pro access (just ₹200/month)',
+      `${PRO_WEEKLY_CREDITS} AI credits refilled every week`,
       ...PRO_SHARED_FEATURES,
     ],
   },
   pro_lifetime: {
     id: 'pro_lifetime',
     name: 'HypeResume Pro — Founding Lifetime',
-    tagline: 'Limited initial validation offer: Pay once, keep Pro forever',
+    tagline: 'Pay once, keep Pro forever — 75 AI credits every week for life',
     amountMinor: 99900, // ₹999
     currency: 'INR',
     displayPrice: '₹999',
     prices: {
       INR: { amountMinor: 99900, displayPrice: '₹999' },
-      USD: { amountMinor: 1900, displayPrice: '$19' },
+      USD: { amountMinor: 2499, displayPrice: '$24.99' }, // Tier 1
     },
-    credits: 5000,
+    credits: PRO_WEEKLY_CREDITS,
     durationDays: null,
     isPro: true,
     isLifetime: true,
@@ -153,8 +167,34 @@ export const PRICING_PLANS: Record<string, PlanConfig> = {
     badge: 'Founding Launch Offer',
     features: [
       'Permanent Lifetime access to all HypeResume Pro tools & future templates',
-      'Cheaper than 6 months (₹999 one-time vs ₹1,200) during Founding Cohort',
+      `${PRO_WEEKLY_CREDITS} AI credits refilled every week — forever`,
+      'Cheaper than 6 months during Founding Cohort',
       ...PRO_SHARED_FEATURES,
+    ],
+  },
+  /** Kept hidden so any completed smoke purchases still resolve plan metadata */
+  live_smoke_50: {
+    id: 'live_smoke_50',
+    name: 'Live Payment Smoke Test',
+    tagline: '₹50 one-time charge to verify live Dodo Payments end-to-end',
+    amountMinor: 5000, // ₹50
+    currency: 'INR',
+    displayPrice: '₹50',
+    prices: {
+      INR: { amountMinor: 5000, displayPrice: '₹50' },
+      USD: { amountMinor: 59, displayPrice: '$0.59' },
+    },
+    credits: 5,
+    durationDays: 1,
+    isPro: true,
+    isLifetime: false,
+    isHidden: true,
+    cadenceLabel: '1-day Pro smoke pass · Live gateway only',
+    billingType: 'one_time',
+    badge: '₹50 Live Test',
+    features: [
+      'Temporary 1-day Pro unlock for live payment verification',
+      '5 AI credits included',
     ],
   },
 };
@@ -190,4 +230,8 @@ export function resolvePlanPricing(
     amountMinor: localized.amountMinor,
     displayPrice: localized.displayPrice,
   };
+}
+
+export function getPublicPricingPlans(): PlanConfig[] {
+  return Object.values(PRICING_PLANS).filter((p) => !p.isHidden && p.id !== 'free_tier');
 }

@@ -660,10 +660,10 @@ function JobMatchInner() {
             {/* Subscores Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
               {[
-                { label: 'Required Skills', val: subScores.requiredSkills ?? 85 },
-                { label: 'Experience Align', val: subScores.experienceAlignment ?? 90 },
-                { label: 'Education Align', val: subScores.educationAlignment ?? 100 },
-                { label: 'Metrics Density', val: subScores.actionMetricsDensity ?? 80 },
+                { label: 'Required Skills', val: subScores.requiredSkills ?? 0 },
+                { label: 'Experience Align', val: subScores.experienceAlignment ?? 0 },
+                { label: 'Education Align', val: subScores.educationAlignment ?? 0 },
+                { label: 'Formatting', val: subScores.actionMetricsDensity ?? 0 },
               ].map((sub, sIdx) => (
                 <div
                   key={sIdx}

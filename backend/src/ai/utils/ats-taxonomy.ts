@@ -294,8 +294,8 @@ export function normalizeExtractedText(raw: string): string {
     .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
     // Bullets to standard bullet symbol
     .replace(/[\u2022\u25CF\u25AA\u25AB\u25E6\u2043\u2219\u27A4\u2192\u25BA]/g, '•')
-    // Non-breaking spaces and control chars
-    .replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
+    // Non-breaking / zero-width spaces and control chars (ZWSP breaks bullet detection)
+    .replace(/[\u00A0\u1680\u2000-\u200D\u202F\u205F\u3000\uFEFF]/g, ' ')
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
     // Remove carriage returns
     .replace(/\r\n/g, '\n')

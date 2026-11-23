@@ -17,10 +17,9 @@ import { CertificationsBlock } from './CertificationsBlock';
 import { CustomSectionsBlock } from './CustomSectionsBlock';
 
 /**
- * Jake's Resume Template
- * Modeled after the world-famous Jake Gutierrez Overleaf / LaTeX CS resume template.
- * 100% ATS parser compliant, clean single-column geometry, tight horizontal rules,
- * tabular two-sided alignment (Title/Company left, Date/Location right).
+ * Jake's Resume — ATS-first single column.
+ * Typography targets Jake Gutierrez / Overleaf defaults: 11pt body, ~0.5" margins,
+ * ruled section headers, title|dates and company|location alignment.
  */
 export function JakeTemplate({
   content,
@@ -49,17 +48,14 @@ export function JakeTemplate({
     if (!skills || skills.length === 0) return [];
     const map = new Map<string, Array<{ name: string; idx: number }>>();
     skills.forEach((s, idx) => {
-      const cat = s.category || 'Core Skills';
+      const cat = s.category || 'Skills';
       if (!map.has(cat)) map.set(cat, []);
       map.get(cat)!.push({ name: s.name, idx });
     });
-    return Array.from(map.entries()).map(([category, items]) => ({
-      category,
-      items,
-    }));
+    return Array.from(map.entries()).map(([category, items]) => ({ category, items }));
   }, [skills]);
 
-  const ruleColor = accentColor !== '#000000' ? accentColor : '#18181b';
+  const ruleColor = accentColor && accentColor !== '#000000' ? accentColor : '#111111';
 
   const contactItems: Array<{
     key: string;
@@ -86,19 +82,31 @@ export function JakeTemplate({
       )
     : contactItems.filter((item) => Boolean(item.value?.trim()));
 
+  const sectionTitle = (label: string) => (
+    <h2
+      className="hr-ats-section-title"
+      style={{
+        color: ruleColor,
+        borderBottomColor: ruleColor,
+      }}
+    >
+      {label}
+    </h2>
+  );
+
   return (
     <div
-      className={`resume-page-a4 resume-paper-canvas bg-white text-zinc-950 p-8 sm:p-11 rounded-sm shadow-md border border-zinc-200/80 w-full max-w-[820px] mx-auto text-left leading-relaxed ${getTemplateFontClass(fontFamily)} ${className}`}
+      className={`resume-page-a4 resume-paper-canvas hr-ats-page bg-white text-zinc-950 w-full max-w-[820px] mx-auto text-left ${getTemplateFontClass(fontFamily)} ${className}`}
       style={{ boxSizing: 'border-box' }}
+      data-hr-template="jake-ats"
     >
-      {/* Centered Name & Contact Header */}
-      <header className="text-center pb-3 border-b border-transparent">
+      <header className="text-center pb-2">
         {showPhoto && photoUrl && (
           <div className="flex justify-center mb-2">
             <img
               src={photoUrl}
               alt={contact.fullName || 'Candidate'}
-              className="w-16 h-16 rounded-full object-cover border border-zinc-300 shadow-xs"
+              className="w-14 h-14 rounded-full object-cover border border-zinc-300"
             />
           </div>
         )}
@@ -107,7 +115,7 @@ export function JakeTemplate({
           fieldPath="contact.fullName"
           value={contact.fullName}
           placeholder="Candidate Name"
-          className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-950 uppercase block"
+          className="hr-ats-name uppercase tracking-wide block"
         />
         {(isEditable || headline) && (
           <EditableField
@@ -115,39 +123,30 @@ export function JakeTemplate({
             fieldPath="headline"
             value={headline || ''}
             placeholder="Professional Headline"
-            className="text-xs font-medium text-zinc-700 mt-0.5 tracking-wide block"
+            className="hr-ats-headline block mt-0.5"
           />
         )}
-
-        {/* Contact Line with Separators */}
-        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[10.5px] text-zinc-700 mt-2 font-normal">
+        <div className="hr-ats-contact flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 mt-1.5">
           {visibleContactItems.map((item, idx) => (
             <React.Fragment key={item.key}>
-              {idx > 0 && <span className="text-zinc-400 select-none">|</span>}
+              {idx > 0 && <span className="text-zinc-400 select-none" aria-hidden="true">|</span>}
               <EditableContactLink
                 fieldPath={item.fieldPath}
                 value={item.value}
                 placeholder={item.placeholder}
                 isUrl={item.isUrl}
-                className="text-zinc-800 hover:underline"
+                className="hover:underline"
               />
             </React.Fragment>
           ))}
         </div>
       </header>
 
-      {/* Main Content Sections */}
-      <div className="space-y-4 pt-1">
-        {/* Professional Summary */}
+      <div className="hr-ats-body flex flex-col pt-1">
         {(isEditable || summary) && (
           <section data-resume-section="summary" className="resume-section">
-            <div
-              className="flex items-center justify-between pb-0.5 mb-1.5 border-b"
-              style={{ borderBottomColor: ruleColor, borderBottomWidth: '1.5px' }}
-            >
-              <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-950">
-                Professional Summary
-              </h2>
+            <div className="flex items-center justify-between gap-2">
+              {sectionTitle('Professional Summary')}
               <CanvasSectionMoveButtons sectionKey="summary" label="Summary" />
             </div>
             <EditableField
@@ -156,54 +155,33 @@ export function JakeTemplate({
               fieldPath="summary"
               value={summary || ''}
               placeholder="Write a concise 2–3 line professional summary highlighting key impact..."
-              className="text-[10.5px] text-zinc-700 leading-relaxed block"
+              className="hr-ats-body-text block mt-1"
               highlightKeywords={highlightKeywords}
               showHighlights={showHighlights}
             />
           </section>
         )}
 
-        {/* Experience Section */}
-        {experience.length > 0 && (
+        {(isEditable || experience.length > 0) && (
           <section data-resume-section="experience" className="resume-section">
-            <div
-              className="flex items-center justify-between pb-0.5 mb-2 border-b"
-              style={{ borderBottomColor: ruleColor, borderBottomWidth: '1.5px' }}
-            >
-              <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-950">
-                Experience
-              </h2>
+            <div className="flex items-center justify-between gap-2">
+              {sectionTitle('Experience')}
               <div className="flex items-center gap-1">
                 <CanvasSectionMoveButtons sectionKey="experience" label="Experience" />
                 <CanvasSectionAddButton label="Role" onClick={onAddExperience} />
               </div>
             </div>
-            <div className="space-y-3">
+            <div className="mt-1 hr-entry-stack" data-hr-entry-stack="true">
               {experience.map((exp, idx) => (
-                <div key={exp.id || idx} className="resume-entry group/entry relative space-y-1">
+                <div key={exp.id || idx} className="resume-entry group/entry relative">
                   <CanvasEntryDeleteButton onClick={() => onDeleteExperience?.(idx)} label="Delete role" />
-                  <div className="flex justify-between items-baseline text-[11px] gap-2">
-                    <EditableField
-                      as="span"
-                      fieldPath={`experience[${idx}].company`}
-                      value={exp.company}
-                      placeholder="Company"
-                      className="font-bold text-zinc-950"
-                    />
-                    <EditableField
-                      as="span"
-                      fieldPath={`experience[${idx}].location`}
-                      value={exp.location || ''}
-                      placeholder="Location"
-                      className="font-medium text-zinc-700 text-[10.5px]"
-                    />
-                  </div>
-                  <div className="flex justify-between items-baseline text-[10.5px] italic text-zinc-700 gap-2">
+                  <div className="hr-ats-row">
                     <EditableField
                       as="span"
                       fieldPath={`experience[${idx}].title`}
                       value={exp.title}
                       placeholder="Title"
+                      className="hr-ats-entry-title font-bold"
                     />
                     <EditableDateRange
                       startDate={exp.startDate}
@@ -211,7 +189,23 @@ export function JakeTemplate({
                       current={exp.current}
                       startFieldPath={`experience[${idx}].startDate`}
                       endFieldPath={`experience[${idx}].endDate`}
-                      className="not-italic text-zinc-600 font-normal text-[10.5px]"
+                      className="hr-ats-meta shrink-0 whitespace-nowrap"
+                    />
+                  </div>
+                  <div className="hr-ats-row">
+                    <EditableField
+                      as="span"
+                      fieldPath={`experience[${idx}].company`}
+                      value={exp.company}
+                      placeholder="Company"
+                      className="hr-ats-entry-sub italic"
+                    />
+                    <EditableField
+                      as="span"
+                      fieldPath={`experience[${idx}].location`}
+                      value={exp.location || ''}
+                      placeholder="Location"
+                      className="hr-ats-meta shrink-0"
                     />
                   </div>
                   <EditableBulletList
@@ -220,7 +214,7 @@ export function JakeTemplate({
                     expIdx={idx}
                     highlightKeywords={highlightKeywords}
                     showHighlights={showHighlights}
-                    className="list-disc list-outside ml-4 space-y-0.5 pt-0.5 text-[10.5px] text-zinc-800 leading-relaxed"
+                    className="hr-ats-bullets list-disc list-outside ml-[1.1em] mt-0.5 space-y-0"
                     liClassName="pl-0.5"
                   />
                 </div>
@@ -229,129 +223,131 @@ export function JakeTemplate({
           </section>
         )}
 
-        {/* Projects Section */}
-        {projects && projects.length > 0 && (
+        {(isEditable || (projects && projects.length > 0)) && (
           <section data-resume-section="projects" className="resume-section">
-            <div
-              className="flex items-center justify-between pb-0.5 mb-2 border-b"
-              style={{ borderBottomColor: ruleColor, borderBottomWidth: '1.5px' }}
-            >
-              <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-950">
-                Projects
-              </h2>
+            <div className="flex items-center justify-between gap-2">
+              {sectionTitle('Projects')}
               <div className="flex items-center gap-1">
                 <CanvasSectionMoveButtons sectionKey="projects" label="Projects" />
                 <CanvasSectionAddButton label="Project" onClick={onAddProject} />
               </div>
             </div>
-            <div className="space-y-2.5">
-              {projects.map((proj, idx) => (
-                <div key={proj.id || idx} className="resume-entry group/entry relative space-y-0.5">
-                  <CanvasEntryDeleteButton onClick={() => onDeleteProject?.(idx)} label="Delete project" />
-                  <div className="flex justify-between items-baseline text-[11px] gap-2">
-                    <div className="font-bold text-zinc-950 flex flex-wrap items-center gap-1.5">
-                      <EditableField
-                        as="span"
-                        fieldPath={`projects[${idx}].name`}
-                        value={proj.name}
-                        placeholder="Project Name"
-                      />
-                      {(isEditable || proj.url) && (
-                        <span className="text-[10px] text-zinc-500 font-normal underline">
+            <div className="mt-1 hr-entry-stack" data-hr-entry-stack="true">
+              {(projects || []).map((proj, idx) => {
+                const desc = (proj.description || '').trim();
+                const name = (proj.name || '').trim();
+                const showDesc = Boolean(desc) && desc.toLowerCase() !== name.toLowerCase();
+                const urlLabel = (proj.url || '').trim();
+                const showUrl =
+                  Boolean(urlLabel) &&
+                  !/^view\s+project$/i.test(urlLabel) &&
+                  (isEditable || Boolean(urlLabel));
+
+                return (
+                  <div key={proj.id || idx} className="resume-entry group/entry relative">
+                    <CanvasEntryDeleteButton onClick={() => onDeleteProject?.(idx)} label="Delete project" />
+                    <div className="hr-ats-row items-baseline">
+                      <div className="flex flex-wrap items-baseline gap-x-1.5 min-w-0">
+                        <EditableField
+                          as="span"
+                          fieldPath={`projects[${idx}].name`}
+                          value={proj.name}
+                          placeholder="Project Name"
+                          className="hr-ats-entry-title font-bold"
+                        />
+                        {showUrl && (
                           <EditableContactLink
                             fieldPath={`projects[${idx}].url`}
                             value={proj.url}
                             placeholder="project-url.com"
                             isUrl={true}
+                            className="hr-ats-meta underline"
                           />
-                        </span>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  {(isEditable || proj.description) && (
-                    <EditableField
-                      as="p"
-                      fieldPath={`projects[${idx}].description`}
-                      value={proj.description || ''}
-                      placeholder="Project description and key technical architecture..."
-                      className="text-[10.5px] text-zinc-700 leading-normal block"
+                    {showDesc && (
+                      <EditableField
+                        as="p"
+                        fieldPath={`projects[${idx}].description`}
+                        value={proj.description || ''}
+                        placeholder="Tech stack or one-line summary"
+                        className="hr-ats-entry-sub italic block mt-0.5"
+                      />
+                    )}
+                    <EditableBulletList
+                      bullets={proj.highlights || []}
+                      section="projects"
+                      projIdx={idx}
+                      highlightKeywords={highlightKeywords}
+                      showHighlights={showHighlights}
+                      className="hr-ats-bullets list-disc list-outside ml-[1.1em] mt-0.5 space-y-0"
+                      liClassName="pl-0.5"
                     />
-                  )}
-                  <EditableBulletList
-                    bullets={proj.highlights || []}
-                    section="projects"
-                    projIdx={idx}
-                    highlightKeywords={highlightKeywords}
-                    showHighlights={showHighlights}
-                    className="list-disc list-outside ml-4 space-y-0.5 text-[10.5px] text-zinc-800 leading-relaxed"
-                    liClassName="pl-0.5"
-                  />
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}
 
-        {/* Education Section */}
-        {education.length > 0 && (
+        {(isEditable || education.length > 0) && (
           <section data-resume-section="education" className="resume-section">
-            <div
-              className="flex items-center justify-between pb-0.5 mb-2 border-b"
-              style={{ borderBottomColor: ruleColor, borderBottomWidth: '1.5px' }}
-            >
-              <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-950">
-                Education
-              </h2>
+            <div className="flex items-center justify-between gap-2">
+              {sectionTitle('Education')}
               <div className="flex items-center gap-1">
                 <CanvasSectionMoveButtons sectionKey="education" label="Education" />
                 <CanvasSectionAddButton label="Degree" onClick={onAddEducation} />
               </div>
             </div>
-            <div className="space-y-2">
+            <div className="mt-1 hr-entry-stack" data-hr-entry-stack="true">
               {education.map((edu, idx) => (
-                <div key={edu.id || idx} className="resume-entry group/entry relative text-[11px]">
+                <div key={edu.id || idx} className="resume-entry group/entry relative">
                   <CanvasEntryDeleteButton onClick={() => onDeleteEducation?.(idx)} label="Delete degree" />
-                  <div className="flex justify-between items-baseline font-bold text-zinc-950 gap-2">
+                  <div className="hr-ats-row">
                     <EditableField
                       as="span"
                       fieldPath={`education[${idx}].school`}
                       value={edu.school}
                       placeholder="University / School"
+                      className="hr-ats-entry-title font-bold"
                     />
                     <EditableField
                       as="span"
-                      fieldPath={`education[${idx}].location`}
-                      value={edu.location || ''}
-                      placeholder="Location"
-                      className="font-semibold text-zinc-700 text-[10.5px]"
+                      fieldPath={`education[${idx}].graduationDate`}
+                      value={edu.graduationDate || ''}
+                      placeholder="Year"
+                      className="hr-ats-meta shrink-0"
                     />
                   </div>
-                  <div className="flex justify-between items-baseline text-zinc-700 italic text-[10.5px] gap-2">
-                    <div className="flex items-center gap-1 flex-wrap">
+                  <div className="hr-ats-row">
+                    <div className="flex flex-wrap items-baseline gap-1 min-w-0">
                       <EditableField
                         as="span"
                         fieldPath={`education[${idx}].degree`}
                         value={edu.degree}
                         placeholder="Degree"
+                        className="hr-ats-entry-sub italic"
                       />
-                      {(isEditable || edu.field) && (
+                      {(isEditable || edu.field) && edu.field !== 'N/A' && (
                         <>
-                          <span className="not-italic text-zinc-500">in</span>
+                          <span className="hr-ats-meta">in</span>
                           <EditableField
                             as="span"
                             fieldPath={`education[${idx}].field`}
                             value={edu.field || ''}
                             placeholder="Field of Study"
+                            className="hr-ats-entry-sub italic"
                           />
                         </>
                       )}
                     </div>
                     <EditableField
                       as="span"
-                      fieldPath={`education[${idx}].graduationDate`}
-                      value={edu.graduationDate || ''}
-                      placeholder="Graduation Date"
-                      className="not-italic text-zinc-600 font-normal"
+                      fieldPath={`education[${idx}].location`}
+                      value={edu.location || ''}
+                      placeholder=""
+                      className="hr-ats-meta shrink-0"
                     />
                   </div>
                 </div>
@@ -360,41 +356,39 @@ export function JakeTemplate({
           </section>
         )}
 
-        {/* Technical Skills Section */}
-        {skills.length > 0 && (
+        {(isEditable || skills.length > 0) && (
           <section data-resume-section="skills" className="resume-section">
-            <div
-              className="flex items-center justify-between pb-0.5 mb-1.5 border-b"
-              style={{ borderBottomColor: ruleColor, borderBottomWidth: '1.5px' }}
-            >
-              <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-950">
-                Technical Skills
-              </h2>
+            <div className="flex items-center justify-between gap-2">
+              {sectionTitle('Technical Skills')}
               <div className="flex items-center gap-1">
                 <CanvasSectionMoveButtons sectionKey="skills" label="Skills" />
                 <CanvasSectionAddButton label="Skill" onClick={() => onAddSkill && onAddSkill()} />
               </div>
             </div>
-            <div className="space-y-1 text-[10.5px] text-zinc-800">
+            <div className="mt-1 space-y-0">
               {skillsByCategory.map((group, gIdx) => (
-                <div key={gIdx} className="flex gap-1.5 items-baseline">
-                  <span className="font-bold text-zinc-950 shrink-0">
-                    {group.category}:
-                  </span>
-                  <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-zinc-700">
+                <div key={gIdx} className="hr-ats-skill-row">
+                  <span className="hr-ats-skill-label font-bold">{group.category}: </span>
+                  <span className="hr-ats-body-text">
                     {group.items.map((item, iIdx) => (
-                      <span key={item.idx} className="group/skill inline-flex items-center gap-0.5">
-                        {iIdx > 0 && <span className="text-zinc-400 select-none mr-1">,</span>}
-                        <EditableField
-                          as="span"
-                          fieldPath={`skills[${item.idx}].name`}
-                          value={item.name}
-                          placeholder="Skill"
-                        />
-                        <CanvasEntryDeleteButton variant="chip" onClick={() => onDeleteSkill?.(item.idx)} label="Remove skill" />
-                      </span>
+                      <React.Fragment key={item.idx}>
+                        {iIdx > 0 ? ', ' : null}
+                        <span className="group/skill">
+                          <EditableField
+                            as="span"
+                            fieldPath={`skills[${item.idx}].name`}
+                            value={item.name}
+                            placeholder="Skill"
+                          />
+                          <CanvasEntryDeleteButton
+                            variant="chip"
+                            onClick={() => onDeleteSkill?.(item.idx)}
+                            label="Remove skill"
+                          />
+                        </span>
+                      </React.Fragment>
                     ))}
-                  </div>
+                  </span>
                 </div>
               ))}
             </div>
@@ -402,7 +396,6 @@ export function JakeTemplate({
         )}
 
         <CertificationsBlock content={content} accentColor={ruleColor} />
-
         <CustomSectionsBlock
           content={content}
           accentColor={accentColor}

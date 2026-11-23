@@ -12,11 +12,25 @@ export interface DappledLightProps {
   showWindowFrame?: boolean;// Show subtle window mullions
 }
 
+function hexToRgb(hex: string): [number, number, number] {
+  const value = hex.replace('#', '').trim();
+  const full =
+    value.length === 3
+      ? value
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : value.slice(0, 6);
+  const n = Number.parseInt(full, 16);
+  if (Number.isNaN(n)) return [56, 114, 250];
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
 export function DappledLight({
   className = '',
-  lightColor = '#7C3AED',
+  lightColor = '#3872FA',
   beamOpacity = 0.32,
-  leafColor = '#07080E',
+  leafColor = '#060b14',
   speed = 1.0,
   placement = 'top-right',
   showWindowFrame = true,
@@ -195,10 +209,15 @@ export function DappledLight({
         height * 0.75,
         Math.max(width, height) * 0.85
       );
-      lightGrad.addColorStop(0.0, `rgba(168, 85, 247, ${currentOpacity * 1.1})`);
-      lightGrad.addColorStop(0.35, `rgba(124, 58, 237, ${currentOpacity * 0.85})`);
-      lightGrad.addColorStop(0.70, `rgba(85, 37, 245, ${currentOpacity * 0.4})`);
-      lightGrad.addColorStop(1.0, 'rgba(85, 37, 245, 0)');
+      const [lr, lg, lb] = hexToRgb(lightColor);
+      const lighten = (c: number, amount: number) => Math.min(255, Math.round(c + (255 - c) * amount));
+      const darken = (c: number, amount: number) => Math.max(0, Math.round(c * (1 - amount)));
+      const [hr, hg, hb] = [lighten(lr, 0.35), lighten(lg, 0.35), lighten(lb, 0.2)];
+      const [dr, dg, db] = [darken(lr, 0.25), darken(lg, 0.25), darken(lb, 0.15)];
+      lightGrad.addColorStop(0.0, `rgba(${hr}, ${hg}, ${hb}, ${currentOpacity * 1.1})`);
+      lightGrad.addColorStop(0.35, `rgba(${lr}, ${lg}, ${lb}, ${currentOpacity * 0.85})`);
+      lightGrad.addColorStop(0.70, `rgba(${dr}, ${dg}, ${db}, ${currentOpacity * 0.4})`);
+      lightGrad.addColorStop(1.0, `rgba(${dr}, ${dg}, ${db}, 0)`);
 
       // Draw the illuminated window shape with soft blur
       ctx.globalCompositeOperation = 'source-over';

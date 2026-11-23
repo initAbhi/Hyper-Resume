@@ -17,12 +17,14 @@ import {
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { FeatureLimitPaywallModal } from '@/components/billing/FeatureLimitPaywallModal';
 import type {
   ResumeContent,
   WritingCheckCategory,
   WritingCheckResponse,
   WritingIssueItem,
 } from '@/lib/api-client';
+import { useAuthOptional } from '@/lib/auth-context';
 import {
   applyAllSafeFixes,
   applyWritingIssueFix,
@@ -93,7 +95,7 @@ const CATEGORY_META: Record<
   },
 };
 
-function renderDiffSegment(issue: WritingIssueItem) {
+function renderDiffSegment(issue: WritingIssueItem, blurCorrection: boolean) {
   const { originalText, matchedText, suggestedReplacement } = issue;
   if (!matchedText) {
     return (
@@ -133,7 +135,12 @@ function renderDiffSegment(issue: WritingIssueItem) {
       {!isRedundantWithTrailingText && (
         <>
           {' '}
-          <mark className="px-1 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-200 font-semibold not-italic">
+          <mark
+            className={`px-1 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-200 font-semibold not-italic ${
+              blurCorrection ? 'select-none blur-[5px] opacity-80' : ''
+            }`}
+            aria-hidden={blurCorrection || undefined}
+          >
             {suggestedReplacement}
           </mark>
         </>
@@ -161,6 +168,8 @@ export function FixMistakesDrawer({
   aiCheckError,
   onLocateIssue,
 }: FixMistakesDrawerProps) {
+  const auth = useAuthOptional();
+  const hasActivePro = Boolean(auth?.hasActivePro);
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -169,6 +178,8 @@ export function FixMistakesDrawer({
 
   const [activeTab, setActiveTab] = useState<FilterTabId>('all');
   const [liveStatusMessage, setLiveStatusMessage] = useState('');
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const blurCorrections = !hasActivePro;
 
   // Sync open state cleanly with native modal <dialog> when in overlay mode
   useEffect(() => {
@@ -223,6 +234,10 @@ export function FixMistakesDrawer({
   );
 
   const handleApplySingle = (issue: WritingIssueItem) => {
+    if (!hasActivePro) {
+      setPaywallOpen(true);
+      return;
+    }
     const updated = applyWritingIssueFix(content, issue);
     if (updated !== content) {
       onApplyContent(updated);
@@ -233,6 +248,10 @@ export function FixMistakesDrawer({
   };
 
   const handleApplyAll = () => {
+    if (!hasActivePro) {
+      setPaywallOpen(true);
+      return;
+    }
     const { updated, appliedCount } = applyAllSafeFixes(
       content,
       autoFixableVisible,
@@ -492,13 +511,22 @@ export function FixMistakesDrawer({
                     {issue.reason}
                   </p>
 
-                  {/* Inline Highlighted Preview */}
+                  {/* Inline Highlighted Preview — corrections blurred for free users */}
                   <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/70 dark:border-zinc-700/60 text-[11.5px] space-y-1.5">
-                    <div>{renderDiffSegment(issue)}</div>
+                    <div>{renderDiffSegment(issue, blurCorrections)}</div>
                     {autoFixable && issue.rewrittenText !== issue.originalText && (
                       <div className="pt-1.5 border-t border-zinc-200/60 dark:border-zinc-700/50 text-[11px] text-emerald-800 dark:text-emerald-300 flex items-start gap-1.5">
                         <ArrowRight className="w-3.5 h-3.5 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
-                        <span>{issue.rewrittenText}</span>
+                        <span
+                          className={
+                            blurCorrections
+                              ? 'select-none blur-[5px] opacity-80'
+                              : undefined
+                          }
+                          aria-hidden={blurCorrections || undefined}
+                        >
+                          {issue.rewrittenText}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -563,40 +591,54 @@ export function FixMistakesDrawer({
       </div>
   );
 
+  const paywall = (
+    <FeatureLimitPaywallModal
+      isOpen={paywallOpen}
+      onClose={() => setPaywallOpen(false)}
+      kind="writing_fixes"
+    />
+  );
+
   if (docked) {
     return (
-      <aside
-        id="fix-mistakes-drawer"
-        aria-labelledby={titleId}
-        className="h-full w-full bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 shadow-sm overflow-hidden flex flex-col"
-      >
-        {innerContent}
-      </aside>
+      <>
+        <aside
+          id="fix-mistakes-drawer"
+          aria-labelledby={titleId}
+          className="h-full w-full bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 shadow-sm overflow-hidden flex flex-col"
+        >
+          {innerContent}
+        </aside>
+        {paywall}
+      </>
     );
   }
 
   return (
-    <dialog
-      ref={dialogRef}
-      id="fix-mistakes-drawer"
-      aria-labelledby={titleId}
-      onClose={onClose}
-      onCancel={(e) => {
-        e.preventDefault();
-        onClose();
-      }}
-      onPointerDown={(e) => {
-        pointerDownOutsideRef.current = isPointerOutsideDialog(e);
-      }}
-      onPointerUp={(e) => {
-        if (pointerDownOutsideRef.current && isPointerOutsideDialog(e)) {
+    <>
+      <dialog
+        ref={dialogRef}
+        id="fix-mistakes-drawer"
+        aria-labelledby={titleId}
+        onClose={onClose}
+        onCancel={(e) => {
+          e.preventDefault();
           onClose();
-        }
-        pointerDownOutsideRef.current = false;
-      }}
-      className="m-0 ml-auto h-full max-h-none w-full max-w-[460px] p-0 border-l border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-2xl [overscroll-behavior:contain] backdrop:bg-black/25 backdrop:overflow-hidden backdrop:[overscroll-behavior:contain]"
-    >
-      {innerContent}
-    </dialog>
+        }}
+        onPointerDown={(e) => {
+          pointerDownOutsideRef.current = isPointerOutsideDialog(e);
+        }}
+        onPointerUp={(e) => {
+          if (pointerDownOutsideRef.current && isPointerOutsideDialog(e)) {
+            onClose();
+          }
+          pointerDownOutsideRef.current = false;
+        }}
+        className="m-0 ml-auto h-full max-h-none w-full max-w-[460px] p-0 border-l border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-2xl [overscroll-behavior:contain] backdrop:bg-black/25 backdrop:overflow-hidden backdrop:[overscroll-behavior:contain]"
+      >
+        {innerContent}
+      </dialog>
+      {paywall}
+    </>
   );
 }

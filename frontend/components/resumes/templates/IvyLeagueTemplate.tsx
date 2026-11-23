@@ -342,18 +342,20 @@ export function IvyLeagueTemplate({
               <CanvasSectionAddButton label="Skill" onClick={() => onAddSkill && onAddSkill()} />
             </div>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[10.5px] text-zinc-800">
+          <div className="text-center text-[10.5px] text-zinc-800 leading-snug">
             {skills.map((s, idx) => (
-              <span key={idx} className="group/skill inline-flex items-center gap-0.5">
-                {idx > 0 && <span className="text-zinc-400 select-none mr-1">•</span>}
-                <EditableField
-                  as="span"
-                  fieldPath={`skills[${idx}].name`}
-                  value={s.name}
-                  placeholder="Skill"
-                />
-                <CanvasEntryDeleteButton variant="chip" onClick={() => onDeleteSkill?.(idx)} label="Remove skill" />
-              </span>
+              <React.Fragment key={idx}>
+                {idx > 0 ? <span className="text-zinc-400 select-none"> • </span> : null}
+                <span className="group/skill">
+                  <EditableField
+                    as="span"
+                    fieldPath={`skills[${idx}].name`}
+                    value={s.name}
+                    placeholder="Skill"
+                  />
+                  <CanvasEntryDeleteButton variant="chip" onClick={() => onDeleteSkill?.(idx)} label="Remove skill" />
+                </span>
+              </React.Fragment>
             ))}
           </div>
         </section>

@@ -20,7 +20,8 @@ import {
   ShieldCheck,
   Mail,
 } from 'lucide-react';
-import { LinkedInIcon } from '@/components/linkedin/LinkedInIcon';
+// LinkedIn Studio temporarily hidden from sidebar
+// import { LinkedInIcon } from '@/components/linkedin/LinkedInIcon';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { Logo } from '@/components/ui/Logo';
 import { useAuth } from '@/lib/auth-context';
@@ -31,7 +32,16 @@ import { GlobalAgentDrawer } from '@/components/layout/GlobalAgentDrawer';
 function AppLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, creditBalance, isAuthenticated, isLoading, logout } = useAuth();
+  const { user, creditBalance, hasActivePro, isAuthenticated, isLoading, logout } = useAuth();
+
+  const planLabel = (() => {
+    if (!hasActivePro) return 'Free Starter';
+    if (user?.isLifetimePro || user?.proPlanId === 'pro_lifetime') return 'Lifetime Pro';
+    if (user?.proPlanId === 'pro_weekly') return 'Pro · 1 Week';
+    if (user?.proPlanId === 'pro_monthly') return 'Pro · 1 Month';
+    if (user?.proPlanId === 'pro_6month') return 'Pro · 6 Months';
+    return 'Pro';
+  })();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -165,11 +175,12 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
     { label: 'My Resumes', href: '/app/resumes', icon: FileText },
     { label: 'Sample Library', href: '/app/samples', icon: BookOpen },
     { label: 'Match a Job', href: '/app/match', icon: Sparkles },
-    { label: 'LinkedIn Studio', href: '/app/linkedin', icon: LinkedInIcon, badge: 'New' },
-    { label: 'Cover Letters', href: '/app/cover-letters', icon: Mail, badge: 'New' },
+    // Temporarily hidden — LinkedIn Studio not production-ready
+    // { label: 'LinkedIn Studio', href: '/app/linkedin', icon: LinkedInIcon, badge: 'New' },
+    { label: 'Cover Letters', href: '/app/cover-letters', icon: Mail },
     { label: 'Applications', href: '/app/applications', icon: Briefcase },
-    { label: 'AI Interview', href: '/app/interview', icon: Mic, badge: 'New' },
-    { label: 'Job Search', href: '/app/job-search', icon: Search, badge: 'Live' },
+    { label: 'AI Interview', href: '/app/interview', icon: Mic, badge: 'Soon' },
+    { label: 'Job Search', href: '/app/job-search', icon: Search },
     ...(user?.role === 'admin'
       ? [{ label: 'Admin Center', href: '/admin', icon: ShieldCheck, badge: 'Admin' }]
       : []),
@@ -179,6 +190,14 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
     item.href === '/app' ? pathname === '/app' : pathname.startsWith(item.href)
   );
   const isResumeEditor = /^\/app\/resumes\/[^/]+$/.test(pathname);
+
+  // On the resume editor, keep the workspace nav as an icon rail so the canvas
+  // stays lean — hover still expands; pin still available.
+  useEffect(() => {
+    if (!isResumeEditor) return;
+    setIsPinned(false);
+    setIsHovered(false);
+  }, [isResumeEditor, pathname]);
 
   // Dynamic per-page document title for authenticated workspace routes (UX-31)
   useEffect(() => {
@@ -219,7 +238,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
       {/* Desktop Sidebar Layout Placeholder (Preserves space in flex layout, preventing layout jumps) */}
       <div
         className={`print:hidden shrink-0 hidden md:block transition-all duration-200 ease-in-out ${
-          isPinned ? 'w-[288px]' : 'w-[76px]'
+          isPinned ? 'w-[264px]' : 'w-[56px]'
         }`}
         aria-hidden="true"
       />
@@ -231,21 +250,17 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
         onFocus={handleFocus}
         onBlur={handleBlur}
         className={`print:hidden fixed top-0 bottom-0 left-0 h-screen ${
-          isExpanded ? 'w-[288px]' : 'w-[76px]'
-        } border-r border-[#E2E5E9] dark:border-[#252A33] bg-white dark:bg-[#14171C] flex flex-col justify-between shrink-0 hidden md:flex transition-all duration-200 ease-in-out z-30 select-none ${
+          isExpanded ? 'w-[264px]' : 'w-[56px]'
+        } border-r border-[#E2E5E9] dark:border-[#252A33] bg-white dark:bg-[#14171C] flex flex-col justify-between shrink-0 hidden md:flex transition-all duration-200 ease-in-out z-30 select-none overflow-x-clip overflow-y-hidden max-w-[264px] no-scrollbar ${
           !isPinned && isExpanded ? 'shadow-xl dark:shadow-2xl dark:shadow-black/60' : ''
         }`}
       >
-        <div className="flex flex-col flex-1 min-h-0">
+        <div className="flex flex-col flex-1 min-h-0 overflow-x-clip overflow-y-hidden w-full max-w-full min-w-0">
           {/* Workspace Brand Header */}
-          <div
-            className={`px-4 border-b border-[#E2E5E9] dark:border-[#252A33] flex items-center ${
-              isExpanded ? 'justify-between' : 'justify-center'
-            } h-14 shrink-0 transition-colors`}
-          >
+          <div className={`${isExpanded ? 'px-4' : 'px-1.5'} border-b border-[#E2E5E9] dark:border-[#252A33] flex items-center justify-center h-14 shrink-0 overflow-hidden w-full`}>
             <Link
               href="/app"
-              className="flex items-center gap-2 min-w-0"
+              className="flex items-center gap-2 min-w-0 max-w-full"
               title="HypeResume Workspace"
               onClick={(e) => {
                 if (!hasHoverSupport && !isExpanded) {
@@ -260,31 +275,10 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                 <Logo variant="icon" size="md" priority />
               )}
             </Link>
-
-            {isExpanded && (
-              <button
-                type="button"
-                onClick={togglePin}
-                className={`p-1.5 rounded-md transition-colors ${
-                  isPinned
-                    ? 'text-[#285FEA] bg-[#285FEA]/10 hover:bg-[#285FEA]/20 dark:bg-[#285FEA]/20 dark:text-[#3B75F2]'
-                    : 'text-[#525B68] dark:text-[#A3ACB9] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5] hover:bg-[#F1F3F5] dark:hover:bg-[#1D2128]'
-                }`}
-                title={isPinned ? 'Unpin sidebar (enable hover-to-expand)' : 'Pin sidebar (keep expanded)'}
-                aria-label={isPinned ? 'Unpin sidebar' : 'Pin sidebar'}
-                aria-pressed={isPinned}
-              >
-                <Pin
-                  className={`w-4 h-4 transition-transform duration-200 ${
-                    isPinned ? 'fill-current rotate-0' : '-rotate-45'
-                  }`}
-                />
-              </button>
-            )}
           </div>
 
           {/* Navigation Links */}
-          <nav className="p-2 space-y-0.5 overflow-y-auto flex-1" aria-label="Workspace Sidebar">
+          <nav className="p-1.5 space-y-0.5 overflow-y-auto overflow-x-clip flex-1 no-scrollbar w-full max-w-full min-w-0" aria-label="Workspace Sidebar">
             {navItems.map((item) => {
               const IconComp = item.icon;
               const isActive =
@@ -336,10 +330,43 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
 
         {/* User Workspace Info, Settings & Logout */}
         <div
-          className={`p-2.5 border-t border-[#E2E5E9] dark:border-[#252A33] shrink-0 ${
+          className={`p-2 border-t border-[#E2E5E9] dark:border-[#252A33] shrink-0 overflow-x-clip w-full max-w-full min-w-0 no-scrollbar ${
             isExpanded ? 'space-y-1' : 'space-y-1.5'
           }`}
         >
+          {/* Open / pin sidebar — centered, just above profile */}
+          <div className="flex justify-center mb-0.5">
+            <button
+              type="button"
+              onClick={togglePin}
+              className={`inline-flex items-center justify-center rounded-md transition-colors shrink-0 ${
+                isExpanded ? 'gap-1.5 px-3 py-1.5 w-full max-w-[220px]' : 'w-8 h-8'
+              } ${
+                isPinned
+                  ? 'text-[#285FEA] bg-[#285FEA]/10 hover:bg-[#285FEA]/20 dark:bg-[#285FEA]/20 dark:text-[#3B75F2]'
+                  : 'text-[#525B68] dark:text-[#A3ACB9] hover:text-[#1A1D23] dark:hover:text-[#F0F2F5] hover:bg-[#F1F3F5] dark:hover:bg-[#1D2128]'
+              }`}
+              title={
+                isPinned
+                  ? 'Unpin sidebar (icon rail + hover to expand)'
+                  : 'Pin sidebar open'
+              }
+              aria-label={isPinned ? 'Unpin sidebar' : 'Pin sidebar open'}
+              aria-pressed={isPinned}
+            >
+              <Pin
+                className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${
+                  isPinned ? 'fill-current rotate-0' : '-rotate-45'
+                }`}
+              />
+              {isExpanded && (
+                <span className="text-[11px] font-medium tracking-tight">
+                  {isPinned ? 'Unpin' : 'Pin open'}
+                </span>
+              )}
+            </button>
+          </div>
+
           {isExpanded ? (
             <>
               {/* Candidate Profile Snippet */}
@@ -357,11 +384,33 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                     </p>
                   </div>
                 </div>
-                <div className="mt-1.5 pt-1.5 border-t border-[#E2E5E9]/60 dark:border-[#252A33] flex items-center justify-between text-[11px]">
-                  <span className="text-[#5A6270] dark:text-[#9EA7B4]">Credits</span>
-                  <Link href="/pricing" className="font-semibold text-[#285FEA] hover:underline">
-                    {creditBalance}
-                  </Link>
+                <div className="mt-1.5 pt-1.5 border-t border-[#E2E5E9]/60 dark:border-[#252A33] space-y-1.5 text-[11px]">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[#5A6270] dark:text-[#9EA7B4]">Plan</span>
+                    <span
+                      className={`font-semibold truncate ${
+                        hasActivePro
+                          ? 'text-emerald-700 dark:text-emerald-400'
+                          : 'text-[#1A1D23] dark:text-[#F0F2F5]'
+                      }`}
+                    >
+                      {planLabel}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#5A6270] dark:text-[#9EA7B4]">Credits</span>
+                    <Link href="/pricing" className="font-semibold text-[#285FEA] hover:underline">
+                      {creditBalance}
+                    </Link>
+                  </div>
+                  {!hasActivePro && (
+                    <Link
+                      href="/pricing"
+                      className="mt-0.5 flex w-full items-center justify-center rounded-md bg-[#285FEA] px-2 py-1.5 text-[11px] font-semibold text-white hover:bg-[#1f4fd0] transition-colors"
+                    >
+                      Upgrade
+                    </Link>
+                  )}
                 </div>
               </div>
 
@@ -532,9 +581,30 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
 
               <div className="pt-3 border-t border-[#E2E5E9] dark:border-[#252A33] space-y-2">
                 <div className="flex items-center justify-between text-xs px-1">
+                  <span className="text-[#525B68] dark:text-[#A3ACB9]">Plan</span>
+                  <span
+                    className={`font-semibold ${
+                      hasActivePro
+                        ? 'text-emerald-700 dark:text-emerald-400'
+                        : 'text-[#1A1D23] dark:text-[#F0F2F5]'
+                    }`}
+                  >
+                    {planLabel}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs px-1">
                   <span className="text-[#525B68] dark:text-[#A3ACB9]">Credits</span>
                   <span className="font-semibold text-[#285FEA]">{creditBalance}</span>
                 </div>
+                {!hasActivePro && (
+                  <Link
+                    href="/pricing"
+                    onClick={() => setIsMobileNavOpen(false)}
+                    className="w-full flex items-center justify-center rounded-md bg-[#285FEA] px-2.5 py-2 text-xs font-semibold text-white hover:bg-[#1f4fd0] transition-colors"
+                  >
+                    Upgrade
+                  </Link>
+                )}
                 <Link
                   href="/app/settings"
                   onClick={() => setIsMobileNavOpen(false)}

@@ -110,13 +110,13 @@ export class AuthService {
     });
     await this.profileRepository.save(profile);
 
-    // Initial Welcome Signup Credits (5 free audits/matches)
+    // Initial Welcome Signup Credits (10 lifetime AI credits)
     const initialCredits = this.creditLedgerRepository.create({
       userId: savedUser.id,
-      amount: 5,
+      amount: 10,
       transactionType: 'signup_bonus',
       idempotencyKey: `signup-bonus-${savedUser.id}`,
-      description: 'Welcome bonus: 5 free AI optimizations & analyses',
+      description: 'Welcome bonus: 10 lifetime AI credits',
       metadata: { initial: true },
     });
     await this.creditLedgerRepository.save(initialCredits);
@@ -230,6 +230,38 @@ export class AuthService {
 
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+
+    // Grant 75 Pro AI credits once per ISO week while pass is active
+    const hasActivePro =
+      Boolean(user.isLifetimePro) ||
+      Boolean(user.proExpiresAt && new Date(user.proExpiresAt).getTime() > Date.now());
+    if (hasActivePro) {
+      const now = new Date();
+      const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+      const dayNum = d.getUTCDay() || 7;
+      d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+      const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+      const weekKey = `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+      const idempotencyKey = `weekly-refill:${userId}:${weekKey}`;
+      const existing = await this.creditLedgerRepository.findOne({ where: { idempotencyKey } });
+      if (!existing) {
+        try {
+          await this.creditLedgerRepository.save(
+            this.creditLedgerRepository.create({
+              userId,
+              amount: 75,
+              transactionType: 'weekly_refill',
+              idempotencyKey,
+              description: `Weekly Pro AI credits (75) for ${weekKey}`,
+              metadata: { weekKey, amount: 75 },
+            }),
+          );
+        } catch {
+          // Race on unique idempotency — ignore
+        }
+      }
     }
 
     const { sum } = await this.creditLedgerRepository
@@ -501,10 +533,10 @@ export class AuthService {
       // Welcome signup bonus
       const initialCredits = this.creditLedgerRepository.create({
         userId: user.id,
-        amount: 5,
+        amount: 10,
         transactionType: 'signup_bonus',
         idempotencyKey: `signup-bonus-${user.id}`,
-        description: 'Welcome bonus: 5 free AI optimizations & analyses',
+        description: 'Welcome bonus: 10 lifetime AI credits',
         metadata: { provider: 'google', initial: true, targetRole: dto.targetRole, targetGoal: dto.targetGoal },
       });
       await this.creditLedgerRepository.save(initialCredits);

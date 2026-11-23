@@ -294,7 +294,8 @@ export function CanvasEntryDeleteButton({
           e.stopPropagation();
           onClick();
         }}
-        className={`print:hidden inline-flex items-center justify-center w-4 h-4 rounded-full transition-all opacity-65 sm:opacity-0 group-hover/skill:opacity-100 group-focus-within/skill:opacity-100 focus-visible:opacity-100 cursor-pointer select-none text-[10px] leading-none font-bold ${chipTone} ${className}`}
+        // Absolutely positioned so it never inserts gaps between skill commas
+        className={`print:hidden absolute -top-2 -right-2 z-10 items-center justify-center w-4 h-4 rounded-full transition-all hidden group-hover/skill:inline-flex group-focus-within/skill:inline-flex focus-visible:inline-flex cursor-pointer select-none text-[10px] leading-none font-bold ${chipTone} ${className}`}
         title={label}
         aria-label={label}
       >
@@ -304,8 +305,8 @@ export function CanvasEntryDeleteButton({
   }
 
   const entryTone = darkSurface
-    ? 'bg-zinc-900/90 text-rose-300 hover:text-white hover:bg-rose-600 border-white/25'
-    : 'bg-white text-rose-600 hover:text-white hover:bg-rose-600 border-rose-200';
+    ? 'bg-rose-600 text-white hover:bg-rose-500 border-rose-400/40'
+    : 'bg-rose-600 text-white hover:bg-rose-500 border-rose-700 shadow-sm';
 
   return (
     <button
@@ -316,7 +317,7 @@ export function CanvasEntryDeleteButton({
         e.stopPropagation();
         onClick();
       }}
-      className={`print:hidden absolute -top-1.5 -right-1.5 z-10 inline-flex items-center justify-center w-5 h-5 rounded-full border shadow-xs transition-all opacity-65 sm:opacity-0 group-hover/entry:opacity-100 group-focus-within/entry:opacity-100 focus-visible:opacity-100 cursor-pointer select-none text-[11px] leading-none font-bold ${entryTone} ${className}`}
+      className={`print:hidden absolute -top-1.5 right-0 z-20 inline-flex items-center justify-center w-5 h-5 rounded-full border transition-all opacity-100 sm:opacity-0 group-hover/entry:opacity-100 group-focus-within/entry:opacity-100 focus-visible:opacity-100 cursor-pointer select-none text-[12px] leading-none font-bold ${entryTone} ${className}`}
       title={label}
       aria-label={label}
     >

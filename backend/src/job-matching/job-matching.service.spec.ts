@@ -108,8 +108,10 @@ describe('JobMatchingService', () => {
       });
 
       expect(match.overallScore).toBeDefined();
-      expect(match.scoreComponents.requiredSkillsScore).toBe(50); // 1 of 2 supported
-      expect(match.scoreComponents.formattingScore).toBe(95);
+      expect(match.overallScore).toBeLessThanOrEqual(28);
+      // Thin resume: supported hits demoted to needs_confirmation (0.25 weight) → ~12–13
+      expect(match.scoreComponents.requiredSkillsScore).toBeLessThanOrEqual(25);
+      expect(match.scoreComponents.formattingScore).toBeLessThanOrEqual(40);
       expect(match.requirementsAnalysis).toHaveLength(2);
       expect((match.requirementsAnalysis[1] as any).keywords).toEqual(['Rust']);
       expect(match.jobDescription?.title).toBe('Backend Engineer');
@@ -268,7 +270,9 @@ describe('JobMatchingService', () => {
       });
 
       expect(publicMatch.overallScore).toBeGreaterThan(0);
-      expect(publicMatch.scoreComponents.requiredSkillsScore).toBe(50);
+      expect(publicMatch.overallScore).toBeLessThanOrEqual(28);
+      // Thin public resume: Redis demoted to needs_confirmation → ~13% required skills
+      expect(publicMatch.scoreComponents.requiredSkillsScore).toBeLessThanOrEqual(25);
       expect(publicMatch.requirementsAnalysis).toHaveLength(2);
       expect(publicMatch.recommendations.length).toBeGreaterThan(0);
       expect(mockCreditLedgerRepo.create).not.toHaveBeenCalled();

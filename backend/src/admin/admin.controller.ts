@@ -15,6 +15,8 @@ import { AdminGuard } from './guards/admin.guard.js';
 import { AdminService } from './admin.service.js';
 import { DodoPaymentProvider } from '../payments/providers/dodo-payment.provider.js';
 import { resolvePlanPricing } from '../payments/pricing-plans.js';
+import { ContactService } from '../contact/contact.service.js';
+import { UpdateContactStatusDto } from '../contact/dto/create-contact.dto.js';
 
 export class UpdatePaymentModeDto {
   @IsIn(['test_mode', 'live_mode'])
@@ -66,6 +68,7 @@ export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly dodoProvider: DodoPaymentProvider,
+    private readonly contactService: ContactService,
   ) {}
 
   @Get('stats')
@@ -147,6 +150,33 @@ export class AdminController {
   @ApiOperation({ summary: 'Audit trail of platform credit ledger operations' })
   async getCreditsAudit(@Query('limit') limit?: number) {
     return this.adminService.getCreditsAudit(limit ? Number(limit) : 50);
+  }
+
+  @Get('contact-submissions')
+  @ApiOperation({ summary: 'List inbound contact / support form submissions' })
+  async listContactSubmissions(
+    @Query('search') search?: string,
+    @Query('status') status?: string,
+    @Query('limit') limit?: number,
+  ) {
+    const [items, unreadCount] = await Promise.all([
+      this.contactService.listSubmissions({
+        search,
+        status,
+        limit: limit ? Number(limit) : 50,
+      }),
+      this.contactService.getUnreadCount(),
+    ]);
+    return { items, unreadCount };
+  }
+
+  @Patch('contact-submissions/:id')
+  @ApiOperation({ summary: 'Update contact submission status / admin notes' })
+  async updateContactSubmission(
+    @Param('id') id: string,
+    @Body() dto: UpdateContactStatusDto,
+  ) {
+    return this.contactService.updateStatus(id, dto.status, dto.adminNotes);
   }
 
   @Post('test-checkout')

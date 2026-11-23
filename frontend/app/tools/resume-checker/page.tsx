@@ -624,7 +624,7 @@ Required Qualifications:
                 <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 space-y-2">
                   <Link href="/register" className="w-full block">
                     <Button variant="primary" size="sm" className="w-full justify-center">
-                      <span>Create Free Account (5 Free Credits)</span>
+                      <span>Create Free Account (10 Free Credits)</span>
                       <ArrowRight className="w-4 h-4 ml-1.5" />
                     </Button>
                   </Link>

@@ -98,7 +98,7 @@ describe('AuthService', () => {
       expect(mockCreditLedgerRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: 'usr-123',
-          amount: 5,
+          amount: 10,
           transactionType: 'signup_bonus',
         }),
       );

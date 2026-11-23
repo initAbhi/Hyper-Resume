@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X, Check, Palette, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import type { ResumeLayoutSettings } from '@/lib/api-client';
 import {
@@ -10,12 +10,13 @@ import {
 } from '@/lib/resume-layout';
 
 export const ACCENT_SWATCHES = [
-  { id: 'blue', hex: '#2563eb', label: 'Royal Blue' },
+  { id: 'black', hex: '#000000', label: 'Black (Recommended)' },
+  { id: 'charcoal', hex: '#18181b', label: 'Charcoal' },
   { id: 'navy', hex: '#1e3a8a', label: 'Deep Navy' },
+  { id: 'blue', hex: '#2563eb', label: 'Royal Blue' },
   { id: 'teal', hex: '#0d9488', label: 'Teal' },
   { id: 'purple', hex: '#7c3aed', label: 'Purple' },
   { id: 'coral', hex: '#e11d48', label: 'Coral' },
-  { id: 'charcoal', hex: '#18181b', label: 'Charcoal' },
   { id: 'forest', hex: '#15803d', label: 'Forest' },
   { id: 'amber', hex: '#b45309', label: 'Amber' },
 ];
@@ -49,8 +50,11 @@ interface DesignPanelProps {
   onShowPhotoChange: (show: boolean) => void;
   photoUrl: string;
   onPhotoUrlChange: (url: string) => void;
+  /** When false, photo controls are disabled (template has no photo slot) */
+  supportsPhoto?: boolean;
   showHighlights: boolean;
   onShowHighlightsChange: (show: boolean) => void;
+  hasHighlightKeywords?: boolean;
   layout?: ResumeLayoutSettings;
   onLayoutChange?: (nextLayout: ResumeLayoutSettings) => void;
   onPreviewChange?: (preview: DesignLivePreview | null) => void;
@@ -72,29 +76,34 @@ export function DesignPanel({
   onShowPhotoChange,
   photoUrl,
   onPhotoUrlChange,
+  supportsPhoto = true,
   showHighlights,
   onShowHighlightsChange,
+  hasHighlightKeywords = false,
   layout,
   onLayoutChange,
   onPreviewChange,
 }: DesignPanelProps) {
+  const onPreviewChangeRef = useRef(onPreviewChange);
+  onPreviewChangeRef.current = onPreviewChange;
+
   useEffect(() => {
     if (!isOpen) {
-      onPreviewChange?.(null);
+      onPreviewChangeRef.current?.(null);
       return;
     }
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onPreviewChange?.(null);
+        onPreviewChangeRef.current?.(null);
         onClose();
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
-      onPreviewChange?.(null);
+      onPreviewChangeRef.current?.(null);
     };
-  }, [isOpen, onClose, onPreviewChange]);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -203,7 +212,7 @@ export function DesignPanel({
                   }`}
                 >
                   <div
-                    className="w-7 h-7 rounded-full shadow-inner flex items-center justify-center text-white transition-transform group-hover:scale-105"
+                    className="w-7 h-7 rounded-full shadow-inner flex items-center justify-center text-white"
                     style={{ backgroundColor: swatch.hex }}
                   >
                     {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
@@ -293,6 +302,7 @@ export function DesignPanel({
                   fontSizeScale: DEFAULT_LAYOUT_SETTINGS.fontSizeScale,
                   lineHeight: DEFAULT_LAYOUT_SETTINGS.lineHeight,
                   sectionSpacing: DEFAULT_LAYOUT_SETTINGS.sectionSpacing,
+                  entrySpacing: DEFAULT_LAYOUT_SETTINGS.entrySpacing,
                   pageMargin: DEFAULT_LAYOUT_SETTINGS.pageMargin,
                 })
               }
@@ -422,8 +432,8 @@ export function DesignPanel({
               <input
                 id="slider-font-scale"
                 type="range"
-                min={0.85}
-                max={1.15}
+                min={0.75}
+                max={1.25}
                 step={0.01}
                 value={spacing.fontSizeScale}
                 onChange={(e) =>
@@ -451,8 +461,8 @@ export function DesignPanel({
               <input
                 id="slider-line-height"
                 type="range"
-                min={1.2}
-                max={1.75}
+                min={1.1}
+                max={1.85}
                 step={0.05}
                 value={spacing.lineHeight}
                 onChange={(e) =>
@@ -480,15 +490,47 @@ export function DesignPanel({
               <input
                 id="slider-section-spacing"
                 type="range"
-                min={8}
-                max={28}
-                step={2}
+                min={2}
+                max={36}
+                step={1}
                 value={spacing.sectionSpacing}
                 onChange={(e) =>
                   updateSpacingField({ sectionSpacing: parseInt(e.target.value, 10) })
                 }
                 className="w-full accent-blue-600 cursor-pointer"
               />
+            </div>
+
+            <div>
+              <div className="flex justify-between text-[11px] mb-1">
+                <label
+                  htmlFor="slider-entry-spacing"
+                  className="font-medium text-zinc-700 dark:text-zinc-300"
+                >
+                  Entry Spacing
+                </label>
+                <span
+                  data-testid="readout-entry-spacing"
+                  className="font-mono font-semibold text-zinc-900 dark:text-zinc-100"
+                >
+                  {spacing.entrySpacing}px
+                </span>
+              </div>
+              <input
+                id="slider-entry-spacing"
+                type="range"
+                min={2}
+                max={28}
+                step={1}
+                value={spacing.entrySpacing}
+                onChange={(e) =>
+                  updateSpacingField({ entrySpacing: parseInt(e.target.value, 10) })
+                }
+                className="w-full accent-blue-600 cursor-pointer"
+              />
+              <p className="text-[10px] text-zinc-500 mt-1">
+                Gap between roles, projects, and education rows
+              </p>
             </div>
 
             <div>
@@ -509,8 +551,8 @@ export function DesignPanel({
               <input
                 id="slider-page-margin"
                 type="range"
-                min={16}
-                max={52}
+                min={12}
+                max={64}
                 step={2}
                 value={spacing.pageMargin}
                 onChange={(e) =>
@@ -523,12 +565,12 @@ export function DesignPanel({
         </div>
 
         {/* 3. Profile Photo Controls */}
-        <div className="space-y-3 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+        <div className={`space-y-3 pt-3 border-t border-zinc-100 dark:border-zinc-800 ${!supportsPhoto ? 'opacity-55' : ''}`}>
           <div className="flex items-center justify-between gap-3">
             <div>
               <label
                 htmlFor="design-show-photo-switch"
-                className="font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider text-[11px] block cursor-pointer"
+                className={`font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider text-[11px] block ${supportsPhoto ? 'cursor-pointer' : 'cursor-not-allowed'}`}
               >
                 Profile Photo Avatar
               </label>
@@ -536,27 +578,30 @@ export function DesignPanel({
                 id="design-show-photo-desc"
                 className="text-[11px] text-zinc-600 dark:text-zinc-400"
               >
-                Display circular headshot on applicable templates
+                {supportsPhoto
+                  ? 'Display circular headshot on this template'
+                  : 'This template has no photo slot — switch to Double Column / Sidebar to use a photo'}
               </span>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+            <label className={`relative inline-flex items-center shrink-0 ${supportsPhoto ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
               <input
                 id="design-show-photo-switch"
                 type="checkbox"
                 role="switch"
-                checked={showPhoto}
+                checked={supportsPhoto && showPhoto}
+                disabled={!supportsPhoto}
                 aria-describedby="design-show-photo-desc"
                 onChange={(e) => onShowPhotoChange(e.target.checked)}
                 className="sr-only peer"
               />
               <span
                 aria-hidden="true"
-                className="w-9 h-5 rounded-full bg-zinc-300 dark:bg-zinc-700 peer-checked:bg-blue-600 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-600 transition-colors relative block after:content-[''] after:w-4 after:h-4 after:rounded-full after:bg-white after:shadow-xs after:absolute after:top-0.5 after:left-0.5 after:transition-transform peer-checked:after:translate-x-4"
+                className="w-9 h-5 rounded-full bg-zinc-300 dark:bg-zinc-700 peer-checked:bg-blue-600 peer-disabled:opacity-50 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-600 transition-colors relative block after:content-[''] after:w-4 after:h-4 after:rounded-full after:bg-white after:shadow-xs after:absolute after:top-0.5 after:left-0.5 after:transition-transform peer-checked:after:translate-x-4"
               />
             </label>
           </div>
 
-          {showPhoto && (
+          {supportsPhoto && showPhoto && (
             <div className="space-y-1.5 pt-1 animate-in fade-in">
               <label
                 htmlFor="design-photo-url"
@@ -590,7 +635,9 @@ export function DesignPanel({
                 id="design-show-highlights-desc"
                 className="text-[11px] text-zinc-600 dark:text-zinc-400"
               >
-                Highlight verified skills &amp; keywords with soft contrast
+                {hasHighlightKeywords
+                  ? 'Highlight matched job keywords on the canvas'
+                  : 'Open Job Match and save a job description to enable keyword highlights'}
               </span>
             </div>
             <label className="relative inline-flex items-center cursor-pointer shrink-0">

@@ -64,8 +64,32 @@ describe('5-Dimension Rezi-Style ATS & Parser Audit Engine', () => {
       'Redis',
     ]);
     expect(result.findings.stackAlignment?.unreferencedSkills).toEqual(['Rust']);
-    expect(result.score).toBeGreaterThanOrEqual(70);
+    // Mid-tier quantified draft — evidence density should keep this out of the 90s
+    expect(result.score).toBeGreaterThanOrEqual(35);
+    expect(result.score).toBeLessThanOrEqual(85);
     expect(result.findings.parserRisks?.some((r) => r.id === 'contact-pass')).toBe(true);
+  });
+
+  it('scores near-empty placeholder resumes under 20', () => {
+    const content: ResumeContent = {
+      contact: { fullName: 'Abhi Singh', email: 'abhi@example.com' },
+      headline: 'backend engineer',
+      summary: 'Experienced professional with a proven track record.',
+      experience: [
+        {
+          company: 'sadf',
+          title: 'df',
+          startDate: '2022',
+          current: true,
+          bullets: ['df'],
+        },
+      ],
+      education: [{ school: 'University of Technology', degree: 'B.S.', graduationDate: '2021' }],
+      skills: [{ name: 'TypeScript' }],
+    };
+
+    const result = evaluateStructuredResumeAts(content);
+    expect(result.score).toBeLessThanOrEqual(15);
   });
 
   it('extracts plain-text sections cleanly without flagging header emails as bullets and catches table/glyph parser risks', () => {
@@ -156,10 +180,11 @@ Required Skills:
     // Recruiter boolean search simulation
     expect(jdMatch.recruiterSearchSimulation.passedQueries.length).toBeGreaterThan(0);
 
-    // Dual-score architecture verifications
-    expect(result.atsScore).toBeGreaterThanOrEqual(80);
+    // Dual-score architecture verifications (composite is evidence-capped)
+    expect(result.atsScore).toBeGreaterThanOrEqual(40);
     expect(result.matchScore).toBe(jdMatch.matchRate);
-    expect(result.compositeScore).toBe(
+    expect(result.compositeScore).toBeDefined();
+    expect(result.compositeScore!).toBeLessThanOrEqual(
       Math.round(result.atsScore * 0.4 + (result.matchScore || 0) * 0.6),
     );
     expect(result.score).toBe(result.compositeScore);
@@ -389,9 +414,9 @@ JavaScript, React, PostgreSQL, Jest, Redux`;
 
     const baselineResult = analyzePlainResumeTextAts(unquantifiedResume);
 
-    // Baseline unquantified resume should get a fair, constructive score (~68-75) rather than collapsing to 40-50
-    expect(baselineResult.score).toBeGreaterThanOrEqual(68);
-    expect(baselineResult.score).toBeLessThanOrEqual(76);
+    // Baseline unquantified resume: constructive mid band — not inflated into the 70s/80s
+    expect(baselineResult.score).toBeGreaterThanOrEqual(25);
+    expect(baselineResult.score).toBeLessThanOrEqual(60);
 
     // Corroborated skills check
     expect(baselineResult.findings.stackAlignment?.corroboratedSkills).toContain('React');

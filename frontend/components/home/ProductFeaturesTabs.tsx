@@ -21,7 +21,7 @@ const FEATURE_TABS = [
   {
     title: 'Samples',
     value: 'samples',
-    heading: '82 company benchmarks',
+    heading: '25 company benchmarks',
     blurb:
       'Clone role-ready formats used for top companies, then adapt them to your verified profile.',
     img: '/marketing/product/samples-v2.png',

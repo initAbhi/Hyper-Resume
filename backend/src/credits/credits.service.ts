@@ -4,10 +4,15 @@ import { EntityManager, Repository } from 'typeorm';
 import { CreditLedger, type CreditTransactionType } from './entities/credit-ledger.entity.js';
 import { User } from '../users/entities/user.entity.js';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
+import {
+  FREE_SIGNUP_CREDITS,
+  PRO_WEEKLY_CREDITS,
+} from '../payments/pricing-plans.js';
 
 export const CREDIT_COSTS = {
   RESUME_ANALYSIS: 1,
   JOB_MATCH: 1,
+  AGENT_REPLY: 1,
   BULLET_REWRITE: 1,
   EXPORT_PDF: 0,
   ADAPT_RESUME: 3,
@@ -67,6 +72,9 @@ export class CreditsService {
   }
 
   async getEntitlementStatus(userId: string, manager?: EntityManager): Promise<EntitlementStatus> {
+    // Pro users receive 75 credits per ISO week while their pass is active
+    await this.ensureWeeklyProCredits(userId, manager);
+
     const balance = await this.getBalance(userId, manager);
     const repo = this.getUserRepo(manager);
     if (!repo) {
@@ -89,12 +97,48 @@ export class CreditsService {
     );
 
     return {
-      balance,
+      balance: await this.getBalance(userId, manager),
       hasActivePro,
       proPlanId: user?.proPlanId || null,
       proExpiresAt: user?.proExpiresAt || null,
       isLifetimePro: Boolean(user?.isLifetimePro),
     };
+  }
+
+  /** ISO week key e.g. 2026-W47 — used for idempotent weekly Pro refills */
+  private getIsoWeekKey(date = new Date()): string {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+    return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+  }
+
+  /**
+   * Grant PRO_WEEKLY_CREDITS once per ISO week while Pro is active.
+   * Idempotent via weekly-refill:{userId}:{year}-W{week}.
+   */
+  async ensureWeeklyProCredits(userId: string, manager?: EntityManager): Promise<void> {
+    if (!(await this.hasActivePro(userId, manager))) {
+      return;
+    }
+
+    const weekKey = this.getIsoWeekKey();
+    const idempotencyKey = `weekly-refill:${userId}:${weekKey}`;
+    try {
+      await this.addTransaction(
+        userId,
+        PRO_WEEKLY_CREDITS,
+        'weekly_refill',
+        idempotencyKey,
+        `Weekly Pro AI credits (${PRO_WEEKLY_CREDITS}) for ${weekKey}`,
+        { weekKey, amount: PRO_WEEKLY_CREDITS },
+        manager,
+      );
+    } catch {
+      // Duplicate idempotency key = already granted this week — ignore
+    }
   }
 
   async getBalance(userId: string, manager?: EntityManager): Promise<number> {
@@ -232,9 +276,8 @@ export class CreditsService {
       return { accessGrantedVia: 'credits' };
     }
 
-    if (await this.hasActivePro(userId, manager)) {
-      return { accessGrantedVia: 'pro_pass' };
-    }
+    // Pro unlocks premium features (templates/samples) but AI still burns weekly credits
+    await this.ensureWeeklyProCredits(userId, manager);
 
     const ledgerEntry = await this.deductCredits(
       userId,
@@ -270,10 +313,10 @@ export class CreditsService {
   async initializeUserCredits(userId: string, manager?: EntityManager): Promise<CreditLedger> {
     return this.addTransaction(
       userId,
-      5,
+      FREE_SIGNUP_CREDITS,
       'signup_bonus',
       `signup-bonus-${userId}`,
-      'Welcome bonus: 5 free AI optimizations & analyses',
+      `Welcome bonus: ${FREE_SIGNUP_CREDITS} lifetime AI credits`,
       { initial: true },
       manager,
     );
@@ -334,9 +377,7 @@ export class CreditsService {
     }
 
     return this.runWithUserCreditLock(userId, manager, async (txManager) => {
-      if (await this.hasActivePro(userId, txManager)) {
-        return { success: true, reservationKey: `pro:${taskId}:${stepIndex}`, grantedVia: 'pro_pass' };
-      }
+      await this.ensureWeeklyProCredits(userId, txManager);
 
       const maxTaskCredits = Number(process.env.AGENT_MAX_TASK_CREDITS || 6);
       const currentTaskSpend = await this.getTaskCreditSpend(taskId, txManager);

@@ -36,15 +36,15 @@ const FALLBACK_PRO_PLANS: PricingPlan[] = [
   {
     id: 'pro_weekly',
     name: 'HypeResume Pro — 1 Week Pass',
-    tagline: 'Try full Pro capabilities for 7 days. Ideal for upcoming interview deadlines.',
+    tagline: 'Full Pro for an urgent interview sprint — 75 AI credits this week.',
     amountMinor: 14900,
     currency: 'INR',
     displayPrice: '₹149',
     prices: {
       INR: { amountMinor: 14900, displayPrice: '₹149' },
-      USD: { amountMinor: 300, displayPrice: '$3' },
+      USD: { amountMinor: 799, displayPrice: '$7.99' },
     },
-    credits: 0,
+    credits: 75,
     durationDays: 7,
     isLifetime: false,
     isPro: true,
@@ -52,26 +52,26 @@ const FALLBACK_PRO_PLANS: PricingPlan[] = [
     billingType: 'one_time',
     badge: 'Try 1 Week',
     features: [
-      '7 days unlimited HypeResume Pro access',
-      'Unlimited STAR bullet rewrites & tailored versions',
-      'Evidence-quoted Job Description matching',
-      'AI Cover Letters & LinkedIn profile audits',
-      'Mock Interview Simulator + weak-area practice',
+      '7 days of HypeResume Pro access',
+      '75 AI credits for the week',
+      'All 10 ATS templates unlocked',
+      'Sample library, cover letters & LinkedIn audits',
+      'Mock Interview Simulator',
       'One-time payment — zero automatic renewal',
     ],
   },
   {
     id: 'pro_monthly',
     name: 'HypeResume Pro — Monthly',
-    tagline: 'Full platform access for an active 30-day job search sprint.',
+    tagline: 'Flexible full-month job search pass with 75 AI credits every week.',
     amountMinor: 39900,
     currency: 'INR',
     displayPrice: '₹399',
     prices: {
       INR: { amountMinor: 39900, displayPrice: '₹399' },
-      USD: { amountMinor: 900, displayPrice: '$9' },
+      USD: { amountMinor: 1499, displayPrice: '$14.99' },
     },
-    credits: 0,
+    credits: 75,
     durationDays: 30,
     isLifetime: false,
     isPro: true,
@@ -79,53 +79,26 @@ const FALLBACK_PRO_PLANS: PricingPlan[] = [
     billingType: 'one_time',
     badge: 'Most Popular',
     features: [
-      '30 days unlimited HypeResume Pro access',
-      'Unlimited tailored resume variants & exports',
-      'Evidence-quoted JD matching & gap analysis',
-      'AI Cover Letters & LinkedIn profile optimizer',
-      'Full AI Mock Interview Simulator access',
+      '30 days of HypeResume Pro access',
+      '75 AI credits refilled every week',
+      'All 10 ATS templates + sample library',
+      'Cover letters, LinkedIn optimizer & interviews',
+      'Clean PDF & DOCX exports',
       'Pay once for 30 days — zero surprise rebills',
-    ],
-  },
-  {
-    id: 'pro_6month',
-    name: 'HypeResume Pro — 6 Months',
-    tagline: 'Extended half-year job switch protection with 50% savings vs monthly.',
-    amountMinor: 120000,
-    currency: 'INR',
-    displayPrice: '₹1,200',
-    prices: {
-      INR: { amountMinor: 120000, displayPrice: '₹1,200' },
-      USD: { amountMinor: 2900, displayPrice: '$29' },
-    },
-    credits: 0,
-    durationDays: 180,
-    isLifetime: false,
-    isPro: true,
-    cadenceLabel: '6 months',
-    billingType: 'one_time',
-    badge: 'Best Value · Save 50%',
-    features: [
-      '180 days unlimited HypeResume Pro access',
-      'Unlimited AI tailoring across every application',
-      'Unlimited Cover Letters & LinkedIn audits',
-      'Mock Interview simulator for every round',
-      'Complete application tracker & career snapshots',
-      'One-time 6-month pass — zero recurring fee',
     ],
   },
   {
     id: 'pro_lifetime',
     name: 'HypeResume Pro — Founding Lifetime',
-    tagline: 'Early validation offer for our first cohort: unlock Pro permanently in one payment.',
+    tagline: 'Pay once, keep Pro forever — 75 AI credits every week for life.',
     amountMinor: 99900,
     currency: 'INR',
     displayPrice: '₹999',
     prices: {
       INR: { amountMinor: 99900, displayPrice: '₹999' },
-      USD: { amountMinor: 1900, displayPrice: '$19' },
+      USD: { amountMinor: 2499, displayPrice: '$24.99' },
     },
-    credits: 0,
+    credits: 75,
     durationDays: null,
     isLifetime: true,
     isPro: true,
@@ -135,9 +108,9 @@ const FALLBACK_PRO_PLANS: PricingPlan[] = [
     badge: 'Founding Launch Offer',
     features: [
       'Permanent Lifetime HypeResume Pro access',
+      '75 AI credits refilled every week — forever',
       'All future templates & AI upgrades included',
-      'Unlimited bullet rewrites, JD matches & cover letters',
-      'Unlimited LinkedIn optimizer & interview practice',
+      'Sample library, LinkedIn & interview practice',
       'Clean PDF & DOCX export with zero watermarks',
       'Never expires · Strictly limited founding seats',
     ],
@@ -147,23 +120,23 @@ const FALLBACK_PRO_PLANS: PricingPlan[] = [
 const FAQS = [
   {
     q: 'What is included in HypeResume Pro across all options?',
-    a: 'All four paid options belong to the same unified plan: HypeResume Pro. You get unlimited AI bullet rewrites, job description match analyses, AI cover letters, LinkedIn profile optimizations, mock interview simulator sessions, and clean PDF/DOCX exports. You only choose the pass duration: 1 week, 1 month, 6 months, or Founding Lifetime.',
+    a: 'Every paid option is the same HypeResume Pro plan: 75 AI credits every week, all 10 ATS templates, the sample library, cover letters, LinkedIn optimizer, mock interviews, and clean PDF/DOCX exports. You only choose duration: 1 week, 1 month, or Founding Lifetime.',
   },
   {
     q: 'Are there hidden recurring subscriptions or automatic renewals?',
-    a: 'No. Every Pro Pass (1 Week, 1 Month, 6 Months, and Founding Lifetime) is processed as a transparent one-time pass. When your pass expires, you keep all your resumes, data, and free PDF export access without unexpected card charges.',
+    a: 'No. Every Pro Pass is a transparent one-time payment. When your pass expires, you keep your resumes and free PDF export access — no surprise card charges.',
   },
   {
     q: 'What does Free Starter include?',
-    a: 'Every new account receives 5 Free Welcome AI credits, full access to all 10 ATS resume templates, unlimited manual editing and cloud saving, and unlimited clean PDF downloads with zero watermarks.',
+    a: 'Every new account receives 10 lifetime AI credits, Jake\'s Resume + Awesome CV templates, up to 2 active resumes, up to 50 tracked applications, unlimited manual editing, and clean PDF downloads with zero watermarks. Premium templates, unlimited resumes/tracking, and the sample library require Pro.',
   },
   {
-    q: 'How does the ₹999 ($19) Founding Lifetime Launch Offer work?',
-    a: 'During our early validation phase, we opened a strictly limited Founding Member Lifetime seat cap tracked directly in our database. While seats remain, paying ₹999 ($19) once grants permanent Pro access with zero renewal fees ever.',
+    q: 'How do the 75 weekly Pro credits work?',
+    a: 'While your Pro pass is active, you receive 75 AI credits at the start of each week for job matches, rewrites, cover letters, LinkedIn audits, and interviews. Unused credits stay in your balance.',
   },
   {
-    q: 'What happens on Free Starter if an AI request fails?',
-    a: 'Our credit ledger is atomic and idempotent. If an AI operation fails on a free account, any reserved credits are automatically refunded. Pro Pass holders enjoy unlimited retries at 0 credit cost.',
+    q: 'How does the Founding Lifetime Launch Offer work?',
+    a: 'During our early validation phase, a limited Founding Lifetime seat cap is tracked in our database. While seats remain, one payment grants permanent Pro access with weekly credit refills and zero renewal fees. Prices are localized by region (₹999 in Tier 2/3 markets, $24.99 in Tier 1).',
   },
   {
     q: 'Are my resumes or personal data used to train AI models?',
@@ -186,10 +159,9 @@ export function PricingClient() {
   const searchParams = useSearchParams();
   const { user, creditBalance, hasActivePro, isAuthenticated, refreshUser } = useAuth();
 
-  const initialCurrencyParam = searchParams?.get('currency')?.toUpperCase();
-  const [currency, setCurrency] = useState<SupportedCurrency>(
-    initialCurrencyParam === 'USD' ? 'USD' : 'INR',
-  );
+  const [currency, setCurrency] = useState<SupportedCurrency>('USD');
+  const [pricingReady, setPricingReady] = useState(false);
+  const [geoLabel, setGeoLabel] = useState<string>('Detecting your region…');
   const [plans, setPlans] = useState<PricingPlan[]>(FALLBACK_PRO_PLANS);
   const [promo, setPromo] = useState<PromoStatus | null>(null);
   const [activePlan, setActivePlan] = useState<PricingPlan | null>(null);
@@ -212,15 +184,26 @@ export function PricingClient() {
     analytics.track('pricing_viewed', { source: 'pricing_page' });
 
     apiClient
-      .getPricingPlans()
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setPlans(data);
+      .getPricingContext()
+      .then((ctx) => {
+        if (ctx?.currency) {
+          setCurrency(ctx.currency);
+          setGeoLabel(
+            ctx.countryCode
+              ? `Prices for ${ctx.countryCode} · ${ctx.currency}`
+              : `Prices in ${ctx.currency}`,
+          );
+        }
+        if (Array.isArray(ctx?.plans) && ctx.plans.length > 0) {
+          setPlans(ctx.plans);
         }
       })
       .catch(() => {
-        // Use predefined fallback plans
-      });
+        setCurrency('USD');
+        setGeoLabel('Prices in USD');
+        setPlans(FALLBACK_PRO_PLANS);
+      })
+      .finally(() => setPricingReady(true));
 
     apiClient
       .getPromoStatus()
@@ -232,14 +215,25 @@ export function PricingClient() {
 
   // Verify returning payment from Dodo Checkout (using REAL verified fields!)
   useEffect(() => {
-    const statusParam = searchParams?.get('status');
+    // Dodo appends its own status=succeeded, which can duplicate our status=success.
+    const statusValues = searchParams?.getAll('status') ?? [];
+    const statusParam = statusValues.includes('cancelled')
+      ? 'cancelled'
+      : statusValues.includes('success') || statusValues.includes('succeeded')
+        ? 'success'
+        : statusValues[0] || null;
     const orderIdParam = searchParams?.get('orderId');
+    const providerPaymentId =
+      searchParams?.get('payment_id') || searchParams?.get('paymentId') || undefined;
 
     if (orderIdParam && statusParam !== 'cancelled') {
       setIsCheckoutOpen(true);
       setCheckoutStep('processing');
       apiClient
-        .verifyPayment({ orderId: orderIdParam })
+        .verifyPayment({
+          orderId: orderIdParam,
+          ...(providerPaymentId ? { providerPaymentId } : {}),
+        })
         .then(async (result) => {
           if (result.verified) {
             await refreshUser();
@@ -276,7 +270,15 @@ export function PricingClient() {
         })
         .catch((err) => {
           setCheckoutStep('error');
-          setErrorMessage(err instanceof Error ? err.message : 'Payment verification could not be completed.');
+          const raw = err instanceof Error ? err.message : 'Payment verification could not be completed.';
+          // Webhook often grants Pro before the browser return finishes — guide the user.
+          if (/not found for this user|different account/i.test(raw)) {
+            setErrorMessage(
+              `${raw} If Dodo showed payment success, open https://hype-resume.com/app while logged into the same account — Pro may already be active via webhook.`,
+            );
+          } else {
+            setErrorMessage(raw);
+          }
         });
     } else if (statusParam === 'cancelled') {
       setIsCheckoutOpen(true);
@@ -311,13 +313,28 @@ export function PricingClient() {
   }, [isAuthenticated, searchParams, plans]);
 
   const visiblePlans = plans.filter((p) => {
+    if (p.id === 'pro_6month') return false;
     if (p.id === 'pro_lifetime' && promo && (!promo.enabled || promo.isSoldOut)) {
       return false;
     }
     return true;
   });
 
+  const isCurrentPlan = (plan: PricingPlan) => {
+    if (!isAuthenticated) return false;
+    if (plan.id === 'free_tier' || plan.amountMinor === 0) {
+      return !hasActivePro;
+    }
+    if (!hasActivePro) return false;
+    if (plan.isLifetime || plan.id === 'pro_lifetime') {
+      return Boolean(user?.isLifetimePro || user?.proPlanId === 'pro_lifetime');
+    }
+    return user?.proPlanId === plan.id;
+  };
+
   const handleSelectPlan = (plan: PricingPlan) => {
+    if (isCurrentPlan(plan)) return;
+
     const price = getPlanPrice(plan, currency);
     if (price.amountMinor === 0) {
       router.push(isAuthenticated ? '/app' : '/register');
@@ -400,54 +417,33 @@ export function PricingClient() {
           Zero Subscription Traps.
         </h1>
         <p className="mt-4 text-sm sm:text-lg text-zinc-600 dark:text-zinc-400">
-          Start free with 5 welcome AI credits and unlimited PDF downloads, or unlock full HypeResume Pro for 1 week, 1 month, 6 months, or lifetime.
+          Start free with 10 lifetime AI credits and 2 templates, or unlock Pro — 75 AI credits every week, all 10 templates, for 1 week, 1 month, or lifetime.
         </p>
 
-        {/* Currency Selector */}
         <div className="mt-6 flex justify-center">
-          <div className="inline-flex items-center rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-1 max-w-full">
-            <button
-              type="button"
-              onClick={() => setCurrency('INR')}
-              className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                currency === 'INR'
-                  ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-sm'
-                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
-              }`}
-            >
-              <span className="sm:hidden">INR (₹)</span>
-              <span className="hidden sm:inline">INR (₹) · India</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setCurrency('USD')}
-              className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                currency === 'USD'
-                  ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-sm'
-                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
-              }`}
-            >
-              <span className="sm:hidden">USD ($)</span>
-              <span className="hidden sm:inline">USD ($) · Global</span>
-            </button>
+          <div className="inline-flex items-center rounded-full border border-zinc-200 bg-zinc-100 px-3 py-1.5 text-[11px] font-medium text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+            {pricingReady ? geoLabel : 'Detecting your region…'}
           </div>
         </div>
 
         {/* Authenticated Entitlement Pill */}
         {isAuthenticated && (
-          <div className="mt-5 inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-2xl sm:rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 text-xs sm:text-sm text-blue-700 dark:text-blue-300 font-medium max-w-full flex-wrap justify-center">
-            <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-            <span className="break-all sm:break-normal text-center">
-              Signed in as <strong>{user?.email}</strong> ·{' '}
+          <div className="mt-5 inline-flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-2xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300 sm:rounded-full sm:px-4 sm:text-sm">
+            <Sparkles className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+            <span className="min-w-0 text-center break-words">
+              Signed in as <strong className="break-all">{user?.email}</strong>
+            </span>
+            <span className="hidden text-blue-300 sm:inline dark:text-blue-700">·</span>
+            <span className="whitespace-nowrap text-center">
               {hasActivePro ? (
                 <strong className="text-emerald-700 dark:text-emerald-400">
                   {user?.isLifetimePro
-                    ? 'HypeResume Pro Lifetime Active'
-                    : `HypeResume Pro Active (until ${formatExpiry(user?.proExpiresAt)})`}
+                    ? 'Pro Lifetime Active'
+                    : `Pro Active · until ${formatExpiry(user?.proExpiresAt)}`}
                 </strong>
               ) : (
                 <>
-                  Balance: <strong>{creditBalance} Free Credits</strong>
+                  Balance: <strong>{creditBalance} credits</strong>
                 </>
               )}
             </span>
@@ -457,7 +453,7 @@ export function PricingClient() {
 
       {/* Founding Lifetime Offer Banner (Live PostgreSQL Seat Counter) */}
       {promo && promo.enabled && !promo.isSoldOut && (
-        <div className="mb-12 rounded-2xl border-2 border-emerald-500/60 bg-gradient-to-r from-emerald-950 via-zinc-900 to-violet-950 text-white p-6 sm:p-7 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 shadow-xl">
+        <div className="mb-12 rounded-2xl border-2 border-blue-500/50 bg-gradient-to-r from-[#1e3a8a] via-[#285FEA] to-[#4f46e5] text-white p-6 sm:p-7 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 shadow-xl">
           <div className="space-y-2 max-w-2xl">
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-bold uppercase tracking-wider">
@@ -469,11 +465,11 @@ export function PricingClient() {
               </span>
             </div>
             <h2 className="text-xl sm:text-2xl font-extrabold">
-              Pay {currency === 'INR' ? '₹999' : '$19'} once. Get Lifetime HypeResume Pro forever.
+              Pay {currency === 'INR' ? '₹999' : '$24.99'} once. Get Lifetime HypeResume Pro forever.
             </h2>
             <p className="text-xs sm:text-sm text-zinc-200 leading-relaxed">
               {promo.bannerText ||
-                `To validate HypeResume with our earliest job seekers, our first ${promo.totalCap} founding members unlock permanent Lifetime Pro access at ${currency === 'INR' ? '₹999' : '$19'}. Live seat count verified directly from our database.`}
+                `To validate HypeResume with our earliest job seekers, our first ${promo.totalCap} founding members unlock permanent Lifetime Pro access at ${currency === 'INR' ? '₹999' : '$24.99'}. Live seat count verified directly from our database.`}
             </p>
           </div>
           <Button
@@ -481,12 +477,12 @@ export function PricingClient() {
             size="lg"
             className="shrink-0 bg-emerald-400 hover:bg-emerald-300 text-zinc-950 font-bold shadow-lg"
             onClick={() => {
-              const lifetimePlan = plans.find((p) => p.id === 'pro_lifetime') || FALLBACK_PRO_PLANS[3];
+              const lifetimePlan = plans.find((p) => p.id === 'pro_lifetime') || FALLBACK_PRO_PLANS.find((p) => p.id === 'pro_lifetime') || FALLBACK_PRO_PLANS[2];
               handleSelectPlan(lifetimePlan);
             }}
           >
             <Crown className="w-4 h-4 mr-2" />
-            Claim Lifetime ({currency === 'INR' ? '₹999' : '$19'})
+            Claim Lifetime ({currency === 'INR' ? '₹999' : '$24.99'})
           </Button>
         </div>
       )}
@@ -548,11 +544,11 @@ export function PricingClient() {
                     <div className="flex items-center gap-2">
                       <Zap className="w-4 h-4 text-emerald-500 shrink-0" />
                       <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                        AI Operations
+                        AI Credits
                       </span>
                     </div>
                     <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                      Unlimited Pro
+                      75 / week
                     </span>
                   </div>
 
@@ -568,15 +564,27 @@ export function PricingClient() {
               </div>
 
               <CardFooter className="pt-6">
-                <Button
-                  variant={isHighlighted ? 'primary' : 'outline'}
-                  size="md"
-                  onClick={() => handleSelectPlan(plan)}
-                  className="w-full justify-center font-medium shadow-sm"
-                >
-                  <span>Choose {plan.name.replace('HypeResume Pro — ', '')}</span>
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
+                {isCurrentPlan(plan) ? (
+                  <Button
+                    variant="outline"
+                    size="md"
+                    disabled
+                    className="w-full justify-center font-medium shadow-sm opacity-90 cursor-default"
+                  >
+                    <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
+                    <span>Current Plan</span>
+                  </Button>
+                ) : (
+                  <Button
+                    variant={isHighlighted ? 'primary' : 'outline'}
+                    size="md"
+                    onClick={() => handleSelectPlan(plan)}
+                    className="w-full justify-center font-medium shadow-sm"
+                  >
+                    <span>Choose {plan.name.replace('HypeResume Pro — ', '')}</span>
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                )}
               </CardFooter>
             </Card>
           );
@@ -586,24 +594,34 @@ export function PricingClient() {
       {/* Free Starter Callout */}
       <div className="mb-16 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/70 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
               Free Starter ({currency === 'INR' ? '₹0' : '$0'} forever)
             </h3>
-            <Badge variant="neutral" className="text-xs">5 Welcome AI Credits</Badge>
+            <Badge variant="neutral" className="text-xs">10 Lifetime AI Credits</Badge>
+            {isAuthenticated && !hasActivePro && (
+              <Badge variant="success" className="text-xs">Current Plan</Badge>
+            )}
           </div>
           <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-            Build unlimited resumes manually, test our ATS audits & job matcher with 5 free AI credits, and export unlimited clean watermark-free PDFs.
+            Includes Jake&apos;s + Awesome CV, up to 2 active resumes, 50 tracked applications, 10 lifetime AI credits, and unlimited watermark-free PDF exports. Premium templates unlock on Pro.
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="md"
-          onClick={() => router.push(isAuthenticated ? '/app' : '/register')}
-          className="shrink-0"
-        >
-          {isAuthenticated ? 'Go to Dashboard' : 'Start Free Account'}
-        </Button>
+        {isAuthenticated && !hasActivePro ? (
+          <Button variant="outline" size="md" disabled className="shrink-0 opacity-90 cursor-default">
+            <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
+            Current Plan
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            size="md"
+            onClick={() => router.push(isAuthenticated ? '/app' : '/register')}
+            className="shrink-0"
+          >
+            {isAuthenticated ? 'Go to Dashboard' : 'Start Free Account'}
+          </Button>
+        )}
       </div>
 
       {/* Feature Comparison Table */}
@@ -613,7 +631,7 @@ export function PricingClient() {
             Free Starter vs. HypeResume Pro
           </h2>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-            Every paid option (1 Week, 1 Month, 6 Months, Lifetime) unlocks the exact same full Pro suite.
+            Every paid option (1 Week, 1 Month, Lifetime) unlocks the same Pro suite with 75 AI credits per week.
           </p>
         </div>
 
@@ -624,7 +642,7 @@ export function PricingClient() {
                 <th className="py-3.5 px-4 font-semibold">Capability</th>
                 <th className="py-3.5 px-4 font-semibold text-center">Free Starter ({currency === 'INR' ? '₹0' : '$0'})</th>
                 <th className="py-3.5 px-4 font-semibold text-center text-blue-600 dark:text-blue-400">
-                  HypeResume Pro (1 Week / Monthly / 6M / Lifetime)
+                  HypeResume Pro (1 Week / Monthly / Lifetime)
                 </th>
               </tr>
             </thead>
@@ -633,36 +651,50 @@ export function PricingClient() {
                 <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
                   AI Bullet Rewrites & STAR Improvements
                 </td>
-                <td className="py-3 px-4 text-center">Up to 5 welcome credits</td>
-                <td className="py-3 px-4 text-center font-semibold text-emerald-700 dark:text-emerald-400">Unlimited during active pass</td>
+                <td className="py-3 px-4 text-center">10 lifetime credits</td>
+                <td className="py-3 px-4 text-center font-semibold text-emerald-700 dark:text-emerald-400">75 credits / week</td>
               </tr>
               <tr>
                 <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
                   Evidence-Quoted JD Matching & Tailoring
                 </td>
-                <td className="py-3 px-4 text-center">Uses welcome credits (1–2/run)</td>
-                <td className="py-3 px-4 text-center font-semibold text-emerald-700 dark:text-emerald-400">Unlimited during active pass</td>
+                <td className="py-3 px-4 text-center">Uses lifetime credits (1–2/run)</td>
+                <td className="py-3 px-4 text-center font-semibold text-emerald-700 dark:text-emerald-400">From weekly credits</td>
               </tr>
               <tr>
                 <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
                   AI Cover Letters & LinkedIn Optimizer
                 </td>
                 <td className="py-3 px-4 text-center">2 credits per generation</td>
-                <td className="py-3 px-4 text-center font-semibold text-emerald-700 dark:text-emerald-400">Unlimited during active pass</td>
+                <td className="py-3 px-4 text-center font-semibold text-emerald-700 dark:text-emerald-400">From weekly credits</td>
               </tr>
               <tr>
                 <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
                   Mock Interview Simulator & Weak-Area Drill
                 </td>
                 <td className="py-3 px-4 text-center">2 credits per session</td>
-                <td className="py-3 px-4 text-center font-semibold text-emerald-700 dark:text-emerald-400">Unlimited during active pass</td>
+                <td className="py-3 px-4 text-center font-semibold text-emerald-700 dark:text-emerald-400">From weekly credits</td>
               </tr>
               <tr>
                 <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
-                  10 ATS Templates & Unwatermarked PDF/DOCX Export
+                  ATS Templates & Unwatermarked PDF/DOCX Export
                 </td>
-                <td className="py-3 px-4 text-center text-emerald-700 dark:text-emerald-400 font-medium">Included Free</td>
-                <td className="py-3 px-4 text-center text-emerald-700 dark:text-emerald-400 font-medium">Included</td>
+                <td className="py-3 px-4 text-center text-emerald-700 dark:text-emerald-400 font-medium">2 free templates + PDF</td>
+                <td className="py-3 px-4 text-center text-emerald-700 dark:text-emerald-400 font-medium">All 10 templates</td>
+              </tr>
+              <tr>
+                <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
+                  Active Resumes
+                </td>
+                <td className="py-3 px-4 text-center">Up to 2</td>
+                <td className="py-3 px-4 text-center font-semibold text-emerald-700 dark:text-emerald-400">Unlimited</td>
+              </tr>
+              <tr>
+                <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
+                  Job Application Tracking
+                </td>
+                <td className="py-3 px-4 text-center">Up to 50</td>
+                <td className="py-3 px-4 text-center font-semibold text-emerald-700 dark:text-emerald-400">Unlimited</td>
               </tr>
               <tr>
                 <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">

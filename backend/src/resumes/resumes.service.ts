@@ -26,6 +26,7 @@ import { CREDIT_COSTS, CreditsService } from '../credits/credits.service.js';
 import { AiService } from '../ai/ai.service.js';
 import { validateAndReconstructAdaptation } from '../ai/utils/factual-integrity-validator.js';
 import { evaluateStructuredResumeAts } from '../ai/utils/ats-audit-engine.js';
+import { FREE_MAX_RESUMES } from '../payments/pricing-plans.js';
 
 @Injectable()
 export class ResumesService {
@@ -48,6 +49,22 @@ export class ResumesService {
   ) {}
 
   async createResume(userId: string, dto: CreateResumeDto): Promise<Resume> {
+    const isPro = await this.creditsService.hasActivePro(userId);
+    if (!isPro) {
+      const activeCount = await this.resumeRepository.count({
+        where: { userId, isArchived: false },
+      });
+      if (activeCount >= FREE_MAX_RESUMES) {
+        throw new ForbiddenException({
+          statusCode: 403,
+          error: 'RESUME_LIMIT_REACHED',
+          message: `Free Starter allows up to ${FREE_MAX_RESUMES} active resumes. Upgrade to Pro for unlimited resumes.`,
+          limit: FREE_MAX_RESUMES,
+          current: activeCount,
+        });
+      }
+    }
+
     let initialContent = dto.content;
 
     // Seed content from CandidateProfile if not supplied
@@ -87,7 +104,7 @@ export class ResumesService {
     const resume = this.resumeRepository.create({
       userId,
       name: dto.name.trim(),
-      templateKey: dto.templateKey || 'clean-modern',
+      templateKey: dto.templateKey || 'jake-ats',
       locale: dto.locale || 'en-US',
       isMaster: dto.isMaster || false,
       isArchived: false,

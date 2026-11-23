@@ -37,9 +37,13 @@ export class MetaConversionsService {
 
   constructor(private readonly configService: ConfigService) {
     this.accessToken =
-      this.configService.get<string>('META_CONVERSIONS_API_TOKEN', '')?.trim() || '';
+      this.configService.get<string>('META_CONVERSIONS_API_TOKEN', '')?.trim() ||
+      this.configService.get<string>('META_CONVERSIONS_API_ACCESS_TOKEN', '')?.trim() ||
+      '';
     this.pixelId =
-      this.configService.get<string>('META_PIXEL_ID', '')?.trim() || '';
+      this.configService.get<string>('META_PIXEL_ID', '')?.trim() ||
+      this.configService.get<string>('NEXT_PUBLIC_FACEBOOK_PIXEL_ID', '')?.trim() ||
+      '';
     this.testEventCode =
       this.configService.get<string>('META_TEST_EVENT_CODE', '')?.trim() || undefined;
     const frontendUrl = (

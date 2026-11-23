@@ -187,7 +187,10 @@ export default function AdminOverviewPage() {
               {(analytics?.overview.pageViews ?? 0).toLocaleString()}
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-slate-400">Verified client route hits</p>
+          <p className="mt-1 text-[11px] text-slate-400">
+            Last 7d: {(analytics?.overview.last7DayPageViews ?? 0).toLocaleString()} · Landing:{' '}
+            {(analytics?.overview.landingPageViews ?? 0).toLocaleString()}
+          </p>
         </div>
 
         {/* Card 3: Paid Orders */}
@@ -361,36 +364,111 @@ export default function AdminOverviewPage() {
         )}
       </div>
 
-      {/* BOTTOM SECTION: Referrers & Recent Payments */}
+      {/* Traffic breakdown: sources / countries / paths */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Top Traffic & Sources Breakdown */}
         <div className="rounded-2xl border border-slate-200/90 dark:border-zinc-800 bg-white dark:bg-[#14171C] p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-bold text-slate-900 dark:text-zinc-100">Top Sources</h4>
           </div>
-
           <div className="space-y-3 pt-1">
-            {analytics?.topReferrers.map((ref, idx) => (
-              <div key={idx} className="space-y-1">
-                <div className="flex items-center justify-between text-xs font-semibold">
-                  <span className="text-slate-700">{ref.source}</span>
-                  <span className="text-slate-900">{ref.visits.toLocaleString()} ({ref.share})</span>
+            {(analytics?.topReferrers?.length ?? 0) > 0 ? (
+              analytics!.topReferrers.map((ref, idx) => (
+                <div key={idx} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs font-semibold">
+                    <span className="text-slate-700 truncate pr-2">{ref.source}</span>
+                    <span className="text-slate-900 shrink-0">
+                      {ref.visits.toLocaleString()} ({ref.share})
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-600"
+                      style={{ width: ref.share }}
+                    />
+                  </div>
                 </div>
-                <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-600"
-                    style={{ width: ref.share }}
-                  />
-                </div>
-              </div>
-            )) || (
-              <p className="text-xs text-slate-400">Loading sources...</p>
+              ))
+            ) : (
+              <p className="text-xs text-slate-400">No source data yet — open the landing page once.</p>
             )}
           </div>
         </div>
 
+        <div className="rounded-2xl border border-slate-200/90 dark:border-zinc-800 bg-white dark:bg-[#14171C] p-5 shadow-xs space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-zinc-100">Top Countries</h4>
+          </div>
+          <div className="space-y-3 pt-1">
+            {(analytics?.topCountries?.length ?? 0) > 0 ? (
+              analytics!.topCountries!.map((row, idx) => (
+                <div key={row.countryCode || idx} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs font-semibold">
+                    <span className="text-slate-700 truncate pr-2">
+                      {row.country}{' '}
+                      <span className="font-mono text-[10px] text-slate-400">{row.countryCode}</span>
+                    </span>
+                    <span className="text-slate-900 shrink-0">
+                      {row.visits.toLocaleString()} ({row.share})
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-600"
+                      style={{ width: row.share }}
+                    />
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-slate-400">
+                Regions appear after new visits (IP→country, no raw IP stored).
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200/90 dark:border-zinc-800 bg-white dark:bg-[#14171C] p-5 shadow-xs space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-zinc-100">Top Pages</h4>
+          </div>
+          <div className="space-y-3 pt-1">
+            {(analytics?.topPaths?.length ?? 0) > 0 ? (
+              analytics!.topPaths!.map((row, idx) => (
+                <div key={row.path || idx} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs font-semibold">
+                    <span className="text-slate-700 truncate pr-2 font-mono text-[11px]">{row.path}</span>
+                    <span className="text-slate-900 shrink-0">
+                      {row.visits.toLocaleString()} ({row.share})
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-600"
+                      style={{ width: row.share }}
+                    />
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-slate-400">No page hits recorded yet.</p>
+            )}
+          </div>
+          <a
+            href="https://clarity.microsoft.com/projects/view/zhrwdxdio6/dashboard"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#285FEA] hover:underline"
+          >
+            Open Clarity replays
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        </div>
+      </div>
+
+      {/* BOTTOM SECTION: Recent Payments */}
+      <div className="grid grid-cols-1 gap-6">
         {/* Recent Transactions Table snippet */}
-        <div className="lg:col-span-2 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs space-y-4">
+        <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h4 className="text-sm font-bold text-slate-900">Recent Payment Transactions</h4>

@@ -25,6 +25,11 @@ import {
   resolvePlanPricing,
   SupportedCurrency,
 } from './pricing-plans.js';
+import {
+  countryFromHeaders,
+  PricingGeoContext,
+  resolvePricingGeo,
+} from './pricing-regions.js';
 import type {
   PaymentProvider,
   PaymentProviderType,
@@ -38,6 +43,9 @@ export interface RequestMetaContext {
   clientIp?: string;
   clientUserAgent?: string;
   sourceUrl?: string;
+  countryCode?: string | null;
+  countrySource?: string;
+  headers?: Record<string, string | string[] | undefined>;
 }
 
 export interface LifetimePromoStatus {
@@ -108,7 +116,7 @@ export class PaymentsService {
   }
 
   getPlans(): PlanConfig[] {
-    return Object.values(PRICING_PLANS);
+    return Object.values(PRICING_PLANS).filter((p) => !p.isHidden && p.id !== 'free_tier');
   }
 
   /**
@@ -116,7 +124,7 @@ export class PaymentsService {
    */
   async getPromoStatus(): Promise<LifetimePromoStatus> {
     let enabled = true;
-    let totalCap = 10;
+    let totalCap = 13;
     let bannerText: string | undefined;
 
     if (this.settingRepository) {
@@ -154,16 +162,139 @@ export class PaymentsService {
     const remainingSeats = Math.max(0, totalCap - claimedSeats);
     const isSoldOut = remainingSeats <= 0;
 
+    const lifetimeUsd = PRICING_PLANS.pro_lifetime.prices.USD;
     return {
       enabled,
       planId: 'pro_lifetime',
-      priceInr: 999,
-      priceUsd: 19,
+      priceInr: Math.round(PRICING_PLANS.pro_lifetime.prices.INR.amountMinor / 100),
+      priceUsd: lifetimeUsd.amountMinor / 100,
       claimedSeats,
       totalCap,
       remainingSeats,
       isSoldOut,
       bannerText,
+    };
+  }
+
+  /**
+   * Resolve geo pricing context for display + checkout.
+   * Prefers CDN country headers, then IP lookup, then USD fallback.
+   */
+  async resolveRequestPricingGeo(
+    context?: RequestMetaContext,
+  ): Promise<PricingGeoContext & { detectionSource: string }> {
+    const fromExplicit = resolvePricingGeo(context?.countryCode);
+    if (context?.countryCode && fromExplicit.detectionSource !== 'fallback_usd') {
+      return {
+        ...fromExplicit,
+        detectionSource: context.countrySource || fromExplicit.detectionSource,
+      };
+    }
+
+    if (context?.headers) {
+      const headerHit = countryFromHeaders(context.headers);
+      if (headerHit.countryCode) {
+        const geo = resolvePricingGeo(headerHit.countryCode);
+        return { ...geo, detectionSource: headerHit.source };
+      }
+    }
+
+    const ip = context?.clientIp?.trim();
+    if (ip && !this.isPrivateIp(ip)) {
+      const lookedUp = await this.lookupCountryFromIp(ip);
+      if (lookedUp) {
+        const geo = resolvePricingGeo(lookedUp);
+        return { ...geo, detectionSource: 'ip_lookup' };
+      }
+    }
+
+    return resolvePricingGeo(null);
+  }
+
+  private isPrivateIp(ip: string): boolean {
+    return (
+      ip === '127.0.0.1' ||
+      ip === '::1' ||
+      ip.startsWith('10.') ||
+      ip.startsWith('192.168.') ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(ip) ||
+      ip.startsWith('fc') ||
+      ip.startsWith('fd')
+    );
+  }
+
+  private async lookupCountryFromIp(ip: string): Promise<string | null> {
+    const providers: Array<() => Promise<string | null>> = [
+      async () => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 1600);
+        try {
+          const response = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/country/`, {
+            signal: controller.signal,
+            headers: { Accept: 'text/plain' },
+          });
+          if (!response.ok) return null;
+          const text = (await response.text()).trim().toUpperCase();
+          return text.length === 2 && text !== 'XX' ? text : null;
+        } finally {
+          clearTimeout(timer);
+        }
+      },
+      async () => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 1600);
+        try {
+          const response = await fetch(
+            `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,countryCode`,
+            { signal: controller.signal },
+          );
+          if (!response.ok) return null;
+          const body = (await response.json()) as { status?: string; countryCode?: string };
+          if (body.status !== 'success') return null;
+          const text = String(body.countryCode || '').toUpperCase();
+          return text.length === 2 ? text : null;
+        } finally {
+          clearTimeout(timer);
+        }
+      },
+    ];
+
+    for (const provider of providers) {
+      try {
+        const code = await provider();
+        if (code) return code;
+      } catch (err) {
+        this.logger.warn(
+          `IP country lookup failed for ${ip}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+    return null;
+  }
+
+  async getPricingContext(context?: RequestMetaContext) {
+    const geo = await this.resolveRequestPricingGeo(context);
+    const plans = this.getPlans().map((plan) => {
+      const localized = resolvePlanPricing(plan.id, geo.currency)!;
+      return {
+        ...plan,
+        amountMinor: localized.amountMinor,
+        currency: localized.currency,
+        displayPrice: localized.displayPrice,
+        resolvedPrice: {
+          amountMinor: localized.amountMinor,
+          currency: localized.currency,
+          displayPrice: localized.displayPrice,
+        },
+      };
+    });
+
+    return {
+      countryCode: geo.countryCode,
+      tier: geo.tier,
+      currency: geo.currency,
+      detectionSource: geo.detectionSource,
+      plans,
     };
   }
 
@@ -187,12 +318,17 @@ export class PaymentsService {
     checkoutUrl?: string;
     plan: PlanConfig;
   }> {
-    const resolved = resolvePlanPricing(dto.planId, dto.currency);
+    // Authoritative currency comes from geo — never trust the client for charge amount.
+    const geo = await this.resolveRequestPricingGeo(context);
+    const resolved = resolvePlanPricing(dto.planId, geo.currency);
     if (!resolved || resolved.amountMinor <= 0) {
       throw new BadRequestException('Invalid or non-payable plan selected');
     }
 
     const { plan, amountMinor, currency } = resolved;
+    this.logger.log(
+      `createOrder plan=${plan.id} currency=${currency} amountMinor=${amountMinor} country=${geo.countryCode || 'unknown'} source=${geo.detectionSource}`,
+    );
 
     if (plan.id === 'pro_lifetime') {
       const promo = await this.getPromoStatus();
@@ -224,6 +360,7 @@ export class PaymentsService {
       planId: plan.id,
       email: user?.email,
       fullName: user?.fullName,
+      countryCode: geo.countryCode || (currency === 'INR' ? 'IN' : 'US'),
     });
 
     const payment = this.paymentRepository.create({
@@ -303,11 +440,29 @@ export class PaymentsService {
     proExpiresAt: Date | null;
     balance: number;
   }> {
-    const payment = await this.paymentRepository.findOne({
+    let payment = await this.paymentRepository.findOne({
       where: { orderId, userId },
     });
 
+    // Dodo may bounce back with payment_id / session id instead of our ord_* id.
+    if (!payment && providerPaymentId) {
+      payment = await this.paymentRepository.findOne({
+        where: [
+          { providerTransactionId: providerPaymentId, userId },
+          { orderId: providerPaymentId, userId },
+        ],
+      });
+    }
+
     if (!payment) {
+      const orphan = await this.paymentRepository.findOne({
+        where: [{ orderId }, ...(providerPaymentId ? [{ providerTransactionId: providerPaymentId }] : [])],
+      });
+      if (orphan && orphan.userId !== userId) {
+        throw new NotFoundException(
+          'Payment order belongs to a different account. Sign in with the account that started checkout, then reopen the receipt link.',
+        );
+      }
       throw new NotFoundException('Payment order not found for this user');
     }
 
@@ -517,13 +672,26 @@ export class PaymentsService {
       }
 
       if (creditsAwarded > 0) {
+        // Seed this week's Pro allotment (75). Idempotent with ensureWeeklyProCredits.
+        const now = new Date();
+        const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+        const dayNum = d.getUTCDay() || 7;
+        d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+        const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+        const weekKey = `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
         await this.creditsService.addTransaction(
           payment.userId,
           creditsAwarded,
-          'purchase',
-          `purchase-${payment.id}`,
+          'weekly_refill',
+          `weekly-refill:${payment.userId}:${weekKey}`,
           creditDescription,
-          { orderId: payment.orderId, providerTransactionId: payment.providerTransactionId },
+          {
+            orderId: payment.orderId,
+            providerTransactionId: payment.providerTransactionId,
+            weekKey,
+            source: 'purchase',
+          },
           manager,
         );
       }

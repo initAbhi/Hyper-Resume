@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { X, Check, Info, RotateCcw, Search, Sparkles } from 'lucide-react';
-import { AVAILABLE_TEMPLATES, ResumeTemplateRenderer } from './templates';
+import { X, Check, Info, RotateCcw, Search, Sparkles, Lock, Crown } from 'lucide-react';
+import { AVAILABLE_TEMPLATES, ResumeTemplateRenderer, isTemplatePremium } from './templates';
+import { TemplatePaywallModal } from './TemplatePaywallModal';
 import type { ResumeContent } from '@/lib/api-client';
+import { useAuth } from '@/lib/auth-context';
 
 interface TemplatePickerProps {
   isOpen: boolean;
@@ -212,6 +214,7 @@ export function TemplatePicker({
   showPhoto,
   photoUrl,
 }: TemplatePickerProps) {
+  const { hasActivePro } = useAuth();
   const [selectedSize, setSelectedSize] = useState<'A4' | 'US Letter'>(pageSize);
   const [language, setLanguage] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -221,6 +224,8 @@ export function TemplatePicker({
   });
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const [paywallTemplateName, setPaywallTemplateName] = useState<string | undefined>();
 
   const handleLanguageChange = (nextLang: string) => {
     setLanguage(nextLang);
@@ -255,24 +260,28 @@ export function TemplatePicker({
     }
   }, [pageSize]);
 
-  // Close on Escape key press
+  // Close on Escape; clear preview only when panel closes — do NOT depend on
+  // onPreviewTemplate identity (parent re-renders were clearing hover preview mid-hover).
+  const onPreviewTemplateRef = useRef(onPreviewTemplate);
+  onPreviewTemplateRef.current = onPreviewTemplate;
+
   useEffect(() => {
     if (!isOpen) {
-      onPreviewTemplate?.(null);
+      onPreviewTemplateRef.current?.(null);
       return;
     }
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onPreviewTemplate?.(null);
+        onPreviewTemplateRef.current?.(null);
         onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      onPreviewTemplate?.(null);
+      onPreviewTemplateRef.current?.(null);
     };
-  }, [isOpen, onClose, onPreviewTemplate]);
+  }, [isOpen, onClose]);
 
   const previewContent = useMemo(() => {
     return getSafePreviewContent(content);
@@ -418,7 +427,12 @@ export function TemplatePicker({
         {/* Templates Grid (Scrollable) */}
         <div
           className="flex-1 overflow-y-auto p-4 space-y-4 overscroll-contain studio-preview-group"
-          onMouseLeave={() => onPreviewTemplate?.(null)}
+          onMouseLeave={(e) => {
+            // Only clear when leaving the scroll region entirely (not when crossing card gaps)
+            const next = e.relatedTarget as Node | null;
+            if (next && e.currentTarget.contains(next)) return;
+            onPreviewTemplate?.(null);
+          }}
         >
           {filteredTemplates.length === 0 ? (
             <div className="py-12 text-center text-xs text-zinc-500">
@@ -429,8 +443,9 @@ export function TemplatePicker({
               {filteredTemplates.map((tpl) => {
                 const isSelected =
                   currentTemplateKey === tpl.key ||
-                  (!currentTemplateKey && tpl.key === 'double-column') ||
-                  (currentTemplateKey === 'default' && tpl.key === 'double-column');
+                  (!currentTemplateKey && tpl.key === 'jake-ats') ||
+                  (currentTemplateKey === 'default' && tpl.key === 'jake-ats');
+                const locked = Boolean(tpl.isPremium || isTemplatePremium(tpl.key)) && !hasActivePro;
 
                 return (
                   <button
@@ -444,9 +459,19 @@ export function TemplatePicker({
                     onFocus={() =>
                       onPreviewTemplate?.({ templateKey: tpl.key, label: tpl.name })
                     }
-                    onBlur={() => onPreviewTemplate?.(null)}
+                    onBlur={(e) => {
+                      // Keep preview when focus moves to another template card
+                      const next = e.relatedTarget as HTMLElement | null;
+                      if (next?.closest?.('[data-template-key]')) return;
+                      onPreviewTemplate?.(null);
+                    }}
                     onClick={() => {
                       onPreviewTemplate?.(null);
+                      if (locked) {
+                        setPaywallTemplateName(tpl.name);
+                        setPaywallOpen(true);
+                        return;
+                      }
                       onSelectTemplate(tpl.key);
                     }}
                     className="group cursor-pointer flex flex-col text-left space-y-1.5 focus:outline-none rounded-lg"
@@ -457,6 +482,8 @@ export function TemplatePicker({
                       inert={true}
                       className={`relative aspect-[794/1123] w-full rounded-lg border-2 overflow-hidden bg-white shadow-xs transition-all duration-200 group-hover:-translate-y-0.5 group-hover:shadow-md ${isSelected
                           ? 'border-emerald-700 ring-2 ring-emerald-700/30 shadow-md'
+                          : locked
+                            ? 'border-amber-300/80 dark:border-amber-700/60 hover:border-amber-400'
                           : 'border-zinc-200 dark:border-zinc-700 hover:border-emerald-500 dark:hover:border-emerald-500'
                         }`}
                     >
@@ -469,8 +496,15 @@ export function TemplatePicker({
                         photoUrl={photoUrl}
                       />
 
+                      {locked && (
+                        <div className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-md">
+                          <Crown className="h-3 w-3" />
+                          Premium
+                        </div>
+                      )}
+
                       {/* Corner Checkmark Pill */}
-                      {isSelected && (
+                      {isSelected && !locked && (
                         <div className="absolute top-2 right-2 flex items-center gap-1 bg-emerald-700 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md animate-in zoom-in-75 z-10">
                           <Check className="w-3 h-3 stroke-[3]" />
                           <span>Active</span>
@@ -480,8 +514,15 @@ export function TemplatePicker({
                       {/* Hover Overlay */}
                       {!isSelected && (
                         <div className="absolute inset-0 bg-emerald-950/10 dark:bg-emerald-400/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2 text-center">
-                          <span className="bg-zinc-900/95 text-white text-[10.5px] font-semibold px-2.5 py-1 rounded-full shadow-md">
-                            Preview live
+                          <span className="bg-zinc-900/95 text-white text-[10.5px] font-semibold px-2.5 py-1 rounded-full shadow-md inline-flex items-center gap-1">
+                            {locked ? (
+                              <>
+                                <Lock className="h-3 w-3" />
+                                Unlock with Pro
+                              </>
+                            ) : (
+                              'Preview live'
+                            )}
                           </span>
                         </div>
                       )}
@@ -499,7 +540,15 @@ export function TemplatePicker({
                           {tpl.name}
                         </span>
                         {tpl.badge && (
-                          <span className="shrink-0 px-1.5 py-0.2 bg-emerald-700 text-white text-[8.5px] font-bold rounded uppercase tracking-wider">
+                          <span
+                            className={`shrink-0 px-1.5 py-0.2 text-white text-[8.5px] font-bold rounded uppercase tracking-wider ${
+                              tpl.badge === 'Recommended'
+                                ? 'bg-[#1A1D23] dark:bg-zinc-100 dark:text-zinc-900'
+                                : tpl.badge === 'Premium'
+                                  ? 'bg-amber-500'
+                                : 'bg-emerald-700'
+                            }`}
+                          >
                             {tpl.badge}
                           </span>
                         )}
@@ -591,8 +640,21 @@ export function TemplatePicker({
       </aside>
   );
 
+  const paywall = (
+    <TemplatePaywallModal
+      isOpen={paywallOpen}
+      onClose={() => setPaywallOpen(false)}
+      templateName={paywallTemplateName}
+    />
+  );
+
   if (docked) {
-    return asidePanel;
+    return (
+      <>
+        {asidePanel}
+        {paywall}
+      </>
+    );
   }
 
   return (
@@ -604,6 +666,7 @@ export function TemplatePicker({
         aria-hidden="true"
       />
       {asidePanel}
+      {paywall}
     </>
   );
 }

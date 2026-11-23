@@ -21,57 +21,57 @@ const CATEGORIES = [
     title: 'Software Engineering',
     slug: 'software-engineer',
     icon: <Code className="h-4 w-4" />,
-    count: '15 samples',
-    blurb: 'Backend, full-stack, DevOps, cloud.',
+    count: '8 samples',
+    blurb: 'Backend, full-stack, systems, platform.',
   },
   {
-    title: 'Marketing & Growth',
-    slug: 'marketing',
+    title: 'Data & AI / ML',
+    slug: 'data-ai',
     icon: <TrendingUp className="h-4 w-4" />,
-    count: '7 samples',
-    blurb: 'PMM, growth, SEO, lifecycle.',
+    count: '6 samples',
+    blurb: 'LLMs, ML infra, data platforms.',
   },
   {
     title: 'Business & Product',
     slug: 'business',
     icon: <Briefcase className="h-4 w-4" />,
-    count: '8 samples',
-    blurb: 'PM, BA, strategy, operations.',
+    count: '1 sample',
+    blurb: 'Product leadership and strategy.',
   },
   {
     title: 'Finance & Banking',
     slug: 'finance',
     icon: <DollarSign className="h-4 w-4" />,
-    count: '7 samples',
-    blurb: 'IB, FP&A, modeling, risk.',
+    count: '3 samples',
+    blurb: 'Quant, trading, investment banking.',
   },
   {
     title: 'Design & UX',
     slug: 'design',
     icon: <Palette className="h-4 w-4" />,
-    count: '6 samples',
-    blurb: 'Product design, research, systems.',
+    count: '2 samples',
+    blurb: 'Product design and design systems.',
   },
   {
-    title: 'Legal & Compliance',
-    slug: 'legal',
+    title: 'DevOps & Cloud',
+    slug: 'devops',
     icon: <Scale className="h-4 w-4" />,
-    count: '4 samples',
-    blurb: 'Counsel, contracts, regulatory.',
+    count: '2 samples',
+    blurb: 'Security, reliability, cloud infra.',
   },
   {
-    title: 'Healthcare',
-    slug: 'medical',
+    title: 'Core Engineering',
+    slug: 'core-engineering',
     icon: <Stethoscope className="h-4 w-4" />,
-    count: '6 samples',
-    blurb: 'Clinical, research, informatics.',
+    count: '2 samples',
+    blurb: 'Graphics, robotics, systems software.',
   },
   {
     title: 'Students & Early Career',
     slug: 'fresher',
     icon: <GraduationCap className="h-4 w-4" />,
-    count: '5 samples',
-    blurb: 'Interns, freshers, research assistants.',
+    count: '1 sample',
+    blurb: 'New-grad and early-career resumes.',
   },
 ] as const;
 
@@ -99,7 +99,7 @@ export function SampleLibraryShowcase() {
               Sample library
             </p>
             <h2 className="mt-3 font-rubik text-3xl font-semibold tracking-tight sm:text-4xl">
-              82 company-caliber samples across 12 disciplines.
+              25 company-caliber samples across top tech, finance, and design.
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-zinc-400 sm:text-base">
               Browse dense ATS formats by role — then adapt one to your verified profile while

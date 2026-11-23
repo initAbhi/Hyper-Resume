@@ -116,9 +116,10 @@ export class GeminiAiProvider implements AiProvider {
     private readonly modelRouter?: AiModelRouterService,
   ) {
     this.apiKey = this.configService.get<string>('AI_API_KEY') || this.configService.get<string>('GEMINI_API_KEY');
-    const rawModel = this.configService.get<string>('AI_MODEL', 'gemini-2.5-flash');
-    this.model = (!rawModel || rawModel.includes('1.5'))
-      ? 'gemini-2.5-flash'
+    const rawModel = this.configService.get<string>('AI_MODEL', 'gemini-3.1-flash-lite');
+    // Legacy 1.5 / retired 2.5 defaults → stable lite Flash (3.8/latest often 503 or slow)
+    this.model = (!rawModel || rawModel.includes('1.5') || rawModel === 'gemini-2.5-flash')
+      ? 'gemini-3.1-flash-lite'
       : rawModel.trim();
 
     // Safeguard 1: Verify model pricing exists on initialization

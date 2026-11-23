@@ -111,6 +111,8 @@ export interface ResumeLayoutSettings {
   fontSizeScale?: number;
   lineHeight?: number;
   sectionSpacing?: number;
+  /** Gap between experience / project / education entries within a section */
+  entrySpacing?: number;
   pageMargin?: number;
   accentColor?: string;
   fontFamily?: 'sans' | 'serif' | 'mono';
@@ -1528,13 +1530,19 @@ export class ApiClient {
   }
 
   public getBaseUrl(): string {
+    const configured = (this.baseUrl || env.apiUrl || '').replace(/\/+$/, '');
     if (typeof window !== 'undefined') {
       const host = window.location.hostname;
       if (host === 'localhost' || host === '127.0.0.1') {
+        // If NEXT_PUBLIC_API_URL points at production, honor it even on localhost.
+        // This prevents Dodo return-url mistakes from verifying against an empty local DB.
+        if (configured && !/localhost|127\.0\.0\.1/.test(configured)) {
+          return configured;
+        }
         return 'http://localhost:3001/api/v1';
       }
     }
-    return this.baseUrl || env.apiUrl;
+    return configured || env.apiUrl;
   }
 
   setToken(token: string | null) {
@@ -1755,10 +1763,21 @@ export class ApiClient {
       let errorPayload: ApiErrorPayload;
       try {
         const body = await response.json();
+        const nested =
+          body.message && typeof body.message === 'object'
+            ? (body.message as { message?: string; error?: string; statusCode?: number })
+            : null;
+        const rawCode = body.code || body.error || nested?.error;
         errorPayload = {
-          statusCode: body.statusCode || response.status,
-          code: body.code || 'API_ERROR',
-          message: body.message || response.statusText,
+          statusCode: body.statusCode || nested?.statusCode || response.status,
+          code:
+            typeof rawCode === 'string' && rawCode !== 'Forbidden'
+              ? rawCode
+              : 'API_ERROR',
+          message:
+            (typeof body.message === 'string'
+              ? body.message
+              : nested?.message) || response.statusText,
           details: body.details || [],
           requestId:
             body.requestId ||
@@ -2600,11 +2619,11 @@ export class ApiClient {
     });
 
     const subScores = {
-      requiredSkills: Number(data.scoreComponents?.requiredSkillsScore ?? data.analysis?.subScores?.requiredSkills ?? 85),
-      preferredSkills: Number(data.scoreComponents?.preferredSkillsScore ?? data.analysis?.subScores?.preferredSkills ?? 75),
-      experienceAlignment: Number(data.scoreComponents?.experienceScore ?? data.analysis?.subScores?.experienceAlignment ?? 88),
-      educationAlignment: Number(data.scoreComponents?.responsibilityScore ?? data.analysis?.subScores?.educationAlignment ?? 95),
-      actionMetricsDensity: Number(data.scoreComponents?.formattingScore ?? data.analysis?.subScores?.actionMetricsDensity ?? 80),
+      requiredSkills: Number(data.scoreComponents?.requiredSkillsScore ?? data.analysis?.subScores?.requiredSkills ?? 0),
+      preferredSkills: Number(data.scoreComponents?.preferredSkillsScore ?? data.analysis?.subScores?.preferredSkills ?? 0),
+      experienceAlignment: Number(data.scoreComponents?.experienceScore ?? data.analysis?.subScores?.experienceAlignment ?? 0),
+      educationAlignment: Number(data.scoreComponents?.responsibilityScore ?? data.analysis?.subScores?.educationAlignment ?? 0),
+      actionMetricsDensity: Number(data.scoreComponents?.formattingScore ?? data.analysis?.subScores?.actionMetricsDensity ?? 0),
     };
 
     return {
@@ -3027,6 +3046,11 @@ export class ApiClient {
     return res.data;
   }
 
+  async getPricingContext() {
+    const res = await this.request<PricingContextResponse>('/payments/pricing-context');
+    return res.data;
+  }
+
   async getPromoStatus() {
     const res = await this.request<PromoStatus>('/payments/promo-status');
     return res.data;
@@ -3186,6 +3210,43 @@ export class ApiClient {
 
   async getAdminCreditsAudit(limit = 50) {
     const res = await this.request<AdminCreditAuditItem[]>(`/admin/credits/ledger?limit=${limit}`);
+    return res.data;
+  }
+
+  async submitContactMessage(payload: {
+    fullName: string;
+    email: string;
+    topic: string;
+    subject: string;
+    message: string;
+    website?: string;
+  }) {
+    const res = await this.request<{ id?: string; message: string }>('/contact', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return res.data;
+  }
+
+  async getAdminContactSubmissions(search?: string, status?: string, limit = 50) {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (status && status !== 'all') params.append('status', status);
+    params.append('limit', String(limit));
+    const res = await this.request<{ items: AdminContactSubmission[]; unreadCount: number }>(
+      `/admin/contact-submissions?${params.toString()}`,
+    );
+    return res.data;
+  }
+
+  async updateAdminContactSubmission(
+    id: string,
+    payload: { status: AdminContactStatus; adminNotes?: string },
+  ) {
+    const res = await this.request<AdminContactSubmission>(`/admin/contact-submissions/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
     return res.data;
   }
 
@@ -3351,6 +3412,10 @@ export interface AdminAnalyticsOverview {
   overview: {
     uniqueVisitors: number;
     pageViews: number;
+    landingPageViews?: number;
+    landingUniqueVisitors?: number;
+    last7DayPageViews?: number;
+    last7DayUniqueVisitors?: number;
     totalOrders: number;
     totalRevenue: string;
     conversionRate: string;
@@ -3367,6 +3432,33 @@ export interface AdminAnalyticsOverview {
     share: string;
     visits: number;
   }>;
+  topCountries?: Array<{
+    country: string;
+    countryCode: string;
+    share: string;
+    visits: number;
+  }>;
+  topPaths?: Array<{
+    path: string;
+    share: string;
+    visits: number;
+  }>;
+}
+
+export type AdminContactStatus = 'new' | 'in_progress' | 'resolved' | 'spam';
+
+export interface AdminContactSubmission {
+  id: string;
+  fullName: string;
+  email: string;
+  topic: string;
+  subject: string;
+  message: string;
+  status: AdminContactStatus;
+  userId?: string | null;
+  adminNotes?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AdminUserItem {
@@ -3494,6 +3586,14 @@ export interface PromoStatus {
   remainingSeats: number;
   isSoldOut: boolean;
   bannerText?: string;
+}
+
+export interface PricingContextResponse {
+  countryCode: string | null;
+  tier: 1 | 2;
+  currency: SupportedCurrency;
+  detectionSource: string;
+  plans: PricingPlan[];
 }
 
 export interface AdminPromoSettings {
