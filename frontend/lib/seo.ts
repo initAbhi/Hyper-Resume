@@ -12,6 +12,10 @@ export interface MetadataOptions {
   path?: string;
   image?: string;
   noIndex?: boolean;
+  type?: 'website' | 'article';
+  publishedTime?: string;
+  modifiedTime?: string;
+  authors?: string[];
 }
 
 export function constructMetadata({
@@ -20,6 +24,10 @@ export function constructMetadata({
   path = '',
   image = '/og-image.png',
   noIndex = false,
+  type = 'website',
+  publishedTime,
+  modifiedTime,
+  authors,
 }: MetadataOptions): Metadata {
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   const canonicalUrl = `${SITE_URL}${cleanPath}`;
@@ -44,8 +52,13 @@ export function constructMetadata({
           alt: `${title} preview`,
         },
       ],
-      type: 'website',
+      type,
       locale: 'en_US',
+      ...(type === 'article' && {
+        publishedTime,
+        modifiedTime,
+        authors,
+      }),
     },
     twitter: {
       card: 'summary_large_image',
@@ -102,6 +115,74 @@ export function getFaqJsonLd(faqs: { question: string; answer: string }[]) {
         '@type': 'Answer',
         text: faq.answer,
       },
+    })),
+  };
+}
+
+/**
+ * Valid JSON-LD Structured Data for BlogPosting
+ */
+export function getBlogPostingJsonLd({
+  title,
+  description,
+  path,
+  publishedAt,
+  updatedAt,
+  authorName,
+  authorRole,
+  image = '/og-image.png',
+}: {
+  title: string;
+  description: string;
+  path: string;
+  publishedAt: string;
+  updatedAt: string;
+  authorName: string;
+  authorRole?: string;
+  image?: string;
+}) {
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: title,
+    description,
+    image: [`${SITE_URL}${image}`],
+    datePublished: publishedAt,
+    dateModified: updatedAt,
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `${SITE_URL}${cleanPath}`,
+    },
+    author: {
+      '@type': 'Person',
+      name: authorName,
+      ...(authorRole ? { jobTitle: authorRole } : {}),
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: SITE_NAME,
+      url: SITE_URL,
+      logo: {
+        '@type': 'ImageObject',
+        url: `${SITE_URL}/icon.png`,
+      },
+    },
+  };
+}
+
+/**
+ * Valid JSON-LD Structured Data for BreadcrumbList
+ */
+export function getBreadcrumbJsonLd(items: { name: string; path: string }[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, idx) => ({
+      '@type': 'ListItem',
+      position: idx + 1,
+      name: item.name,
+      item: `${SITE_URL}${item.path.startsWith('/') ? item.path : `/${item.path}`}`,
     })),
   };
 }

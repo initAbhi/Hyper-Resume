@@ -178,6 +178,21 @@ function NavbarInner() {
             </Link>
 
             <Link
+              href="/blog"
+              className={`text-sm font-medium transition-colors ${
+                isLightSurface
+                  ? pathname.startsWith('/blog')
+                    ? 'text-zinc-950 dark:text-white font-semibold'
+                    : 'text-zinc-600 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white'
+                  : pathname.startsWith('/blog')
+                    ? 'text-white font-semibold [text-shadow:0_1px_10px_rgba(0,0,0,0.35)]'
+                    : 'text-white/90 hover:text-white [text-shadow:0_1px_10px_rgba(0,0,0,0.35)]'
+              }`}
+            >
+              Blog
+            </Link>
+
+            <Link
               href="/pricing"
               className={`text-sm font-medium transition-colors ${
                 isLightSurface
@@ -335,6 +350,13 @@ function NavbarInner() {
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Sample Library
+                </Link>
+                <Link
+                  href="/blog"
+                  className="block px-3 py-2.5 rounded-lg text-sm font-medium text-zinc-200 hover:bg-white/[0.06] transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Blog
                 </Link>
                 <Link
                   href="/pricing"

@@ -17,7 +17,7 @@ import { CreditLedger } from '../credits/entities/credit-ledger.entity.js';
 import { AnalyticsEvent } from '../analytics/analytics-event.entity.js';
 import { CreditsService } from '../credits/credits.service.js';
 import { PaymentsService } from '../payments/payments.service.js';
-import { formatMinorAmount, normalizeCurrency } from '../payments/pricing-plans.js';
+import { formatMinorAmount, normalizeCurrency, PRICING_PLANS } from '../payments/pricing-plans.js';
 
 @Injectable()
 export class AdminService implements OnModuleInit {
@@ -426,17 +426,27 @@ export class AdminService implements OnModuleInit {
 
     const resumeCountMap = new Map(resumeCounts.map((r) => [r.userId, Number(r.count)]));
 
-    return users.map((u) => ({
-      id: u.id,
-      email: u.email,
-      fullName: u.fullName,
-      role: u.role,
-      isActive: u.isActive,
-      isEmailVerified: u.isEmailVerified,
-      creditBalance: balanceMap.get(u.id) || 0,
-      resumesCount: resumeCountMap.get(u.id) || 0,
-      createdAt: u.createdAt,
-    }));
+    return users.map((u) => {
+      const hasActivePro = Boolean(
+        u.isLifetimePro ||
+        (u.proExpiresAt && new Date(u.proExpiresAt).getTime() > Date.now()),
+      );
+      return {
+        id: u.id,
+        email: u.email,
+        fullName: u.fullName,
+        role: u.role,
+        isActive: u.isActive,
+        isEmailVerified: u.isEmailVerified,
+        creditBalance: balanceMap.get(u.id) || 0,
+        resumesCount: resumeCountMap.get(u.id) || 0,
+        proPlanId: u.proPlanId ?? null,
+        proExpiresAt: u.proExpiresAt ?? null,
+        isLifetimePro: Boolean(u.isLifetimePro),
+        hasActivePro,
+        createdAt: u.createdAt,
+      };
+    });
   }
 
   async grantUserCredits(userId: string, amount: number, reason = 'Admin grant') {
@@ -467,6 +477,82 @@ export class AdminService implements OnModuleInit {
       email: user.email,
       grantedAmount: amount,
       newBalance,
+    };
+  }
+
+  async grantUserProAccess(
+    userId: string,
+    planId: 'pro_weekly' | 'pro_monthly' | 'pro_6month' | 'pro_lifetime' | 'custom',
+    durationDays?: number,
+    reason = 'Admin grant',
+  ) {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (planId === 'pro_lifetime') {
+      user.isLifetimePro = true;
+      user.proPlanId = 'pro_lifetime';
+      user.proExpiresAt = null;
+    } else {
+      const days =
+        planId === 'custom'
+          ? durationDays
+          : (PRICING_PLANS[planId]?.durationDays ?? durationDays);
+
+      if (!days || days < 1) {
+        throw new BadRequestException('durationDays must be at least 1');
+      }
+
+      const now = new Date();
+      const baseDate =
+        !user.isLifetimePro && user.proExpiresAt && new Date(user.proExpiresAt) > now
+          ? new Date(user.proExpiresAt)
+          : now;
+
+      user.isLifetimePro = false;
+      user.proPlanId = planId === 'custom' ? 'pro_custom' : planId;
+      user.proExpiresAt = new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000);
+    }
+
+    await this.userRepo.save(user);
+    await this.creditsService.ensureWeeklyProCredits(userId);
+
+    this.logger.warn(
+      `ADMIN ACTION: Granted Pro (${user.proPlanId}) to ${user.email} (${reason})`,
+    );
+
+    return {
+      userId,
+      email: user.email,
+      proPlanId: user.proPlanId ?? null,
+      proExpiresAt: user.proExpiresAt ?? null,
+      isLifetimePro: Boolean(user.isLifetimePro),
+      hasActivePro: true,
+    };
+  }
+
+  async revokeUserProAccess(userId: string) {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    user.isLifetimePro = false;
+    user.proPlanId = null;
+    user.proExpiresAt = null;
+    await this.userRepo.save(user);
+
+    this.logger.warn(`ADMIN ACTION: Revoked Pro access from ${user.email}`);
+
+    return {
+      userId,
+      email: user.email,
+      proPlanId: null,
+      proExpiresAt: null,
+      isLifetimePro: false,
+      hasActivePro: false,
     };
   }
 

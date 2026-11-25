@@ -17,5 +17,6 @@ export default defineProject({
   // colorScheme: "dark",
   brand: {
     color: "#5525F5",
+    logo: "../../frontend/public/logos/logo-icon.png",
   },
 });

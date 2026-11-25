@@ -25,6 +25,8 @@ describe('AdminService', () => {
     mockUserRepo = {
       count: vi.fn().mockResolvedValue(10),
       findBy: vi.fn().mockResolvedValue([]),
+      findOne: vi.fn().mockResolvedValue(null),
+      save: vi.fn((u) => Promise.resolve(u)),
     };
 
     mockPaymentRepo = {
@@ -61,6 +63,7 @@ describe('AdminService', () => {
     const mockCreditsService = {
       getBalance: vi.fn().mockResolvedValue(50),
       addTransaction: vi.fn().mockResolvedValue({ id: 'tx-1' }),
+      ensureWeeklyProCredits: vi.fn().mockResolvedValue(undefined),
     };
 
     service = new AdminService(
@@ -136,5 +139,47 @@ describe('AdminService', () => {
     expect(updated.totalCap).toBe(25);
     expect(updated.remainingSeats).toBe(25);
     expect(mockSettingRepo.save).toHaveBeenCalled();
+  });
+
+  it('should grant lifetime Pro access and trigger weekly Pro credits', async () => {
+    const user = {
+      id: 'user-1',
+      email: 'vip@example.com',
+      isLifetimePro: false,
+      proPlanId: null,
+      proExpiresAt: null,
+    };
+    mockUserRepo.findOne.mockResolvedValue(user);
+
+    const res = await service.grantUserProAccess('user-1', 'pro_lifetime', undefined, 'Beta VIP');
+
+    expect(res.isLifetimePro).toBe(true);
+    expect(res.proPlanId).toBe('pro_lifetime');
+    expect(res.proExpiresAt).toBeNull();
+    expect(res.hasActivePro).toBe(true);
+    expect(mockUserRepo.save).toHaveBeenCalled();
+  });
+
+  it('should grant timed Pro access for custom duration and revoke it cleanly', async () => {
+    const user = {
+      id: 'user-2',
+      email: 'tester@example.com',
+      isLifetimePro: false,
+      proPlanId: null,
+      proExpiresAt: null,
+    };
+    mockUserRepo.findOne.mockResolvedValue(user);
+
+    const granted = await service.grantUserProAccess('user-2', 'custom', 14, 'Creator review');
+    expect(granted.proPlanId).toBe('pro_custom');
+    expect(granted.isLifetimePro).toBe(false);
+    expect(granted.hasActivePro).toBe(true);
+    expect(granted.proExpiresAt).toBeInstanceOf(Date);
+
+    const revoked = await service.revokeUserProAccess('user-2');
+    expect(revoked.proPlanId).toBeNull();
+    expect(revoked.proExpiresAt).toBeNull();
+    expect(revoked.isLifetimePro).toBe(false);
+    expect(revoked.hasActivePro).toBe(false);
   });
 });

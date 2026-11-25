@@ -1,0 +1,60 @@
+{
+  "language": "en",
+  "wordsPerMinute": 111,
+  "gapMs": 500,
+  "voice": {
+    "provider": "elevenlabs",
+    "modelId": "eleven_turbo_v2_5"
+  },
+  "segments": [
+    {
+      "step": "intro",
+      "text": "Seventy-five percent of resumes never reach a human recruiter. Opaque ATS filters quietly reject qualified engineers every day.",
+      "durationMs": 9183,
+      "audio": "narration\\master_product_launch\\01-intro.mp3",
+      "audioTextHash": "1fbee10a00da"
+    },
+    {
+      "step": "open_canvas",
+      "text": "Meet Hyper-Resume. A production-grade visual resume engine built for high-growth tech talent.",
+      "durationMs": 6693,
+      "audio": "narration\\master_product_launch\\02-open_canvas.mp3",
+      "audioTextHash": "8afbded97865"
+    },
+    {
+      "step": "open_ats_scorecard",
+      "text": "Our deterministic audit evaluates your resume across five core dimensions: formatting, metrics, verbs, tech depth, and brevity.",
+      "durationMs": 9048,
+      "audio": "narration\\master_product_launch\\03-open_ats_scorecard.mp3",
+      "audioTextHash": "f77196338926"
+    },
+    {
+      "step": "fix_mistakes",
+      "text": "With one click, our anti-hallucination fixer upgrades weak verbs and quantifies achievements, preserving factual truth without fabricating experience.",
+      "durationMs": 10033,
+      "audio": "narration\\master_product_launch\\04-fix_mistakes.mp3",
+      "audioTextHash": "a8fd8b182291"
+    },
+    {
+      "step": "trigger_export",
+      "text": "Export true selectable vector PDFs verified for ATS parsers, or download clean Jake's Resume LaTeX source ready for Overleaf.",
+      "durationMs": 9172,
+      "audio": "narration\\master_product_launch\\05-trigger_export.mp3",
+      "audioTextHash": "80079836c64d"
+    },
+    {
+      "step": "career_launch",
+      "text": "Seamlessly transition into AI job description matching and STAR mock interviews grounded in your exact resume facts.",
+      "durationMs": 7630,
+      "audio": "narration\\master_product_launch\\06-career_launch.mp3",
+      "audioTextHash": "9d1fb4cd7f28"
+    },
+    {
+      "step": "outro",
+      "text": "Zero parse errors. 100 percent ATS safe. Build your unfair career advantage today at hyper-resume.com.",
+      "durationMs": 11218,
+      "audio": "narration\\master_product_launch\\07-outro.mp3",
+      "audioTextHash": "7b8e0bc02678"
+    }
+  ]
+}

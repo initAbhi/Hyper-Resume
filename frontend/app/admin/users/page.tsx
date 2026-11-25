@@ -14,6 +14,7 @@ import {
   X,
   CheckCircle2,
   AlertCircle,
+  Crown,
 } from 'lucide-react';
 import { apiClient, AdminUserItem } from '@/lib/api-client';
 
@@ -31,6 +32,13 @@ export default function AdminUsersPage() {
   const [granting, setGranting] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Manage Pro Modal state
+  const [proModalUser, setProModalUser] = useState<AdminUserItem | null>(null);
+  const [proPlanId, setProPlanId] = useState<'pro_weekly' | 'pro_monthly' | 'pro_6month' | 'pro_lifetime' | 'custom'>('pro_monthly');
+  const [proCustomDays, setProCustomDays] = useState<number>(30);
+  const [proReason, setProReason] = useState('Admin Courtesy Pro Access');
+  const [updatingPro, setUpdatingPro] = useState(false);
 
   const loadUsers = async (limitOverride?: number) => {
     setLoading(true);
@@ -51,13 +59,16 @@ export default function AdminUsersPage() {
   }, [roleFilter]);
 
   useEffect(() => {
-    if (!selectedUser) return;
+    if (!selectedUser && !proModalUser) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setSelectedUser(null);
+      if (e.key === 'Escape') {
+        setSelectedUser(null);
+        setProModalUser(null);
+      }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selectedUser]);
+  }, [selectedUser, proModalUser]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,6 +89,48 @@ export default function AdminUsersPage() {
       setErrorMessage(err instanceof Error ? err.message : 'Failed to grant credits');
     } finally {
       setGranting(false);
+    }
+  };
+
+  const handleGrantPro = async () => {
+    if (!proModalUser) return;
+    if (proPlanId === 'custom' && (!proCustomDays || proCustomDays < 1)) return;
+    setUpdatingPro(true);
+    setErrorMessage(null);
+    try {
+      const res = await apiClient.grantAdminUserPro(proModalUser.id, {
+        planId: proPlanId,
+        durationDays: proPlanId === 'custom' ? proCustomDays : undefined,
+        reason: proReason,
+      });
+      const label = res.isLifetimePro
+        ? 'Lifetime Pro'
+        : `Pro (${res.proPlanId}) until ${res.proExpiresAt ? new Date(res.proExpiresAt).toLocaleDateString('en-IN') : 'active'}`;
+      setToastMessage(`Granted ${label} to ${proModalUser.email}`);
+      setProModalUser(null);
+      await loadUsers();
+      setTimeout(() => setToastMessage(null), 4000);
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to grant Pro access');
+    } finally {
+      setUpdatingPro(false);
+    }
+  };
+
+  const handleRevokePro = async () => {
+    if (!proModalUser) return;
+    setUpdatingPro(true);
+    setErrorMessage(null);
+    try {
+      await apiClient.revokeAdminUserPro(proModalUser.id);
+      setToastMessage(`Revoked Pro access from ${proModalUser.email}`);
+      setProModalUser(null);
+      await loadUsers();
+      setTimeout(() => setToastMessage(null), 4000);
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to revoke Pro access');
+    } finally {
+      setUpdatingPro(false);
     }
   };
 
@@ -191,6 +244,7 @@ export default function AdminUsersPage() {
               <tr>
                 <th className="px-5 py-3.5">User</th>
                 <th className="px-5 py-3.5">Role</th>
+                <th className="px-5 py-3.5">Plan</th>
                 <th className="px-5 py-3.5">Status</th>
                 <th className="px-5 py-3.5">Credit Balance</th>
                 <th className="px-5 py-3.5">Resumes</th>
@@ -202,14 +256,14 @@ export default function AdminUsersPage() {
               {loading ? (
                 [1, 2, 3, 4].map((n) => (
                   <tr key={n}>
-                    <td colSpan={7} className="px-5 py-4">
+                    <td colSpan={8} className="px-5 py-4">
                       <div className="h-5 rounded bg-slate-100 dark:bg-zinc-800 animate-pulse" />
                     </td>
                   </tr>
                 ))
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center text-slate-500 dark:text-zinc-400">
+                  <td colSpan={8} className="px-5 py-12 text-center text-slate-500 dark:text-zinc-400">
                     No users matched your query.
                   </td>
                 </tr>
@@ -240,6 +294,29 @@ export default function AdminUsersPage() {
                         >
                           {u.role}
                         </span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        {u.isLifetimePro ? (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-purple-50 border border-purple-200 px-2 py-0.5 text-[10px] font-bold text-purple-700">
+                            <Crown className="h-3 w-3 text-purple-600" />
+                            Lifetime Pro
+                          </span>
+                        ) : u.hasActivePro ? (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-bold text-blue-700">
+                            <Crown className="h-3 w-3 text-blue-600" />
+                            Pro ·{' '}
+                            {u.proExpiresAt
+                              ? new Date(u.proExpiresAt).toLocaleDateString('en-IN', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                })
+                              : 'Active'}
+                          </span>
+                        ) : (
+                          <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                            Free
+                          </span>
+                        )}
                       </td>
                       <td className="px-5 py-3.5">
                         <span
@@ -274,13 +351,29 @@ export default function AdminUsersPage() {
                         })}
                       </td>
                       <td className="px-5 py-3.5 text-right">
-                        <button
-                          onClick={() => setSelectedUser(u)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition"
-                        >
-                          <PlusCircle className="h-3 w-3 text-blue-600" />
-                          <span>Grant Credits</span>
-                        </button>
+                        <div className="inline-flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProPlanId('pro_monthly');
+                              setProCustomDays(30);
+                              setProReason('Admin Courtesy Pro Access');
+                              setProModalUser(u);
+                            }}
+                            className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50/60 px-2.5 py-1 text-[11px] font-bold text-indigo-700 hover:bg-indigo-100/70 transition cursor-pointer"
+                          >
+                            <Crown className="h-3 w-3 text-indigo-600" />
+                            <span>{u.hasActivePro ? 'Manage Pro' : 'Grant Pro'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedUser(u)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+                          >
+                            <PlusCircle className="h-3 w-3 text-blue-600" />
+                            <span>Grant Credits</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -402,6 +495,135 @@ export default function AdminUsersPage() {
               >
                 {granting ? 'Granting...' : `Confirm Grant (+${grantAmount})`}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MANAGE PRO ACCESS MODAL */}
+      {proModalUser && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="manage-pro-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setProModalUser(null);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-[#14171C] p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
+                  <Crown className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 id="manage-pro-modal-title" className="text-sm font-bold text-slate-900 dark:text-zinc-100">
+                    Manage Pro Access
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-400">User: {proModalUser.email}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                aria-label="Close manage Pro modal"
+                onClick={() => setProModalUser(null)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 block mb-1.5">
+                  Select Pro Plan / Duration
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'pro_weekly', label: '1 Week (7d)' },
+                    { id: 'pro_monthly', label: '1 Month (30d)' },
+                    { id: 'pro_6month', label: '6 Months (180d)' },
+                    { id: 'pro_lifetime', label: 'Lifetime Pro' },
+                    { id: 'custom', label: 'Custom Days' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setProPlanId(opt.id as typeof proPlanId)}
+                      className={`rounded-lg py-2 px-3 text-xs font-bold transition border cursor-pointer text-left ${
+                        proPlanId === opt.id
+                          ? 'bg-[#285FEA] text-white border-blue-600 shadow-xs'
+                          : 'bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-700'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {proPlanId === 'custom' && (
+                <div>
+                  <label htmlFor="admin-pro-custom-days" className="text-xs font-semibold text-slate-700 dark:text-zinc-300 block mb-1">
+                    Duration (Days)
+                  </label>
+                  <input
+                    id="admin-pro-custom-days"
+                    type="number"
+                    min="1"
+                    value={proCustomDays}
+                    onChange={(e) => setProCustomDays(Number(e.target.value))}
+                    className="w-full rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-xs text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label htmlFor="admin-pro-reason" className="text-xs font-semibold text-slate-700 dark:text-zinc-300 block mb-1">
+                  Reason / Internal Note
+                </label>
+                <input
+                  id="admin-pro-reason"
+                  type="text"
+                  value={proReason}
+                  onChange={(e) => setProReason(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-xs text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  placeholder="e.g. Beta tester / Creator collab"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 pt-2">
+              <div>
+                {proModalUser.hasActivePro && (
+                  <button
+                    type="button"
+                    onClick={handleRevokePro}
+                    disabled={updatingPro}
+                    className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100 transition disabled:opacity-50 cursor-pointer"
+                  >
+                    Revoke Pro
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setProModalUser(null)}
+                  className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGrantPro}
+                  disabled={updatingPro}
+                  className="rounded-xl bg-[#285FEA] px-4 py-2 text-xs font-bold text-white hover:bg-blue-600 transition shadow-xs disabled:opacity-50 cursor-pointer"
+                >
+                  {updatingPro ? 'Saving...' : 'Grant Pro Access'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

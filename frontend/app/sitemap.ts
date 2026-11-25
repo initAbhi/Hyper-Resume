@@ -1,11 +1,13 @@
 import { MetadataRoute } from 'next';
 import { SITE_URL } from '@/lib/seo';
+import { getAllPosts } from '@/lib/blog';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const currentDate = new Date().toISOString();
 
   const routes = [
     { url: '', priority: 1.0, changeFrequency: 'weekly' as const },
+    { url: '/blog', priority: 0.9, changeFrequency: 'weekly' as const },
     { url: '/tools/resume-checker', priority: 0.9, changeFrequency: 'weekly' as const },
     { url: '/tools/resume-score', priority: 0.8, changeFrequency: 'weekly' as const },
     { url: '/tools/job-match', priority: 0.9, changeFrequency: 'weekly' as const },
@@ -23,10 +25,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: '/security', priority: 0.4, changeFrequency: 'monthly' as const },
   ];
 
-  return routes.map((route) => ({
-    url: `${SITE_URL}${route.url}`,
-    lastModified: currentDate,
-    changeFrequency: route.changeFrequency,
-    priority: route.priority,
+  const blogRoutes = getAllPosts().map((post) => ({
+    url: `${SITE_URL}/blog/${post.slug}`,
+    lastModified: new Date(post.updatedAt).toISOString(),
+    changeFrequency: 'monthly' as const,
+    priority: 0.8,
   }));
+
+  return [
+    ...routes.map((route) => ({
+      url: `${SITE_URL}${route.url}`,
+      lastModified: currentDate,
+      changeFrequency: route.changeFrequency,
+      priority: route.priority,
+    })),
+    ...blogRoutes,
+  ];
 }

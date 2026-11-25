@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { name: 'Product', link: '#product-workspace' },
   { name: 'Templates', link: '#templates' },
   { name: 'Samples', link: '/examples' },
+  { name: 'Blog', link: '/blog' },
   { name: 'Pricing', link: '/pricing' },
 ];
 

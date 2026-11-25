@@ -60,6 +60,22 @@ export class GrantCreditsDto {
   reason?: string;
 }
 
+export class GrantProAccessDto {
+  @IsIn(['pro_weekly', 'pro_monthly', 'pro_6month', 'pro_lifetime', 'custom'])
+  @IsNotEmpty()
+  planId!: 'pro_weekly' | 'pro_monthly' | 'pro_6month' | 'pro_lifetime' | 'custom';
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  durationDays?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  reason?: string;
+}
+
 @ApiTags('admin')
 @ApiBearerAuth('JWT')
 @Controller('admin')
@@ -121,6 +137,18 @@ export class AdminController {
   @ApiOperation({ summary: 'Manually award credits to a specific user' })
   async grantCredits(@Param('userId') userId: string, @Body() dto: GrantCreditsDto) {
     return this.adminService.grantUserCredits(userId, dto.amount, dto.reason);
+  }
+
+  @Post('users/:userId/grant-pro')
+  @ApiOperation({ summary: 'Directly grant Pro access to a user bypassing payment' })
+  async grantProAccess(@Param('userId') userId: string, @Body() dto: GrantProAccessDto) {
+    return this.adminService.grantUserProAccess(userId, dto.planId, dto.durationDays, dto.reason);
+  }
+
+  @Post('users/:userId/revoke-pro')
+  @ApiOperation({ summary: 'Revoke Pro access from a user' })
+  async revokeProAccess(@Param('userId') userId: string) {
+    return this.adminService.revokeUserProAccess(userId);
   }
 
   @Get('payments')

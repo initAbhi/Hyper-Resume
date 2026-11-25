@@ -30,6 +30,7 @@ export function Footer() {
   ];
 
   const companyLinks = [
+    { label: 'Blog', href: '/blog' },
     { label: 'Pricing', href: '/pricing' },
     { label: 'Contact & Support', href: '/contact' },
     { label: 'Privacy Policy', href: '/privacy' },

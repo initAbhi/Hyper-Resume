@@ -3190,6 +3190,28 @@ export class ApiClient {
     return this.grantAdminUserCredits(userId, amount, reason);
   }
 
+  async grantAdminUserPro(
+    userId: string,
+    payload: {
+      planId: 'pro_weekly' | 'pro_monthly' | 'pro_6month' | 'pro_lifetime' | 'custom';
+      durationDays?: number;
+      reason?: string;
+    },
+  ) {
+    const res = await this.request<AdminProAccessResponse>(`/admin/users/${userId}/grant-pro`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return res.data;
+  }
+
+  async revokeAdminUserPro(userId: string) {
+    const res = await this.request<AdminProAccessResponse>(`/admin/users/${userId}/revoke-pro`, {
+      method: 'POST',
+    });
+    return res.data;
+  }
+
   async getAdminPayments(search?: string, status?: string, mode?: string, limit = 50) {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
@@ -3470,7 +3492,20 @@ export interface AdminUserItem {
   isEmailVerified: boolean;
   creditBalance: number;
   resumesCount: number;
+  proPlanId?: string | null;
+  proExpiresAt?: string | null;
+  isLifetimePro?: boolean;
+  hasActivePro?: boolean;
   createdAt: string;
+}
+
+export interface AdminProAccessResponse {
+  userId: string;
+  email: string;
+  proPlanId: string | null;
+  proExpiresAt: string | null;
+  isLifetimePro: boolean;
+  hasActivePro: boolean;
 }
 
 export interface AdminResumeItem {

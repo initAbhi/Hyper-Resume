@@ -1,0 +1,72 @@
+---
+title: "Canva Resumes vs Jake's Resume: We Ran Both Through Raw PDF Text Extraction (pdf-parse)"
+description: "Why 2-column Canva PDFs and 12 MB portfolio exports silently break Workday and Naukri parsers—and why single-column Jake's Resume passes cleanly."
+slug: "canva-vs-jakes-resume-pdf-parse-test"
+publishedAt: "2026-11-25"
+updatedAt: "2026-11-25"
+category: "ATS & Parsing"
+tags: ["canva-resume", "jakes-resume", "pdf-parse", "ats-friendly", "india-freshers"]
+author:
+  name: "Abhi"
+  role: "Founder & Staff Engineer, HypeResume"
+  bio: "Built HypeResume's deterministic ATS audit, Puppeteer vector PDF verifier, and lossless PDF compressor."
+featured: false
+primaryTool: "resume-checker"
+faqs:
+  - question: "Are Canva resumes ATS-friendly?"
+    answer: "Most multi-column Canva templates are not reliable for strict enterprise ATS parsers like Workday. Text boxes, vector shapes, and 2-column grids often extract out of order or fail file-size limits."
+  - question: "Why did my compressed PDF lose all selectable text?"
+    answer: "Many free online PDF compressors shrink file size by rasterizing pages into JPEG/PNG images. Once flattened into an image, pdf-parse and ATS engines extract 0 characters."
+  - question: "What is Jake's Resume and why do tech recruiters prefer it?"
+    answer: "Jake's Resume is a clean, single-column chronological layout popularized on Overleaf. It has predictable top-to-bottom reading order, high information density, and zero parsing ambiguity."
+---
+
+Every week we inspect dozens of fresher and early-career developer resumes across India. Good GitHub repos. Solid DSA prep. Yet their callback rate is near zero—not because of their skills, but because of what happens when an enterprise portal runs raw text extraction on their PDF.
+
+## 1. What `pdf-parse` Actually Sees in a 2-Column Canva PDF
+
+Canva is built for visual design, not structured document trees. When you export a 2-column resume with sidebar skill bars, icons, and floating text boxes, the underlying PDF text stream is often ordered by **visual Y-coordinate** rather than logical section flow.
+
+Here is what a typical parser extracts from a 2-column layout:
+
+```text
+RAHUL SHARMA                    EXPERIENCE
+B.Tech CSE (2025)               Backend Intern | Acme Corp
+SKILLS                          Built REST APIs in Node.js
+React, Java, Docker             EDUCATION
+CONTACT                         CGPA: 8.4/10
+```
+
+Notice how `B.Tech CSE` gets glued next to `Backend Intern`, and `SKILLS` collides with `Built REST APIs`. When Workday's regex field-mapper tries to isolate your job title and employment dates, it fails silently.
+
+<Callout type="warning" title="The 12 MB Canva Bloat + Image Compressor Trap">
+Canva resumes with embedded portfolio thumbnails or custom fonts frequently export at **6–15 MB**. Many Indian corporate portals (Naukri, Superset, Workday) reject files over **2–5 MB**. Worse, if you run that PDF through a generic online compressor, it often rasterizes your resume into an image—leaving **0 selectable characters** for the ATS.
+</Callout>
+
+## 2. Single-Column `Jake's Resume`: Predictable Top-to-Bottom Stream
+
+When we run a single-column `Jake's Resume` export (generated via headless Puppeteer with `tagged: true` and verified via `pdf-parse` for `extractableChars > 20`), the extracted text stream matches the exact order a human recruiter reads:
+
+1. Header (Name, Email, GitHub, LinkedIn, Phone)
+2. Education
+3. Experience
+4. Projects
+5. Technical Skills
+
+Zero column collisions. Zero icon-font garbage characters (`\uE801`).
+
+<BeforeAfterBullet
+  before="Used a 2-column Canva template with star ratings (★★★★☆ for React) and a 9 MB PDF export."
+  after="Switched to single-column Jake's Resume with tagged Vector PDF export (<300 KB) and explicit project bullet proof."
+  beforeLabel="Canva 2-Column Export"
+  afterLabel="ATS-Verified Vector PDF"
+  note="Star ratings and progress bars mean nothing to an ATS or a Staff Engineer—replace them with real bullets showing how you used React in production."
+/>
+
+<ToolCtaCard tool="resume-checker" />
+
+## 3. How to Test Your Own PDF in 10 Seconds
+
+1. **Quick local check:** Open your PDF, press `Ctrl+A` then `Ctrl+C`, and paste into Notepad. If you cannot select text—or your left sidebar mixes with your right column—your ATS parser sees the same mess.
+2. **Automated 5-dimension audit:** Upload your PDF to our [Free ATS Resume Checker](/tools/resume-checker) (no signup wall) to inspect raw extracted text, catch 84+ typo/formatting rules, and compress `>10 MB` PDFs while keeping UTF-8 text 100% selectable.
+

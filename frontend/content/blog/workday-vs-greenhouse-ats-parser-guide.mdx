@@ -1,0 +1,70 @@
+---
+title: "Workday vs Greenhouse vs Lever: How Actual ATS Parsers Read Your Resume (2026 Engineering Breakdown)"
+description: "Why 'ATS rejects 75% of resumes' is a myth, how enterprise parsers actually extract PDF text, why 2-column Canva PDFs scramble, and how to test yours free."
+slug: "workday-vs-greenhouse-ats-parser-guide"
+publishedAt: "2026-11-25"
+updatedAt: "2026-11-25"
+category: "ATS & Parsing"
+tags: ["workday", "greenhouse", "lever", "ats-parser", "pdf-parse", "india-tech"]
+author:
+  name: "Abhi"
+  role: "Founder & Staff Engineer, HypeResume"
+  bio: "Built HypeResume's deterministic ATS audit, Puppeteer vector PDF verifier, and anti-hallucination bullet validator."
+featured: true
+primaryTool: "resume-checker"
+faqs:
+  - question: "Do ATS systems automatically reject 75% of resumes before a human reads them?"
+    answer: "No. That 75% figure is a widely debunked marketing myth. Modern ATS platforms like Greenhouse, Lever, and Workday parse your PDF into structured fields, index keywords, and rank or filter applicants—recruiters still review the top profiles."
+  - question: "Why do 2-column Canva resumes fail in Workday?"
+    answer: "Many PDF text extractors read left-to-right across the entire page width rather than column-by-column. A 2-column layout can merge your job title on the left with an unrelated skill or course on the right, leaving Workday's structured profile fields blank."
+  - question: "How can I check if my resume PDF is ATS-readable?"
+    answer: "Try selecting all text in your PDF (Ctrl+A, Ctrl+C) and pasting it into a plain text editor—or run it through HypeResume's free ATS Resume Checker, which runs real pdf-parse extraction without a signup wall."
+---
+
+Every developer on `r/developersIndia` or `r/resumes` has heard the same terrifying claim: *"ATS bots automatically reject 75% of resumes before a human ever sees them."*
+
+That statistic is a 2012 sales myth. Here is what enterprise Applicant Tracking Systems—**Workday, Greenhouse, and Lever**—actually do under the hood, and why chasing a fake "95% ATS score" often ruins good engineering resumes.
+
+## 1. What ATS Platforms Actually Do: Parse → Structure → Rank
+
+Most modern ATS tools do not auto-reject your application based on an arbitrary percentage score. Instead, they run a three-step pipeline:
+
+1. **Text Extraction:** A PDF/DOCX parser extracts raw UTF-8 character streams and bounding-box coordinates from your file.
+2. **Field Mapping:** Regex and NLP heuristics map blocks into structured database fields (`Full Name`, `Email`, `Company`, `Title`, `Dates`, `Skills`).
+3. **Search & Ranking:** When 800+ engineers apply to one opening, recruiters filter by knockout questions (location, visa, YOE) and review the top-ranked or earliest clean profiles.
+
+<Callout type="warning" title="Where Candidates Actually Lose Out">
+If your PDF fails at **Step 1 (Text Extraction)** or **Step 2 (Field Mapping)**, your Workday profile parses blank or scrambled. You don't get "auto-rejected"—you simply become invisible in recruiter search.
+</Callout>
+
+## 2. Workday vs Greenhouse vs Lever: Parser Differences
+
+| ATS Platform | Parsing Behavior | Common Failure Mode |
+| :--- | :--- | :--- |
+| **Workday** | Strict field-mapper used by large enterprises & GCCs | 2-column Canva/Figma PDFs scramble left-to-right across rows |
+| **Greenhouse** | Clean HTML/PDF preview + structured keyword search | Bloated `>5 MB` image-heavy PDFs or flattened screenshots fail preview |
+| **Lever** | Fast parser + recruiter-first inline resume viewer | Custom icon fonts or non-standard section headers (`"My Journey"` instead of `"Experience"`) |
+
+## 3. Why Chasing a "90% Match Score" Backfires
+
+Some legacy ATS scanners give you a single `0–100%` number and tell you to jam missing keywords anywhere to hit `90%`. That works for gaming a naive string counter, but fails the moment a **Staff Engineer or Hiring Manager** reads your resume.
+
+Instead of stuffing keywords into a Skills bar, prove them inside your experience bullets—without inventing fake numbers:
+
+<BeforeAfterBullet
+  before="Responsible for backend APIs and React frontend. Improved latency by 42% and scaled to 1M users."
+  after="Built Node.js REST endpoints and PostgreSQL queries for order checkout, cutting p95 response time [Confirm measurable impact] across production traffic."
+  beforeLabel="Generic / Hallucinated Metrics"
+  afterLabel="Evidence-Grounded Bullet"
+  note="If a metric wasn't in your real history, never let an AI invent '42%' or '1M users'. You will get grilled on how you benchmarked it in the interview."
+/>
+
+<ToolCtaCard tool="resume-checker" />
+
+## 4. The 4-Point ATS Engineering Checklist
+
+Before you submit your next application:
+- **Use a single-column layout** (like `Jake's Resume`) so left-to-right text extraction never merges unrelated sections.
+- **Keep file size under 2 MB** while preserving selectable UTF-8 text (never use online compressors that rasterize pages into images).
+- **Use standard section headings:** `Experience`, `Projects`, `Education`, `Skills`.
+- **Verify raw text extraction:** Every character in your exported PDF should be cleanly selectable.
